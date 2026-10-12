@@ -1,9 +1,23 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
 const { fileURLToPath } = require('url');
 const { spawn, execFile } = require('child_process');
 const { createArtworkCache } = require('./artwork-cache.cjs');
+const { createConsoleServices } = require('./console-services.cjs');
+const { createSoundPack } = require('./sound-pack.cjs');
+const { createSteamShop } = require('./steam-shop.cjs');
+const { createStoreOffers } = require('./store-offers.cjs');
+const { createPlayerProfile, profileMode, defaultAvatarId } = require('./player-profile.cjs');
+const { createAccountLibraries } = require('./account-libraries.cjs');
+const { scanLocalPublishers, mergePublisherGames } = require('./launcher-libraries.cjs');
+const { readGogOwned, readAmazonOwned } = require('./local-owned-libraries.cjs');
+const { normalizeTitle, titleMatchScore, titleNeedsRecheck } = require('./title-match.cjs');
+const { libraryKey, installLibrariesByDrive } = require('./steam-install-libraries.cjs');
+const { readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, parseVdf: parseSteamVdf } = require('./steam-local.cjs');
+const { createSteamFamilyLibrary } = require('./steam-family.cjs');
+const { duplicateGroups, providers: duplicateProviders } = require('./library-duplicates.cjs');
+const storeOffers = createStoreOffers();
 const { runPowerAction } = require('./power-actions.cjs');
 const { parseSteamCommunityAchievements, safeSteamIcon } = require('./steam-public-achievements.cjs');
 
@@ -12,25 +26,50 @@ if (process.env.NEBULA_DEMO === '1') {
   app.disableHardwareAcceleration();
 }
 
+// One launcher at a time. Opening it again (for example from Xbox mode) brings the window forward.
+const XBOX_MODE = process.argv.includes('--xbox-mode');
+if (!process.env.NEBULA_REVIEW && !app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', (_event, argv) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (argv.includes('--xbox-mode')) mainWindow.setFullScreen(true);
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 let mainWindow;
+let steamShop;
 let currentLibrary = [];
 const gameDetailCache = new Map();
 let steamChartsCache = { at: 0, apiKey: '', ranks: new Map(), status: 'empty' };
 let steamDiscoveryCache = { at: 0, data: null };
 const steamDiscoveryArtworkCache = new Map();
 let steamDiscoveryArtworkRunning = false;
-let xboxTitleHistoryCache = { at: 0, apiKey: '', xuid: '', titles: [] };
-const xboxAchievementCache = new Map();
 const publicSteamAchievementCache = new Map();
 let activeGameSession = null;
+const installRequests = new Map();
+let publisherLocalStatus = { ubisoftStatus:'not-scanned', ubisoftCount:0 };
+
+async function localSteamLibrary() {
+  if (process.env.NEBULA_DEMO === '1') return { hiddenIds: [], stats: {}, available: false };
+  return readSteamLocalLibrary(await findSteamRoots(), await detectSteamId64());
+}
 
 const SETTINGS_DEFAULTS = {
   steamGridDbKey: '',
   steamApiKey: '',
-  xboxApiKey: '',
   steamId64: '',
   showUninstalledSteam: false,
+  includeSteamFamily: true,
+  duplicateMode: 'all',
+  duplicatePreferredProvider: 'Steam',
+  duplicatePreferences: {},
   showUninstalledEpic: false,
+  showUninstalledUbisoft: false,
+  showUninstalledEA: false,
+  showUninstalledBattleNet: false,
+  showUninstalledGog: false,
+  showUninstalledAmazon: false,
   legendaryPath: '',
   fullscreen: true,
   hiddenGameIds: [],
@@ -44,8 +83,8 @@ const SETTINGS_DEFAULTS = {
   gameLaunchOptions: {},
   gameCategoryOverrides: {},
   achievementReferenceAppIds: {},
-  xboxAchievementReferences: {},
   soundEffects: true,
+  startupAnimation: true,
   onboardingComplete: false,
   steamBannerDismissed: false,
   avatarId: 'one-orbit',
@@ -75,6 +114,16 @@ function librarySnapshotPath() {
 }
 
 const artworkCache = createArtworkCache(path.join(path.dirname(settingsPath()), 'artwork-cache'));
+const consoleServices = createConsoleServices(path.join(path.dirname(settingsPath()), 'catalog-cache'));
+const soundPack = createSoundPack(path.join(path.dirname(settingsPath()), 'personalization'));
+const playerProfile = createPlayerProfile(path.join(path.dirname(settingsPath()), 'profile-cache'));
+function connectionProgress(data) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('connection:progress', data);
+  if (['connected', 'choose-folder', 'missing-folder', 'error'].includes(data.phase)) { mainWindow.show(); mainWindow.focus(); }
+}
+const accountLibraries = createAccountLibraries(path.join(path.dirname(settingsPath()), 'account-libraries'), () => mainWindow, process.env.NEBULA_DEMO === '1', { BrowserWindow, session: require('electron').session, onProgress: connectionProgress });
+const steamFamily = createSteamFamilyLibrary(path.join(path.dirname(settingsPath()), 'steam-family'), () => mainWindow, {demo:process.env.NEBULA_DEMO === '1',onProgress:connectionProgress});
 let artworkCacheTask = Promise.resolve();
 
 async function readLibrarySnapshot() {
@@ -83,8 +132,18 @@ async function readLibrarySnapshot() {
     const snapshot = JSON.parse(await fs.readFile(librarySnapshotPath(), 'utf8'));
     if (snapshot.version !== 1 || !Array.isArray(snapshot.games) || snapshot.games.length > 30000
       || !snapshot.games.every(game => typeof game?.id === 'string' && typeof game.title === 'string' && typeof game.provider === 'string')) return null;
+    snapshot.games = applySteamLocalData(snapshot.games, await localSteamLibrary());
+    const savedSettings = await readSettings();
+    snapshot.games = snapshot.games.filter(game => game.installed !== false || !game.accountLibrary || savedSettings[{ ubisoft:'showUninstalledUbisoft',ea:'showUninstalledEA',battlenet:'showUninstalledBattleNet',gog:'showUninstalledGog',amazon:'showUninstalledAmazon' }[game.accountLibrary]]);
+    const expectedSteamId = savedSettings.steamFamilyAccountId || savedSettings.steamId64 || await detectSteamId64();
+    const familyStatus = await steamFamily.status(expectedSteamId);
+    snapshot.games = snapshot.games.filter(game => !game.steamFamilyImported || game.installed !== false ||
+      (savedSettings.showUninstalledSteam && savedSettings.includeSteamFamily && familyStatus.status !== 'not-connected' && snapshot.summary?.steamFamilyAccount === expectedSteamId));
+    const hiddenIds = new Set(savedSettings.hiddenGameIds || []);
+    snapshot.games = snapshot.games.filter(game => !hiddenIds.has(game.id));
     if (!currentLibrary.length) currentLibrary = snapshot.games;
-    return { ...snapshot.summary, games: snapshot.games, cachedAt: snapshot.savedAt };
+    return { ...snapshot.summary, games: snapshot.games, duplicateMode:savedSettings.duplicateMode,
+      duplicatePreferredProvider:savedSettings.duplicatePreferredProvider,duplicatePreferences:savedSettings.duplicatePreferences,cachedAt: snapshot.savedAt };
   } catch { return null; }
 }
 
@@ -292,28 +351,44 @@ async function exists(candidate) {
   }
 }
 
+let steamRootCache = null;
 async function findSteamRoots() {
+  if (steamRootCache && Date.now() - steamRootCache.at < 30000) return [...steamRootCache.roots];
   const candidates = [
     path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Steam'),
     path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Steam')
   ];
-
-  const roots = [];
-  for (const candidate of candidates) {
-    if (await exists(path.join(candidate, 'steamapps'))) roots.push(candidate);
+  if (process.platform === 'win32' && process.env.NEBULA_DEMO !== '1') {
+    const registered = await new Promise(resolve => execFile('reg.exe', ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'SteamPath'], { windowsHide: true, timeout: 1500 }, (error, stdout) => {
+      resolve(error ? '' : stdout.match(/SteamPath\s+REG_SZ\s+([^\r\n]+)/i)?.[1]?.trim() || '');
+    }));
+    if (registered && path.isAbsolute(registered)) candidates.unshift(registered);
   }
+
+  // The same folder can be spelled several ways (the registry uses "c:/program files (x86)/steam"), so compare normalised paths.
+  const roots = [];
+  const rootKey = value => path.resolve(value).replace(/[\\/]+$/, '').toLowerCase();
+  const addRoot = async value => {
+    if (!value || !path.isAbsolute(value)) return;
+    const normal = path.resolve(value).replace(/[\\/]+$/, '');
+    const index = roots.findIndex(item => rootKey(item) === rootKey(normal));
+    // Keep the nicest spelling (one with capitals) for display.
+    if (index >= 0) { if (roots[index] === roots[index].toLowerCase() && normal !== normal.toLowerCase()) roots[index] = normal; return; }
+    if (await exists(path.join(normal, 'steamapps'))) roots.push(normal);
+  };
+  for (const candidate of candidates) await addRoot(candidate);
 
   for (const root of [...roots]) {
     try {
       const libraryVdf = await fs.readFile(path.join(root, 'steamapps', 'libraryfolders.vdf'), 'utf8');
       const matches = [...libraryVdf.matchAll(/"path"\s+"([^"]+)"/gi)];
       for (const match of matches) {
-        const libraryRoot = match[1].replace(/\\\\/g, '\\');
-        if (!roots.includes(libraryRoot) && await exists(path.join(libraryRoot, 'steamapps'))) roots.push(libraryRoot);
+        await addRoot(match[1].replace(/\\\\/g, '\\'));
       }
     } catch { /* Steam may not have created libraryfolders.vdf yet. */ }
   }
-  return roots;
+  steamRootCache = { at: Date.now(), roots };
+  return [...roots];
 }
 
 function isSteamRuntimeComponent(appId, title) {
@@ -352,7 +427,11 @@ async function scanSteam() {
           provider: 'Steam',
           appId,
           steamType: type,
+          installed: Boolean(Number(parseVdfValue(text, 'StateFlags')) & 4),
           addedAt: updated ? updated * 1000 : 0,
+          sizeOnDisk: Number(parseVdfValue(text, 'SizeOnDisk')) || 0,
+          buildId: parseVdfValue(text, 'buildid'),
+          lastUpdated: updated ? updated * 1000 : 0,
           steamExecutable,
           installPath: path.join(steamApps, 'common', installDir),
           launchUri: `steam://rungameid/${appId}`
@@ -452,7 +531,9 @@ async function scanEpic() {
         provider: 'Epic Games',
         installPath: item.InstallLocation,
         executable,
-        args: item.LaunchCommand || ''
+        args: item.LaunchCommand || '',
+        sizeOnDisk: Number(item.InstallSize) || 0,
+        version: item.AppVersionString || ''
       });
     } catch { /* Ignore launcher support manifests. */ }
   }
@@ -634,6 +715,38 @@ function scheduleScreenshotCache(game, details) {
   artworkCacheTask = Promise.allSettled([artworkCacheTask, task]);
 }
 
+// Age ratings: PEGI in PEGI regions, ESRB elsewhere, then the store's own minimum age.
+const ESRB_AGES = { ec: '3', e: '6', e10: '10', t: '13', m: '17', ao: '18', rp: '' };
+function preferredRatingSystems() {
+  const region = (Intl.DateTimeFormat().resolvedOptions().locale.split('-')[1] || app.getLocaleCountryCode?.() || '').toUpperCase();
+  return ['US', 'CA', 'MX'].includes(region) ? ['ESRB', 'PEGI', 'USK'] : region === 'DE' ? ['USK', 'PEGI', 'ESRB'] : ['PEGI', 'ESRB', 'USK'];
+}
+function steamAgeRating(item) {
+  const ratings = item.ratings || {};
+  for (const system of preferredRatingSystems()) {
+    const entry = ratings[system.toLowerCase()];
+    if (!entry?.rating) continue;
+    const raw = String(entry.rating).toLowerCase();
+    const value = system === 'ESRB' ? ESRB_AGES[raw] ?? raw : raw.replace(/\D/g, '');
+    if (value) return { system, value, label: system === 'ESRB' ? raw.toUpperCase() : value, descriptors: String(entry.descriptors || '').replace(/\s*[\r\n]+\s*/g, ', ').trim() };
+  }
+  const age = Number(item.required_age) || 0;
+  return age ? { system: preferredRatingSystems()[0], value: String(age), label: String(age), descriptors: '' } : null;
+}
+function xboxAgeRating(product) {
+  const ratings = product.MarketProperties?.[0]?.ContentRatings || [];
+  for (const system of preferredRatingSystems()) {
+    const entry = ratings.find((item) => String(item.RatingSystem || '').toUpperCase() === system);
+    if (!entry?.RatingId) continue;
+    const raw = String(entry.RatingId).split(':').pop().toLowerCase();
+    const value = system === 'ESRB' ? ESRB_AGES[raw] ?? raw : raw.replace(/\D/g, '');
+    if (!value) continue;
+    const descriptors = (entry.RatingDescriptors || []).map((item) => String(item).split(':').pop().replace(/([a-z])([A-Z])/g, '$1 $2')).join(', ');
+    return { system, value, label: system === 'ESRB' ? raw.toUpperCase() : value, descriptors };
+  }
+  return null;
+}
+
 async function fetchGameDetails(game) {
   const cached = gameDetailCache.get(game.id);
   if (cached && Date.now() - cached.at < 15 * 60 * 1000) return cached.data;
@@ -643,9 +756,21 @@ async function fetchGameDetails(game) {
     ageRating: '', controllerSupport: game.controls || 'unknown', categories: [], playableOn: ['PC'],
     achievementCount: 0, supportedLanguages: '', metacriticScore: null, metadataSource: 'Local library'
   };
+  // Xbox.com's product summary carries the official rating badge, trailers and product ID.
+  const xboxSummaryRequest = consoleServices.findXboxProduct(game.title).catch(() => null);
+  const applyXboxSummary = async (details) => {
+    const summary = await xboxSummaryRequest;
+    if (!summary) return details;
+    if (summary.rating?.label) details.rating = summary.rating;
+    if (summary.videos?.length) details.videos = summary.videos;
+    details.xboxProductId ||= summary.xboxProductId;
+    details.publisher ||= summary.publisher;
+    if (!details.description && summary.description) details.description = details.fullDescription = summary.description;
+    return details;
+  };
   const xboxFallback = async () => {
     const xboxDetails = await fetchXboxCatalogDetails(game.title);
-    const result = xboxDetails ? { ...fallback, ...xboxDetails } : fallback;
+    const result = await applyXboxSummary(xboxDetails ? { ...fallback, ...xboxDetails } : { ...fallback });
     gameDetailCache.set(game.id, { at: Date.now(), data: result });
     scheduleScreenshotCache(game, result);
     return result;
@@ -658,6 +783,7 @@ async function fetchGameDetails(game) {
     if (match?.id && titleMatchScore(game.title, match.name) >= 90) appId = String(match.id);
   } catch { /* An imported title may not have a Steam store listing. */ }
   if (!appId) return xboxFallback();
+  const xboxDetailsRequest = fetchXboxCatalogDetails(game.title).catch(() => null);
   try {
     const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&l=english`, {
       headers: { 'Accept-Language': 'en-US,en;q=0.9' }, signal: AbortSignal.timeout(10000)
@@ -682,6 +808,8 @@ async function fetchGameDetails(game) {
       controllerSupport: item.controller_support === 'full' ? 'controller' : item.controller_support === 'partial' ? 'partial' : fallback.controllerSupport,
       achievementCount: Number(item.achievements?.total) || 0,
       supportedLanguages: String(item.supported_languages || '').replace(/<br\s*\/?\s*>/gi, ', ').replace(/<[^>]+>/g, '').replace(/\*+\s*languages with full audio support.*$/i, '').replace(/\*/g, '').split(',').map((language) => language.trim()).filter(Boolean).slice(0, 8).join(', '),
+      supportedLanguageCount: String(item.supported_languages || '').replace(/<br\s*\/?\s*>/gi, ', ').replace(/<[^>]+>/g, '').replace(/\*+\s*languages with full audio support.*$/i, '').split(',').map((language) => language.trim()).filter(Boolean).length,
+      contentNotes: plainText(item.content_descriptors?.notes || '').slice(0, 200),
       metacriticScore: Number(item.metacritic?.score) || null,
       metadataSource: 'Steam Store',
       screenshots: (item.screenshots || []).map((entry) => entry.path_full || entry.path_thumbnail).filter((url) => /^https:\/\/[^/]*steamstatic\.com\//i.test(url)).slice(0, 12),
@@ -690,19 +818,19 @@ async function fetchGameDetails(game) {
     const dlcIds = (item.dlc || []).map(String).filter((id) => /^\d+$/.test(id)).slice(0, 50);
     details.dlcIds = dlcIds;
     details.dlcStatus = dlcIds.length ? 'needs-check' : 'none-listed';
-    if (!details.description || !details.screenshots.length) {
-      const xbox = await fetchXboxCatalogDetails(game.title);
-      if (xbox) {
-        details.description ||= xbox.description || '';
-        details.fullDescription ||= xbox.fullDescription || xbox.description || '';
-        if (!details.screenshots.length) details.screenshots = xbox.screenshots || [];
-        details.publisher ||= xbox.publisher || '';
-        details.developer ||= xbox.developer || '';
-        if (!details.genres.length) details.genres = xbox.genres || [];
-        details.releaseDate ||= xbox.releaseDate || '';
-        if (!details.categories.length) details.categories = xbox.categories || [];
-      }
+    details.rating = steamAgeRating(item);
+    // Metadata follows the artwork order: the Xbox Store first, Steam fills the gaps.
+    const xbox = await xboxDetailsRequest;
+    if (xbox) {
+      for (const key of ['description', 'fullDescription', 'publisher', 'developer', 'releaseDate']) if (xbox[key]) details[key] = xbox[key];
+      if (xbox.genres?.length) details.genres = [...new Set([...xbox.genres, ...details.genres])].slice(0, 5);
+      if (!details.screenshots.length) details.screenshots = xbox.screenshots || [];
+      if (!details.categories.length) details.categories = xbox.categories || [];
+      if (xbox.rating) details.rating = xbox.rating;
+      details.metadataSource = 'Xbox Store · Steam';
     }
+    await applyXboxSummary(details);
+    if (details.rating && !details.ageRating) details.ageRating = `${details.rating.value}+`;
     if (!details.screenshots.length) details.screenshots = fallback.screenshots;
     gameDetailCache.set(game.id, { at: Date.now(), data: details });
     scheduleScreenshotCache(game, details);
@@ -734,112 +862,6 @@ async function fetchOwnedDlc(game) {
   return { status: owned.status === 'ready' ? 'listed-checked' : 'listed-unverified', items, total: details.dlcIds.length };
 }
 
-async function fetchXboxAchievementCatalog(game, settings) {
-  const apiKey = String(settings.xboxApiKey || '').trim();
-  if (!apiKey) return null;
-  const savedReference = game.xboxAchievementReference || settings.xboxAchievementReferences?.[game.id] || {};
-  let xuid = '';
-  let titles = [];
-  try {
-    if (xboxTitleHistoryCache.apiKey === apiKey && Date.now() - xboxTitleHistoryCache.at < 60 * 60 * 1000) {
-      ({ xuid, titles } = xboxTitleHistoryCache);
-    } else {
-      const request = async (route) => {
-        const response = await fetch(`https://api.xbl.io/v2/${route}`, {
-          headers: { 'X-Authorization': apiKey, Accept: 'application/json' },
-          signal: AbortSignal.timeout(10000)
-        });
-        if (!response.ok) throw new Error(`OpenXBL returned ${response.status}`);
-        const body = await response.json();
-        return body?.content || body?.data || body;
-      };
-      const account = await request('account');
-      const profile = account.profileUsers?.[0] || account.profile?.profileUsers?.[0] || account.account?.profileUsers?.[0] || {};
-      const profileSettings = profile.settings || [];
-      xuid = String(account.xuid || account.XUID || profile.id || profile.hostId || '');
-      const history = await request('player/titleHistory');
-      titles = Array.isArray(history) ? history : history.titles || history.titleHistory || history.items || history.games || history.titleHistory?.titles || [];
-      if (!Array.isArray(titles)) titles = [];
-      xboxTitleHistoryCache = { at: Date.now(), apiKey, xuid, titles };
-      if (!xuid) {
-        const setting = profileSettings.find((item) => String(item.id).toLowerCase() === 'xuid');
-        xuid = String(setting?.value || '');
-      }
-      xboxTitleHistoryCache.xuid = xuid;
-    }
-    if (!xuid) throw new Error('OpenXBL did not return an Xbox account identifier.');
-    let reference = String(savedReference.titleId || '').trim() ? savedReference : null;
-    if (!reference) {
-      const ranked = titles.map((entry) => ({
-        entry,
-        titleId: String(entry.titleId || entry.titleID || entry.title?.titleId || entry.id || ''),
-        name: String(entry.name || entry.titleName || entry.title?.name || entry.displayName || entry.title?.displayName || '')
-      })).filter((entry) => /^\d{1,12}$/.test(entry.titleId))
-        .map((entry) => ({ ...entry, score: titleMatchScore(game.title, entry.name) }))
-        .sort((a, b) => b.score - a.score);
-      if (ranked[0]?.score >= 66) reference = {
-        titleId: ranked[0].titleId,
-        platform: String(ranked[0].entry.platform || ranked[0].entry.device || ranked[0].entry.platformName || 'auto')
-      };
-    }
-    if (!reference?.titleId) return { status: 'xbox-no-match', items: [] };
-    const titleId = String(reference.titleId);
-    const cacheKey = `${apiKey}:${xuid}:${titleId}:${reference.platform || 'auto'}`;
-    const cached = xboxAchievementCache.get(cacheKey);
-    if (cached && Date.now() - cached.at < 6 * 60 * 60 * 1000) return cached.result;
-    const platform = String(reference.platform || 'auto');
-    const is360 = platform === 'xbox360' || /360|legacy/i.test(platform);
-    const routes = is360
-      ? [`achievements/x360/${encodeURIComponent(xuid)}/title/${encodeURIComponent(titleId)}`, `achievements/player/${encodeURIComponent(xuid)}/${encodeURIComponent(titleId)}`]
-      : [`achievements/player/${encodeURIComponent(xuid)}/${encodeURIComponent(titleId)}`, `achievements/x360/${encodeURIComponent(xuid)}/title/${encodeURIComponent(titleId)}`];
-    let payload = null;
-    let requestSucceeded = false;
-    let detectedPlatform = platform;
-    for (const route of routes) {
-      try {
-        const response = await fetch(`https://api.xbl.io/v2/${route}`, {
-          headers: { 'X-Authorization': apiKey, Accept: 'application/json' },
-          signal: AbortSignal.timeout(12000)
-        });
-        if (!response.ok) continue;
-        payload = await response.json();
-        requestSucceeded = true;
-        detectedPlatform = route.includes('/x360/') ? 'Xbox 360' : 'Xbox';
-        break;
-      } catch { /* Try the other documented Xbox achievement route. */ }
-    }
-    const body = payload?.content || payload?.data || payload;
-    const achievements = body?.achievements || body?.playerAchievements || body?.achievementList || body?.items || (Array.isArray(body) ? body : []);
-    if (!requestSucceeded) return { status: 'xbox-unavailable', items: [] };
-    if (!Array.isArray(achievements) || !achievements.length) return { status: 'xbox-no-match', items: [] };
-    const safeIcon = (value) => {
-      try {
-        const url = new URL(String(value || ''));
-        if (url.protocol === 'http:') url.protocol = 'https:';
-        return url.protocol === 'https:' ? url.toString() : null;
-      } catch { return null; }
-    };
-    const items = achievements.slice(0, 250).map((entry) => {
-      const icon = (entry.mediaAssets || []).find((asset) => /icon/i.test(String(asset.type || asset.name || '')))?.url || entry.icon || entry.imageUrl || '';
-      const unlockedState = String(entry.progressState || entry.progression?.achievementState || entry.state || '');
-      const hasUnlockInfo = Boolean(unlockedState || entry.progression?.timeUnlocked || typeof entry.unlocked === 'boolean' || typeof entry.earned === 'boolean');
-      const reward = (entry.rewards || []).find((item) => String(item.type).toLowerCase() === 'gamerscore');
-      const secret = Boolean(entry.isSecret || entry.secret);
-      return {
-        id: String(entry.id || entry.achievementId || entry.name || ''),
-        title: secret && !/achieved|unlocked/i.test(unlockedState) ? 'Secret achievement' : String(entry.name || entry.title || entry.displayName || 'Achievement'),
-        description: secret && !/achieved|unlocked/i.test(unlockedState) ? 'Unlock this achievement to reveal its details.' : String(entry.description || entry.lockedDescription || entry.requirements?.[0]?.description || ''),
-        unlocked: /achieved|unlocked|earned/i.test(unlockedState) || Boolean(entry.progression?.timeUnlocked) || entry.unlocked === true || entry.earned === true ? true : hasUnlockInfo ? false : null,
-        icon: safeIcon(icon), lockedIcon: safeIcon(icon), gamerscore: Number(reward?.value || entry.gamerscore || 0)
-      };
-    }).filter((item) => item.title);
-    const result = { status: 'xbox-ready', source: 'Xbox Live', platform: detectedPlatform, progressAvailable: items.some((item) => item.unlocked !== null), items };
-    xboxAchievementCache.set(cacheKey, { at: Date.now(), result });
-    return result;
-  } catch {
-    return { status: 'xbox-unavailable', items: [] };
-  }
-}
 
 async function fetchGameAchievements(game) {
   const settings = await readSettings();
@@ -878,6 +900,8 @@ async function fetchGameAchievements(game) {
           status: referenceOnly ? 'reference-only' : 'ready',
           source: 'Steam',
           progressAvailable: !referenceOnly && Boolean(player?.playerstats?.success),
+          totalAvailable: available.length,
+          unlockedCount: !referenceOnly ? available.filter(entry => unlocked.get(entry.name) === true).length : 0,
           items: available.slice(0, 150).map((entry) => ({
             id: entry.name, title: entry.displayName || entry.name,
             description: entry.hidden ? '' : entry.description || '',
@@ -904,38 +928,11 @@ async function fetchGameAchievements(game) {
       }
     } catch { /* An authenticated Xbox catalog may have this game's achievement data. */ }
   }
-  const xbox = await fetchXboxAchievementCatalog(game, settings);
-  if (xbox) return xbox;
+
   return { status: appId ? 'none-listed' : 'no-reference', items: [] };
 }
 
-function normalizeTitle(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-function titleMatchScore(query, candidate) {
-  const wanted = normalizeTitle(query);
-  const actual = normalizeTitle(candidate);
-  if (!wanted || !actual) return 0;
-  if (wanted === actual) return 100;
-  if (actual.startsWith(wanted) || wanted.startsWith(actual)) return 82;
-  if (actual.includes(wanted) || wanted.includes(actual)) return 72;
-  const wantedWords = new Set(wanted.split(' '));
-  const actualWords = new Set(actual.split(' '));
-  const overlap = [...wantedWords].filter((word) => actualWords.has(word)).length / Math.max(wantedWords.size, actualWords.size);
-  const rows = Array.from({ length: wanted.length + 1 }, (_, row) => row);
-  for (let column = 1; column <= actual.length; column++) {
-    let diagonal = rows[0];
-    rows[0] = column;
-    for (let row = 1; row <= wanted.length; row++) {
-      const previous = rows[row];
-      rows[row] = Math.min(rows[row] + 1, rows[row - 1] + 1, diagonal + (wanted[row - 1] === actual[column - 1] ? 0 : 1));
-      diagonal = previous;
-    }
-  }
-  const editSimilarity = 1 - rows[wanted.length] / Math.max(wanted.length, actual.length);
-  return Math.round(Math.max(overlap * 68, editSimilarity * 64));
-}
+// Title matching lives in title-match.cjs (sequel numbers, years and remasters must agree).
 
 function catalogImage(images, purpose, squareOnly = false) {
   return images
@@ -967,7 +964,7 @@ async function fetchXboxCatalogArtwork(title) {
       return score(titleOf(b)) - score(titleOf(a));
     })[0];
     const productTitle = product?.ProductTitle || product?.LocalizedProperties?.[0]?.ProductTitle || product?.LocalizedProperties?.[0]?.Title || '';
-    if (titleMatchScore(title, productTitle) < 72) return null;
+    if (titleMatchScore(title, productTitle) < 82) return null;
     const localized = product.LocalizedProperties?.[0] || product.localizedProperties?.[0] || product;
     const imageList = localized.Images || localized.images || product.Images || product.images || [];
     const images = Array.isArray(imageList) ? imageList : [];
@@ -1037,6 +1034,7 @@ async function fetchXboxCatalogDetails(title) {
       categories,
       screenshots,
       dlcStatus: 'unavailable',
+      rating: xboxAgeRating(product),
       metadataSource: 'Xbox Store'
     };
   } catch { return null; }
@@ -1106,7 +1104,7 @@ async function findArtwork(title, apiKey, provider = 'PC', fullArt = true) {
   ]);
   let sgdb = null;
   let sgdbError = '';
-  if (apiKey && (fullArt || !(psn?.tile || ign?.tile || xbox?.tile))) {
+  if (apiKey && (fullArt || !(xbox?.tile || ign?.tile || psn?.tile))) {
     try {
       const results = await fetchSgdbJson(`/search/autocomplete/${encodeURIComponent(title)}`, apiKey);
       if (results.length) {
@@ -1161,25 +1159,26 @@ async function findArtwork(title, apiKey, provider = 'PC', fullArt = true) {
     }
   }
 
-  const selected = psn?.tile ? psn : xbox?.tile ? xbox : ign?.tile ? ign : sgdb || psn || xbox || ign || {};
+  // Covers: Xbox, then IGN, then PlayStation, then SteamGridDB.
+  const selected = xbox?.tile ? xbox : ign?.tile ? ign : psn?.tile ? psn : sgdb?.tile ? sgdb : sgdb || xbox || ign || psn || {};
   const hasArtwork = Boolean(selected.tile || selected.hero || sgdb?.hero || xbox?.hero);
-  const coverCandidates = [psn, xbox, ign, sgdb].filter((source) => source?.tile && isAllowedArtworkUrl(source.tile))
+  const coverCandidates = [xbox, ign, psn, sgdb].filter((source) => source?.tile && isAllowedArtworkUrl(source.tile))
     .filter((source, index, sources) => sources.findIndex((candidate) => candidate.tile === source.tile) === index)
     .map((source) => ({ tile: source.tile, imageSource: source.imageSource, tileIsSquare: Boolean(source.tileIsSquare) }));
   return {
     tile: selected.tile || null,
     grid: selected.grid || selected.tile || null,
     tileIsSquare: Boolean(selected.tileIsSquare),
-    hero: sgdb?.hero || psn?.hero || xbox?.hero || selected.tile || null,
-    wide: sgdb?.wide || psn?.wide || xbox?.wide || null,
-    logo: sgdb?.logo || null,
+    hero: xbox?.hero || psn?.hero || sgdb?.hero || selected.tile || null,
+    wide: xbox?.wide || psn?.wide || sgdb?.wide || null,
+    logo: xbox?.logo || sgdb?.logo || null,
     controls: xbox?.controls || 'unknown',
     sgdbGameId: sgdb?.sgdbGameId || null,
     imageSource: selected.imageSource || (hasArtwork ? 'steamgriddb-fallback' : 'none'),
     coverCandidates,
-    artworkVersion: 6,
+    artworkVersion: 8,
     artworkError: hasArtwork ? '' : sgdbError,
-    artworkPriority: 'psn-then-xbox-then-ign-then-steamgriddb',
+    artworkPriority: 'xbox-then-ign-then-psn-then-steamgriddb',
     provider
   };
 }
@@ -1222,6 +1221,59 @@ async function fetchOwnedEpicGames(settings) {
   } catch { return { games: [], status: 'sign-in-required', helperPath }; }
 }
 
+// Install sizes for launchers that do not report one. Folders are measured once in the
+// background, one at a time, and cached on disk for a week.
+let installSizeCache = null;
+let installSizeRunning = false;
+function installSizeFile() { return path.join(path.dirname(settingsPath()), 'install-sizes.json'); }
+async function readInstallSizes() {
+  if (installSizeCache) return installSizeCache;
+  try { installSizeCache = JSON.parse(await fs.readFile(installSizeFile(), 'utf8')) || {}; } catch { installSizeCache = {}; }
+  return installSizeCache;
+}
+async function measureFolderSize(folder, { files = 400000, until = Date.now() + 60000 } = {}) {
+  let total = 0, seen = 0;
+  const stack = [folder];
+  while (stack.length && seen < files && Date.now() < until) {
+    const current = stack.pop();
+    let entries = [];
+    try { entries = await fs.readdir(current, { withFileTypes: true }); } catch { continue; }
+    const sizes = await Promise.all(entries.map(async (entry) => {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) { stack.push(full); return 0; }
+      if (!entry.isFile()) return 0;
+      seen++;
+      try { return (await fs.stat(full)).size; } catch { return 0; }
+    }));
+    for (const size of sizes) total += size;
+  }
+  return { bytes: total, complete: !stack.length };
+}
+function needsMeasuredSize(game) {
+  return game.installed !== false && !game.sizeOnDisk && !game.isLauncher && game.installPath && game.provider !== 'Steam';
+}
+async function applyCachedInstallSizes(games) {
+  const cache = await readInstallSizes();
+  for (const game of games) if (needsMeasuredSize(game) && cache[game.installPath]?.bytes) game.sizeOnDisk = cache[game.installPath].bytes;
+}
+async function measureInstallSizes() {
+  if (installSizeRunning || process.env.NEBULA_DEMO === '1') return;
+  installSizeRunning = true;
+  try {
+    const cache = await readInstallSizes();
+    const pending = currentLibrary.filter((game) => needsMeasuredSize(game) || (game.provider !== 'Steam' && game.installPath && cache[game.installPath] && Date.now() - cache[game.installPath].at > 7 * 24 * 60 * 60 * 1000));
+    for (const game of pending) {
+      if (!await exists(game.installPath)) continue;
+      const measured = await measureFolderSize(game.installPath);
+      if (!measured.bytes) continue;
+      cache[game.installPath] = { bytes: measured.bytes, at: Date.now() };
+      game.sizeOnDisk = measured.bytes;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:sizes', { [game.id]: measured.bytes });
+      await fs.writeFile(installSizeFile(), JSON.stringify(cache)).catch(() => {});
+    }
+  } finally { installSizeRunning = false; }
+}
+
 async function scanLibrary({ refreshArt = false } = {}) {
   const scanEpoch = ++artworkScanEpoch;
   const progress = (percent, message) => {
@@ -1232,37 +1284,53 @@ async function scanLibrary({ refreshArt = false } = {}) {
     await new Promise(resolve => setTimeout(resolve, Math.min(5000, Number(process.env.NEBULA_REVIEW_SCAN_DELAY) || 0)));
   }
   const settings = await readSettings();
-  const [found, ownedResult, epicOwnedResult] = await Promise.all([
+  const steamAccount = settings.steamId64 || await detectSteamId64();
+  const steamFamilyAccount = settings.steamFamilyAccountId || steamAccount;
+  const [found, ownedResult, epicOwnedResult, steamLocal, publishers, eaOwned, battleOwned, familyResult] = await Promise.all([
     process.env.NEBULA_DEMO === '1'
       ? [[
-        { id: 'demo-1', title: 'Forza Horizon 5', provider: 'Steam', appId: '1551360', executable: process.execPath },
-        { id: 'demo-2', title: 'Halo Infinite', provider: 'Steam', appId: '1240440', executable: process.execPath },
+        { id: 'demo-1', title: 'Forza Horizon 5', provider: 'Steam', appId: '1551360', executable: process.execPath, sizeOnDisk: 161061273600, buildId: '15890211', lastUpdated: Date.UTC(2026, 8, 4) },
+        { id: 'demo-2', title: 'Halo Infinite', provider: 'Steam', appId: '1240440', executable: process.execPath, sizeOnDisk: 52613349376, buildId: '14220877', lastUpdated: Date.UTC(2026, 7, 21) },
         { id: 'demo-3', title: 'Lies of P', provider: 'PC', executable: process.execPath },
         { id: 'demo-4', title: 'Hi-Fi RUSH', provider: 'Epic Games', executable: process.execPath },
-        { id: 'demo-5', title: 'Sea of Thieves', provider: 'Steam', appId: '1172620', executable: process.execPath },
+        { id: 'demo-5', title: 'Sea of Thieves', provider: 'Steam', appId: '1172620', executable: process.execPath, sizeOnDisk: 85899345920, buildId: '15012344', lastUpdated: Date.UTC(2026, 8, 30) },
         { id: 'demo-6', title: 'Senua’s Saga', provider: 'PC', executable: process.execPath }
       ], [{ id: 'launcher-steam', title: 'Steam', provider: 'Steam', executable: process.execPath, isApp: true, isLauncher: true }, { id: 'launcher-epic-games-launcher', title: 'Epic Games Launcher', provider: 'Epic Games', executable: process.execPath, isApp: true, isLauncher: true }]]
       : Promise.all([scanSteam(), scanEpic(), scanXboxGames(), scanPublisherShortcuts(), scanInstalledLaunchers()]),
     process.env.NEBULA_DEMO === '1' ? Promise.resolve({ games: [], status: 'disabled' }) : fetchOwnedSteamGames(settings),
-    fetchOwnedEpicGames(settings)
+    fetchOwnedEpicGames(settings),
+    localSteamLibrary(),
+    process.env.NEBULA_DEMO === '1' ? {games:[],ubisoftStatus:'not-connected',ubisoftCount:0} : scanLocalPublishers(settings.showUninstalledUbisoft),
+    settings.showUninstalledEA ? accountLibraries.library('ea') : {games:[],status:'disabled'},
+    settings.showUninstalledBattleNet ? accountLibraries.library('battlenet') : {games:[],status:'disabled'},
+    settings.includeSteamFamily ? steamFamily.library(steamFamilyAccount) : {games:[],status:'disabled'}
   ]);
+  publisherLocalStatus = {ubisoftStatus:publishers.ubisoftStatus,ubisoftCount:publishers.ubisoftCount};
   const ownedByAppId = new Map(ownedResult.games.map((game) => [game.appId, game]));
-  const installed = found.flat().map((game) => ({
+  const familyByAppId = new Map(familyResult.games.map(game=>[game.appId,game]));
+  const demo = process.env.NEBULA_DEMO === '1';
+  const gogOwned = settings.showUninstalledGog && !demo ? readGogOwned() : { games: [] }, amazonOwned = settings.showUninstalledAmazon && !demo ? readAmazonOwned() : { games: [] };
+  const installed = mergePublisherGames(mergePublisherGames(found.flat(), publishers.games), [...eaOwned.games,...battleOwned.games,...gogOwned.games,...amazonOwned.games]).map((game) => ({
     ...game,
-    installed: true,
-    steamPlaytimeMinutes: ownedByAppId.get(game.appId)?.steamPlaytimeMinutes || 0,
-    steamOwned: Boolean(ownedByAppId.has(game.appId))
+    installed: game.installed !== false,
+    steamPlaytimeMinutes: Math.max(ownedByAppId.get(game.appId)?.steamPlaytimeMinutes || 0,familyByAppId.get(game.appId)?.steamPlaytimeMinutes || 0),
+    steamOwned: Boolean(ownedByAppId.has(game.appId) || familyByAppId.get(game.appId)?.steamOwned),
+    steamFamilyShared: game.provider === 'Steam' && !ownedByAppId.has(game.appId) && familyByAppId.get(game.appId)?.steamFamilyShared === true
   }));
   const installedIds = new Set(installed.filter((game) => game.provider === 'Steam').map((game) => game.appId));
   const remoteGames = settings.showUninstalledSteam ? ownedResult.games.filter((game) => !installedIds.has(game.appId)).map((game) => ({ ...game, steamOwned: true })) : [];
+  const remoteIds = new Set(remoteGames.map(game=>game.appId));
+  // Family games you haven't installed follow the Steam switch: "installed games only" means none of them.
+  const familyGames = !settings.showUninstalledSteam ? [] : familyResult.games.filter(game=>game.steamFamilyShared && !ownedByAppId.has(game.appId) && !installedIds.has(game.appId) && !remoteIds.has(game.appId))
+    .map(game=>({...game,steamFamilyImported:true}));
   const installedEpicTitles = new Set(installed.filter(game => game.provider === 'Epic Games').map(game => normalizeTitle(game.title)));
   const remoteEpicGames = settings.showUninstalledEpic ? epicOwnedResult.games.filter(game => !installedEpicTitles.has(normalizeTitle(game.title))) : [];
-  const merged = [...installed, ...remoteGames, ...remoteEpicGames, ...(settings.customGames || []).map((game) => ({ installed: true, ...game, isCustom: true }))];
+  const merged = applySteamLocalData([...installed, ...remoteGames, ...familyGames, ...remoteEpicGames, ...(settings.customGames || []).map((game) => ({ installed: true, ...game, isCustom: true }))], steamLocal);
   progress(28, `Found ${merged.length} library items. Checking game types…`);
   const byId = new Map();
   const seen = new Set();
   for (const game of merged) {
-    const dedupeKey = `${normalizeTitle(game.title)}:${game.provider}`;
+    const dedupeKey = game.isCustom ? game.id : game.provider === 'Steam' && game.appId ? `steam-${game.appId}` : `${normalizeTitle(game.title)}:${game.provider}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
     byId.set(game.id, game);
@@ -1274,6 +1342,8 @@ async function scanLibrary({ refreshArt = false } = {}) {
     const cached = steamAppDetails[game.appId];
     return !cached?.type || !Array.isArray(cached.categories) || (cached.checkedAt && Date.now() - cached.checkedAt > 30 * 24 * 60 * 60 * 1000);
   }).slice(0, 120);
+  // Steam's app-type lookup waits at most 4 seconds before the library is shown; the rest finishes behind it.
+  const detailsTask = (async () => {
   for (let index = 0; index < detailsPending.length; index += 80) {
     const groups = Array.from({ length: Math.min(4, Math.ceil((detailsPending.length - index) / 20)) }, (_, groupIndex) => detailsPending.slice(index + groupIndex * 20, index + (groupIndex + 1) * 20));
     await Promise.all(groups.map(async (batch) => {
@@ -1293,11 +1363,15 @@ async function scanLibrary({ refreshArt = false } = {}) {
     }));
   }
   if (detailsPending.length) await writeSettings({ steamAppDetails });
+  })().catch(() => {});
+  if (detailsPending.length) await Promise.race([detailsTask, new Promise(resolve => setTimeout(resolve, 4000))]);
   progress(42, 'Preparing your game artwork…');
   const playHistory = settings.playHistory || [];
   const historyRank = new Map(playHistory.map((id, index) => [id, index]));
+  const hiddenIds = new Set(settings.hiddenGameIds || []);
+  const hiddenGames = [...byId.values()].filter((game) => hiddenIds.has(game.id)).map((game) => ({ id: game.id, title: game.title, provider: game.provider, artwork: artwork[game.id] || game.artwork || null }));
   const visible = [...byId.values()]
-    .filter((game) => !(settings.hiddenGameIds || []).includes(game.id))
+    .filter((game) => !hiddenIds.has(game.id))
     .sort((a, b) => {
       const aRank = historyRank.has(a.id) ? historyRank.get(a.id) : Number.MAX_SAFE_INTEGER;
       const bRank = historyRank.has(b.id) ? historyRank.get(b.id) : Number.MAX_SAFE_INTEGER;
@@ -1310,7 +1384,7 @@ async function scanLibrary({ refreshArt = false } = {}) {
   }
   currentLibrary = visible.map((game) => ({
     ...game,
-    artwork: artwork[game.id] || null,
+    artwork: artwork[game.id] || game.artwork || null,
     steamType: game.provider === 'Steam' ? (steamAppDetails[game.appId]?.type || game.steamType || 'game') : null,
     steamCategories: game.provider === 'Steam' ? (steamAppDetails[game.appId]?.categories || []) : [],
     isApp: game.isLauncher || (typeof settings.gameCategoryOverrides?.[game.id] === 'boolean'
@@ -1321,14 +1395,17 @@ async function scanLibrary({ refreshArt = false } = {}) {
     playCount: Number((settings.playCounts || {})[game.id] || 0),
     launchOptions: (settings.gameLaunchOptions || {})[game.id] || '',
     achievementReferenceAppId: (settings.achievementReferenceAppIds || {})[game.id] || '',
-    xboxAchievementReference: (settings.xboxAchievementReferences || {})[game.id] || null,
     controls: capabilitiesByGame[game.id] || game.controls || artwork[game.id]?.controls || 'unknown'
   }));
   const latestPlaySettings = await readSettings();
   const latestHistoryRank = new Map((latestPlaySettings.playHistory || []).map((id, index) => [id, index]));
   currentLibrary.forEach((game) => { game.playCount = Number(latestPlaySettings.playCounts?.[game.id] || 0); });
   currentLibrary.sort((a, b) => (latestHistoryRank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (latestHistoryRank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
-  const librarySummary = { steamStatus: ownedResult.status, steamOwnedCount: ownedResult.count || 0, steamId64: ownedResult.steamId64 || '', showUninstalledSteam: settings.showUninstalledSteam === true, steamApiKeyConfigured: Boolean(settings.steamApiKey), epicStatus: epicOwnedResult.status, epicOwnedCount: epicOwnedResult.games.length, epicHelperPath: epicOwnedResult.helperPath, showUninstalledEpic: settings.showUninstalledEpic === true };
+  const librarySummary = { hiddenGames, steamStatus: ownedResult.status, steamOwnedCount: ownedResult.count || 0, steamId64: ownedResult.steamId64 || '', showUninstalledSteam: settings.showUninstalledSteam === true, steamApiKeyConfigured: Boolean(settings.steamApiKey), epicStatus: epicOwnedResult.status, epicOwnedCount: epicOwnedResult.games.length, epicHelperPath: epicOwnedResult.helperPath, showUninstalledEpic: settings.showUninstalledEpic === true,
+    steamFamilyStatus:familyResult.status,steamFamilyCount:familyResult.games.filter(game=>game.steamFamilyShared).length,steamFamilyAccount:familyResult.steamId || steamAccount,
+    duplicateMode:settings.duplicateMode,duplicatePreferredProvider:settings.duplicatePreferredProvider,duplicatePreferences:settings.duplicatePreferences };
+  await applyCachedInstallSizes(currentLibrary);
+  setTimeout(() => measureInstallSizes().catch(() => {}), 8000);
   if (scanEpoch === artworkScanEpoch) {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:initial', { games: currentLibrary, ...librarySummary });
     await writeLibrarySnapshot({ games: currentLibrary, ...librarySummary }, scanEpoch).catch(() => {});
@@ -1345,7 +1422,9 @@ async function scanLibrary({ refreshArt = false } = {}) {
     const pending = visible.filter((game) => {
       if (game.isLauncher) return false;
       const cached = artwork[game.id];
-      return !cached?.manual && (refreshArt || cached?.artworkVersion !== 6 || (cached?.imageSource === 'none' && Date.now() - (cached.lastAttemptedAt || 0) > 7 * 24 * 60 * 60 * 1000));
+      // Games that already have artwork keep it. Only missing art, or a failed lookup a week old, is fetched again.
+      // Numbered, dated or remastered titles matched before version 8 are checked once more with the stricter matcher.
+      return !cached?.manual && (refreshArt || !cached || (Number(cached.artworkVersion) || 0) < 6 || ((Number(cached.artworkVersion) || 0) < 8 && titleNeedsRecheck(game.title)) || (!cached.tile && !cached.hero && Date.now() - (cached.lastAttemptedAt || 0) > 7 * 24 * 60 * 60 * 1000));
     }).sort((a, b) => (historyRank.has(a.id) ? historyRank.get(a.id) : Number.MAX_SAFE_INTEGER) - (historyRank.has(b.id) ? historyRank.get(b.id) : Number.MAX_SAFE_INTEGER)
       || Number(b.installed !== false) - Number(a.installed !== false)
       || (Number(b.steamPlaytimeMinutes) || 0) - (Number(a.steamPlaytimeMinutes) || 0)
@@ -1356,12 +1435,14 @@ async function scanLibrary({ refreshArt = false } = {}) {
       await Promise.all(batch.map(async (game) => {
         try {
           const foundArtwork = await findArtwork(game.title, settings.steamGridDbKey, game.provider, false);
-          const existingLogo = artwork[game.id]?.artworkVersion === 6
+          const existingLogo = artwork[game.id]?.artworkVersion >= 6 && !(artwork[game.id].artworkVersion < 8 && titleNeedsRecheck(game.title))
             ? (currentLibrary.find((item) => item.id === game.id)?.artwork?.logo || artwork[game.id]?.logo)
             : null;
-          artwork[game.id] = { ...(foundArtwork || { artworkVersion: 6, imageSource: 'none' }), logo: foundArtwork?.logo || existingLogo || null, lastAttemptedAt: Date.now() };
+          artwork[game.id] = { ...(foundArtwork || { artworkVersion: 8, imageSource: 'none' }), logo: foundArtwork?.logo || existingLogo || null, lastAttemptedAt: Date.now() };
         } catch (error) {
-          artwork[game.id] = { ...(artwork[game.id] || {}), artworkVersion: 6, imageSource: artwork[game.id]?.imageSource || 'none', lastAttemptedAt: Date.now(), artworkError: error.message };
+          // A failed lookup must not bless old, potentially mismatched artwork
+          // with the new matcher's version: leave it eligible for a retry.
+          artwork[game.id] = { ...(artwork[game.id] || {}), imageSource: artwork[game.id]?.imageSource || 'none', lastAttemptedAt: Date.now(), artworkError: error.message };
         }
       }));
       if (scanEpoch !== artworkScanEpoch) break;
@@ -1487,6 +1568,8 @@ function registerIpc() {
     return { appId, assets: available.filter(Boolean) };
   });
   ipcMain.handle('library:scan', (_event, options) => scanLibrary(options));
+  ipcMain.handle('accounts:cancel-connect', () => accountLibraries.cancelConnect());
+  ipcMain.handle('steam:family-cancel-connect', () => steamFamily.cancelConnect());
   ipcMain.handle('library:cached', () => readLibrarySnapshot());
   ipcMain.handle('settings:get', async () => {
     const settings = await readSettings();
@@ -1496,13 +1579,221 @@ function registerIpc() {
     const [roots, steamId64, recentSteamId64, clientRunning] = await Promise.all([findSteamRoots(), detectSteamId64(), detectRecentSteamId64(), steamClientIsRunning()]);
     return { installed: roots.length > 0, accountDetected: Boolean(steamId64), steamId64, clientRunning, ready: clientRunning && Boolean(recentSteamId64) };
   });
+  ipcMain.handle('steam:profile', async () => {
+    const [local, settings] = await Promise.all([localSteamLibrary(), readSettings()]);
+    currentLibrary = applySteamLocalData(currentLibrary, local);
+    const games = currentLibrary.filter(game => game.provider === 'Steam' && game.appId && !game.isApp);
+    return { games: games.map(game => ({ id: game.id, minutes: Number(game.steamPlaytimeMinutes) || 0, lastPlayed: game.steamLastPlayed || 0 })),
+      localAvailable: local.available, personalAchievements: Boolean(settings.steamApiKey),
+      scope: 'Imported Steam games · hidden games excluded' };
+  });
+  ipcMain.handle('profile:identity', async () => {
+    const settings = await readSettings();
+    const steamId = settings.steamId64 || await detectSteamId64();
+    const identity = process.env.NEBULA_DEMO === '1' ? { available: false } : await playerProfile.identity(steamId, await findSteamRoots(), settings.steamApiKey);
+    return { ...identity, nameMode: profileMode(settings), avatarId: defaultAvatarId(settings) };
+  });
+  ipcMain.handle('profile:score', async (_event, sync = false) => {
+    const settings = await readSettings();
+    const steamId = settings.steamId64 || await detectSteamId64();
+    const ids = currentLibrary.filter(game => game.provider === 'Steam' && !game.isApp).map(game => String(game.appId)).filter(id => /^\d+$/.test(id));
+    const canSync = Boolean(settings.steamApiKey && steamId && process.env.NEBULA_DEMO !== '1');
+    const summary = sync && canSync ? await playerProfile.sync(steamId, settings.steamApiKey, ids, () => mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused() && !activeGameSession)
+      : await playerProfile.score(steamId, ids);
+    return { ...summary, canSync };
+  });
+  ipcMain.handle('accounts:status', async () => {
+    const settings = await readSettings();
+    return { ubisoft:{status:publisherLocalStatus.ubisoftStatus,count:publisherLocalStatus.ubisoftCount,enabled:settings.showUninstalledUbisoft},
+      ea:{...await accountLibraries.status('ea'),enabled:settings.showUninstalledEA},
+      battlenet:{...await accountLibraries.status('battlenet'),enabled:settings.showUninstalledBattleNet} };
+  });
+  // Every launcher on this PC, and whether it can also bring in games you own but haven't installed.
+  // Owned-library support: Steam (Web API), Steam Family (family sign-in), Epic (Legendary helper),
+  // EA app and Battle.net (website sign-in), Ubisoft Connect, GOG Galaxy and Amazon Games (local client data).
+  // Xbox app, Rockstar, Riot and itch only expose installed games.
+  let launcherScanCache = { at: 0, list: null };
+  ipcMain.handle('library:import-sources', async () => {
+    const settings = await readSettings();
+    const demo = process.env.NEBULA_DEMO === '1';
+    if (!launcherScanCache.list || Date.now() - launcherScanCache.at > 60000) launcherScanCache = { at: Date.now(), list: demo ? ['Steam', 'Epic Games', 'EA app', 'Battle.net', 'Ubisoft Connect', 'GOG Galaxy', 'Xbox PC'].map(provider => ({ provider })) : await scanInstalledLaunchers().catch(() => []) };
+    const found = new Set(launcherScanCache.list.map(item => item.provider));
+    const [ea, battlenet, family, helper] = await Promise.all([accountLibraries.status('ea').catch(() => ({})), accountLibraries.status('battlenet').catch(() => ({})),
+      steamFamily.status(settings.steamFamilyAccountId || settings.steamId64 || await detectSteamId64()).catch(() => ({})), findLegendaryExecutable(settings.legendaryPath).catch(() => '')]);
+    const linked = value => ['ready', 'cached'].includes(value?.status);
+    const fs2 = require('fs'), { gogDatabasePath, amazonDatabasePath } = require('./local-owned-libraries.cjs');
+    const counts = {};
+    for (const game of currentLibrary) if (game.installed === false) counts[game.accountLibrary || (game.steamFamilyImported ? 'steam-family' : game.provider)] = (counts[game.accountLibrary || (game.steamFamilyImported ? 'steam-family' : game.provider)] || 0) + 1;
+    const sources = [
+      { id: 'steam', name: 'Steam', found: found.has('Steam'), owned: true, enabled: Boolean(settings.showUninstalledSteam), ready: Boolean(settings.steamApiKey), needs: 'link', count: counts.Steam || 0 },
+      { id: 'steam-family', name: 'Steam Family games', found: found.has('Steam'), owned: true, enabled: Boolean(settings.includeSteamFamily), ready: ['ready', 'cached', 'no-family'].includes(family.status), noFamily: family.status === 'no-family', needs: 'sign-in', count: family.count || counts['steam-family'] || 0 },
+      { id: 'epic', name: 'Epic Games', found: found.has('Epic Games'), owned: true, enabled: Boolean(settings.showUninstalledEpic), ready: Boolean(helper), needs: 'legendary', count: counts['Epic Games'] || 0 },
+      { id: 'ea', name: 'EA app', found: found.has('EA app'), owned: true, enabled: Boolean(settings.showUninstalledEA), ready: linked(ea), needs: 'sign-in', count: counts.ea || 0 },
+      { id: 'battlenet', name: 'Battle.net', found: found.has('Battle.net'), owned: true, enabled: Boolean(settings.showUninstalledBattleNet), ready: linked(battlenet), needs: 'sign-in', count: counts.battlenet || 0 },
+      { id: 'ubisoft', name: 'Ubisoft Connect', found: found.has('Ubisoft Connect'), owned: true, enabled: Boolean(settings.showUninstalledUbisoft), ready: true, needs: 'client', count: counts.ubisoft || 0 },
+      { id: 'gog', name: 'GOG Galaxy', found: found.has('GOG Galaxy'), owned: true, enabled: Boolean(settings.showUninstalledGog), ready: demo || fs2.existsSync(gogDatabasePath()), needs: 'client', count: counts.gog || 0 },
+      { id: 'amazon', name: 'Amazon Games', found: found.has('Amazon Games'), owned: true, enabled: Boolean(settings.showUninstalledAmazon), ready: fs2.existsSync(amazonDatabasePath()), needs: 'client', count: counts.amazon || 0 },
+      { id: 'xbox', name: 'Xbox app', found: found.has('Xbox PC'), owned: false },
+      { id: 'rockstar', name: 'Rockstar Games', found: found.has('Rockstar Games Launcher'), owned: false },
+      { id: 'riot', name: 'Riot Games', found: found.has('Riot Client'), owned: false },
+      { id: 'itch', name: 'itch.io', found: found.has('itch'), owned: false }
+    ];
+    return sources.filter(source => source.found || source.id === 'steam');
+  });
+  ipcMain.handle('library:set-uninstalled', async (_event, id, enabled) => {
+    enabled = Boolean(enabled);
+    const settings = await readSettings();
+    const keys = { steam: 'showUninstalledSteam', epic: 'showUninstalledEpic', ea: 'showUninstalledEA', battlenet: 'showUninstalledBattleNet', ubisoft: 'showUninstalledUbisoft', gog: 'showUninstalledGog', amazon: 'showUninstalledAmazon' };
+    if (id === 'steam-family') {
+      if (enabled && !settings.showUninstalledSteam) return { status: 'needs-steam' };
+      if (!enabled) { await writeSettings({ includeSteamFamily: false }); currentLibrary = currentLibrary.filter(game => !game.steamFamilyImported || game.installed !== false); return { status: 'off' }; }
+      if (process.env.NEBULA_DEMO === '1') { await writeSettings({ includeSteamFamily: true }); return { status: 'on', count: 0 }; }
+      const result = await steamFamily.connect();
+      await writeSettings({ includeSteamFamily: true, steamFamilyAccountId: result.steamId || '' });
+      return { status: 'on', count: result.games.filter(game => game.steamFamilyShared).length };
+    }
+    if (!keys[id]) throw Error('This launcher only shows installed games.');
+    if (enabled && id === 'steam' && !settings.steamApiKey) return { status: 'needs-link' };
+    if (enabled && id === 'epic' && !await findLegendaryExecutable(settings.legendaryPath)) return { status: 'needs-helper' };
+    if (enabled && ['ea', 'battlenet'].includes(id) && process.env.NEBULA_DEMO !== '1' && !['ready', 'cached'].includes((await accountLibraries.status(id)).status)) {
+      const result = await accountLibraries.connect(id);
+      await writeSettings({ [keys[id]]: true });
+      return { status: 'on', count: result.games.length };
+    }
+    await writeSettings({ [keys[id]]: enabled });
+    if (!enabled) currentLibrary = currentLibrary.filter(game => game.installed !== false || (id === 'steam' ? game.provider !== 'Steam' : id === 'epic' ? game.provider !== 'Epic Games' : game.accountLibrary !== id));
+    return { status: enabled ? 'on' : 'off' };
+  });
+  ipcMain.handle('steam:connect-account', async (_event, input = {}) => {
+    const settings=await readSettings(),apiKey=String(input.apiKey||settings.steamApiKey||'').trim(),steamId64=String(input.steamId||settings.steamId64||await detectSteamId64()).trim();
+    if(!/^[a-f0-9]{32}$/i.test(apiKey))throw Error('Paste your Steam Web API key to link account games and PC Gamerscore.');
+    if(!/^7656119\d{10}$/.test(steamId64))throw Error('Open Steam and sign in, or enter your SteamID in Advanced setup.');
+    connectionProgress({provider:'steam',phase:'loading',message:'Checking your Steam account…'});
+    const result=await fetchOwnedSteamGames({...settings,steamApiKey:apiKey,steamId64});
+    if(result.status!=='ready') {
+      const message=result.status==='private-library'?'Steam game details are private. Make Game details public in Steam, then try again.':result.status==='invalid-api-key'?'Steam did not accept this key. Check it and try again.':'Steam could not be reached. Your current library is unchanged.';
+      connectionProgress({provider:'steam',phase:'error',message});throw Error(message);
+    }
+    await writeSettings({steamApiKey:apiKey,steamId64,showUninstalledSteam:true});
+    connectionProgress({provider:'steam',phase:'connected',message:`Steam linked. ${result.count} account games found. PC Gamerscore is ready to sync.`});
+    return {count:result.count,steamId64};
+  });
+  // One-click Steam link: the player signs in on Steam's own page in a sandboxed window. Once signed
+  // in, the Web API key is read from steamcommunity.com/dev/apikey. If there is no key yet, Steam's
+  // registration form is pre-filled and the player confirms it there; nothing is submitted for them.
+  let steamLinkWindow = null;
+  ipcMain.handle('steam:auto-link', async () => {
+    if (steamLinkWindow && !steamLinkWindow.isDestroyed()) { steamLinkWindow.focus(); return { status: 'open' }; }
+    const { session } = require('electron');
+    const linkSession = session.fromPartition('persist:steam-link');
+    const allowed = (url) => { try { const host = new URL(url).hostname; return /(^|\.)steamcommunity\.com$|(^|\.)steampowered\.com$|(^|\.)steamstatic\.com$/.test(host); } catch { return false; } };
+    steamLinkWindow = new BrowserWindow({ parent: mainWindow, modal: true, width: 1000, height: 760, show: false, autoHideMenuBar: true, backgroundColor: '#171a21', title: 'Sign in to Steam',
+      webPreferences: { session: linkSession, sandbox: true, nodeIntegration: false, contextIsolation: true, devTools: false } });
+    const win = steamLinkWindow;
+    win.webContents.on('will-navigate', (event, url) => { if (!allowed(url)) event.preventDefault(); });
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    win.once('ready-to-show', () => { if (!win.isDestroyed()) win.show(); });
+    connectionProgress({ provider: 'steam', phase: 'waiting', message: 'Sign in to Steam to link your account…' });
+    return new Promise((resolve) => {
+      let finished = false;
+      const finish = (value) => { if (finished) return; finished = true; if (!win.isDestroyed()) win.close(); steamLinkWindow = null; resolve(value); };
+      win.on('closed', () => finish({ status: 'cancelled' }));
+      win.webContents.on('did-finish-load', async () => {
+        let page;
+        try {
+          page = await win.webContents.executeJavaScript(`(() => {
+            const text = document.querySelector('#bodyContents_ex')?.innerText || '';
+            const key = (text.match(/Key:\\s*([A-F0-9]{32})/i) || [])[1] || '';
+            const steamId = typeof g_steamID === 'string' ? g_steamID : '';
+            const form = document.querySelector('#editForm, form[action*="registerkey"]');
+            if (form && !key) {
+              const domain = form.querySelector('input[name="domain"]');
+              if (domain && !domain.value) domain.value = 'localhost';
+              const agree = form.querySelector('input[type="checkbox"]');
+              if (agree) agree.checked = true;
+            }
+            return { key, steamId, signedIn: Boolean(steamId), form: Boolean(form), path: location.pathname };
+          })()`);
+        } catch { return; }
+        if (!page.signedIn && !/\/login/.test(page.path)) { win.loadURL('https://steamcommunity.com/login/home/?goto=dev%2Fapikey').catch(() => {}); return; }
+        if (page.signedIn && !/\/dev\/apikey/.test(page.path) && !/\/dev\/registerkey/.test(page.path)) { win.loadURL('https://steamcommunity.com/dev/apikey').catch(() => {}); return; }
+        if (page.key && /^7656119\d{10}$/.test(page.steamId)) {
+          await writeSettings({ steamApiKey: page.key, steamId64: page.steamId });
+          const settings = await readSettings();
+          const result = await fetchOwnedSteamGames({ ...settings, steamApiKey: page.key, steamId64: page.steamId }).catch(() => ({ status: 'steam-error' }));
+          if (result.status === 'ready') await writeSettings({ showUninstalledSteam: true });
+          connectionProgress({ provider: 'steam', phase: 'connected', message: result.status === 'ready' ? `Steam linked. ${result.count} games in your account.` : 'Steam linked. Make your game details public in Steam to include uninstalled games.' });
+          finish({ status: 'linked', count: result.count || 0, privateLibrary: result.status === 'private-library' });
+        } else if (page.form) connectionProgress({ provider: 'steam', phase: 'waiting', message: 'Confirm "Register" on Steam\'s page to finish linking.' });
+      });
+      win.loadURL('https://steamcommunity.com/dev/apikey').catch(() => finish({ status: 'unavailable' }));
+    });
+  });
+  ipcMain.handle('steam:disconnect-account',async()=>{await writeSettings({steamApiKey:'',showUninstalledSteam:false});return true;});
+  ipcMain.handle('steam:family-status',async()=>{
+    const settings=await readSettings();
+    return {...await steamFamily.status(settings.steamFamilyAccountId || settings.steamId64 || await detectSteamId64()),enabled:settings.includeSteamFamily};
+  });
+  ipcMain.handle('steam:family-connect',async()=>{
+    const settings=await readSettings();
+    const result=await steamFamily.connect();
+    await writeSettings({includeSteamFamily:true,steamFamilyAccountId:result.steamId||''});
+    return {status:result.status,count:result.games.filter(game=>game.steamFamilyShared).length};
+  });
+  ipcMain.handle('steam:family-disconnect',async()=>{
+    await steamFamily.disconnect();
+    await writeSettings({includeSteamFamily:false,steamFamilyAccountId:''});
+    currentLibrary=currentLibrary.filter(game=>!game.steamFamilyImported || game.installed!==false);
+    return true;
+  });
+  ipcMain.handle('accounts:connect', async (_event, provider) => {
+    if (!['ea','battlenet'].includes(provider)) throw Error('Choose EA app or Battle.net. Ubisoft reads the local client cache.');
+    const result = await accountLibraries.connect(provider);
+    await writeSettings({ [provider === 'ea' ? 'showUninstalledEA' : 'showUninstalledBattleNet']:true });
+    return {status:result.status,count:result.games.length};
+  });
+  ipcMain.handle('accounts:disconnect', async (_event, provider) => {
+    if (!['ea','battlenet'].includes(provider)) throw Error('Unknown account');
+    await accountLibraries.disconnect(provider);
+    await writeSettings({ [provider === 'ea' ? 'showUninstalledEA' : 'showUninstalledBattleNet']:false });
+    currentLibrary = currentLibrary.filter(game => game.accountLibrary !== provider || game.installed !== false);
+    const snapshot = await readLibrarySnapshot();
+    if (snapshot) await writeLibrarySnapshot({...snapshot,games:currentLibrary},artworkScanEpoch);
+    return true;
+  });
+  ipcMain.handle('accounts:open-client', async (_event, provider) => {
+    const name = {ubisoft:'Ubisoft Connect',ea:'EA app',battlenet:'Battle.net'}[provider];
+    if (!name) throw Error('Unknown launcher');
+    if (process.env.NEBULA_DEMO === '1') return true;
+    const launcher = currentLibrary.find(game=>game.isLauncher && game.provider===name);
+    if (!launcher?.executable || !await exists(launcher.executable)) throw Error(`Install ${name} first, then scan your library.`);
+    await launchExecutable(launcher.executable,[],path.dirname(launcher.executable));
+    return true;
+  });
+  ipcMain.handle('steam:install-status', async (_event, gameId) => {
+    const game = currentLibrary.find(item => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
+    if (!game) throw new Error('This Steam game is not in your library.');
+    if (process.env.NEBULA_DEMO === '1') return { state: 'waiting', installed: false, percent: null };
+    for (const root of await findSteamRoots()) {
+      try {
+        const manifest = await fs.readFile(path.join(root, 'steamapps', `appmanifest_${game.appId}.acf`), 'utf8');
+        const result = manifestProgress(manifest);
+        if (result.installed) {
+          game.installed = true;
+          game.installPath = path.join(root, 'steamapps', 'common', parseVdfValue(manifest, 'installdir'));
+          installRequests.delete(gameId);
+        }
+        return result.installed ? result : await liveSteamProgress(game.appId, result);
+      } catch { /* The install may not have created its manifest yet. */ }
+    }
+    return { state: 'waiting', installed: false, percent: null, requestedAt: installRequests.get(gameId) || null };
+  });
   ipcMain.handle('steam:open-help', async (_event, destination) => {
     const urls = {
       privacy: 'https://steamcommunity.com/my/edit/settings',
       apiKey: 'https://steamcommunity.com/dev/apikey',
       sgdbApiKey: 'https://www.steamgriddb.com/profile/preferences/api',
       client: 'steam://open/games',
-      xboxApiKey: 'https://xbl.io',
       epicHelper: 'https://github.com/legendary-gl/legendary#quickstart'
     };
     if (!urls[destination]) throw new Error('Unknown Steam help destination.');
@@ -1527,9 +1818,20 @@ function registerIpc() {
     }
     if ('steamGridDbKey' in incoming) allowed.steamGridDbKey = String(incoming.steamGridDbKey || '').trim();
     if ('steamApiKey' in incoming) allowed.steamApiKey = String(incoming.steamApiKey || '').trim();
-    if ('xboxApiKey' in incoming) allowed.xboxApiKey = String(incoming.xboxApiKey || '').trim();
     const effectiveSteamApiKey = 'steamApiKey' in incoming ? allowed.steamApiKey : existing.steamApiKey;
     if ('showUninstalledSteam' in incoming) allowed.showUninstalledSteam = Boolean(incoming.showUninstalledSteam && effectiveSteamApiKey);
+    if ('includeSteamFamily' in incoming) allowed.includeSteamFamily = Boolean(incoming.includeSteamFamily);
+    if (['all','preferred'].includes(incoming.duplicateMode)) allowed.duplicateMode=incoming.duplicateMode;
+    if (duplicateProviders.includes(incoming.duplicatePreferredProvider)) allowed.duplicatePreferredProvider=incoming.duplicatePreferredProvider;
+    if (incoming.duplicatePreferences && typeof incoming.duplicatePreferences==='object' && !Array.isArray(incoming.duplicatePreferences)) {
+      const groups=duplicateGroups(currentLibrary);
+      allowed.duplicatePreferences={...(existing.duplicatePreferences || {})};
+      for(const group of groups) {
+        delete allowed.duplicatePreferences[group.key];
+        const id=incoming.duplicatePreferences[group.key];
+        if(typeof id==='string' && group.copies.some(game=>game.id===id))allowed.duplicatePreferences[group.key]=id;
+      }
+    }
     if ('steamApiKey' in incoming && !effectiveSteamApiKey) allowed.showUninstalledSteam = false;
     if ('legendaryPath' in incoming) {
       const helper = String(incoming.legendaryPath || '').trim();
@@ -1540,10 +1842,16 @@ function registerIpc() {
       const helper = await findLegendaryExecutable(allowed.legendaryPath ?? existing.legendaryPath);
       allowed.showUninstalledEpic = Boolean(incoming.showUninstalledEpic && helper);
     }
+    for (const key of ['showUninstalledUbisoft','showUninstalledEA','showUninstalledBattleNet','showUninstalledGog','showUninstalledAmazon']) {
+      if (key in incoming) allowed[key] = Boolean(incoming[key]);
+    }
     if ('fullscreen' in incoming) allowed.fullscreen = Boolean(incoming.fullscreen);
     if ('soundEffects' in incoming) allowed.soundEffects = incoming.soundEffects !== false;
+    if ('startupAnimation' in incoming) allowed.startupAnimation = incoming.startupAnimation !== false;
     if (typeof incoming.onboardingComplete === 'boolean') allowed.onboardingComplete = incoming.onboardingComplete;
     if (typeof incoming.avatarId === 'string') allowed.avatarId = incoming.avatarId.slice(0, 40);
+    if (['steam', 'custom'].includes(incoming.profileNameMode)) allowed.profileNameMode = incoming.profileNameMode;
+    if (typeof incoming.profileAvatarCustomized === 'boolean') allowed.profileAvatarCustomized = incoming.profileAvatarCustomized;
     if (typeof incoming.avatarImage === 'string') {
       const image = incoming.avatarImage.trim();
       if (image.length > 1_000_000 || (image && !/^data:image\/(?:jpeg|png|webp);base64,[a-z\d+/=]+$/i.test(image))) throw new Error('Choose a PNG, JPEG, or WebP image under 750 KB after cropping.');
@@ -1562,19 +1870,15 @@ function registerIpc() {
     if ('useRandomScreenshotBackground' in incoming) allowed.useRandomScreenshotBackground = Boolean(incoming.useRandomScreenshotBackground);
     if ('shuffleHomeScreenshots' in incoming) allowed.shuffleHomeScreenshots = Boolean(incoming.shuffleHomeScreenshots);
     const saved = await writeSettings(allowed);
-    if ('xboxApiKey' in incoming && allowed.xboxApiKey !== existing.xboxApiKey) {
-      xboxTitleHistoryCache = { at: 0, apiKey: '', xuid: '', titles: [] };
-      xboxAchievementCache.clear();
-    }
     if (mainWindow) {
       mainWindow.setFullScreen(saved.fullscreen);
-      mainWindow.webContents.setZoomFactor(saved.uiScale || 1);
+      mainWindow.webContents.setZoomFactor(1);
     }
     return saved;
   });
   ipcMain.handle('settings:preview-scale', (_event, value) => {
     const scale = Math.max(0.65, Math.min(1.5, Number(value) || SETTINGS_DEFAULTS.uiScale));
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(scale);
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(1);
     return scale;
   });
   ipcMain.handle('epic:choose-helper', async () => {
@@ -1600,6 +1904,10 @@ function registerIpc() {
     artworkScanEpoch++;
     await artworkCacheTask.catch(() => {});
     await librarySnapshotWriteQueue;
+    await playerProfile.reset();
+    await accountLibraries.disconnect('ea');
+    await accountLibraries.disconnect('battlenet');
+    await steamFamily.disconnect();
     await fs.rm(librarySnapshotPath(), { force: true });
     await fs.rm(`${librarySnapshotPath()}.tmp`, { force: true });
     const cacheDirectory = path.resolve(path.dirname(settingsPath()), 'artwork-cache');
@@ -1611,19 +1919,23 @@ function registerIpc() {
     gameDetailCache.clear();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setFullScreen(SETTINGS_DEFAULTS.fullscreen);
-      mainWindow.webContents.setZoomFactor(SETTINGS_DEFAULTS.uiScale);
+      mainWindow.webContents.setZoomFactor(1);
     }
     return true;
   });
   ipcMain.handle('game:launch', async (_event, gameId, launchOptions) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
-    if (!game.installed) throw new Error('This game is not installed. Choose Download with Steam first.');
+    if (game.installed === false) throw new Error('This game is not installed. Choose Install on its game page first.');
     const optionText = String(launchOptions ?? game.launchOptions ?? '').trim();
     if (optionText.length > 512 || /[\r\n\0]/.test(optionText)) throw new Error('Steam launch options must be a single line under 512 characters.');
     const parsedOptions = optionText.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((arg) => arg.replace(/^"|"$/g, '')) || [];
     let directProcessId = null;
-    if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
+    if (game.accountLibrary === 'battlenet' && game.internalId && /^[a-z0-9]+$/i.test(game.providerId)) {
+      const launcher = currentLibrary.find(item => item.isLauncher && item.provider === 'Battle.net');
+      if (!launcher?.executable || !await exists(launcher.executable)) throw Error('Battle.net client was not found. Scan your library after installing it.');
+      await launchExecutable(launcher.executable, [`--exec=launch ${game.providerId}`], path.dirname(launcher.executable));
+    } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
         await launchExecutable(game.steamExecutable, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(game.steamExecutable));
       } catch {
@@ -1704,6 +2016,12 @@ function registerIpc() {
       const index = customCollections.findIndex((item) => item.id === payload.collectionId);
       if (index < 0) throw new Error('Collection not found.');
       customCollections.splice(index, 1);
+    } else if (action === 'hide' || action === 'unhide') {
+      const hiddenGameIds = new Set(settings.hiddenGameIds || []);
+      if (action === 'hide') { if (!currentLibrary.some((game) => game.id === gameId)) throw new Error('Game is not in your library.'); hiddenGameIds.add(gameId); currentLibrary = currentLibrary.filter((game) => game.id !== gameId); }
+      else hiddenGameIds.delete(gameId);
+      await writeSettings({ hiddenGameIds: [...hiddenGameIds] });
+      return { favoriteGameIds, customCollections, hiddenGameIds: [...hiddenGameIds] };
     } else throw new Error('Unknown collection action.');
     await writeSettings({ favoriteGameIds, customCollections });
     return { favoriteGameIds, customCollections };
@@ -1720,8 +2038,23 @@ function registerIpc() {
   ipcMain.handle('game:action', async (_event, gameId, action) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
+    if (action === 'download' && game.accountLibrary && !game.installed) {
+      if (process.env.NEBULA_DEMO === '1') return true;
+      if (game.accountLibrary === 'ubisoft' && /^\d+$/.test(game.providerId)) await shell.openExternal(`uplay://install/${game.providerId}`);
+      else if (game.accountLibrary === 'ea' && /^origin2:\/\/game\/launch\/\?offerIds=[A-Za-z0-9%.:_-]+$/.test(game.installUri || '')) await shell.openExternal(game.installUri);
+      else if (game.accountLibrary === 'gog' && /^goggalaxy:\/\/openGameView\/\d+$/.test(game.installUri || '')) await shell.openExternal(game.installUri);
+      else if (game.accountLibrary === 'amazon' && /^amazon-games:\/\/play\/[A-Za-z0-9._-]+$/.test(game.installUri || '')) await shell.openExternal(game.installUri);
+      else {
+        const launcher = currentLibrary.find(item=>item.isLauncher && item.provider===game.provider);
+        if (!launcher?.executable || !await exists(launcher.executable)) throw Error(`Install ${game.provider} first, then scan your library.`);
+        const args = game.accountLibrary === 'battlenet' && /^[a-z0-9_]+$/i.test(game.internalId || '') ? [`--game=${game.internalId}`] : [];
+        await launchExecutable(launcher.executable,args,path.dirname(launcher.executable));
+      }
+      return true;
+    }
     if (action === 'download' && game.provider === 'Steam' && game.appId && !game.installed) {
-      await shell.openExternal(`steam://install/${encodeURIComponent(game.appId)}`);
+      if (process.env.NEBULA_DEMO !== '1') await shell.openExternal(`steam://install/${encodeURIComponent(game.appId)}`);
+      installRequests.set(game.id, Date.now());
       return true;
     }
     if (action === 'download' && game.provider === 'Epic Games' && game.epicOwned && !game.installed) {
@@ -1739,7 +2072,7 @@ function registerIpc() {
       return true;
     }
     if (action === 'view-steam-library' && game.provider === 'Steam' && game.appId) {
-      await shell.openExternal(`steam://nav/games/details/${encodeURIComponent(game.appId)}`);
+      if (process.env.NEBULA_DEMO !== '1') await shell.openExternal(`steam://nav/games/details/${encodeURIComponent(game.appId)}`);
       return true;
     }
     if (action === 'open-steamdb' && game.provider === 'Steam' && game.appId) {
@@ -1753,7 +2086,385 @@ function registerIpc() {
       if (result) throw new Error(result);
       return true;
     }
+    if (action === 'verify' && game.provider === 'Steam' && game.appId && game.installed) {
+      if (process.env.NEBULA_DEMO !== '1') await shell.openExternal(`steam://validate/${encodeURIComponent(game.appId)}`);
+      return true;
+    }
+    if (action === 'check-updates' && game.provider === 'Steam' && game.appId) {
+      if (process.env.NEBULA_DEMO !== '1') await shell.openExternal('steam://open/downloads');
+      return true;
+    }
+    if (action === 'desktop-shortcut') {
+      const target = game.launchUri || (game.provider === 'Steam' && game.appId ? `steam://rungameid/${game.appId}` : '');
+      const name = String(game.title).replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 120) || 'Game';
+      const file = path.join(app.getPath('desktop'), `${name}.${target ? 'url' : 'lnk'}`);
+      if (process.env.NEBULA_DEMO === '1') return true;
+      if (target && /^[a-z][a-z0-9+.-]*:\/\//i.test(target)) await fs.writeFile(file, `[InternetShortcut]\r\nURL=${target}\r\n`, 'utf8');
+      else if (game.executable && await exists(game.executable)) {
+        if (!shell.writeShortcutLink(file, { target: game.executable, cwd: path.dirname(game.executable) })) throw new Error('Could not create the shortcut.');
+      } else throw new Error('This game has no launch target for a shortcut.');
+      return true;
+    }
     throw new Error('That action is not available for this game.');
+  });
+  // Storage details for Manage game. Steam and Epic report their own size; other folders share the background size cache.
+  // Xbox mode (Windows full screen experience) home app. Registration happens only when the player
+  // chooses it in Settings: the bridge layout is copied to their profile and registered as an
+  // unpacked app, which Windows permits while Developer Mode is on. Nothing here needs admin rights.
+  const XBOX_MODE_PACKAGE = 'XboxPreviewUI.XboxModeHome';
+  const powershell = (command) => new Promise((resolve) => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command], { windowsHide: true, timeout: 60000 }, (error, stdout, stderr) => resolve({ ok: !error, stdout: String(stdout || '').trim(), stderr: String(stderr || error?.message || '').trim() })));
+  const developerMode = () => new Promise((resolve) => execFile('reg.exe', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock', '/v', 'AllowDevelopmentWithoutDevLicense'], { windowsHide: true, timeout: 4000 }, (error, stdout) => resolve(!error && /0x1\b/.test(stdout))));
+  ipcMain.handle('xbox-mode:status', async () => {
+    if (process.platform !== 'win32') return { supported: false };
+    const result = await powershell(`(Get-AppxPackage -Name '${XBOX_MODE_PACKAGE}' | Select-Object -First 1).InstallLocation`);
+    return { supported: true, registered: Boolean(result.stdout), developerMode: await developerMode() };
+  });
+  ipcMain.handle('xbox-mode:register', async () => {
+    if (process.platform !== 'win32') throw new Error('Xbox mode is a Windows feature.');
+    if (!await developerMode()) return { status: 'needs-developer-mode' };
+    const source = path.join(__dirname, 'xbox-mode-bridge').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+    const target = path.join(process.env.LOCALAPPDATA || app.getPath('userData'), 'Xbox Preview UI', 'xbox-mode-bridge');
+    if (!await exists(path.join(source, 'AppxManifest.xml'))) throw new Error('The Xbox mode bridge is missing from this install. Reinstall Xbox Preview UI.');
+    await fs.rm(target, { recursive: true, force: true });
+    await fs.cp(source, target, { recursive: true });
+    await fs.writeFile(path.join(path.dirname(target), 'xbox-mode-target.txt'), process.execPath, 'utf8');
+    const result = await powershell(`Add-AppxPackage -Register '${path.join(target, 'AppxManifest.xml').replace(/'/g, "''")}' -ForceApplicationShutdown`);
+    if (!result.ok) throw new Error(`Windows could not add Xbox Preview UI to Xbox mode. ${result.stderr.split(/\r?\n/).find(Boolean) || ''}`.trim());
+    return { status: 'registered' };
+  });
+  ipcMain.handle('xbox-mode:unregister', async () => {
+    const result = await powershell(`Get-AppxPackage -Name '${XBOX_MODE_PACKAGE}' | Remove-AppxPackage`);
+    if (!result.ok) throw new Error('Windows could not remove the Xbox mode home app.');
+    return { status: 'removed' };
+  });
+  ipcMain.handle('xbox-mode:open-settings', async (_event, page = 'gaming') => {
+    await shell.openExternal(page === 'developers' ? 'ms-settings:developers' : 'ms-settings:gaming-fullscreenexperience').catch(() => shell.openExternal('ms-settings:gaming'));
+    return true;
+  });
+  // Native Steam installs: no Steam dialog. A manifest flagged "update required" is written to the
+  // Steam library with the most free space, and Steam is restarted silently so it starts the download.
+  const steamRunning = () => new Promise((resolve) => execFile('tasklist.exe', ['/FI', 'IMAGENAME eq steam.exe', '/NH'], { windowsHide: true, timeout: 4000 }, (error, stdout) => resolve(!error && /steam\.exe/i.test(stdout))));
+  ipcMain.handle('steam:native-install', async (_event, gameId, chosenLibrary = '') => {
+    const game = currentLibrary.find((item) => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
+    if (!game) throw new Error('This Steam game is not in your library.');
+    if (game.installed !== false) return { status: 'installed' };
+    if (process.env.NEBULA_DEMO === '1') { installRequests.set(game.id, Date.now()); return { status: 'started', library: 'D:\\SteamLibrary', demo: true }; }
+    if (activeGameSession) throw new Error('Close your game before installing. Steam needs to restart to start the download.');
+    const roots = await findSteamRoots();
+    const steamExe = roots.map((root) => path.join(root, 'steam.exe')).find((file) => require('fs').existsSync(file));
+    if (!steamExe) throw new Error('Steam was not found on this PC.');
+    for (const root of roots) if (await exists(path.join(root, 'steamapps', `appmanifest_${game.appId}.acf`))) return { status: 'queued', library: root };
+    let info = null;
+    try {
+      const response = await fetch(`https://api.steamcmd.net/v1/info/${game.appId}`, { signal: AbortSignal.timeout(10000) });
+      if (response.ok) info = (await response.json()).data?.[game.appId] || null;
+    } catch { /* The Steam dialog is the fallback below. */ }
+    const installdir = String(info?.config?.installdir || '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
+    if (!installdir) {
+      await shell.openExternal(`steam://install/${game.appId}`);
+      installRequests.set(game.id, Date.now());
+      return { status: 'dialog' };
+    }
+    const libraries = [];
+    for (const root of roots) {
+      try { const stats = await fs.statfs(root); libraries.push({ root, free: stats.bavail * stats.bsize }); } catch { /* Unavailable drive. */ }
+    }
+    libraries.sort((a, b) => b.free - a.free);
+    const target = roots.includes(chosenLibrary) ? chosenLibrary : libraries[0]?.root || roots[0];
+    const settings = await readSettings();
+    const owner = String(settings.steamId64 || await detectSteamId64() || '');
+    const name = String(info?.common?.name || game.title).replace(/["\\\r\n]/g, '');
+    const manifest = `"AppState"\n{\n\t"appid"\t\t"${game.appId}"\n\t"Universe"\t\t"1"\n\t"name"\t\t"${name}"\n\t"StateFlags"\t\t"1026"\n\t"installdir"\t\t"${installdir}"\n\t"LastUpdated"\t\t"0"\n\t"SizeOnDisk"\t\t"0"\n\t"StagingSize"\t\t"0"\n\t"buildid"\t\t"0"\n\t"LastOwner"\t\t"${/^\d{17}$/.test(owner) ? owner : '0'}"\n\t"UpdateResult"\t\t"0"\n\t"BytesToDownload"\t\t"0"\n\t"BytesDownloaded"\t\t"0"\n\t"BytesToStage"\t\t"0"\n\t"BytesStaged"\t\t"0"\n\t"AutoUpdateBehavior"\t\t"0"\n\t"AllowOtherDownloadsWhileRunning"\t\t"0"\n\t"ScheduledAutoUpdate"\t\t"0"\n}\n`;
+    await fs.mkdir(path.join(target, 'steamapps'), { recursive: true });
+    await fs.writeFile(path.join(target, 'steamapps', `appmanifest_${game.appId}.acf`), manifest, 'utf8');
+    installRequests.set(game.id, Date.now());
+    // Steam only reads new manifests at start-up: close it, then start it again in the background.
+    if (await steamRunning()) {
+      await shell.openExternal('steam://exit');
+      for (let waited = 0; waited < 40000 && await steamRunning(); waited += 1000) await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    return { status: 'started', library: target, free: libraries.find(item => item.root === target)?.free || null };
+  });
+  // "Install to": every Steam library folder with its drive, free space and the game's listed size.
+  ipcMain.handle('steam:install-targets', async (_event, gameId) => {
+    const game = currentLibrary.find((item) => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
+    if (!game) throw new Error('This Steam game is not in your library.');
+    const roots = process.env.NEBULA_DEMO === '1' ? ['C:\\Program Files (x86)\\Steam', 'D:\\SteamLibrary'] : await findSteamRoots();
+    const libraries = [];
+    for (const root of roots) {
+      let free = null, total = null;
+      try { const stats = await fs.statfs(root); free = stats.bavail * stats.bsize; total = stats.blocks * stats.bsize; } catch { if (process.env.NEBULA_DEMO !== '1') continue; }
+      if (process.env.NEBULA_DEMO === '1') { free = root.startsWith('C') ? 182e9 : 1.21e12; total = root.startsWith('C') ? 1e12 : 2e12; }
+      libraries.push({ root, drive: path.parse(root).root.replace(/\\$/, ''), free, total });
+    }
+    let needed = null;
+    try {
+      const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${game.appId}&filters=pc_requirements`, { signal: AbortSignal.timeout(6000) });
+      const requirements = (await response.json())?.[game.appId]?.data?.pc_requirements;
+      const text = `${requirements?.recommended || ''} ${requirements?.minimum || ''}`.replace(/<[^>]+>/g, ' ');
+      const match = text.match(/(\d+(?:[.,]\d+)?)\s*(TB|GB|MB)\s*(?:of\s*)?(?:available|free|hard|disk|storage|space)/i) || text.match(/(?:Storage|Hard Drive|Disk Space)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(TB|GB|MB)/i);
+      if (match) needed = Number(match[1].replace(',', '.')) * { TB: 1e12, GB: 1e9, MB: 1e6 }[match[2].toUpperCase()];
+    } catch { /* Size is optional. */ }
+    const settings = await readSettings();
+    const destinations = installLibrariesByDrive(libraries, settings.steamInstallLibrary);
+    const preferred = destinations.find(item => libraryKey(item.root) === libraryKey(settings.steamInstallLibrary || ''))?.root
+      || [...destinations].sort((a, b) => (b.free || 0) - (a.free || 0))[0]?.root || '';
+    return { libraries: destinations, needed, preferred };
+  });
+  ipcMain.handle('steam:remember-library', async (_event, root) => {
+    if (typeof root === 'string' && (await findSteamRoots()).includes(root)) await writeSettings({ steamInstallLibrary: root });
+    return true;
+  });
+  // The real Steam download queue, read from Steam's own manifests (only changed files are re-read).
+  const manifestCache = new Map();
+  ipcMain.handle('steam:downloads', async () => {
+    if (process.env.NEBULA_DEMO === '1') return process.env.NEBULA_DEMO_QUEUE ? [{ appId: '1551360', title: 'Forza Horizon 5', library: 'D:\SteamLibrary', installed: false, state: 'downloading', downloaded: 21.1e9 + (Date.now() % 60000) * 4e5, total: 33.7e9, percent: 63 }, { appId: '1172620', title: 'Sea of Thieves', library: 'D:\SteamLibrary', installed: false, state: 'queued', downloaded: 0, total: 85.9e9, percent: 0 }] : [];
+    const active = [];
+    for (const root of await findSteamRoots()) {
+      const folder = path.join(root, 'steamapps');
+      let names = [];
+      try { names = (await fs.readdir(folder)).filter(name => /^appmanifest_\d+\.acf$/.test(name)); } catch { continue; }
+      for (const name of names) {
+        const file = path.join(folder, name);
+        let stat;
+        try { stat = await fs.stat(file); } catch { continue; }
+        let entry = manifestCache.get(file);
+        if (!entry || entry.mtime !== stat.mtimeMs) {
+          try {
+            const text = await fs.readFile(file, 'utf8');
+            entry = { mtime: stat.mtimeMs, appId: name.match(/\d+/)[0], title: parseVdfValue(text, 'name'), result: manifestProgress(text), root };
+          } catch { continue; }
+          manifestCache.set(file, entry);
+        }
+        if (!entry.result.installed) active.push({ appId: entry.appId, title: entry.title, library: root, ...entry.result });
+      }
+    }
+    return Promise.all(active.map(item => liveSteamProgress(item.appId, item)));
+  });
+  // Pause and resume talk to the Steam client itself. That needs Steam's local developer port, which
+  // the player turns on once from the Queue. It listens on this PC only (127.0.0.1:8080).
+  const steamControlFlag = async () => path.join((await findSteamRoots())[0] || '', '.cef-enable-remote-debugging');
+  async function steamClientEval(expression) {
+    const targets = await (await fetch('http://127.0.0.1:8080/json', { signal: AbortSignal.timeout(1500) })).json();
+    const target = targets.find(item => /SharedJSContext/i.test(item.title || '')) || targets.find(item => /steam/i.test(item.title || '') && item.webSocketDebuggerUrl);
+    if (!target?.webSocketDebuggerUrl || !/^ws:\/\/(127\.0\.0\.1|localhost):8080\//.test(target.webSocketDebuggerUrl)) throw new Error('Steam download controls are not ready yet.');
+    return new Promise((resolve, reject) => {
+      const socket = new WebSocket(target.webSocketDebuggerUrl);
+      const timer = setTimeout(() => { socket.close(); reject(new Error('Steam did not respond.')); }, 5000);
+      socket.onopen = () => socket.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }));
+      socket.onmessage = event => {
+        const message = JSON.parse(String(event.data));
+        if (message.id !== 1) return;
+        clearTimeout(timer); socket.close();
+        if (message.result?.exceptionDetails) reject(new Error('Steam could not change this download.')); else resolve(message.result?.result?.value);
+      };
+      socket.onerror = () => { clearTimeout(timer); reject(new Error('Steam download controls are not ready yet.')); };
+    });
+  }
+  // Live progress: Steam's own numbers when download controls are on, otherwise an estimate from its
+  // content log. The manifest alone lags far behind (it can read 0% while Steam shows 74%).
+  let contentLogCache = { at: 0, text: '' };
+  async function steamContentLogTail() {
+    if (Date.now() - contentLogCache.at < 1500) return contentLogCache.text;
+    let text = '';
+    try {
+      const file = path.join((await findSteamRoots())[0] || '', 'logs', 'content_log.txt');
+      const handle = await fs.open(file, 'r');
+      try {
+        const { size } = await handle.stat();
+        const length = Math.min(size, 512 * 1024);
+        const buffer = Buffer.alloc(length);
+        await handle.read(buffer, 0, length, size - length);
+        text = buffer.toString('utf8');
+      } finally { await handle.close(); }
+    } catch { /* No log yet. */ }
+    contentLogCache = { at: Date.now(), text };
+    return text;
+  }
+  let clientDownloadsCache = { at: 0, data: null };
+  async function steamClientDownloads() {
+    if (Date.now() - clientDownloadsCache.at < 1500) return clientDownloadsCache.data;
+    let data = null;
+    try {
+      if (await exists(await steamControlFlag())) data = await steamClientEval(`(async () => {
+        const downloads = SteamClient.Downloads, result = { overview: null, items: null };
+        const handles = [];
+        await new Promise(resolve => {
+          const done = () => { if (result.overview && result.items) resolve(); };
+          handles.push(downloads.RegisterForDownloadOverview(overview => { result.overview = overview; done(); }));
+          handles.push(downloads.RegisterForDownloadItems((active, items) => { result.items = items; done(); }));
+          setTimeout(resolve, 1500);
+        });
+        for (const handle of handles) { try { handle?.unregister?.(); } catch {} }
+        return JSON.parse(JSON.stringify(result));
+      })()`);
+    } catch { /* Controls off or Steam starting: the log estimate is used. */ }
+    clientDownloadsCache = { at: Date.now(), data };
+    return data;
+  }
+  async function liveSteamProgress(appId, result) {
+    if (!result || result.installed) return result;
+    const id = String(appId);
+    const client = await steamClientDownloads();
+    const live = clientDownloadProgress(client, id, result);
+    if (live) return live;
+    const log = contentLogProgress(await steamContentLogTail(), id);
+    if (!log || log.state === 'ready') return result;
+    const downloaded = Math.max(result.downloaded || 0, log.downloaded), total = log.total || result.total || 0;
+    const state = result.state === 'paused' ? 'paused' : log.state === 'queued' && result.state !== 'queued' ? result.state : log.state;
+    return { ...result, state, downloaded, total, rate: state === 'downloading' ? log.rate : 0, percent: total ? Math.min(100, Math.floor(downloaded / total * 100)) : result.percent, estimated: true };
+  }
+  ipcMain.handle('steam:download-controls', async () => {
+    if (process.env.NEBULA_DEMO === '1') return { enabled: true, live: true };
+    const enabled = await exists(await steamControlFlag());
+    let live = false;
+    if (enabled) try { live = await steamClientEval('typeof SteamClient?.Downloads?.PauseAppUpdate === "function"') === true; } catch { /* Steam is starting or closed. */ }
+    return { enabled, live };
+  });
+  ipcMain.handle('steam:set-download-controls', async (_event, enabled) => {
+    const flag = await steamControlFlag();
+    if (!path.isAbsolute(flag)) throw new Error('Steam was not found on this PC.');
+    if (enabled) await fs.writeFile(flag, '', 'utf8'); else await fs.rm(flag, { force: true });
+    // Steam reads the setting when it starts. Restart it quietly unless a game is running.
+    if (!activeGameSession && process.env.NEBULA_DEMO !== '1') {
+      const steamExe = path.join(path.dirname(flag), 'steam.exe');
+      if (await steamRunning()) {
+        await shell.openExternal('steam://exit');
+        for (let waited = 0; waited < 40000 && await steamRunning(); waited += 1000) await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      if (await exists(steamExe)) spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    }
+    return { enabled: Boolean(enabled), restarted: !activeGameSession };
+  });
+  ipcMain.handle('steam:download-action', async (_event, appId, action) => {
+    if (!/^\d{1,10}$/.test(String(appId)) || !['pause', 'resume', 'pause-all', 'resume-all', 'top', 'remove'].includes(action)) throw new Error('Unknown download action.');
+    if (process.env.NEBULA_DEMO === '1') return { status: action.startsWith('pause') ? 'paused' : action === 'remove' ? 'removed' : 'downloading' };
+    const id = Number(appId);
+    const script = { pause: `SteamClient.Downloads.PauseAppUpdate(${id})`, resume: `SteamClient.Downloads.EnableAllDownloads(true); SteamClient.Downloads.QueueAppUpdate(${id})`,
+      'pause-all': 'SteamClient.Downloads.EnableAllDownloads(false)', 'resume-all': 'SteamClient.Downloads.EnableAllDownloads(true)',
+      top: `SteamClient.Downloads.SetQueueIndex(${id}, 0)`, remove: `SteamClient.Downloads.RemoveFromDownloadList(${id})` }[action];
+    await steamClientEval(`(async () => { ${script}; return true; })()`);
+    return { status: action.startsWith('pause') ? 'paused' : action === 'remove' ? 'removed' : 'downloading' };
+  });
+  // Steam friends for the Xbox friends pill and "Play with friends". Live presence needs the
+  // player's own Web API key; without one, names come from the Steam client's local cache.
+  let friendsCache = { at: 0, data: null };
+  ipcMain.handle('friends:list', async (_event, force = false) => {
+    if (!force && friendsCache.data && Date.now() - friendsCache.at < 45000) return friendsCache.data;
+    if (process.env.NEBULA_DEMO === '1') return { status: 'demo', friends: [] };
+    const settings = await readSettings();
+    const steamId = String(settings.steamId64 || await detectSteamId64()).trim();
+    if (!/^7656119\d{10}$/.test(steamId)) return { status: 'no-account', friends: [] };
+    const personaState = (value) => ['offline', 'online', 'busy', 'away', 'snooze', 'online', 'online'][Number(value)] || 'offline';
+    // The Steam client keeps the friends list locally, even when it is private to the Web API.
+    const accountId = String(BigInt(steamId) - 76561197960265728n);
+    const local = [];
+    for (const root of await findSteamRoots()) {
+      try {
+        const text = await fs.readFile(path.join(root, 'userdata', accountId, 'config', 'localconfig.vdf'), 'utf8');
+        const section = parseSteamVdf(text).userlocalconfigstore?.friends || {};
+        for (const [id, entry] of Object.entries(section)) {
+          if (!/^\d+$/.test(id) || id === accountId || typeof entry !== 'object' || !entry.name) continue;
+          local.push({ id: String(BigInt(id) + 76561197960265728n), name: String(entry.name).slice(0, 64), avatar: /^[0-9a-f]{40}$/i.test(entry.avatar || '') ? `https://avatars.steamstatic.com/${entry.avatar}_medium.jpg` : null, state: 'unknown', game: '', gameId: '', lobby: '' });
+        }
+        break;
+      } catch { /* Try the next Steam library root. */ }
+    }
+    let data = null;
+    if (settings.steamApiKey) try {
+      const get = async (url) => { const response = await fetch(url, { signal: AbortSignal.timeout(8000) }); if (!response.ok) throw new Error(`Steam returned ${response.status}`); return response.json(); };
+      const list = await get(`https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=${encodeURIComponent(settings.steamApiKey)}&steamid=${steamId}&relationship=friend`).catch(() => ({}));
+      const listed = (list.friendslist?.friends || []).map((friend) => String(friend.steamid)).filter((id) => /^\d{17}$/.test(id));
+      const ids = [...new Set(listed.length ? listed : local.map((friend) => friend.id))].slice(0, 300);
+      const players = [];
+      for (let index = 0; index < ids.length; index += 100) {
+        const batch = await get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${encodeURIComponent(settings.steamApiKey)}&steamids=${ids.slice(index, index + 100).join(',')}`);
+        players.push(...(batch.response?.players || []));
+      }
+      if (players.length) data = { status: 'ready', friends: players.map((player) => ({
+        id: String(player.steamid), name: String(player.personaname || 'Steam friend').slice(0, 64),
+        avatar: safeSteamIcon(player.avatarmedium || player.avatar), state: personaState(player.personastate),
+        game: player.gameextrainfo ? String(player.gameextrainfo).slice(0, 120) : '', gameId: /^\d+$/.test(String(player.gameid || '')) ? String(player.gameid) : '',
+        lobby: /^\d+$/.test(String(player.lobbysteamid || '')) ? String(player.lobbysteamid) : '', lastOnline: Number(player.lastlogoff) * 1000 || 0
+      })) };
+    } catch { /* Fall back to the local list without presence. */ }
+    if (!data) data = { status: local.length ? 'local' : 'unavailable', friends: local };
+    const order = { online: 0, busy: 1, away: 2, snooze: 3, unknown: 4, offline: 5 };
+    data.friends.sort((a, b) => Number(Boolean(b.game)) - Number(Boolean(a.game)) || order[a.state] - order[b.state] || a.name.localeCompare(b.name));
+    data.online = data.friends.filter((friend) => friend.state !== 'offline' && friend.state !== 'unknown').length;
+    friendsCache = { at: Date.now(), data };
+    return data;
+  });
+  ipcMain.handle('friends:action', async (_event, action, friendId, appId = '', lobbyId = '') => {
+    if (!/^\d{17}$/.test(String(friendId))) throw new Error('Unknown friend.');
+    const urls = {
+      chat: `steam://friends/message/${friendId}`,
+      profile: `steam://url/SteamIDPage/${friendId}`,
+      join: /^\d+$/.test(String(appId)) && /^\d+$/.test(String(lobbyId)) ? `steam://joinlobby/${appId}/${lobbyId}/${friendId}` : `steam://url/SteamIDPage/${friendId}`,
+      add: 'steam://friends/add'
+    };
+    if (!urls[action]) throw new Error('Unknown friend action.');
+    if (process.env.NEBULA_DEMO !== '1') await shell.openExternal(urls[action]);
+    return true;
+  });
+  // Gamerscore calculator: the fixed 1,000-point split for a Steam game, from global unlock rates.
+  const gamerscoreBreakdowns = new Map();
+  ipcMain.handle('gamerscore:breakdown', async (_event, gameId) => {
+    const game = currentLibrary.find((item) => item.id === gameId);
+    const appId = String(game?.achievementReferenceAppId || game?.appId || '');
+    if (!/^\d{1,10}$/.test(appId)) throw new Error('Choose a game with Steam achievements.');
+    const cached = gamerscoreBreakdowns.get(appId);
+    if (cached && Date.now() - cached.at < 6 * 60 * 60 * 1000) return cached.result;
+    const pcGamerscore = require('./pc-gamerscore.cjs');
+    const settings = await readSettings();
+    const getJson = async (url) => { const response = await fetch(url, { signal: AbortSignal.timeout(10000) }); if (!response.ok) throw new Error(`Steam returned ${response.status}`); return response.json(); };
+    const global = (await getJson(`https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appId}`).catch(() => null))?.achievementpercentages?.achievements || [];
+    let named = [];
+    if (settings.steamApiKey) try {
+      const schema = await getJson(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${encodeURIComponent(settings.steamApiKey)}&appid=${appId}&l=english`);
+      named = (schema.game?.availableGameStats?.achievements || []).map((entry) => ({ id: String(entry.name), title: entry.displayName || entry.name, description: entry.hidden ? '' : entry.description || '', icon: safeSteamIcon(entry.icon) }));
+    } catch { /* Fall back to the public achievement page. */ }
+    if (!named.length) {
+      const html = await fetch(`https://steamcommunity.com/stats/${appId}/achievements/?l=english`, { signal: AbortSignal.timeout(10000) }).then((response) => response.ok ? response.text() : '').catch(() => '');
+      const items = parseSteamCommunityAchievements(html, appId);
+      // The public page and the global API are both ordered by unlock rate, so ranks line up.
+      const ranked = [...global].sort((a, b) => Number(b.percent) - Number(a.percent));
+      named = items.map((item, index) => ({ id: ranked[index] ? String(ranked[index].name) : item.id, title: item.title, description: item.description, icon: item.icon, rarity: item.rarity }));
+    }
+    if (!named.length && global.length) named = global.map((entry) => ({ id: String(entry.name), title: String(entry.name), description: '', icon: null }));
+    if (!named.length) throw new Error('This game has no Steam achievements.');
+    const percentages = new Map(global.map((entry) => [String(entry.name), Number(entry.percent)]));
+    for (const item of named) if (!percentages.has(item.id) && Number.isFinite(item.rarity)) percentages.set(item.id, item.rarity);
+    const table = pcGamerscore.pointTable(named.map((item) => ({ apiname: item.id })), percentages);
+    const items = named.map((item) => ({ title: item.title, description: item.description, icon: item.icon, percent: table[item.id]?.percent ?? null, points: table[item.id]?.points || 0 }))
+      .sort((a, b) => b.points - a.points || a.title.localeCompare(b.title));
+    const result = { appId, title: game?.title || '', total: items.reduce((sum, item) => sum + item.points, 0), rarityKnown: items.some((item) => item.percent !== null), items };
+    gamerscoreBreakdowns.set(appId, { at: Date.now(), result });
+    return result;
+  });
+  ipcMain.handle('game:storage', async (_event, gameId) => {
+    const game = currentLibrary.find((item) => item.id === gameId);
+    if (!game) throw new Error('Game is not in the current library.');
+    const folder = game.installPath || (game.executable ? path.dirname(game.executable) : '');
+    const result = { installed: game.installed !== false, folder: folder || '', drive: '', freeBytes: null, sizeBytes: game.sizeOnDisk || null, sizeEstimated: false, version: game.buildId ? `Build ${game.buildId}` : game.version || '', lastUpdated: game.lastUpdated || 0 };
+    if (!folder || game.installed === false || !await exists(folder)) return result;
+    result.drive = path.parse(folder).root.replace(/\\$/, '');
+    result.library = path.dirname(game.provider === 'Steam' ? path.dirname(path.dirname(folder)) : folder);
+    try { const stats = await fs.statfs(path.parse(folder).root); result.freeBytes = stats.bavail * stats.bsize; } catch { /* Network drives may not report space. */ }
+    if (!result.sizeBytes) {
+      const cache = await readInstallSizes();
+      let measured = cache[folder] ? { bytes: cache[folder].bytes, complete: true } : null;
+      if (!measured) {
+        measured = await measureFolderSize(folder, { until: Date.now() + 8000 });
+        if (measured.complete && measured.bytes) { cache[folder] = { bytes: measured.bytes, at: Date.now() }; fs.writeFile(installSizeFile(), JSON.stringify(cache)).catch(() => {}); }
+      }
+      result.sizeBytes = measured.bytes || null;
+      result.sizeEstimated = !measured.complete;
+      if (measured.complete && measured.bytes) game.sizeOnDisk = measured.bytes;
+    }
+    if (!result.lastUpdated) try { result.lastUpdated = (await fs.stat(folder)).mtimeMs; } catch { /* Unknown. */ }
+    return result;
   });
   ipcMain.handle('game:category:save', async (_event, gameId, isApp) => {
     const game = currentLibrary.find((item) => item.id === gameId);
@@ -1849,23 +2560,6 @@ function registerIpc() {
     gameDetailCache.delete(gameId);
     return appId;
   });
-  ipcMain.handle('game:xbox-achievement-reference:save', async (_event, gameId, incoming) => {
-    const game = currentLibrary.find((item) => item.id === gameId);
-    if (!game) throw new Error('Game is not in the current library.');
-    const titleId = String(incoming?.titleId || '').trim();
-    const platform = String(incoming?.platform || 'auto').trim();
-    if (titleId && !/^\d{1,12}$/.test(titleId)) throw new Error('Xbox Title ID must be numeric.');
-    if (!['auto', 'xbox360', 'xbox'].includes(platform)) throw new Error('Choose an Xbox platform.');
-    const settings = await readSettings();
-    const xboxAchievementReferences = { ...(settings.xboxAchievementReferences || {}) };
-    if (titleId) xboxAchievementReferences[gameId] = { titleId, platform };
-    else delete xboxAchievementReferences[gameId];
-    await writeSettings({ xboxAchievementReferences });
-    game.xboxAchievementReference = titleId ? { titleId, platform } : null;
-    gameDetailCache.delete(gameId);
-    xboxAchievementCache.clear();
-    return game.xboxAchievementReference;
-  });
   ipcMain.handle('artwork:save', async (_event, gameId, selection) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
@@ -1905,20 +2599,46 @@ function registerIpc() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:artwork', [{ id: gameId, artwork: fresh }]);
     return fresh;
   });
+  ipcMain.handle('app:rating-info', async (_event, system) => {
+    const urls = { PEGI: 'https://pegi.info/what-do-the-labels-mean', ESRB: 'https://www.esrb.org/ratings-guide/', USK: 'https://usk.de/en/home/age-classification-for-games-and-apps/', 'COB-AU': 'https://www.classification.gov.au/classification-ratings/what-do-ratings-mean', OFLC: 'https://www.classificationoffice.govt.nz/' };
+    await shell.openExternal(urls[String(system)] || urls.PEGI);
+    return true;
+  });
   ipcMain.handle('news:open', async (_event, url) => {
     const target = new URL(String(url));
     if (target.protocol !== 'https:' || !['store.steampowered.com', 'steamcommunity.com'].includes(target.hostname)) throw new Error('Unsupported news link.');
     await shell.openExternal(target.toString());
     return true;
   });
-  ipcMain.handle('game:add', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Add a game',
-      properties: ['openFile'],
-      filters: [{ name: 'Windows applications', extensions: ['exe', 'bat', 'cmd'] }]
-    });
-    if (result.canceled || !result.filePaths[0]) return null;
-    const executable = result.filePaths[0];
+  ipcMain.handle('app:browse-files', (_event, directory, kind) => consoleServices.browseFiles(String(directory || ''), kind));
+  ipcMain.handle('app:read-gamerpic', (_event, filename) => consoleServices.readGamerpic(String(filename || '')));
+  ipcMain.handle('app:get-sound-pack', () => soundPack.get());
+  ipcMain.handle('shop:offers', (event, appId) => {
+    if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame)throw Error('Untrusted Store request');
+    return storeOffers.get(appId, app.getLocaleCountryCode() || 'US');
+  });
+  ipcMain.handle('shop:open', (event, destination) => {
+    if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw Error('Untrusted Store request');
+    return steamShop.open(destination);
+  });
+  ipcMain.handle('shop:command', (event, action) => {
+    if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw Error('Untrusted Store request');
+    steamShop.command(action);
+  });
+  ipcMain.handle('app:install-sound-pack', (_event, folder) => soundPack.install(String(folder || '')));
+  ipcMain.handle('app:reset-sound-pack', () => soundPack.reset());
+  ipcMain.handle('xbox:gamepass-catalog', async () => (await consoleServices.getGamePassCatalog()).map(({details, ...game}) => game));
+  ipcMain.handle('xbox:catalog-details', (_event, id) => consoleServices.getCatalogDetails(String(id || '')));
+  ipcMain.handle('xbox:store', () => consoleServices.getXboxStore());
+  ipcMain.handle('xbox:open-catalog-game', async (_event, id) => {
+    if (!/^[A-Z0-9]{12}$/i.test(String(id))) throw Error('Invalid game');
+    await shell.openExternal(`msxbox://game/?productId=${id}`);
+    return true;
+  });
+  ipcMain.handle('game:add', async (_event, selectedPath) => {
+    if (!selectedPath) return null;
+    const executable = String(selectedPath);
+    if (!path.isAbsolute(executable) || !/\.(exe|bat|cmd)$/i.test(executable) || !(await fs.stat(executable)).isFile()) throw Error('Choose an existing game or app');
     const customGame = {
       id: `custom-${Buffer.from(executable.toLowerCase()).toString('base64url')}`,
       title: path.basename(executable, path.extname(executable)),
@@ -1930,10 +2650,10 @@ function registerIpc() {
     };
     return { ...customGame, isCustom: true };
   });
-  ipcMain.handle('game:bulk-add', async () => {
-    const picked = await dialog.showOpenDialog(mainWindow, { title: 'Import games from a folder', properties: ['openDirectory'] });
-    if (picked.canceled || !picked.filePaths[0]) return { added: 0, canceled: true };
-    const root = picked.filePaths[0];
+  ipcMain.handle('game:bulk-add', async (_event, selectedPath) => {
+    if (!selectedPath) return { added: 0, canceled: true };
+    const root = path.resolve(String(selectedPath));
+    if (!path.isAbsolute(String(selectedPath)) || !(await fs.stat(root)).isDirectory()) throw Error('Choose an existing folder');
     const queue = [{ directory: root, depth: 0, gameTitle: '' }];
     const candidates = new Map();
     const ignored = /(unins|uninstall|setup|install|update|crash|report|redistributable|prereq|anticheat|launcherupdater)/i;
@@ -2014,7 +2734,7 @@ async function createWindow() {
     minHeight: 650,
     backgroundColor: '#080b0e',
     autoHideMenuBar: true,
-    frame: true,
+    frame: false,
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     fullscreen: settings.fullscreen,
     show: false,
@@ -2024,14 +2744,18 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       backgroundThrottling: true,
+      autoplayPolicy: 'no-user-gesture-required',
       offscreen: Boolean(process.env.NEBULA_CAPTURE_SET || process.env.NEBULA_REVIEW)
     }
   });
+  mainWindow.setMenu(null);
+  steamShop = createSteamShop(mainWindow, { WebContentsView:require('electron').WebContentsView, ipcMain });
   mainWindow.once('ready-to-show', () => {
+    if (XBOX_MODE) mainWindow.setFullScreen(true);
     if (!process.env.NEBULA_CAPTURE && !process.env.NEBULA_CAPTURE_SET && !process.env.NEBULA_REVIEW) mainWindow.show();
   });
   await mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  mainWindow.webContents.setZoomFactor(settings.uiScale || 1);
+  mainWindow.webContents.setZoomFactor(1);
   if (process.env.NEBULA_CAPTURE_SET && process.env.NEBULA_DEMO === '1') {
     setTimeout(async () => {
       const output = process.env.NEBULA_CAPTURE_SET;

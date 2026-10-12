@@ -1,0 +1,48 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const {rarityPoints,scoreUnlocks,summarizeScore,parsePublicIdentity,safeAvatar,profileMode,defaultAvatarId,createPlayerProfile}=require('../src/player-profile.cjs');
+async function test() {
+  assert.equal(rarityPoints(100),10); assert.equal(rarityPoints(0),100);assert.equal(rarityPoints(undefined),10);
+  for(let i=1;i<=100;i++) assert.ok(rarityPoints(i)<=rarityPoints(i-1));
+  const entries=scoreUnlocks([{apiname:'rare',achieved:1},{apiname:'common',achieved:1},{apiname:'locked',achieved:0},{apiname:'unknown',achieved:1}],new Map([['rare',1],['common',80]]));
+  assert.equal(Object.keys(entries).length,3); assert.equal(entries.rare.points,90);
+  const resync=scoreUnlocks([{apiname:'rare',achieved:1}],new Map([['rare',75]]),entries);
+  const invalid=scoreUnlocks([{apiname:'invalid',achieved:1}],new Map([['invalid',NaN]]));
+  assert.equal(invalid.invalid.rarityKnown,false,'invalid rarity must remain eligible for a later verified value');
+  assert.equal(resync.rare.points,90,'earned rarity points should not drift');
+  const legacy=summarizeScore({10:{verified:true,at:2,entries}},['10']);assert.equal(legacy.points,0);assert.equal(legacy.legacyGames,1);
+  assert.equal(safeAvatar('https://avatars.steamstatic.com/x.jpg'),'https://avatars.steamstatic.com/x.jpg');
+  for(const url of ['file:///c:/private','https://steamstatic.com.evil.test/x','https://u:p@avatars.steamstatic.com/x'])assert.equal(safeAvatar(url),'');
+  const id='76561197960265851';
+  assert.equal(parsePublicIdentity(`<profile><steamID64>${id}</steamID64><steamID><![CDATA[A & B]]></steamID><avatarFull>https://avatars.steamstatic.com/x.jpg</avatarFull></profile>`,id).name,'A & B');
+  assert.equal(parsePublicIdentity('<steamID64>wrong</steamID64>',id),null);
+  assert.equal(profileMode({displayName:'Player'}),'steam');assert.equal(profileMode({displayName:'My name'}),'custom');
+  assert.equal(defaultAvatarId({avatarId:'one-orbit'}),'steam-profile');assert.equal(defaultAvatarId({avatarId:'one-orbit',profileAvatarCustomized:true}),'one-orbit');
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'preview-score-test-'));
+  let calls=0,privateStats=false;
+  const service=createPlayerProfile(directory,{delay:0,fetch:async url=>{
+    calls++;
+    return new Response(JSON.stringify(String(url).includes('GlobalAchievement')?{achievementpercentages:{achievements:[{name:'first',percent:1}]}}:{playerstats:privateStats?{success:false}:{success:true,achievements:[{apiname:'first',achieved:1}]}}));
+  }});
+  const result=await service.sync(id,'test-only-key',['10','20']);
+  assert.equal(result.points,2000);assert.equal(result.checked,2);assert.equal(result.remaining,0);
+  assert.equal((await service.score(id,[])).points,2000,'earned score survives uninstalling games');const count=calls;
+  await service.sync(id,'test-only-key',['10','20']);assert.equal(calls,count,'fresh score should not fetch again');
+  const paused=await service.sync(id,'test-only-key',['40'],()=>false);
+  assert.equal(paused.status,'paused');assert.equal(paused.remaining,1);assert.equal(calls,count,'inactive launcher must not fetch');
+  assert.equal((await service.score('76561197960265852',['10'])).points,0,'accounts must not share score');
+  privateStats=true;const unavailable=await service.sync(id,'test-only-key',['30']);assert.equal(unavailable.checked,2);
+  await service.reset();assert.equal((await service.score(id,['10'])).checked,0);
+  const saved=await fs.readFile(path.join(directory,'player-profile.json'),'utf8');assert.ok(!saved.includes('test-only-key'));
+  let release;
+  const late=createPlayerProfile(path.join(directory,'late'),{fetch:()=>new Promise(resolve=>{release=resolve;})});
+  const lookup=late.identity(id,[]);
+  while(!release)await new Promise(resolve=>setImmediate(resolve));
+  await late.reset();release(new Response(`<profile><steamID64>${id}</steamID64><steamID>Old identity</steamID></profile>`));
+  assert.equal((await lookup).available,false,'reset must discard in-flight identity results');
+  assert.ok(!(await fs.readFile(path.join(directory,'late/player-profile.json'),'utf8')).includes('Old identity'));
+  console.log('PASS rarity weighting, stable points, verified-only scoring, account separation, cache, identity defaults, safe avatar URLs and reset');
+}
+test().catch(error=>{console.error(error);process.exitCode=1;});

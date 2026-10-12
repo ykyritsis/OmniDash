@@ -65,6 +65,9 @@ const state = {
   steamOwnedCount: 0,
   steamId64: '',
   showUninstalledSteam: false,
+  duplicateMode: 'all',
+  duplicatePreferredProvider: 'Steam',
+  duplicatePreferences: {},
   showUninstalledEpic: false,
   epicStatus: 'needs-helper',
   epicHelperPath: '',
@@ -84,19 +87,33 @@ function topmostOpenDialog() {
 }
 
 function navigateBack() {
+  if (!steamShopSurface.hidden) { window.launcher.shopCommand('close'); return; }
   if (!launchOverlay.hidden) return;
   playUiSound('back');
   const modal = topmostOpenDialog();
   if (modal) {
+    if(modal===settingsDialog && state.consoleSettingsParent) {
+      const opener=state.consoleSettingsOpener;
+      showSettingsPage(state.consoleSettingsParent);
+      setFocusedElement(opener || document.querySelector('.settings-tab.active'),{scroll:false});
+      return;
+    }
     if (modal === onboardingDialog) { if (state.onboardingStep > 0) showOnboardingStep(state.onboardingStep - 1); }
     else if (modal === powerDialog && !powerConfirm.hidden) showPowerChoices();
     else modal.close();
     return;
   }
-  if (!searchPopover.hidden) { searchPopover.hidden = true; setFocusedElement(document.querySelector('[data-action="toggle-search"]')); }
-  else if (!navPanel.hidden) closeNav();
-  else if (state.view === 'detail') showView(state.previousView);
+  // Search now lives in a modal. Its deferred close event must not consume
+  // another Back press after the player has already moved to a different page.
+  searchPopover.hidden = true;
+  if (state.view === 'detail') {
+    const returnTo = state.detailReturn;
+    showView(state.previousView, { restore: returnTo });
+    state.detailReturn = null;
+    if (returnTo?.searchGameId) openConsoleSearch(returnTo.searchGameId);
+  }
   else if (state.view === 'library') showView('home');
+  else if (state.view === 'store') showView('home');
 }
 
 const ambient = document.querySelector('#ambient');
@@ -138,8 +155,6 @@ const singlePlayerRow = document.querySelector('#single-player-row');
 const libraryView = document.querySelector('#library-view');
 const libraryGrid = document.querySelector('#library-grid');
 const libraryCount = document.querySelector('#library-count');
-const navPanel = document.querySelector('#nav-panel');
-const brandButton = document.querySelector('.brand');
 const emptyState = document.querySelector('#empty-state');
 const settingsDialog = document.querySelector('#settings-dialog');
 const collectionsDialog = document.querySelector('#collections-dialog');
@@ -187,7 +202,6 @@ const newsPreviewDialog = document.querySelector('#news-preview-dialog');
 const keyboardKeys = document.querySelector('#keyboard-keys');
 const keyboardPreview = document.querySelector('#keyboard-preview');
 let visibleAmbient = ambient;
-let audioContext = null;
 const avatarDialog = document.querySelector('#avatar-dialog');
 const onboardingDialog = document.querySelector('#onboarding-dialog');
 const scanProgress = document.querySelector('#scan-progress');
@@ -213,19 +227,19 @@ let customArtworkSearchSequence = 0;
 let customArtworkSearchTimer = null;
 
 function avatarMarkup(preset) {
+  if (preset?.id === 'steam-profile') return steamPlayerIdentity?.avatar ? `<span class="avatar-picture"><span class="avatar-glyph">S</span><img src="${escapeHtml(steamPlayerIdentity.avatar)}" alt="Steam gamerpic" /></span>` : '<span class="avatar-glyph" style="background:linear-gradient(140deg,#173a54,#09202a)"><img src="assets/steam.svg" alt="Steam" /></span>';
   if (preset?.id === 'custom-uploaded' && customAvatarData) return `<img class="custom-avatar-image" src="${customAvatarData}" alt="Uploaded gamerpic" />`;
   return preset.url ? `<span class="avatar-picture"><span class="avatar-glyph" style="background:linear-gradient(140deg,#87c721,#103a26)">X</span><img src="${preset.url}" alt="" /></span>` : `<span class="avatar-glyph" style="background:linear-gradient(140deg,${preset.colors})">${preset.glyph}</span>`;
 }
 
 function renderAvatarChoices() {
-  const presets = customAvatarData
-    ? [{ id: 'custom-uploaded', group: 'Your gamerpic', label: 'Uploaded image' }, ...avatarPresets]
-    : avatarPresets;
+  const presets = [{ id: 'steam-profile', group: 'Your gamerpic', label: 'Steam profile' }, ...(customAvatarData ? [{ id: 'custom-uploaded', group: 'Your gamerpic', label: 'Uploaded image' }] : []), ...avatarPresets];
   for (const container of [document.querySelector('#avatar-choices'), document.querySelector('#onboard-avatar-choices')]) {
     container.innerHTML = presets.map((preset, index) => `${index === 0 || presets[index - 1].group !== preset.group ? `<strong class="avatar-group">${preset.group}</strong>` : ''}<button class="avatar-choice focusable${selectedAvatarId === preset.id ? ' selected' : ''}" type="button" data-action="choose-avatar" data-avatar-id="${preset.id}" aria-label="${preset.group}: ${preset.label}">${avatarMarkup(preset)}<span>${preset.label}</span></button>`).join('');
   }
   const selected = presets.find((preset) => preset.id === selectedAvatarId) || avatarPresets.find((preset) => preset.id === 'one-orbit');
   document.querySelector('#profile-avatar').innerHTML = avatarMarkup(selected);
+  document.querySelector('#dashboard-player-name').textContent = state.displayName;
   const profileAvatar = document.querySelector('#profile-large-avatar');
   if (profileAvatar) profileAvatar.innerHTML = avatarMarkup(selected);
   document.querySelectorAll('.avatar-picture img').forEach((image) => image.addEventListener('error', () => image.remove(), { once: true }));
@@ -253,17 +267,20 @@ function showOnboardingStep(step) {
 }
 
 function showSettingsPage(page) {
+  state.consoleSettingsParent=null;
   document.querySelectorAll('[data-settings-page]').forEach((element) => { element.hidden = element.dataset.settingsPage !== page; });
   document.querySelectorAll('[data-settings-tab]').forEach((button) => {
-    const active = button.dataset.settingsTab === page;
+    const parent = page === 'duplicates' || page.startsWith('connection-') ? 'services' : ['display', 'audio', 'accessibility'].includes(page) ? 'experience' : page;
+    const active = button.dataset.settingsTab === parent;
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
   });
-  const headings = { services: ['Library', 'Your installed games, launchers, and optional connections.'], experience: ['General', 'The essentials for playing on this PC.'], personalization: ['Appearance', 'Make the interface comfortable on your screen.'], data: ['Data & help', 'Manage this launcher and find setup guidance.'] };
+  const headings = { services: ['Library', 'Your games, apps, and connected services.'], experience: ['General', ''], personalization: ['Personalization', ''], data: ['System', 'Saved data and setup guidance.'], display:['TV & display options',''],audio:['Volume & audio',''],accessibility:['Accessibility',''],duplicates:['Duplicate games','Choose a preferred copy. Every source keeps its artwork, settings and play history.'] };
   const [title, description] = headings[page] || headings.experience;
   document.querySelector('.settings-title h2').textContent = title;
   document.querySelector('.settings-title p').textContent = description;
   document.querySelector('.settings-scroll').scrollTop = 0;
+  if(typeof updateConnectionPage==='function')updateConnectionPage(page);
   refreshFocusables();
 }
 
@@ -296,6 +313,7 @@ window.launcher.onLibraryProgress(({ percent, message }) => {
 window.addEventListener('online', updateConnectivityActivity);
 window.addEventListener('offline', updateConnectivityActivity);
 function applyLibraryResult(result, preserveFocus = false) {
+  scheduleScoreRefresh();
   const focusedBeforeRefresh = preserveFocus ? document.activeElement : null;
   const focusLocation = focusedBeforeRefresh?.classList?.contains('focusable') ? {
     containerId: focusedBeforeRefresh.parentElement?.id,
@@ -304,6 +322,9 @@ function applyLibraryResult(result, preserveFocus = false) {
     action: focusedBeforeRefresh.dataset.action
   } : null;
   state.games = result.games || [];
+  state.duplicateMode = result.duplicateMode || 'all';
+  state.duplicatePreferredProvider = result.duplicatePreferredProvider || 'Steam';
+  state.duplicatePreferences = result.duplicatePreferences || {};
   state.steamStatus = result.steamStatus || 'disabled';
   state.steamOwnedCount = Number(result.steamOwnedCount) || 0;
   state.steamId64 = result.steamId64 || '';
@@ -343,6 +364,7 @@ function applyLibraryResult(result, preserveFocus = false) {
         if (artwork) item.artwork = artwork;
       }
       renderHomeCollections();
+      if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore();
       refreshFocusables();
     }).catch(() => {
       state.steamDiscovery = { mostPlayed: [], topSellers: [], upcoming: [], status: 'unavailable' };
@@ -358,7 +380,21 @@ function renderSettingsLauncherSummary() {
     ? `<span class="settings-connected-dot"></span><strong>${launchers.length} game launcher${launchers.length === 1 ? '' : 's'} detected</strong><button class="focusable" type="button" data-action="settings-open-apps">View apps ›</button>`
     : '<strong>No game launchers detected yet</strong><span>Scan again or add an app manually.</span>';
 }
-window.launcher.onLibraryInitial((result) => applyLibraryResult(result, state.backgroundLibraryRefresh));
+// The game list arrives before artwork. Show it straight away and let artwork fill in behind it.
+window.launcher.onLibraryInitial((result) => {
+  applyLibraryResult(result, state.backgroundLibraryRefresh || state.libraryInitialShown);
+  if (state.libraryInitialShown) return;
+  state.libraryInitialShown = true;
+  if (state.fullScreenImport) {
+    importingScreen.classList.remove('visible');
+    setTimeout(() => { importingScreen.hidden = true; importingScreen.setAttribute('aria-hidden', 'true'); }, 520);
+    state.fullScreenImport = false;
+  }
+  if (!state.backgroundLibraryRefresh) {
+    scanProgress.classList.add('background-refresh');
+    showToast(`${state.games.length} library item${state.games.length === 1 ? '' : 's'} ready · artwork keeps loading in the background`);
+  }
+});
 window.launcher.onSteamDiscoveryArtwork(({ appId, artwork }) => {
   state.steamDiscoveryArtworkUpdates.set(appId, artwork);
   for (const item of Object.values(state.steamDiscovery).filter(Array.isArray).flat()) if (item.appId === appId) item.artwork = artwork;
@@ -371,6 +407,7 @@ window.launcher.onSteamDiscoveryArtwork(({ appId, artwork }) => {
       cardElement.classList.toggle('no-cover', !artGame.artwork?.tile);
     }
   });
+  updateNativeStoreArtwork(appId);
 });
 window.launcher.onLibraryTrending((result) => {
   state.trendingRanks = result.ranks || {};
@@ -391,8 +428,9 @@ window.launcher.onLibraryArtwork((changes) => {
     });
     if (game.id === state.selectedGameId) selectGame(game.id, false, null, false);
   }
-  const collage = document.querySelector('.library-collage');
-  if (collage) collage.innerHTML = state.games.filter((game) => !game.isApp && game.installed !== false).slice(0, 4).map((game) => `<span class="library-collage-art">${gameArt(game)}</span>`).join('');
+  const collage = document.querySelector('#dashboard-features .library-collage');
+  const visibleIds = new Set([...recentRow.querySelectorAll('.game-card')].map(node => node.dataset.gameId));
+  if (collage) collage.innerHTML = displayedLibraryGames().filter((game) => !game.isApp && game.installed !== false && !visibleIds.has(game.id)).slice(0, 4).map((game) => `<span class="library-collage-art">${gameArt(game)}</span>`).join('');
   renderHomeCollections();
   updateControllerPrompts();
 });
@@ -412,32 +450,7 @@ document.addEventListener('error', (event) => {
 }, true);
 
 function playUiSound(kind = 'navigate') {
-  if (!state.soundEffects) return;
-  const presets = {
-    navigate: [{ hz: 460, duration: .045, gain: .035 }],
-    confirm: [{ hz: 560, duration: .065, gain: .05 }, { hz: 820, delay: .055, duration: .085, gain: .045 }],
-    back: [{ hz: 610, duration: .05, gain: .035 }, { hz: 430, delay: .045, duration: .075, gain: .03 }],
-    launch: [{ hz: 392, duration: .09, gain: .04 }, { hz: 523, delay: .085, duration: .09, gain: .045 }, { hz: 659, delay: .17, duration: .1, gain: .045 }, { hz: 784, delay: .265, duration: .17, gain: .05 }]
-  };
-  try {
-    audioContext ||= new AudioContext();
-    if (audioContext.state === 'suspended') audioContext.resume();
-    const start = audioContext.currentTime;
-    for (const note of presets[kind] || presets.navigate) {
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      const at = start + (note.delay || 0);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(note.hz, at);
-      gain.gain.setValueAtTime(.0001, at);
-      gain.gain.exponentialRampToValueAtTime(note.gain, at + .012);
-      gain.gain.exponentialRampToValueAtTime(.0001, at + note.duration);
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-      oscillator.start(at);
-      oscillator.stop(at + note.duration + .015);
-    }
-  } catch { /* Audio can be unavailable in a remote desktop session. */ }
+  if (state.soundEffects) interfaceAudio.play(kind);
 }
 
 function hashHue(text) {
@@ -454,17 +467,117 @@ function fallbackWordmark(title) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+const ambientPreloads = new Map();
+const logoContrastChecks = new Map();
+const logoBounds = new Map();
+let ambientSequence = 0;
+function isDarkGameLogo(url) {
+  if (logoContrastChecks.has(url)) return logoContrastChecks.get(url);
+  const check = new Promise(resolve => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    const timeout = setTimeout(() => finish(false), 5000);
+    let settled = false;
+    const finish = dark => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = image.onerror = null;
+      resolve(dark);
+    };
+    image.onerror = () => finish(false);
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 64;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(image, 0, 0, 128, 64);
+        const pixels = context.getImageData(0, 0, 128, 64).data;
+        let dark = 0, total = 0, transparent = 0, left = 128, top = 64, right = 0, bottom = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i + 3] < 80) { transparent++; continue; }
+          const weight = pixels[i + 3] / 255;
+          const x = (i / 4) % 128, y = Math.floor(i / 4 / 128);
+          left = Math.min(left, x); right = Math.max(right, x + 1);
+          top = Math.min(top, y); bottom = Math.max(bottom, y + 1);
+          total += weight;
+          if (.2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2] < 62) dark += weight;
+        }
+        // Only recolour transparent wordmarks, never opaque art into a white box.
+        if (total > 0) {
+          logoBounds.set(url, { left: Math.max(0,left-1)/128, top: Math.max(0,top-1)/64, right: Math.min(128,right+1)/128, bottom: Math.min(64,bottom+1)/64, ratio: image.naturalWidth / image.naturalHeight });
+          while (logoBounds.size > 64) logoBounds.delete(logoBounds.keys().next().value);
+        }
+        finish(total > 0 && dark / total > .5 && transparent / (128 * 64) > .12);
+      } catch { finish(false); } // Providers without CORS keep their original art.
+    };
+    image.src = url;
+  });
+  logoContrastChecks.set(url, check);
+  while (logoContrastChecks.size > 64) logoContrastChecks.delete(logoContrastChecks.keys().next().value);
+  return check;
+}
+function applyLogoContrast(image, url) {
+  image.classList.remove('dark-game-logo');
+  if (!url) return Promise.resolve();
+  return isDarkGameLogo(url).then(dark => {
+    if (image.getAttribute('src') === url) image.classList.toggle('dark-game-logo', dark);
+  });
+}
+const ambientDimensions = new Map();
+function preloadAmbientImage(url) {
+  if (ambientPreloads.has(url)) return ambientPreloads.get(url);
+  const task = new Promise(resolve => {
+    const image = new Image();
+    let settled = false;
+    const done = success => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = image.onerror = null;
+      if (!success) image.src = '';
+      resolve(success);
+    };
+    const timeout = setTimeout(() => done(false), 12000);
+    image.onload = () => image.decode().catch(() => {}).then(() => {
+      ambientDimensions.set(url, { width: image.naturalWidth, height: image.naturalHeight });
+      while (ambientDimensions.size > 64) ambientDimensions.delete(ambientDimensions.keys().next().value);
+      done(true);
+    });
+    image.onerror = () => done(false);
+    image.src = url;
+  });
+  ambientPreloads.set(url, task);
+  while (ambientPreloads.size > 16) ambientPreloads.delete(ambientPreloads.keys().next().value);
+  task.then(success => { if (!success && ambientPreloads.get(url) === task) ambientPreloads.delete(url); });
+  return task;
+}
 function applyAmbientImage(game, image, kind) {
+  const sequence = ++ambientSequence;
   const ambientKey = `${game.id}:${kind}:${image || hashHue(game.title)}`;
   if (state.ambientKey === ambientKey) return;
-  state.ambientKey = ambientKey;
-  const target = visibleAmbient === ambient ? ambientNext : ambient;
-  target.style.backgroundImage = image
-    ? `linear-gradient(118deg, rgba(3,9,14,.3), rgba(3,9,14,.08)), url("${image.replaceAll('"', '%22')}")`
-    : `radial-gradient(circle at 78% 7%, hsla(${hashHue(game.title)}, 72%, 48%, .55), transparent 34%), linear-gradient(118deg, #06243a, #101820 66%, #07090c)`;
-  target.classList.add('ambient-active');
-  visibleAmbient.classList.remove('ambient-active');
-  visibleAmbient = target;
+  const commit = () => {
+    if (sequence !== ambientSequence) return;
+    state.ambientKey = ambientKey;
+    const target = visibleAmbient === ambient ? ambientNext : ambient;
+    target.style.backgroundImage = image
+      ? `linear-gradient(118deg, rgba(3,9,14,.3), rgba(3,9,14,.08)), url("${image.replaceAll('"', '%22')}")`
+      : `radial-gradient(circle at 78% 7%, hsla(${hashHue(game.title)}, 72%, 48%, .55), transparent 34%), linear-gradient(118deg, #06243a, #101820 66%, #07090c)`;
+    target.classList.add('ambient-active');
+    visibleAmbient.classList.remove('ambient-active');
+    visibleAmbient = target;
+  };
+  // Keep the previous image visible until its replacement is decoded. Slow or
+  // failed requests must never blank the background or win a later selection.
+  if (image) preloadAmbientImage(image).then(success => {
+    if (sequence !== ambientSequence) return;
+    const size = ambientDimensions.get(image);
+    // A square/portrait cover or tiny Steam capsule is not a wallpaper. Never
+    // enlarge its embedded title across the whole dashboard.
+    if (!success || !size || size.width / size.height < 1.5 || size.width < 900) image = '';
+    commit();
+  });
+  else commit();
 }
 
 function pickNewScreenshot(images, gameId, previousByGame) {
@@ -477,7 +590,7 @@ function pickNewScreenshot(images, gameId, previousByGame) {
 
 function updateAmbient(game, force = false) {
   const requestToken = ++state.homeAmbientRequestToken;
-  const fallback = game.artwork?.hero || game.artwork?.tile || game.artwork?.grid;
+  const fallback = game.artwork?.hero || game.artwork?.wide || '';
   const cachedScreenshots = state.homeScreenshotCache.get(game.id) || [];
   if (state.shuffleHomeScreenshots && cachedScreenshots.length) {
     applyAmbientImage(game, pickNewScreenshot(cachedScreenshots, game.id, state.lastHomeScreenshotByGame), 'screenshot');
@@ -499,7 +612,7 @@ function providerBadge(provider) {
     return '<span class="provider-mark steam-mark" title="Steam" aria-label="Steam"><img src="assets/steam.svg" alt="" /></span>';
   }
   if (provider === 'Epic Games') return '<span class="provider-mark epic-mark" title="Epic Games" aria-label="Epic Games">EPIC</span>';
-  if (provider === 'Xbox PC') return '<span class="provider-mark xbox-mark" title="Xbox PC" aria-label="Xbox PC"><img src="assets/xbox.svg" alt="" /></span>';
+  if (provider === 'Xbox PC' || provider === 'Xbox') return '<span class="provider-mark xbox-mark" title="Xbox" aria-label="Xbox"><img src="assets/xbox.svg" alt="" /></span>';
   if (provider === 'Ubisoft Connect') return '<span class="provider-mark pc-mark" title="Ubisoft Connect" aria-label="Ubisoft Connect">UBI</span>';
   if (provider === 'EA app') return '<span class="provider-mark pc-mark" title="EA app" aria-label="EA app">EA</span>';
   if (provider === 'Battle.net') return '<span class="provider-mark pc-mark" title="Battle.net" aria-label="Battle.net">B.NET</span>';
@@ -510,12 +623,10 @@ function gameArt(game, className = '', featured = false) {
   const url = featured
     ? (game.artwork?.hero || game.artwork?.wide || game.artwork?.tile)
     : (game.artwork?.tile || game.artwork?.grid);
-  // A vertical/wide asset is still useful as a backdrop, but the launcher keeps
-  // every library tile square and places the title logo over that backdrop.
-  const showCenteredLogo = game.artwork?.overlayLogo === true && game.artwork?.logo;
-  const fallbackTile = !featured && url && (game.artwork?.tileIsSquare !== true || (showCenteredLogo && game.artwork?.overlayLogo));
-  if (url && !fallbackTile) return `<img class="${className}" src="${escapeHtml(url)}" data-art-game-id="${escapeHtml(game.id)}" data-cover-index="0" alt="" loading="${featured ? 'eager' : 'lazy'}" decoding="async" draggable="false">`;
-  if (featured && url) return `<img class="${className}" src="${escapeHtml(url)}" alt="" decoding="async" draggable="false">`;
+  // Non-square artwork is cropped by the square tile, without adding another
+  // title over its own wordmark. The centred logo is an explicit choice.
+  const showCenteredLogo = !featured && game.artwork?.logo && (game.artwork?.overlayLogo === true || !url);
+  if (url && !showCenteredLogo) return `<img class="${className}" src="${escapeHtml(url)}" data-art-game-id="${escapeHtml(game.id)}" data-cover-index="0" alt="" loading="${featured ? 'eager' : 'lazy'}" decoding="async" draggable="false">`;
   return `<span class="art-fallback" style="--hue:${hashHue(game.title)}">
     ${url ? `<img class="fallback-art" src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" draggable="false">` : ''}
     <span class="fallback-scrim"></span>
@@ -525,12 +636,8 @@ function gameArt(game, className = '', featured = false) {
 
 function controlBadge(game) {
   const support = game.controls || 'unknown';
-  const labels = { controller: 'Controller', partial: 'Partial controller support', kbm: 'Keyboard and mouse only', unknown: 'Input support not detected' };
-  const label = labels[support] || labels.unknown;
-  const icon = support === 'kbm'
-    ? '<img src="assets/keyboard.svg" alt="" />'
-    : '<img src="assets/controller.svg" alt="" />';
-  return `<span class="control-badge control-${escapeHtml(support)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${icon}</span>`;
+  const label = inputMethods(game).map(method => method.label).join(' · ');
+  return `<span class="control-badge control-${escapeHtml(support)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${inputSymbols(game)}</span>`;
 }
 
 function card(game, index = 0) {
@@ -539,30 +646,51 @@ function card(game, index = 0) {
     return `<button class="app-list-card focusable" type="button" role="listitem" data-action="select-app" data-game-id="${escapeHtml(game.id)}" aria-label="Open ${escapeHtml(game.title)} options"><span class="app-list-icon">${icon}</span><span class="app-list-copy"><strong>${escapeHtml(game.title)}</strong><small>${game.isLauncher ? 'Game launcher' : 'App'} · ${escapeHtml(game.provider)}</small></span><span class="app-list-chevron" aria-hidden="true">›</span></button>`;
   }
   const installClass = game.installed === false ? ' not-installed' : '';
-  return `<button class="game-card focusable${installClass}" style="--tile-index:${Math.min(index, 8)}" role="listitem" data-game-id="${escapeHtml(game.id)}" data-action="select-game" aria-label="${escapeHtml(game.title)}, ${escapeHtml(game.provider)}${game.installed === false ? ', not installed' : ''}" title="${escapeHtml(game.title)}${game.installed === false ? ' · Not installed' : ''} · Right click or press Y for options">
+  return `<button class="game-card focusable${installClass}" style="--tile-index:${Math.min(index, 8)}" role="listitem" data-game-id="${escapeHtml(game.id)}" data-action="select-game" aria-label="${escapeHtml(game.title)}, ${escapeHtml(game.provider)}${game.installed === false ? ', not installed' : ''}" title="${escapeHtml(game.title)}${game.installed === false ? ' · Not installed' : ''} · Right click or press Menu for options">
     ${gameArt(game)}
     ${providerBadge(game.provider)}
     ${controlBadge(game)}
+    ${game.steamFamilyShared ? `<span class="family-shared-mark">${consoleIcon('groups')}<span>Family</span></span>` : ''}
+    <span class="console-game-label">${escapeHtml(game.title)}</span>
     ${game.installed === false ? '<span class="install-state">NOT INSTALLED</span>' : ''}
+    <span class="g-card-text"><em>${escapeHtml(game.provider === 'PC' ? 'Custom' : game.provider)}</em><strong>${escapeHtml(game.title)}</strong><small class="g-status">${escapeHtml(game.installed === false ? (game.steamFamilyShared ? 'Family shared' : 'Not installed') : game.provider === 'PC' ? 'Custom' : game.provider)}</small><small class="g-size">${game.sizeOnDisk ? formatBytes(game.sizeOnDisk) : ''}</small></span>
+    <span class="g-col g-col-provider">${escapeHtml(game.provider === 'PC' ? 'Custom' : game.provider)}</span><span class="g-col g-col-played">${game.steamLastPlayed ? relativeTime(game.steamLastPlayed) : '—'}</span><span class="g-col g-col-size">${game.sizeOnDisk ? formatBytes(game.sizeOnDisk) : '—'}</span>
   </button>`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const power = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / 1024 ** power;
+  return `${value >= 100 || power === 0 ? Math.round(value) : value.toFixed(1)} ${units[power]}`;
+}
+
+const relativeTimeFormat = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+function relativeTime(at) {
+  const seconds = (at - Date.now()) / 1000;
+  for (const [unit, size] of [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]) {
+    if (Math.abs(seconds) >= size) return relativeTimeFormat.format(Math.round(seconds / size), unit);
+  }
+  return 'Just now';
 }
 
 function updateControllerPrompts() {
   const selectedGame = state.games.find((game) => game.id === state.selectedGameId);
   const hasGames = state.games.some((game) => !game.isApp);
   const hasHomeGames = state.games.some((game) => !game.isApp && game.installed !== false);
-  const visible = state.view === 'home' ? hasHomeGames : ['library', 'detail'].includes(state.view) && hasGames;
+  const visible = state.view === 'home' ? hasHomeGames : state.view === 'store' || ['library', 'detail'].includes(state.view) && hasGames;
   controllerPrompts.hidden = !visible;
   const setPrompt = (element, show, label) => {
     element.hidden = !show;
     element.querySelector('span').textContent = label;
   };
-  setPrompt(promptA, Boolean(selectedGame), state.view === 'detail' && selectedGame?.installed !== false ? 'Play' : state.view === 'detail' && selectedGame ? 'Install' : 'Open');
-  const navOpen = !navPanel.hidden;
-  setPrompt(promptB, state.view !== 'home' || navOpen, navOpen ? 'Close' : state.view === 'library' ? 'Home' : 'Back');
-  setPrompt(promptX, state.view !== 'detail', 'Scan');
-  setPrompt(promptY, Boolean(selectedGame), 'Options');
-  setPrompt(promptMenu, true, 'Settings');
+  const catalogDetail = state.view === 'detail' && !state.games.some(game => game.id === state.detailGameId);
+  setPrompt(promptA, Boolean(selectedGame) || state.view === 'store', state.view === 'store' || catalogDetail ? 'View' : state.view === 'detail' && selectedGame?.installed !== false ? 'Play' : state.view === 'detail' && selectedGame ? 'Install' : 'Open');
+  setPrompt(promptB, state.view !== 'home', state.view === 'library' ? 'Home' : 'Back');
+  setPrompt(promptX, false, 'Scan');
+  setPrompt(promptY, state.view === 'home' || state.view === 'library', 'Search');
+  setPrompt(promptMenu, Boolean(selectedGame) && state.view !== 'store' && !catalogDetail, 'Options');
 }
 
 function libraryCard(games) {
@@ -574,29 +702,49 @@ function libraryCard(games) {
   </button>`;
 }
 
+const LIBRARY_PAGE = 72;
+function appendLibraryPage() {
+  const items = state.libraryItems || [];
+  if (state.consoleLibraryGroups || state.libraryRendered >= items.length) return false;
+  const next = Math.min(items.length, state.libraryRendered + LIBRARY_PAGE);
+  libraryGrid.insertAdjacentHTML('beforeend', items.slice(state.libraryRendered, next).map((game, index) => card(game, index)).join(''));
+  state.libraryRendered = next;
+  refreshFocusables();
+  return true;
+}
+
 function renderLibraryView() {
+  libraryView.classList.toggle('show-groups', Boolean(state.consoleLibraryGroups));
   libraryView.classList.toggle('show-apps', state.libraryCategory === 'apps');
+  const displayed = displayedLibraryGames(state.sourceFilter);
   const categorySource = state.libraryCategory === 'apps'
-    ? state.games.filter((game) => game.isApp)
+    ? displayed.filter((game) => game.isApp)
     : state.libraryCategory === 'games'
-      ? state.games.filter((game) => !game.isApp)
-      : state.games;
+      ? displayed.filter((game) => !game.isApp)
+      : displayed;
   const filtered = categorySource.filter((game) => (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery))
     && (state.installFilter === 'all' || (game.installed !== false) === (state.installFilter === 'installed'))
     && (state.sourceFilter === 'all' || game.provider === state.sourceFilter)
     && matchesCollection(game, state.collectionFilter || 'all'));
   const source = filtered.filter((game) => state.libraryTab === 'play-history' ? (game.playCount || 0) > 0
-    : state.libraryTab === 'my-games' ? game.installed !== false || game.steamOwned || game.epicOwned : true);
+    : state.libraryTab === 'my-games' ? game.installed !== false || game.steamOwned || game.steamFamilyShared || game.epicOwned || Boolean(game.accountLibrary) : true);
   if (state.librarySort === 'name') source.sort((a, b) => a.title.localeCompare(b.title));
   else if (state.librarySort === 'provider') source.sort((a, b) => a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title));
   else if (state.librarySort === 'playtime') source.sort((a, b) => (b.steamPlaytimeMinutes || 0) - (a.steamPlaytimeMinutes || 0) || a.title.localeCompare(b.title));
+  else if (state.librarySort === 'size') source.sort((a, b) => (b.sizeOnDisk || 0) - (a.sizeOnDisk || 0) || a.title.localeCompare(b.title));
   else if (state.libraryTab === 'play-history') source.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
   const categoryName = state.libraryCategory === 'apps' ? 'Apps' : state.libraryCategory === 'games' ? 'Games' : 'Full library';
+  const activeSection = state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
+    : state.installFilter === 'installed' && !state.consoleLibraryGroups && state.libraryCategory !== 'apps' ? 'installed' : 'games';
+  document.querySelectorAll('.console-library-nav [data-section]').forEach(button => button.classList.toggle('active', button.dataset.section === activeSection));
   libraryCount.textContent = `${source.length} ${state.libraryCategory === 'apps' ? 'app' : state.libraryCategory === 'games' ? 'game' : 'item'}${source.length === 1 ? '' : 's'}`;
   document.querySelector('#library-heading').textContent = state.libraryTab === 'play-history' ? 'Play history' : categoryName;
+  // Build the grid a page at a time; the rest is appended as the player scrolls or moves focus down.
+  state.libraryItems = source;
+  state.libraryRendered = Math.min(source.length, LIBRARY_PAGE);
   libraryGrid.innerHTML = source.length
-    ? source.map((game, index) => card(game, index)).join('')
-    : '<p class="library-no-results">No items match these filters.</p>';
+    ? source.slice(0, state.libraryRendered).map((game, index) => card(game, index)).join('')
+    : libraryEmptyState();
   libraryGrid.classList.toggle('dense-results', source.length > 28);
   libraryGrid.classList.toggle('apps-grid', state.libraryCategory === 'apps');
   document.querySelectorAll('.library-tab').forEach((tab) => {
@@ -615,13 +763,15 @@ function renderLibraryView() {
     chip.classList.toggle('active', active);
     chip.setAttribute('aria-pressed', String(active));
   });
+  if (state.consoleLibraryGroups) renderConsoleGroups();
+  renderConsoleLibraryStatus();
 }
 
 function renderSteamConnectionStatus() {
   const messages = {
     disabled: 'Installed Steam games are linked. Account library features are optional.',
     ready: `${state.steamOwnedCount} Steam games visible to the API${state.showUninstalledSteam ? ' · uninstalled titles are included below' : ' · enable uninstalled games in Settings'}.`,
-    'needs-api-key': 'Add a Steam Web API key in Settings to show uninstalled games.',
+    'needs-api-key': 'Installed Steam games are linked. Add a Web API key for uninstalled owned games, or connect Steam Family in Settings.',
     'needs-steam-id': 'SteamID64 not detected. Sign in to the Steam client or enter it in Settings.',
     'invalid-api-key': 'Steam rejected this API key. Check or replace it in Settings.',
     'private-library': 'Steam returned no visible library. Check your profile’s Game details privacy setting.',
@@ -697,8 +847,9 @@ function updateUninstalledRequirement(keyInputId, checkboxId, noteId = '') {
 
 function matchesCollection(game, collection) {
   const categories = (game.steamCategories || []).join(' ');
-  if (collection === 'favorites') return state.favoriteGameIds.includes(game.id);
-  if (collection.startsWith('custom:')) return state.customCollections.find((item) => item.id === collection.slice(7))?.gameIds.includes(game.id) || false;
+  if (collection === 'favorites') return libraryCopyIds(game).some(id=>state.favoriteGameIds.includes(id));
+  if (collection === 'family-shared') return game.steamFamilyShared === true;
+  if (collection.startsWith('custom:')) return libraryCopyIds(game).some(id=>state.customCollections.find((item) => item.id === collection.slice(7))?.gameIds.includes(id));
   if (collection === 'controller') return ['controller', 'partial'].includes(game.controls);
   if (collection === 'solo') return /single-player/i.test(categories);
   if (collection === 'multiplayer') return /multi.?player|co-op|coop|split screen|online pvp|online pve/i.test(categories);
@@ -716,11 +867,8 @@ function showProfilePage(page) {
 }
 
 function renderHomeCollections() {
-  const steamGames = state.games.filter((game) => game.provider === 'Steam' && !game.isApp && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery)));
-  const homeGames = state.games.filter((game) => !game.isApp && game.installed !== false && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery)));
-  const favoriteGames = homeGames.filter((game) => state.favoriteGameIds.includes(game.id));
-  favoritesShelf.hidden = favoriteGames.length === 0;
-  favoritesRow.innerHTML = favoriteGames.slice(0, 12).map((game, index) => card(game, index)).join('');
+  const savedPosition = captureCollectionPosition();
+  favoritesShelf.hidden = true;
   homeCollections.hidden = false;
   for (const [key, row] of Object.entries(steamDiscoveryRows)) {
     const items = state.steamDiscovery[key] || [];
@@ -738,75 +886,21 @@ function renderHomeCollections() {
     }).join('') : '<p class="discovery-loading">Loading Steam charts…</p>';
   }
   for (const shelf of [trendingShelf, mostPlayedShelf, controllerReadyShelf, multiplayerShelf, singlePlayerShelf, recentlyPlayedShelf]) shelf.hidden = true;
-  const collections = [
-    ...state.customCollections.map((item) => [`custom:${item.id}`, item.name, 'Your collection']),
-    ['favorites','Favorites','Your picks'],['controller','Controller ready','Pick up and play'],['solo','Single player','A world of your own'],['multiplayer','Play together','Better with company'],['installed','Ready to play','Installed on this PC']
-  ];
-  document.querySelector('#category-discovery').innerHTML = collections.map(([id,title,subtitle]) => {
-    const games = homeGames.filter(game => matchesCollection(game,id));
-    if (!games.length) return '';
-    const art = games.find(game => game.artwork?.hero || game.artwork?.wide)?.artwork;
-    return `<button class="category-card focusable" data-action="browse-collection" data-collection="${id}">${art ? `<img src="${escapeHtml(art.hero || art.wide)}" loading="lazy" alt="" />` : ''}<span><strong>${title}</strong><small>${subtitle} · ${games.length} games</small></span><b aria-hidden="true">›</b></button>`;
-  }).join('');
-  const recentlyPlayed = state.games.filter((game) => !game.isApp && game.playCount > 0 && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery))).slice(0, 6);
-  recentlyPlayedShelf.hidden = true;
-  recentlyPlayedRow.innerHTML = recentlyPlayed.map((game, index) => card(game, index)).join('');
-  trendingShelf.hidden = !state.steamApiKeyConfigured;
-  trendingRow.innerHTML = [...steamGames]
-    .filter((game) => Number(state.trendingRanks[game.id]) > 0)
-    .sort((a, b) => state.trendingRanks[a.id] - state.trendingRanks[b.id])
-    .slice(0, 5).map((game, index) => card(game, index)).join('');
-  trendingNote.textContent = state.trendingStatus === 'ready'
-    ? trendingRow.childElementCount ? 'Your library, ranked by current player counts across Steam' : 'No games in your visible Steam library appear in Steam’s current popularity chart'
-    : state.trendingStatus === 'unavailable'
-      ? 'Steam’s current popularity chart is unavailable right now'
-      : 'Loading Steam’s current player rankings…';
-  const steamPlaytime = [...steamGames].filter((game) => Number(game.steamPlaytimeMinutes) > 0)
-    .sort((a, b) => Number(b.steamPlaytimeMinutes) - Number(a.steamPlaytimeMinutes)).slice(0, 5);
-  mostPlayedShelf.hidden = !state.steamApiKeyConfigured || steamPlaytime.length === 0;
-  mostPlayedRow.innerHTML = steamPlaytime.map((game, index) => card(game, index)).join('');
-  const controllerReady = homeGames.filter((game) => ['controller', 'partial'].includes(game.controls));
-  controllerReadyShelf.hidden = controllerReady.length === 0;
-  controllerReadyRow.innerHTML = controllerReady.slice(0, 8).map((game, index) => card(game, index)).join('');
-  const includesCategory = (game, pattern) => (game.steamCategories || []).some((category) => pattern.test(category));
-  const multiplayerGames = homeGames.filter((game) => includesCategory(game, /multi.?player|co-op|coop|split screen|remote play together|online pvp|online pve/i));
-  multiplayerShelf.hidden = multiplayerGames.length === 0;
-  multiplayerRow.innerHTML = multiplayerGames.slice(0, 8).map((game, index) => card(game, index)).join('');
-  const singlePlayerGames = homeGames.filter((game) => includesCategory(game, /^single-player$/i));
-  singlePlayerShelf.hidden = singlePlayerGames.length === 0;
-  singlePlayerRow.innerHTML = singlePlayerGames.slice(0, 8).map((game, index) => card(game, index)).join('');
-  recentlyUpdatedRow.innerHTML = [...steamGames]
-    .filter((game) => game.addedAt)
-    .sort((a, b) => b.addedAt - a.addedAt)
-    .slice(0, 5).map((game, index) => card(game, index)).join('');
-  const ids = new Set(homeGames.map((game) => game.id));
-  state.randomGameIds = state.randomGameIds.filter((id) => ids.has(id));
-  const pool = homeGames.filter((game) => !state.randomGameIds.includes(game.id));
-  while (state.randomGameIds.length < Math.min(5, homeGames.length) && pool.length) {
-    const index = Math.floor(Math.random() * pool.length);
-    state.randomGameIds.push(pool.splice(index, 1)[0].id);
-  }
-  randomRow.innerHTML = state.randomGameIds.slice(0, 5)
-    .map((id) => homeGames.find((game) => game.id === id))
-    .filter(Boolean).map((game, index) => card(game, index)).join('');
   recentlyUpdatedRow.closest('section').hidden = true;
   randomRow.closest('section').hidden = true;
-  for (const shelf of [trendingShelf, mostPlayedShelf, controllerReadyShelf, multiplayerShelf, singlePlayerShelf]) shelf.hidden = true;
-  for (const [row, collection] of [[controllerReadyRow,'controller'],[multiplayerRow,'multiplayer'],[singlePlayerRow,'solo']]) {
-    const heading = row.closest('section').querySelector('.section-heading');
-    if (!heading.querySelector('button')) heading.insertAdjacentHTML('beforeend', `<button class="shelf-see-all focusable" data-action="browse-collection" data-collection="${collection}">See all <span aria-hidden="true">›</span></button>`);
-  }
+  renderCollectionBands();
+  restoreCollectionPosition(savedPosition);
 }
 
 function renderLibrary() {
   renderCollectionOptions();
-  const homeGames = state.games.filter((game) => !game.isApp && (game.installed !== false || state.searchQuery) && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery)));
+  const homeGames = displayedLibraryGames().filter((game) => !game.isApp && (game.installed !== false || state.searchQuery) && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery)));
   const hasGames = homeGames.length > 0;
   const hasApps = state.games.some((game) => game.isApp);
   const hasItems = state.games.length > 0;
   if (!hasGames && hasApps && state.view === 'home' && !state.searchQuery) state.libraryCategory = 'apps';
-  document.querySelector('main').hidden = !hasItems;
-  emptyState.hidden = hasGames || state.view === 'library';
+  document.querySelector('main').hidden = !hasItems && state.view === 'home';
+  emptyState.hidden = hasGames || state.view !== 'home';
   if (!hasGames && hasItems) {
     emptyState.querySelector('h2').textContent = state.searchQuery ? 'No matching games' : 'No installed games on Home';
     emptyState.querySelector('p').textContent = state.searchQuery
@@ -816,14 +910,14 @@ function renderLibrary() {
     emptyState.querySelector('h2').textContent = 'No games found yet';
     emptyState.querySelector('p').textContent = 'We scan Steam and Epic Games automatically. You can also add any Windows game manually.';
   }
-  const visibleHomeGames = homeGames.slice(0, 7);
-  const libraryPreviewGames = homeGames.slice(visibleHomeGames.length, visibleHomeGames.length + 4);
+  const visibleHomeGames = homeGames.slice(0, 9);
   recentRow.innerHTML = hasGames
-    ? visibleHomeGames.map((game, index) => card(game, index)).join('') + libraryCard(libraryPreviewGames)
+    ? visibleHomeGames.map((game, index) => card(game, index)).join('')
     : '';
+  renderDashboard();
   renderHomeCollections();
   renderLibraryView();
-  if (hasGames && !state.games.some((game) => game.id === state.selectedGameId)) selectGame(homeGames[0].id, false);
+  if (hasGames && !homeGames.some((game) => game.id === state.selectedGameId)) selectGame(homeGames[0].id, false);
   else if (!hasGames && hasApps && state.view === 'home' && !state.searchQuery) showView('library');
   if (state.selectedGameId) {
     const selectedCard = [...document.querySelectorAll('.game-card[data-game-id]')]
@@ -871,7 +965,7 @@ function renderGameSessionAction() {
   } else {
     detailButton.removeAttribute('data-return-game');
     if (detailGame) detailButton.innerHTML = detailGame.installed === false
-      ? '<span class="detail-action-icon" aria-hidden="true">↓</span><strong>Install</strong>'
+      ? `<span class="detail-action-icon" aria-hidden="true">${detailGame.clientOnly ? '↗' : '↓'}</span><strong>${detailGame.clientOnly ? `Open ${escapeHtml(detailGame.provider)}` : 'Install'}</strong>`
       : '<span class="detail-action-icon" aria-hidden="true">▶</span><strong>Play</strong>';
   }
   const optionsReturn = document.querySelector('#options-return');
@@ -969,8 +1063,10 @@ function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = 
     }
   }
   if (changed) updateAmbient(game);
+  const finishTileMotion = beginDashboardTileMotion(selectedElement);
   document.querySelectorAll('.game-card.selected').forEach((element) => element.classList.remove('selected'));
   if (selectedElement?.classList.contains('game-card')) selectedElement.classList.add('selected');
+  finishTileMotion();
   if (refreshNews && state.view === 'detail' && (changed || (!state.newsCache.has(id) && state.newsPendingGameId !== id))) renderSelectedGameNews(game);
   if (moveFocus) {
     const matchingCard = [...document.querySelectorAll('.game-card[data-game-id]')].find((element) => element.dataset.gameId === id);
@@ -979,10 +1075,37 @@ function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = 
   updateControllerPrompts();
 }
 
+// Rebuild on structural/visibility changes, not on every held D-pad repeat.
+// Drain pending records too: a dialog can open and receive focus synchronously.
+let focusScope = null;
+let focusListDirty = true;
+let focusListBuilds = 0;
+const focusObserver = new MutationObserver(records => {
+  if (records.some(affectsFocusableLayout)) focusListDirty = true;
+});
+function affectsFocusableLayout(record) {
+  const containsControl = node => node.nodeType === 1 && (node.matches('.focusable') || node.querySelector('.focusable'));
+  if (record.type === 'childList') {
+    return [...record.addedNodes, ...record.removedNodes].some(containsControl);
+  }
+  if (!containsControl(record.target)) return false;
+  if (record.attributeName !== 'class') return true;
+  const structuralClasses = value => String(value || '').split(/\s+/).filter(name => !['focused', 'selected', 'store-product-selected'].includes(name)).sort().join(' ');
+  return structuralClasses(record.oldValue) !== structuralClasses(record.target.className);
+}
+focusObserver.observe(document.body, { subtree:true, childList:true, attributes:true, attributeOldValue:true, attributeFilter:['hidden','disabled','inert','open','class'] });
+window.addEventListener('resize', () => { focusListDirty = true; });
+
 function refreshFocusables() {
   const activeDialog = topmostOpenDialog();
-  const scope = activeDialog || (!navPanel.hidden ? navPanel : document);
-  state.focusables = [...scope.querySelectorAll('.focusable')].filter((element) => !element.hidden && !element.disabled && !element.closest('[inert]') && element.offsetParent !== null && getComputedStyle(element).visibility !== 'hidden');
+  const scope = !steamShopSurface.hidden ? steamShopSurface : activeDialog || document;
+  if (focusObserver.takeRecords().some(affectsFocusableLayout)) focusListDirty = true;
+  if (scope !== focusScope || focusListDirty) {
+    state.focusables = [...scope.querySelectorAll('.focusable')].filter((element) => !element.hidden && !element.disabled && !element.closest('[inert]') && element.offsetParent !== null && getComputedStyle(element).visibility !== 'hidden');
+    focusScope = scope;
+    focusListDirty = false;
+    focusListBuilds++;
+  }
   const currentIndex = state.focusables.indexOf(state.focusedElement);
   const activeIndex = state.focusables.indexOf(document.activeElement);
   if (currentIndex >= 0) state.focusIndex = currentIndex;
@@ -991,32 +1114,41 @@ function refreshFocusables() {
 }
 
 function setFocusedElement(element, { scroll = true } = {}) {
+  if (!steamShopSurface.hidden && !steamShopSurface.contains(element)) return;
   const activeDialog = topmostOpenDialog();
   if (!element || (activeDialog && !activeDialog.contains(element))) return;
+  if (state.view === 'home' && !activeDialog && element.parentElement !== recentRow) collapseDashboardTiles();
   refreshFocusables();
   if (state.focusedElement !== element) playUiSound('navigate');
   state.focusedElement = element;
-  state.focusables.forEach((item) => item.classList.remove('focused'));
+  document.querySelectorAll('.focused').forEach((item) => item.classList.remove('focused'));
   const index = state.focusables.indexOf(element);
   if (index >= 0) state.focusIndex = index;
   element.classList.add('focused');
   element.focus({ preventScroll: true });
+  if (element.classList.contains('game-card') && element.dataset.gameId) selectGame(element.dataset.gameId, false, element);
   if (!scroll) return;
-  element.scrollIntoView({ behavior: 'smooth', block: element.closest('#random-row') ? 'center' : 'nearest', inline: 'center' });
+  const behavior = document.documentElement.classList.contains('reduce-motion') ? 'instant' : 'smooth';
+  if (scrollCollectionIntoView(element, behavior)) return;
+  element.scrollIntoView({ behavior, block: element.closest('#random-row') ? 'center' : 'nearest', inline: 'center' });
   const mainScroller = document.querySelector('main');
   if (mainScroller.contains(element)) {
     const bounds = mainScroller.getBoundingClientRect();
     const focused = element.getBoundingClientRect();
-    if (focused.top < bounds.top + 88) mainScroller.scrollBy({ top: focused.top - bounds.top - 110, behavior: 'smooth' });
-    else if (focused.bottom > bounds.bottom - 34) mainScroller.scrollBy({ top: focused.bottom - bounds.bottom + 90, behavior: 'smooth' });
+    if (focused.top < bounds.top + 88) mainScroller.scrollBy({ top: focused.top - bounds.top - 110, behavior });
+    else if (focused.bottom > bounds.bottom - 34) mainScroller.scrollBy({ top: focused.bottom - bounds.bottom + 90, behavior });
   }
-  if (element.classList.contains('game-card') && element.dataset.gameId) selectGame(element.dataset.gameId, false, element);
 }
 
 function moveFocus(direction) {
   refreshFocusables();
   const current = state.focusables[state.focusIndex];
   if (!current) return;
+  if (navigateCollectionBand(direction, current)) return;
+  if (navigateConsoleHome(direction, current)) return;
+  if (navigateConsoleLibrary(direction, current)) return;
+  if (navigateConsoleSearch(direction, current)) return;
+  if (navigateNativeStore(direction, current)) return;
   if (direction === 'down' && current.closest('#steam-upcoming-row')) {
     const browse = document.querySelector('#category-discovery .focusable');
     if (browse) { setFocusedElement(browse); return; }
@@ -1128,10 +1260,13 @@ function openControllerStatus() {
 }
 
 function openGameDetails(gameId) {
-  const game = state.games.find((item) => item.id === gameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find((item) => item.id === gameId);
+  const game = state.games.find((item) => item.id === gameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find((item) => item.id === gameId) || state.gamePassCatalog?.find(item => item.id === gameId) || Object.values(state.xboxStore || {}).filter(Array.isArray).flat().find(item => item.id === gameId);
   if (!game) return;
   const discoveryOnly = game.discoveryOnly === true;
-  if (state.view !== 'detail') state.previousView = state.view;
+  if (state.view !== 'detail') {
+    state.previousView = state.view;
+    state.detailReturn = { element: document.activeElement, scrollTop: document.querySelector('main').scrollTop };
+  }
   state.detailGameId = game.id;
   if (!discoveryOnly) state.selectedGameId = game.id;
   searchPopover.hidden = true;
@@ -1144,7 +1279,7 @@ function openGameDetails(gameId) {
   mainScroller.scrollTop = 0;
   gameDetailView.scrollTop = 0;
   requestAnimationFrame(() => mainScroller.style.removeProperty('scroll-behavior'));
-  const image = game.artwork?.hero || game.artwork?.wide || game.artwork?.tile;
+  const image = game.artwork?.hero || game.artwork?.wide || '';
   const heroArt = document.querySelector('#detail-global-art');
   const alternateHeroArt = document.querySelector('#detail-global-art-next');
   const fallbackBackdrop = image
@@ -1159,14 +1294,20 @@ function openGameDetails(gameId) {
     if (requestToken === state.detailRequestToken) heroArt.classList.add('active');
   });
   detailTitle.textContent = game.title;
-  const showDetailLogo = (logo) => {
+  const showDetailLogo = async (logo) => {
     if (!logo || state.detailGameId !== game.id) return;
+    if (!await preloadAmbientImage(logo) || requestToken !== state.detailRequestToken) return;
     detailLogo.src = logo;
+    await applyLogoContrast(detailLogo, logo);
+    if (requestToken !== state.detailRequestToken) return;
     detailLogo.hidden = false;
+    document.querySelector('#detail-logo-frame').hidden = false;
+    fitDetailWordmark();
     detailTitle.hidden = true;
-    detailLogo.onerror = () => { detailLogo.hidden = true; detailTitle.hidden = false; };
+    detailLogo.onerror = () => { detailLogo.hidden = true; document.querySelector('#detail-logo-frame').hidden = true; detailTitle.hidden = false; };
   };
   detailLogo.hidden = true;
+  document.querySelector('#detail-logo-frame').hidden = true;
   detailTitle.hidden = false;
   if (game.artwork?.logo) showDetailLogo(game.artwork.logo);
   else if (!discoveryOnly) window.launcher.getGameLogo(game.id).then((logo) => {
@@ -1189,14 +1330,15 @@ function openGameDetails(gameId) {
   document.querySelector('#detail-description-more').textContent = 'View more';
   document.querySelector('#detail-rating').textContent = '';
   const playButton = document.querySelector('#detail-play');
-  playButton.innerHTML = discoveryOnly ? '<span class="detail-action-icon" aria-hidden="true">↗</span><strong>View on Steam</strong>' : game.installed === false ? '<span class="detail-action-icon" aria-hidden="true">↓</span><strong>Install</strong>' : '<span class="detail-action-icon" aria-hidden="true">▶</span><strong>Play</strong>';
+  playButton.innerHTML = discoveryOnly ? `<span class="detail-action-icon" aria-hidden="true">↗</span><strong>${game.xboxProductId ? 'View in Xbox' : 'View on Steam'}</strong>` : game.installed === false ? '<span class="detail-action-icon" aria-hidden="true">↓</span><strong>Install</strong>' : '<span class="detail-action-icon" aria-hidden="true">▶</span><strong>Play</strong>';
   if (discoveryOnly) playButton.removeAttribute('data-return-game');
   else renderGameSessionAction();
   playButton.classList.toggle('install-action', game.installed === false && !discoveryOnly);
   document.querySelector('#detail-options-button').hidden = discoveryOnly;
+  prepareConsoleGamePage(game);
   state.galleryImages = [];
   document.querySelector('#detail-gallery').innerHTML = '<p>Loading screenshots…</p>';
-  for (const id of ['detail-platforms', 'detail-inputs', 'detail-capabilities']) document.querySelector(`#${id}`).innerHTML = '';
+  for (const id of ['detail-platforms', 'detail-capabilities']) document.querySelector(`#${id}`).innerHTML = '';
   document.querySelector('#detail-dlc-note').textContent = 'Checking available ownership information…';
   document.querySelector('#detail-dlc-grid').innerHTML = '';
   document.querySelector('#detail-achievements-note').textContent = 'Checking achievements…';
@@ -1214,11 +1356,13 @@ function openGameDetails(gameId) {
   document.querySelector('#achievement-progress-label').textContent = '';
   document.querySelector('#achievement-source-label').textContent = '';
   if (discoveryOnly) {
-    document.querySelector('#detail-achievements-note').textContent = 'Open this game on Steam to see its achievements.';
-    document.querySelector('#detail-dlc-note').textContent = 'Open this game on Steam to browse add-ons.';
+    document.querySelector('#detail-achievements-note').textContent = `View this game in ${game.xboxProductId ? 'Xbox' : 'Steam'} to see its achievements.`;
+    document.querySelector('#detail-dlc-note').textContent = `View this game in ${game.xboxProductId ? 'Xbox' : 'Steam'} to browse add-ons.`;
   } else window.launcher.getGameAchievements(game.id).then((result) => {
     if (requestToken !== state.detailRequestToken) return;
     state.achievementItems = result.items || [];
+    state.achievementTotal = result.totalAvailable ?? state.achievementItems.length;
+    state.achievementUnlocked = result.unlockedCount ?? state.achievementItems.filter(item => item.unlocked === true).length;
     state.achievementProgressAvailable = Boolean(result.progressAvailable);
     document.querySelector('#achievement-source-label').textContent = result.source || (result.status === 'xbox-ready' ? 'Xbox' : state.achievementItems.length ? 'Steam Community' : '');
     document.querySelector('#achievement-trueachievements').hidden = state.achievementItems.length > 0;
@@ -1228,9 +1372,9 @@ function openGameDetails(gameId) {
       'none-listed': 'No achievements listed for this Steam game.',
       'needs-steam-account': 'Add a Steam Web API key and SteamID64 in Settings to load achievements.',
       'xbox-ready': `${result.platform || 'Xbox'} achievement catalog · ${result.progressAvailable ? 'progress from your Xbox account' : 'catalog only'}`,
-      'xbox-no-match': 'No Xbox title matched. Add an OpenXBL key or enter an Xbox Title ID in Game Options.',
-      'xbox-unavailable': 'Xbox lookup failed. Check the OpenXBL key and connection.',
-      'no-reference': 'No compatible achievement catalog found. Add an optional OpenXBL key in Settings to check your Xbox account.',
+      'xbox-no-match': 'No achievement catalog matched this game.',
+      'xbox-unavailable': 'Achievements could not be loaded right now.',
+      'no-reference': 'No compatible achievement catalog found. Link a Steam edition in Manage game to show its achievements.',
       unsupported: 'Achievement lists for this source need a separate authenticated platform integration.'
     };
     document.querySelector('#detail-achievements-note').textContent = result.status === 'ready'
@@ -1243,9 +1387,9 @@ function openGameDetails(gameId) {
     document.querySelector('#achievement-trueachievements').hidden = false;
   });
   setTimeout(() => setFocusedElement(playButton, { scroll: false }), 0);
-  (discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
+  (game.xboxProductId && discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId) : discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
     if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
-    document.querySelector('#detail-byline').textContent = [details.publisher || details.developer || game.provider, details.genres?.[0]].filter(Boolean).join(' · ');
+    document.querySelector('#detail-byline').textContent = [details.publisher || details.developer || game.provider, ...(details.genres || []).slice(0, 3)].filter(Boolean).join(' • ');
     document.querySelector('#detail-description').textContent = details.description || `Play ${game.title} from your ${game.provider} library.`;
     document.querySelector('#detail-publisher').textContent = details.publisher || 'Not available';
     document.querySelector('#detail-developer').textContent = details.developer || 'Not available';
@@ -1265,7 +1409,8 @@ function openGameDetails(gameId) {
       const currentLayer = state.detailBackdropLayer === 0 ? heroArt : alternateHeroArt;
       const nextLayer = state.detailBackdropLayer === 0 ? alternateHeroArt : heroArt;
       nextLayer.style.backgroundImage = `url("${screenshot.replaceAll('"', '%22')}")`;
-      requestAnimationFrame(() => {
+      preloadAmbientImage(screenshot).then(ready => {
+        if (!ready) return;
         if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
         nextLayer.classList.add('active');
         currentLayer.classList.remove('active');
@@ -1277,6 +1422,7 @@ function openGameDetails(gameId) {
       : '<p>No screenshots available from this game’s store listing.</p>';
     document.querySelector('#detail-rating').textContent = [details.ageRating ? `Age rating ${details.ageRating}` : '', details.metacriticScore ? `Metacritic ${Number(details.metacriticScore)}` : ''].filter(Boolean).join(' · ');
     const playModes = (details.categories || []).filter((category) => /^(single-player|multi-player|online co-op|local co-op|shared\/split screen co-op|Xbox online co-op|Xbox online multiplayer)/i.test(category)).slice(0, 2).join(' · ');
+    const platforms = details.playableOn?.length ? details.playableOn : game.xboxProductId && discoveryOnly ? [] : ['PC'];
     const overviewFacts = [
       { label: 'Genre', value: (details.genres || []).slice(0, 2).join(' · ') },
       { label: 'Play modes', value: playModes },
@@ -1285,18 +1431,21 @@ function openGameDetails(gameId) {
       { label: 'Released', value: details.releaseDate }
     ].filter((fact) => fact.value).slice(0, 4);
     if (overviewFacts.length < 4) overviewFacts.push({ label: 'Library', value: game.provider });
-    if (overviewFacts.length < 4) overviewFacts.push({ label: 'Playable on', value: (details.playableOn || ['PC']).join(' · ') });
+    if (overviewFacts.length < 4 && platforms.length) overviewFacts.push({ label: 'Playable on', value: platforms.join(' · ') });
     if (overviewFacts.length < 4 && !discoveryOnly) overviewFacts.push({ label: 'Status', value: game.installed === false ? 'Not installed' : 'Ready to play' });
     document.querySelector('#detail-metadata-source').textContent = details.metadataSource && details.metadataSource !== 'Local library' ? `Details from ${details.metadataSource}` : 'Your library';
     document.querySelector('#detail-overview-grid').innerHTML = overviewFacts.length
       ? overviewFacts.map((fact) => `<div class="detail-overview-fact"><span>${escapeHtml(fact.label)}</span><strong>${escapeHtml(fact.value)}</strong></div>`).join('')
       : '<p class="detail-overview-loading">More details aren’t available for this edition yet.</p>';
+    if (details.controllerSupport && details.controllerSupport !== 'unknown') {
+      game.controls = details.controllerSupport;
+    }
+    renderDetailInputMethods(game, details);
     const pills = (items) => items.map((label) => `<span class="detail-pill">${escapeHtml(label)}</span>`).join('');
-    document.querySelector('#detail-platforms').innerHTML = pills(details.playableOn?.length ? details.playableOn : ['PC']);
-    document.querySelector('#detail-inputs').innerHTML = pills(details.controllerSupport === 'controller' ? ['Controller', 'Keyboard and mouse'] : details.controllerSupport === 'partial' ? ['Partial controller', 'Keyboard and mouse'] : ['Keyboard and mouse']);
+    document.querySelector('#detail-platforms').innerHTML = pills(platforms.length ? platforms : ['Check the Xbox listing']);
     document.querySelector('#detail-capabilities').innerHTML = pills(details.categories || []) || '<span class="detail-pill">No capability data available</span>';
     const dlcNote = document.querySelector('#detail-dlc-note');
-    dlcNote.textContent = discoveryOnly ? 'View available add-ons on Steam.' : details.dlcStatus === 'needs-check' ? 'Loading add-ons listed by Steam…'
+    dlcNote.textContent = discoveryOnly ? `View available add-ons in ${game.xboxProductId ? 'Xbox' : 'Steam'}.` : details.dlcStatus === 'needs-check' ? 'Loading add-ons listed by Steam…'
       : details.dlcStatus === 'none-listed' ? 'This store listing does not list DLC.'
         : 'No DLC listing is available for this game.';
     if (!discoveryOnly && details.dlcStatus === 'needs-check') window.launcher.getOwnedDlc(game.id).then((result) => {
@@ -1323,11 +1472,12 @@ function openGameDetails(gameId) {
 function renderAchievements() {
   const items = state.achievementItems;
   const progressAvailable = state.achievementProgressAvailable;
-  const unlockedCount = items.filter((item) => item.unlocked === true).length;
+  const unlockedCount = state.achievementUnlocked ?? items.filter((item) => item.unlocked === true).length;
+  const totalCount = state.achievementTotal ?? items.length;
   const progress = document.querySelector('#achievement-progress');
   progress.hidden = !items.length || !progressAvailable;
-  progress.querySelector('span').style.width = items.length ? `${Math.round(unlockedCount / items.length * 100)}%` : '0%';
-  document.querySelector('#achievement-progress-label').textContent = items.length && progressAvailable ? `${unlockedCount} / ${items.length}` : '';
+  progress.querySelector('span').style.width = totalCount ? `${Math.round(unlockedCount / totalCount * 100)}%` : '0%';
+  document.querySelector('#achievement-progress-label').textContent = totalCount && progressAvailable ? `${unlockedCount} / ${totalCount}` : '';
   document.querySelector('#achievement-filters').hidden = !items.length || !progressAvailable;
   document.querySelectorAll('.achievement-filter').forEach((button) => button.classList.toggle('active', button.dataset.filter === state.achievementFilter));
   const filtered = items.filter((item) => state.achievementFilter === 'all' || (state.achievementFilter === 'unlocked' ? item.unlocked === true : item.unlocked === false));
@@ -1407,11 +1557,13 @@ async function launchSelectedGame(optionsOverride) {
   const game = state.games.find((item) => item.id === state.selectedGameId);
   if (!game) return;
   if (game.installed === false) {
+    if (installTracking.has(game.id)) { showSteamInstallation(game); return; }
     try {
       await window.launcher.gameAction(game.id, 'download');
       if (gameOptionsDialog.open) gameOptionsDialog.close();
-      showToast(game.provider === 'Epic Games' ? 'Opening Epic Games Launcher — choose the game there to install' : `Opening Steam install options for ${game.title}`);
-    } catch (error) { showToast(error.message || 'Could not open Steam install options'); }
+      if (game.provider === 'Steam') showSteamInstallation(game);
+      else showToast(`Opening ${game.provider} — finish installation there, then scan your library`);
+    } catch (error) { showToast(error.message || 'Could not open install options'); }
     return;
   }
   playUiSound('launch');
@@ -1422,25 +1574,25 @@ async function launchSelectedGame(optionsOverride) {
     : `radial-gradient(circle at 50% 35%, hsla(${hashHue(game.title)}, 72%, 45%, .75), transparent 48%), linear-gradient(145deg, #172632, #05080b)`;
   const launchId = game.id;
   launchGameLogo.src = game.artwork?.logo || fallbackWordmark(game.title);
+  applyLogoContrast(launchGameLogo, launchGameLogo.getAttribute('src'));
   launchGameLogo.onerror = () => { launchGameLogo.src = fallbackWordmark(game.title); };
   launchGameLogo.hidden = false;
   launchingGame.hidden = true;
   if (!game.artwork?.logo) window.launcher.getGameLogo(game.id).then((logo) => {
     if (logo && state.selectedGameId === launchId && !launchOverlay.hidden) {
       launchGameLogo.src = logo;
+      applyLogoContrast(launchGameLogo, logo);
       game.artwork ||= {};
       game.artwork.logo = logo;
     }
   }).catch(() => {});
   launchOverlay.hidden = false;
   requestAnimationFrame(() => launchOverlay.classList.add('active'));
-  let didLaunch = false;
   try {
     await Promise.all([
       window.launcher.launchGame(state.selectedGameId, optionsOverride),
       new Promise((resolve) => setTimeout(resolve, 2100))
     ]);
-    didLaunch = true;
     await refreshActiveGameSession();
     game.playCount = (game.playCount || 0) + 1;
     promoteRecentlyLaunchedGame(game);
@@ -1451,7 +1603,8 @@ async function launchSelectedGame(optionsOverride) {
     launchOverlay.classList.remove('active');
     setTimeout(() => { launchOverlay.hidden = true; }, 380);
   }
-  if (didLaunch) setTimeout(() => window.launcher.minimizeLauncher().catch(() => {}), 420);
+  // Stay underneath the game. Minimizing on a timer exposed the desktop while
+  // Steam or another storefront was still preparing its game window.
 }
 
 function openGameOptions(gameId = state.selectedGameId) {
@@ -1484,6 +1637,9 @@ function openGameOptions(gameId = state.selectedGameId) {
   document.querySelector('#download-steam-button').hidden = !hasSteamActions || game.installed !== false;
   document.querySelector('#uninstall-steam-button').hidden = !hasSteamActions || game.installed === false;
   document.querySelector('#game-options-form [data-action="options-launch"]').hidden = game.installed === false;
+  const providerInstall = document.querySelector('#options-provider-install');
+  providerInstall.hidden = hasSteamActions || game.installed !== false || !['Ubisoft Connect','EA app','Battle.net','Epic Games'].includes(game.provider);
+  providerInstall.textContent = game.clientOnly ? `Open ${game.provider}` : `Install with ${game.provider}`;
   document.querySelector('#favorite-game-button').innerHTML = `${state.favoriteGameIds.includes(game.id) ? 'Remove from Favorites <span>★</span>' : 'Add to Favorites <span>☆</span>'}`;
   renderGameSessionAction();
   const canOpenFolder = Boolean(game.installPath || game.executable);
@@ -1498,8 +1654,6 @@ function openGameOptions(gameId = state.selectedGameId) {
   document.querySelector('#steam-launch-options').value = game.launchOptions || '';
   document.querySelector('#achievement-reference-editor').hidden = game.provider === 'Steam';
   document.querySelector('#achievement-reference-id').value = game.achievementReferenceAppId || '';
-  document.querySelector('#xbox-achievement-title-id').value = game.xboxAchievementReference?.titleId || '';
-  document.querySelector('#xbox-achievement-platform').value = game.xboxAchievementReference?.platform || 'auto';
   document.querySelector('#achievement-links-group').open = false;
   document.querySelector('#achievement-links-group').hidden = Boolean(game.isApp);
   document.querySelector('#options-tab-advanced').hidden = Boolean(game.isApp) && !hasSteamActions;
@@ -1527,12 +1681,14 @@ async function openArtworkPicker(gameId = state.selectedGameId) {
   document.querySelector('#overlay-logo-toggle').checked = game.artwork?.overlayLogo === true;
   artworkResults.innerHTML = '';
   artworkGames.innerHTML = '';
-  artworkStatus.textContent = 'Searching SteamGridDB for square artwork…';
+  artworkStatus.textContent = 'Checking the Xbox Store…';
   useArtwork.disabled = false;
   renderArtworkSlot();
   if (gameOptionsDialog.open) gameOptionsDialog.close();
   artworkDialog.showModal();
-  await runArtworkSearch();
+  // Same order as automatic artwork: Xbox first, then IGN, PlayStation and SteamGridDB.
+  const xboxSource = document.querySelector('[data-action="artwork-source"][data-source="xbox"]');
+  if (xboxSource) await performAction('artwork-source', xboxSource); else await runArtworkSearch();
 }
 
 function artworkChoicesForSlot() {
@@ -1719,15 +1875,17 @@ async function scanLibrary(refreshArt = false, fullScreenImport = false, backgro
     document.querySelector('#importing-fill').style.width = '0%';
     requestAnimationFrame(() => importingScreen.classList.add('visible'));
   }
+  state.libraryInitialShown = false;
   try {
     const result = await window.launcher.scanLibrary({ refreshArt });
-    applyLibraryResult(result, backgroundRefresh);
-    if (!backgroundRefresh && getConnectedControllers().length && !document.querySelector('dialog[open]') && navPanel.hidden) {
+    const quiet = backgroundRefresh || state.libraryInitialShown;
+    applyLibraryResult(result, quiet);
+    if (!quiet && getConnectedControllers().length && !document.querySelector('dialog[open]')) {
       const target = [...document.querySelectorAll('.game-card.focusable')].find((element) => element.dataset.gameId === state.selectedGameId && element.offsetParent !== null)
         || (state.view === 'library' ? libraryGrid.querySelector('.game-card.focusable') : recentRow.querySelector('.game-card.focusable'));
       if (target) setFocusedElement(target);
     }
-    if (!backgroundRefresh) showToast(`${state.games.length} library item${state.games.length === 1 ? '' : 's'} ready`);
+    if (!quiet) showToast(`${state.games.length} library item${state.games.length === 1 ? '' : 's'} ready`);
     if (state.fullScreenImport) {
       importingScreen.classList.remove('visible');
       setTimeout(() => { importingScreen.hidden = true; importingScreen.setAttribute('aria-hidden', 'true'); state.fullScreenImport = false; }, 520);
@@ -1745,6 +1903,8 @@ async function scanLibrary(refreshArt = false, fullScreenImport = false, backgro
 }
 
 function applyPersonalization(settings) {
+  // Garrison is sized in viewport units, so scale is applied through --g-scale rather than browser zoom. 100% is a touch smaller than the reference capture.
+  if (settings.uiScale) document.body.style.setProperty('--g-scale', String(0.9 * Math.max(0.65, Math.min(1.5, Number(settings.uiScale) || 1))));
   document.documentElement.style.setProperty('--tile-radius', `${Number(settings.tileRadius ?? 8)}px`);
   document.documentElement.style.setProperty('--text-scale', String(Math.max(1, Math.min(1.3, Number(settings.textScale) || 1))));
   document.documentElement.classList.toggle('high-contrast-focus', Boolean(settings.highContrastFocus));
@@ -1766,12 +1926,14 @@ async function openSettings() {
   state.steamBannerDismissed = settings.steamBannerDismissed === true;
   document.querySelector('#sgdb-key').value = settings.steamGridDbKey || '';
   document.querySelector('#steam-api-key').value = settings.steamApiKey || '';
-  document.querySelector('#xbox-api-key').value = settings.xboxApiKey || '';
   document.querySelector('#steam-id64').value = settings.steamId64 || '';
   document.querySelector('#show-uninstalled-toggle').checked = settings.showUninstalledSteam === true;
   document.querySelector('#show-uninstalled-epic-toggle').checked = settings.showUninstalledEpic === true;
   document.querySelector('#legendary-path').value = settings.legendaryPath || '';
   refreshEpicHelperStatus().catch(() => {});
+  refreshAccountLibraries();
+  refreshSteamFamily();
+  renderDuplicateSettings(settings);
   updateUninstalledRequirement('steam-api-key', 'show-uninstalled-toggle');
   renderSteamConnectionStatus();
   renderEpicConnectionStatus();
@@ -1779,6 +1941,7 @@ async function openSettings() {
   else window.launcher.getSteamLocalStatus().then((status) => { state.steamLocalStatus = status; renderSteamLocalStatus('#settings-steam-local-status'); }).catch(() => {});
   document.querySelector('#fullscreen-toggle').checked = settings.fullscreen;
   document.querySelector('#sound-toggle').checked = state.soundEffects;
+  document.querySelector('#startup-toggle').checked = settings.startupAnimation !== false;
   document.querySelector('#ui-scale').value = String(Math.round((settings.uiScale || 1) * 100));
   document.querySelector('#scale-value').textContent = `${Math.round((settings.uiScale || 1) * 100)}%`;
   document.querySelector('#tile-radius').value = String(settings.tileRadius ?? 8);
@@ -1792,78 +1955,49 @@ async function openSettings() {
   document.querySelector('#shuffle-home-screenshots-toggle').checked = settings.shuffleHomeScreenshots !== false;
   state.shuffleHomeScreenshots = settings.shuffleHomeScreenshots !== false;
   settingsDialog.showModal();
+  // Account toggles load asynchronously; snapshot again once they settle unless the player has edited them.
+  state.settingsTouched = false;
+  state.settingsOriginal.libraryKey = librarySettingsKey();
+  setTimeout(() => { if (!state.settingsTouched) state.settingsOriginal.libraryKey = librarySettingsKey(); }, 1500);
   renderSettingsLauncherSummary();
   showSettingsPage('experience');
   setTimeout(() => setFocusedElement(document.querySelector('.settings-tab.active'), { scroll: false }), 0);
 }
 
-function showView(view) {
+function showView(view, { restore = null } = {}) {
+  document.body.dataset.pageDirection = restore ? 'back' : 'forward';
   state.view = view;
   const isLibrary = view === 'library';
   const isDetail = view === 'detail';
+  const isStore = view === 'store';
   document.body.classList.toggle('detail-active', isDetail);
   document.body.classList.toggle('home-active', view === 'home');
-  document.querySelector('main').hidden = state.games.length === 0 && !isLibrary && !isDetail;
+  document.querySelector('main').hidden = state.games.length === 0 && !isLibrary && !isDetail && !isStore;
   const hasHomeGames = state.games.some((game) => !game.isApp && (game.installed !== false || state.searchQuery));
-  emptyState.hidden = isLibrary || isDetail || hasHomeGames;
-  homeView.hidden = isLibrary || isDetail;
+  emptyState.hidden = isLibrary || isDetail || isStore || hasHomeGames;
+  document.body.classList.toggle('library-active', isLibrary);
+  document.body.classList.toggle('store-active', isStore);
+  homeView.hidden = isLibrary || isDetail || isStore;
   libraryView.hidden = !isLibrary;
   gameDetailView.hidden = !isDetail;
+  document.querySelector('#store-view').hidden = !isStore;
   document.querySelectorAll('.top-nav-button').forEach((button) => button.classList.toggle('active', button.dataset.action === view));
   const mainScroller = document.querySelector('main');
-  if (isDetail) {
-    mainScroller.style.scrollBehavior = 'auto';
-    mainScroller.scrollTop = 0;
-    gameDetailView.scrollTop = 0;
-    requestAnimationFrame(() => mainScroller.style.removeProperty('scroll-behavior'));
-  } else mainScroller?.scrollTo({ top: 0, behavior: 'smooth' });
-  closeNav();
+  mainScroller.scrollTo({ top: restore?.scrollTop || 0, behavior: 'instant' });
+  if (isDetail) gameDetailView.scrollTop = 0;
   updateControllerPrompts();
   refreshFocusables();
   const first = isDetail ? gameDetailView.querySelector('#detail-play')
-    : isLibrary ? libraryView.querySelector(`.game-card[data-game-id="${CSS.escape(state.selectedGameId || '')}"]`) || libraryView.querySelector('.library-tab')
+    : isStore ? document.querySelector('#console-store-grid .focusable') || document.querySelector('.console-store-tabs .active')
+    : isLibrary ? libraryView.querySelector(`.game-card[data-game-id="${CSS.escape(state.selectedGameId || '')}"]`) || libraryView.querySelector('.console-library-nav .active')
       : recentRow.querySelector(`.game-card[data-game-id="${CSS.escape(state.selectedGameId || '')}"]`) || recentRow.querySelector('.focusable');
-  if (first) setFocusedElement(first, { scroll: !isDetail });
-}
-
-function closeNav() {
-  navPanel.hidden = true;
-  document.querySelector('#nav-scrim').hidden = true;
-  brandButton.setAttribute('aria-expanded', 'false');
-  updateControllerPrompts();
-  const target = [...document.querySelectorAll('.game-card.focusable')]
-    .find((element) => element.dataset.gameId === state.selectedGameId && element.offsetParent !== null) || brandButton;
-  setFocusedElement(target);
+  const restored = restore?.element?.isConnected && restore.element.offsetParent !== null ? restore.element : null;
+  if (restored || first) setFocusedElement(restored || first, { scroll: !isDetail && !restore });
 }
 
 function toggleNav() {
-  if (!navPanel.hidden) {
-    closeNav();
-    return;
-  }
-  const recent = state.games.find((game) => !game.isApp && game.playCount > 0) || state.games.find((game) => !game.isApp);
-  if (recent) {
-    const image = recent.artwork?.tile || recent.artwork?.grid;
-    const backdrop = recent.artwork?.hero || recent.artwork?.wide || image;
-    document.querySelector('#nav-feature-bg').style.backgroundImage = backdrop ? `url("${backdrop.replaceAll('"', '%22')}")` : '';
-    document.querySelector('#nav-feature-art').innerHTML = gameArt(recent);
-    document.querySelector('#nav-feature-title').textContent = recent.title;
-    document.querySelector('#nav-feature-last').textContent = recent.playCount ? `Played ${recent.playCount} time${recent.playCount === 1 ? '' : 's'} here` : 'Ready to play';
-    document.querySelector('#nav-achievements').hidden = true;
-    window.launcher.getGameAchievements(recent.id).then((result) => {
-      if (navPanel.hidden || !result.progressAvailable || !result.items?.length) return;
-      const unlocked = result.items.filter((item) => item.unlocked === true).length;
-      document.querySelector('#nav-achievements').hidden = false;
-      document.querySelector('#nav-achievement-count').textContent = `🏆 ${unlocked}/${result.items.length} achievements · ${Math.round(unlocked / result.items.length * 100)}%`;
-      document.querySelector('#nav-achievement-fill').style.width = `${Math.round(unlocked / result.items.length * 100)}%`;
-    }).catch(() => {});
-  }
-  navPanel.hidden = false;
-  document.querySelector('#nav-scrim').hidden = false;
-  brandButton.setAttribute('aria-expanded', 'true');
-  updateControllerPrompts();
-  const first = navPanel.querySelector('.focusable');
-  if (first) setFocusedElement(first);
+  // The Xbox/Guide button belongs to Windows Game Bar. View opens the library.
+  showView(state.view === 'library' ? 'home' : 'library');
 }
 
 function showPowerChoices() {
@@ -1895,6 +2029,13 @@ function showPowerConfirmation(action) {
 }
 
 async function performAction(action, source) {
+  if (action.startsWith('g-') && await garrisonAction(action, source)) return;
+  if (action === 'steam-family-connect' || action === 'steam-family-disconnect') { await steamFamilyAction(action,source); return; }
+  if (action === 'collection-open') { openCollection(source); return; }
+  if (action === 'collection-store') { consoleStoreTab = source.dataset.chart; await openConsoleStore(); return; }
+  if (['detail-tab', 'install-close', 'install-steam', 'install-play'].includes(action) && await refinementAction(action, source)) return;
+  if (['select-game', 'library', 'home', 'dashboard-store', 'dashboard-gamepass', 'dashboard-customize', 'settings', 'avatar-picker', 'controller-status', 'power-menu', 'toggle-nav'].includes(action)) playUiSound('confirm');
+  if ((/^(dashboard-|console-)/.test(action) || action === 'gamepass-game') && await consoleAction(action, source)) return;
   if (action === 'toggle-favorite') {
     try {
       const organized = await window.launcher.organizeLibrary('favorite', { gameId: state.optionsGameId });
@@ -1962,7 +2103,6 @@ async function performAction(action, source) {
     }
     return;
   }
-  if (action === 'close-nav') { closeNav(); return; }
   if (action === 'controller-status') { openControllerStatus(); return; }
   if (action === 'controller-status-close') { controllerStatusDialog.close(); return; }
   if (action === 'controller-recheck') {
@@ -1979,26 +2119,23 @@ async function performAction(action, source) {
     document.querySelector('#recent-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  if (action === 'give-feedback') { await window.launcher.openFeedback(); closeNav(); return; }
+  if (action === 'give-feedback') { await window.launcher.openFeedback(); return; }
+  if (['account-connect','account-disconnect','account-client'].includes(action)) { await accountLibraryAction(action,source); return; }
   if (action === 'avatar-picker') {
     state.profileOriginal = { avatarId: selectedAvatarId, displayName: state.displayName, avatarImage: customAvatarData };
     document.querySelector('#profile-name-input').value = state.displayName;
     document.querySelector('#profile-name-heading').textContent = state.displayName;
+    prepareProfileIdentity();
+    scheduleScoreRefresh();
     const games = state.games.filter((game) => !game.isApp);
     const art = games.find((game) => game.id === state.selectedGameId)?.artwork;
     const profileBackground = art?.hero || art?.wide || '';
     document.querySelector('.profile-hero').style.setProperty('--profile-art', profileBackground ? `url("${profileBackground.replaceAll('"', '%22')}")` : 'none');
-    document.querySelector('#profile-library-count').textContent = String(games.length);
-    document.querySelector('#profile-installed-count').textContent = String(games.filter((game) => game.installed !== false).length);
-    document.querySelector('#profile-launch-count').textContent = String(games.reduce((total, game) => total + (Number(game.playCount) || 0), 0));
     const providerCount = new Set(games.map((game) => game.provider).filter(Boolean)).size;
     document.querySelector('#profile-source-count').textContent = `${providerCount} store${providerCount === 1 ? '' : 's'}`;
-    const recent = games.filter(game => game.playCount > 0).slice(0,4);
-    const previewGames = games.slice(0, 3);
-    document.querySelector('#profile-recent-games').innerHTML = recent.length ? recent.map(game => `<button class="profile-recent-game focusable" data-action="profile-game" data-game-id="${escapeHtml(game.id)}">${game.artwork?.tile ? `<img src="${escapeHtml(game.artwork.tile)}" alt="" />` : ''}<span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.provider)}</small></span><span aria-hidden="true">›</span></button>`).join('')
-      : `<div class="profile-empty"><div class="profile-empty-art" aria-hidden="true">${previewGames.length ? previewGames.map(game => `<span>${game.artwork?.tile ? `<img src="${escapeHtml(game.artwork.tile)}" alt="" />` : `<b>${escapeHtml(game.title)}</b>`}</span>`).join('') : '<span>✦</span><span>◇</span><span>✦</span>'}</div><div class="profile-empty-copy"><span class="eyebrow">YOUR NEXT CHAPTER</span><strong>Your story starts here</strong><p>Pick a game and your recently played collection will grow with you.</p><button class="focusable" type="button" data-action="profile-library">Explore your library <span aria-hidden="true">›</span></button></div></div>`;
     showProfilePage('overview');
     avatarDialog.showModal();
+    loadSteamProfile();
     setTimeout(() => setFocusedElement(document.querySelector('.profile-tabs .active'), { scroll: false }), 0);
     return;
   }
@@ -2019,12 +2156,15 @@ async function performAction(action, source) {
     state.collectionFilter = source.dataset.collection;
     state.libraryCategory = 'games'; state.libraryTab = 'full-library'; state.installFilter = 'installed'; state.sourceFilter = 'all';
     document.querySelector('#library-collection').value = state.collectionFilter;
+    renderLibraryView();
     showView('library'); return;
   }
   if (action === 'profile-save') {
-    const displayName = document.querySelector('#profile-name-input').value.trim().slice(0, 32) || 'Player';
+    const nameMode = document.querySelector('#profile-steam-name').checked ? 'steam' : 'custom';
+    const displayName = (nameMode === 'steam' && steamPlayerIdentity?.name) || document.querySelector('#profile-name-input').value.trim().slice(0, 32) || 'Player';
     try {
-      await window.launcher.saveSettings({ avatarId: selectedAvatarId, avatarImage: selectedAvatarId === 'custom-uploaded' ? customAvatarData : '', displayName });
+      await window.launcher.saveSettings({ avatarId: selectedAvatarId, profileAvatarCustomized: selectedAvatarId !== 'steam-profile', profileNameMode: nameMode, avatarImage: selectedAvatarId === 'custom-uploaded' ? customAvatarData : '', displayName });
+      state.profileNameMode = nameMode;
       state.displayName = displayName;
       state.profileOriginal = null;
       document.querySelector('#profile-button').title = displayName;
@@ -2036,8 +2176,18 @@ async function performAction(action, source) {
     return;
   }
   if (action === 'profile-library') { avatarDialog.close(); showView('library'); return; }
+  if (action === 'profile-score-sync') { await syncPlayerScore(); return; }
   if (action === 'profile-settings') { avatarDialog.close(); await openSettings(); return; }
-  if (action === 'choose-custom-gamerpic') { document.querySelector('#gamerpic-file-input').click(); return; }
+  if (action === 'choose-custom-gamerpic') {
+    const path = await openConsoleFiles('image');
+    if (path) try {
+      const data = await window.launcher.readGamerpic(path);
+      const [header, encoded] = data.split(',');
+      const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+      await applyCustomGamerpic(new Blob([bytes], {type:header.match(/data:([^;]+)/)[1]}));
+    } catch { showToast('That image could not be opened'); }
+    return;
+  }
   if (action === 'settings-tab') { showSettingsPage(source.dataset.settingsTab); setFocusedElement(source, { scroll: false }); return; }
   if (action === 'options-tab') { showOptionsPage(source.dataset.optionsTab); setFocusedElement(source, { scroll: false }); return; }
   if (action === 'achievement-open') { openAchievement(Number(source.dataset.achievementIndex)); return; }
@@ -2055,11 +2205,12 @@ async function performAction(action, source) {
       const saved = await window.launcher.saveSettings({
         onboardingComplete: true,
         avatarId: selectedAvatarId,
+        profileAvatarCustomized: selectedAvatarId !== 'steam-profile',
+        profileNameMode: displayName === 'Player' || displayName === steamPlayerIdentity?.name ? 'steam' : 'custom',
         avatarImage: selectedAvatarId === 'custom-uploaded' ? customAvatarData : '',
         displayName,
         steamGridDbKey: document.querySelector('#onboard-sgdb-key').value.trim(),
         steamApiKey: document.querySelector('#onboard-steam-key').value.trim(),
-        xboxApiKey: document.querySelector('#onboard-xbox-key').value.trim(),
         steamId64: document.querySelector('#onboard-steam-id').value.trim(),
         showUninstalledSteam: document.querySelector('#onboard-uninstalled').checked && Boolean(document.querySelector('#onboard-steam-key').value.trim())
       });
@@ -2074,12 +2225,19 @@ async function performAction(action, source) {
   if (action === 'keyboard-key') { typeControllerKey(source.dataset.key); return; }
   if (action === 'keyboard-done') { keyboardDialog.close(); return; }
   if (action === 'cancel-custom') { customGameDialog.close(); return; }
-  if (action === 'toggle-search') {
-    searchPopover.hidden = !searchPopover.hidden;
-    if (!searchPopover.hidden) {
-      if (state.controllerClick) openControllerKeyboard(librarySearch);
-      else librarySearch.focus();
+  if (action === 'console-search-close') { document.querySelector('#console-search-dialog').close(); return; }
+  if (action === 'console-search-game') {
+    const returnTo = consoleSearchReturn;
+    document.querySelector('#console-search-dialog').close();
+    if (state.games.find(game => game.id === source.dataset.gameId)?.isApp) openGameOptions(source.dataset.gameId);
+    else {
+      openGameDetails(source.dataset.gameId);
+      state.detailReturn = { ...returnTo, searchGameId: source.dataset.gameId };
     }
+    return;
+  }
+  if (action === 'toggle-search') {
+    openConsoleSearch();
     return;
   }
   if (action === 'toggle-nav') {
@@ -2097,9 +2255,11 @@ async function performAction(action, source) {
     return;
   }
   if (action === 'detail-play') {
+    const xboxGame = state.gamePassCatalog?.find(game => game.id === state.detailGameId);
+    if (xboxGame) { await window.launcher.openCatalogGame(xboxGame.xboxProductId); return; }
     if (source.dataset.returnGame === 'true') { await performAction('return-to-game', source); return; }
     const discovery = Object.values(state.steamDiscovery).filter(Array.isArray).flat().find(item => item.id === state.detailGameId);
-    if (discovery) { await window.launcher.openSteamStore(discovery.appId); return; }
+    if (discovery) { await openSteamShop(discovery.appId); return; }
     state.selectedGameId = state.detailGameId; await launchSelectedGame(); return;
   }
   if (action === 'discovery-game') { openGameDetails(source.dataset.gameId); return; }
@@ -2133,14 +2293,9 @@ async function performAction(action, source) {
     catch (error) { showToast(error.message || 'Could not open TrueAchievements'); }
     return;
   }
-  if (action === 'xbox-open-api-key') {
-    try { await window.launcher.openSteamHelp('xboxApiKey'); }
-    catch (error) { showToast(error.message || 'Could not open OpenXBL'); }
-    return;
-  }
   if (action === 'choose-legendary') {
     try {
-      const selected = await window.launcher.chooseEpicHelper();
+      const selected = await openConsoleFiles('game');
       if (selected) { document.querySelector('#legendary-path').value = selected; await refreshEpicHelperStatus(); }
     } catch (error) { showToast(error.message || 'Could not choose Legendary'); }
     return;
@@ -2217,12 +2372,14 @@ async function performAction(action, source) {
   }
   if (action === 'rescan') await scanLibrary(false);
   if (action === 'add-game') {
-    const added = await window.launcher.addGame();
+    const path = await openConsoleFiles('game');
+    const added = path ? await window.launcher.addGame(path) : null;
     if (added) openCustomGameEditor(added);
   }
   if (action === 'bulk-import') {
     try {
-      const result = await window.launcher.bulkAddGames();
+      const path = await openConsoleFiles('folder');
+      const result = path ? await window.launcher.bulkAddGames(path) : {canceled:true};
       if (!result.canceled) {
         settingsDialog.close();
         showToast(`${result.added} games imported${result.truncated ? ' · folder scan limit reached' : ''}`);
@@ -2305,7 +2462,7 @@ async function performAction(action, source) {
   if (action === 'steam-launch-desktop') { steamLaunchDialog.close(); await launchSelectedGame(); return; }
   if (action === 'steam-launch-big-picture') {
     steamLaunchDialog.close();
-    try { await window.launcher.launchSteamBigPicture(state.selectedGameId); showToast('Opening Steam Big Picture'); setTimeout(() => window.launcher.minimizeLauncher().catch(() => {}), 400); }
+    try { await window.launcher.launchSteamBigPicture(state.selectedGameId); showToast('Opening Steam Big Picture'); }
     catch (error) { showToast(error.message || 'Could not open Steam Big Picture'); }
     return;
   }
@@ -2313,9 +2470,13 @@ async function performAction(action, source) {
     try {
       const normalizedAction = action === 'download-steam' ? 'download' : action;
       const gameId = source.dataset.gameId || state.optionsGameId;
+      if(action==='view-steam') {
+        const game = state.games.find(item=>item.id===gameId);
+        if(game?.provider==='Steam' && game.appId) { if(gameOptionsDialog.open)gameOptionsDialog.close(); await openSteamShop(game.appId); return; }
+      }
       await window.launcher.gameAction(gameId, normalizedAction);
       if (gameOptionsDialog.open) gameOptionsDialog.close();
-      if (action === 'download-steam') showToast('Steam install options opened');
+      if (action === 'download-steam') showSteamInstallation(state.games.find(item => item.id === gameId));
       if (action === 'uninstall-steam') showToast('Steam uninstall options opened');
     } catch (error) { showToast(error.message || 'Could not complete that action'); }
   }
@@ -2350,26 +2511,11 @@ async function performAction(action, source) {
       if (state.view === 'detail') openGameDetails(gameId);
     } catch (error) { showToast(error.message || 'Could not save achievement reference'); }
   }
-  if (action === 'save-xbox-achievement-reference') {
-    const gameId = state.optionsGameId;
-    const reference = {
-      titleId: document.querySelector('#xbox-achievement-title-id').value.trim(),
-      platform: document.querySelector('#xbox-achievement-platform').value
-    };
-    try {
-      const saved = await window.launcher.saveXboxAchievementReference(gameId, reference);
-      const game = state.games.find((item) => item.id === gameId);
-      if (game) game.xboxAchievementReference = saved;
-      gameOptionsDialog.close();
-      showToast(saved ? 'Xbox achievement reference saved' : 'Xbox achievement reference removed');
-      if (state.view === 'detail') openGameDetails(gameId);
-    } catch (error) { showToast(error.message || 'Could not save Xbox achievement reference'); }
-  }
   if (action === 'change-artwork') await openArtworkPicker(state.optionsGameId);
   if (action === 'refresh-game-artwork') {
     const gameId = state.optionsGameId;
     gameOptionsDialog.close();
-    showActivity('Finding artwork', 'Checking PlayStation, IGN, Xbox, then SteamGridDB…');
+    showActivity('Finding artwork', 'Checking Xbox, IGN, PlayStation, then SteamGridDB…');
     try {
       const artwork = await window.launcher.refreshGameArtwork(gameId);
       const names = { 'playstation-store': 'PlayStation Store', ign: 'IGN', 'xbox-catalog': 'Xbox Store', 'steamgriddb-square': 'SteamGridDB' };
@@ -2426,7 +2572,7 @@ document.addEventListener('contextmenu', (event) => {
 });
 
 document.addEventListener('focusin', (event) => {
-  if (event.target.classList.contains('focusable')) setFocusedElement(event.target);
+  if (event.target.classList.contains('focusable') && state.focusedElement !== event.target) setFocusedElement(event.target);
 });
 
 document.addEventListener('keydown', (event) => {
@@ -2455,9 +2601,11 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && event.target === artworkQuery) { event.preventDefault(); runArtworkSearch(); }
   if (event.key === 'Enter' && event.target === librarySearch) {
     event.preventDefault();
-    showView('library');
-    librarySearch.blur();
+    const first = document.querySelector('.console-search-game');
+    if (first) setFocusedElement(first);
+    return;
   }
+  if (event.key === 'ArrowDown' && event.target === librarySearch) { event.preventDefault(); navigateConsoleSearch('down', librarySearch); return; }
   if (event.key === 'Enter' && document.activeElement?.dataset.action) {
     event.preventDefault();
     performAction(document.activeElement.dataset.action, document.activeElement);
@@ -2519,21 +2667,36 @@ customGameName.addEventListener('input', () => {
   if (query) customArtworkSearchTimer = setTimeout(() => runCustomArtworkSearch(), 450);
 });
 
+// Library-affecting fields. A rescan only runs when one of these changes.
+function librarySettingsKey() {
+  return JSON.stringify([...['steam-api-key', 'steam-id64', 'legendary-path'].map(id => document.querySelector('#' + id).value.trim()),
+    ...['show-uninstalled-toggle', 'steam-family-toggle', 'show-uninstalled-epic-toggle', 'uninstalled-ubisoft', 'uninstalled-ea', 'uninstalled-battlenet'].map(id => document.querySelector('#' + id).checked),
+    duplicateSettingsPayload()]);
+}
 document.querySelector('#settings-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (event.submitter?.value === 'cancel') { settingsDialog.close('cancel'); return; }
+  await saveSettingsForm();
+});
+async function saveSettingsForm({ close = true } = {}) {
   try {
     const refreshArtwork = state.settingsOriginal.steamGridDbKey !== document.querySelector('#sgdb-key').value.trim();
+    const libraryChanged = state.settingsOriginal.libraryKey !== librarySettingsKey();
     await window.launcher.saveSettings({
       steamGridDbKey: document.querySelector('#sgdb-key').value,
       steamApiKey: document.querySelector('#steam-api-key').value,
-      xboxApiKey: document.querySelector('#xbox-api-key').value.trim(),
       steamId64: document.querySelector('#steam-id64').value,
       showUninstalledSteam: document.querySelector('#show-uninstalled-toggle').checked,
+      includeSteamFamily: document.querySelector('#steam-family-toggle').checked,
+      ...duplicateSettingsPayload(),
       showUninstalledEpic: document.querySelector('#show-uninstalled-epic-toggle').checked,
+      showUninstalledUbisoft: document.querySelector('#uninstalled-ubisoft').checked,
+      showUninstalledEA: document.querySelector('#uninstalled-ea').checked,
+      showUninstalledBattleNet: document.querySelector('#uninstalled-battlenet').checked,
       legendaryPath: document.querySelector('#legendary-path').value.trim(),
       fullscreen: document.querySelector('#fullscreen-toggle').checked,
       soundEffects: document.querySelector('#sound-toggle').checked,
+      startupAnimation: document.querySelector('#startup-toggle').checked,
       uiScale: Number(document.querySelector('#ui-scale').value) / 100,
       tileRadius: Number(document.querySelector('#tile-radius').value),
       reducedMotion: document.querySelector('#reduced-motion-toggle').checked,
@@ -2542,7 +2705,7 @@ document.querySelector('#settings-form').addEventListener('submit', async (event
       useRandomScreenshotBackground: document.querySelector('#random-screenshot-background-toggle').checked,
       shuffleHomeScreenshots: document.querySelector('#shuffle-home-screenshots-toggle').checked
     });
-    state.settingsOriginal = { uiScale: Number(document.querySelector('#ui-scale').value) / 100, tileRadius: Number(document.querySelector('#tile-radius').value), reducedMotion: document.querySelector('#reduced-motion-toggle').checked, textScale: Number(document.querySelector('#text-size').value) / 100, highContrastFocus: document.querySelector('#high-contrast-focus-toggle').checked, steamGridDbKey: document.querySelector('#sgdb-key').value.trim() };
+    state.settingsOriginal = { uiScale: Number(document.querySelector('#ui-scale').value) / 100, tileRadius: Number(document.querySelector('#tile-radius').value), reducedMotion: document.querySelector('#reduced-motion-toggle').checked, textScale: Number(document.querySelector('#text-size').value) / 100, highContrastFocus: document.querySelector('#high-contrast-focus-toggle').checked, steamGridDbKey: document.querySelector('#sgdb-key').value.trim(), libraryKey: librarySettingsKey() };
     state.settingsSaved = true;
     state.soundEffects = document.querySelector('#sound-toggle').checked;
     state.showUninstalledSteam = document.querySelector('#show-uninstalled-toggle').checked;
@@ -2552,23 +2715,25 @@ document.querySelector('#settings-form').addEventListener('submit', async (event
     state.ambientKey = '';
     const selectedGame = state.games.find((game) => game.id === state.selectedGameId);
     if (selectedGame) updateAmbient(selectedGame, true);
-    settingsDialog.close();
-    await scanLibrary(refreshArtwork);
+    if (close && settingsDialog.open) settingsDialog.close();
+    refreshPlayerIdentity();
+    if (libraryChanged || refreshArtwork) await scanLibrary(refreshArtwork, false, true);
   } catch (error) { showToast(error.message || 'Could not save settings'); }
-});
+}
 document.querySelector('#steam-api-key').addEventListener('input', () => updateUninstalledRequirement('steam-api-key', 'show-uninstalled-toggle'));
 document.querySelector('#legendary-path').addEventListener('change', () => refreshEpicHelperStatus().catch(() => {}));
 document.querySelector('#onboard-steam-key').addEventListener('input', () => updateUninstalledRequirement('onboard-steam-key', 'onboard-uninstalled', 'onboard-uninstalled-note'));
 document.querySelector('#ui-scale').addEventListener('input', (event) => {
   document.querySelector('#scale-value').textContent = `${event.target.value}%`;
-  window.launcher.previewScale(Number(event.target.value) / 100).catch(() => {});
+  previewPersonalization();
 });
 function previewPersonalization() {
   applyPersonalization({
     tileRadius: Number(document.querySelector('#tile-radius').value),
     reducedMotion: document.querySelector('#reduced-motion-toggle').checked,
     textScale: Number(document.querySelector('#text-size').value) / 100,
-    highContrastFocus: document.querySelector('#high-contrast-focus-toggle').checked
+    highContrastFocus: document.querySelector('#high-contrast-focus-toggle').checked,
+    uiScale: Number(document.querySelector('#ui-scale').value) / 100
   });
 }
 document.querySelector('#tile-radius').addEventListener('input', (event) => {
@@ -2582,9 +2747,7 @@ document.querySelector('#profile-name-input').addEventListener('input', (event) 
   document.querySelector('#profile-name-heading').textContent = event.target.value.trim() || 'Player';
 });
 
-document.querySelector('#gamerpic-file-input').addEventListener('change', async (event) => {
-  const file = event.target.files?.[0];
-  event.target.value = '';
+async function applyCustomGamerpic(file) {
   if (!file) return;
   if (file.size > 20 * 1024 * 1024) { showToast('Choose an image smaller than 20 MB'); return; }
   try {
@@ -2599,14 +2762,23 @@ document.querySelector('#gamerpic-file-input').addEventListener('change', async 
     renderAvatarChoices();
     showToast('Gamerpic ready — save your profile to keep it');
   } catch { showToast('That image could not be opened'); }
+}
+document.querySelector('#gamerpic-file-input').addEventListener('change', async (event) => {
+  const file=event.target.files?.[0]; event.target.value=''; await applyCustomGamerpic(file);
 });
 
-for (const dialog of [settingsDialog, resetConfirmDialog, gameOptionsDialog, steamLaunchDialog, artworkDialog, customGameDialog, keyboardDialog, galleryDialog, newsPreviewDialog, avatarDialog, onboardingDialog, controllerStatusDialog, achievementDialog, powerDialog, collectionsDialog]) {
+for (const dialog of document.querySelectorAll('dialog')) {
   let opener;
+  let openerView;
   dialog.addEventListener('beforetoggle', (event) => {
-    if (event.newState === 'open') opener = document.activeElement;
+    if (event.newState === 'open') { opener = document.activeElement; openerView = state.view; }
   });
   dialog.addEventListener('close', () => {
+    // Full screen settings save as you leave them, like the Xbox app. Cancel still discards.
+    if (dialog === settingsDialog && !state.settingsSaved && document.body.classList.contains('garrison') && dialog.returnValue !== 'cancel') {
+      state.settingsSaved = true;
+      saveSettingsForm({ close: false });
+    }
     if (dialog === settingsDialog && !state.settingsSaved) {
       window.launcher.previewScale(state.settingsOriginal.uiScale).catch(() => {});
       applyPersonalization(state.settingsOriginal);
@@ -2619,6 +2791,7 @@ for (const dialog of [settingsDialog, resetConfirmDialog, gameOptionsDialog, ste
       renderAvatarChoices();
     }
     setTimeout(() => {
+      if (state.view !== openerView) return;
       if (dialog === keyboardDialog && state.keyboardTarget?.isConnected) {
         const target = state.keyboardTarget;
         state.keyboardTarget = null;
@@ -2642,8 +2815,7 @@ for (const dialog of [settingsDialog, resetConfirmDialog, gameOptionsDialog, ste
 }
 
 librarySearch.addEventListener('input', () => {
-  state.searchQuery = librarySearch.value.trim().toLowerCase();
-  renderLibrary();
+  renderConsoleSearch();
 });
 document.querySelector('#library-collection').addEventListener('change', event => {
   state.collectionFilter = event.target.value; renderLibraryView(); refreshFocusables();
@@ -2660,7 +2832,9 @@ document.querySelector('#library-source-filter').addEventListener('change', (eve
 function focusForGamepad(gamepad) {
   if (!isUsableController(gamepad)) return;
   state.gamepadIndex = gamepad.index;
-  state.previousButtons = [];
+  // Returning from a game, Game Bar or the Steam session can arrive with A/B
+  // still held. Consume that gesture instead of launching or backing out twice.
+  state.previousButtons = gamepad.buttons.map(button => Boolean(button.pressed || button.value > .55));
   refreshControllerStatus();
   if (state.fullScreenImport) return;
   if (state.lastNotifiedGamepadIndex !== gamepad.index) showToast('Controller connected · input is ready');
@@ -2709,12 +2883,14 @@ function pollGamepad() {
     || connected[0]
     || null;
   if (gamepad) {
+    if (hasRecentControllerInput(gamepad)) document.body.classList.add('controller-input');
     if (state.gamepadIndex !== gamepad.index) focusForGamepad(gamepad);
     const pressed = gamepad.buttons.map((button) => Boolean(button.pressed || button.value > .55));
     const justPressed = (index) => pressed[index] && !state.previousButtons[index];
     if (state.fullScreenImport || !launchOverlay.hidden) { state.previousButtons = pressed; return; }
     if (justPressed(0)) {
-      if (document.activeElement instanceof HTMLInputElement && ['text', 'search', 'password', 'number'].includes(document.activeElement.type)) openControllerKeyboard(document.activeElement);
+      if (document.activeElement instanceof HTMLSelectElement) openConsoleChoice(document.activeElement);
+      else if (document.activeElement instanceof HTMLInputElement && ['text', 'search', 'password', 'number'].includes(document.activeElement.type)) openControllerKeyboard(document.activeElement);
       else { state.controllerClick = true; document.activeElement?.click(); state.controllerClick = false; }
     }
     let modalBackHandled = false;
@@ -2724,13 +2900,19 @@ function pollGamepad() {
     }
     if (modalBackHandled) { state.previousButtons = pressed; return; }
     if (justPressed(9)) {
-      if (settingsDialog.open) settingsDialog.close();
-      else if (!document.querySelector('dialog[open]')) openSettings();
+      if (gameOptionsDialog.open) gameOptionsDialog.close();
+      else if (!document.querySelector('dialog[open]') && state.view !== 'store') {
+        const gameId = document.activeElement?.dataset.gameId || (state.view === 'detail' ? state.detailGameId : state.selectedGameId);
+        if (state.games.some(game => game.id === gameId)) openGameOptions(gameId);
+      }
     }
     if (keyboardDialog.open && justPressed(2)) typeControllerKey('backspace');
-    else if (justPressed(2) && !document.querySelector('dialog[open]')) scanLibrary(false);
+    // X has no global action in the Xbox app; a full library scan was too easy to trigger by accident.
     if (keyboardDialog.open && justPressed(3)) typeControllerKey('space');
-    else if (justPressed(3) && !document.querySelector('dialog[open]')) openGameOptions();
+    else if (justPressed(3) && !document.querySelector('dialog[open]') && ['home','library'].includes(state.view)) {
+      state.controllerClick = true;
+      try { performAction('toggle-search'); } finally { state.controllerClick = false; }
+    }
     if (justPressed(8) && !document.querySelector('dialog[open]')) toggleNav();
     if (justPressed(4) && !document.querySelector('dialog[open]')) document.querySelector('main').scrollBy({ top: -window.innerHeight * .75, behavior: 'smooth' });
     if (justPressed(5) && !document.querySelector('dialog[open]')) document.querySelector('main').scrollBy({ top: window.innerHeight * .75, behavior: 'smooth' });
@@ -2828,10 +3010,12 @@ window.launcher.getSettings().then(async (settings) => {
   state.useRandomScreenshotBackground = settings.useRandomScreenshotBackground !== false;
   state.shuffleHomeScreenshots = settings.shuffleHomeScreenshots !== false;
   state.soundEffects = settings.soundEffects !== false;
+  runStartupSequence(settings);
   selectedAvatarId = settings.avatarId || 'one-orbit';
   customAvatarData = settings.avatarImage || '';
   state.steamBannerDismissed = settings.steamBannerDismissed === true;
   state.displayName = settings.displayName || 'Player';
+  refreshPlayerIdentity();
   window.launcher.getSteamLocalStatus().then((status) => {
     state.steamLocalStatus = status;
     renderSteamLocalStatus();
@@ -2843,14 +3027,15 @@ window.launcher.getSettings().then(async (settings) => {
     const cachedLibrary = await startupLibrarySnapshot;
     if (cachedLibrary) {
       applyLibraryResult(cachedLibrary);
-      setTimeout(() => scanLibrary(false, false, true), 300);
+      // A library saved in the last 15 minutes is current enough; otherwise refresh quietly once the UI is up.
+      const age = Date.now() - (Number(cachedLibrary.cachedAt) || 0);
+      setTimeout(() => scanLibrary(false, false, true), age < 15 * 60 * 1000 ? 15 * 60 * 1000 - age : 4000);
     } else scanLibrary(false, true);
   }
   else {
     document.querySelector('#onboard-name').value = settings.displayName === 'Player' ? '' : settings.displayName || '';
     document.querySelector('#onboard-steam-key').value = settings.steamApiKey || '';
     document.querySelector('#onboard-sgdb-key').value = settings.steamGridDbKey || '';
-    document.querySelector('#onboard-xbox-key').value = settings.xboxApiKey || '';
     document.querySelector('#onboard-steam-id').value = settings.steamId64 || '';
     document.querySelector('#onboard-uninstalled').checked = settings.showUninstalledSteam === true;
     updateUninstalledRequirement('onboard-steam-key', 'onboard-uninstalled', 'onboard-uninstalled-note');
@@ -2863,3 +3048,4 @@ window.addEventListener('focus', () => refreshActiveGameSession().catch(() => {}
 scheduleGamepadPoll();
 updateConnectivityActivity();
 refreshControllerStatus();
+settingsDialog.addEventListener('input', () => { state.settingsTouched = true; }); settingsDialog.addEventListener('change', () => { state.settingsTouched = true; });

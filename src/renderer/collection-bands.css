@@ -1,0 +1,79 @@
+/* Brand-led shelves: a quiet left panel and uninterrupted square cover art. */
+#source-collections, #category-discovery { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: visible; }
+.collection-band { --band-color: #15303c; display: grid; grid-template-columns: clamp(205px,23vw,380px) minmax(0,1fr); gap: clamp(20px,2.3vw,44px); padding: clamp(24px,2.5vw,44px) var(--gutter); margin: 0; background: linear-gradient(112deg,color-mix(in srgb,var(--band-color) 78%,#07090a),#101314 60%,color-mix(in srgb,var(--band-color) 42%,#101314)); border-bottom: 1px solid #ffffff08; }
+.collection-band[data-tone="steam"] { --band-color: #182d3b; }
+.collection-band[data-tone="xbox"] { --band-color: #153b20; }
+.collection-band[data-tone="ubisoft"] { --band-color: #233653; }
+.collection-band[data-tone="ea"] { --band-color: #422b52; }
+.collection-band[data-tone="battlenet"] { --band-color: #18384a; }
+.collection-band[data-tone="epic"] { --band-color: #32313c; }
+.collection-band[data-tone="gog"] { --band-color: #3c2947; }
+.collection-intro, .collection-band .section-heading { padding: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; min-width: 0; }
+.collection-intro h2, .collection-band .section-heading h2 { margin: 0; font-size: clamp(24px,2vw,36px); line-height: 1.12; font-weight: 500; letter-spacing: -.02em; }
+.collection-brand { display: flex; align-items: center; gap: 13px; }
+.collection-brand > img { width: 44px; height: 44px; object-fit: contain; flex: none; }
+.collection-band[data-tone="steam"] .collection-brand, .collection-band[data-tone="ubisoft"] .collection-brand { text-transform:uppercase;letter-spacing:.03em; }
+.collection-brand > .console-glyph { font-size: 34px; flex: none; }
+.collection-brand > svg { width: 34px; height: 34px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.collection-intro p { margin: 0; max-width: 30ch; color: #d1d5d7; font-size: clamp(14px,1.04vw,18px); line-height: 1.55; }
+.collection-intro .collection-count { color: #9ba8ad; font-size: 12px; line-height: 1.4; letter-spacing: .025em; flex: none; }
+.collection-open { display: inline-flex; align-items: center; gap: 24px; min-height: 42px; padding: 10px 18px; margin-top: 5px; border: 1px solid #ffffff12; border-radius: 3px; background: #ffffff12; color: white; font-size: 15px; font-weight: 500; text-align: left; }
+.collection-open:hover { background: #ffffff22; }
+.collection-band .game-row.collection-covers { min-width: 0; gap: clamp(12px,1.1vw,22px); align-items: center; margin: -8px; padding: 8px; scroll-padding-inline: 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.collection-band .game-row .game-card { flex: 0 0 clamp(160px,15.3vw,290px); width: clamp(160px,15.3vw,290px); aspect-ratio: 1; border-radius: var(--tile-radius,4px); box-shadow: none; }
+.collection-band .game-card:hover, .collection-band .steam-discovery-card:hover { transform: none; }
+.collection-band .game-card .console-game-label { display: none; }
+.collection-band .game-card.focused .console-game-label, .collection-band .game-card:focus-visible .console-game-label, .collection-band .game-card:hover .console-game-label { display: block; position: absolute; inset: auto 0 46px; padding: 12px 12px 9px; color: white; background: linear-gradient(transparent,#080b0ed9 25%); font-size: clamp(14px,1vw,18px); text-align: left; font-weight: 500; }
+.collection-band .collection-empty { color: #aeb9bd; padding: 28px; line-height: 1.5; }
+.collection-band .steam-discovery-card { flex: 0 0 clamp(170px,15.3vw,290px); width: clamp(170px,15.3vw,290px); min-width: 0; aspect-ratio: auto; padding: 0; overflow: hidden; background: #080e13; border: 0; border-radius: var(--tile-radius,4px); }
+.collection-band .steam-discovery-card::after { display: none; }
+.collection-band .steam-discovery-art { display: block; position: relative; inset: auto; width: 100%; aspect-ratio: 1; overflow: hidden; }
+.collection-band .steam-discovery-art > img, .collection-band .steam-discovery-art > .art-fallback { width: 100%; height: 100%; object-fit: cover; }
+.collection-band .steam-discovery-caption { position: static; display: flex; flex-direction: column; gap: 5px; padding: 13px 12px; background: none; min-height: 68px; }
+.collection-band .steam-discovery-caption strong { font-size: clamp(14px,1vw,18px); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.collection-band .steam-discovery-card.no-cover .steam-discovery-caption strong { display: block; }
+.collection-band .steam-discovery-caption small { font-size: clamp(12px,.8vw,15px); color: #b6c2c9; }
+.collection-band .steam-discovery-rank { font-size: 13px; top: 9px; left: 9px; padding: 5px 7px; background: #090d12ce; }
+.browse-collections { margin-top: 36px; }
+#library-view.show-groups #library-grid { display: flex; flex-direction: column; gap: 20px; }
+#library-grid .collection-band { padding: 26px; grid-template-columns: clamp(170px,19vw,280px) minmax(0,1fr); }
+#library-grid .collection-band .game-card { width: clamp(145px,13.5vw,245px); flex-basis: clamp(145px,13.5vw,245px); }
+
+/* One outline language for input support, in the same place on every cover. */
+.control-badge, #recent-row .control-badge, #recent-row .control-kbm { width: auto; height: auto; display: inline-flex; gap: 15px; right: 0; bottom: 0; padding: 10px 11px 9px; border: 0; border-radius: 6px 0 0 0; background: #141819db; color: white; box-shadow: none; }
+.control-badge .input-symbol { display: flex; align-items: center; }
+.control-badge img, #recent-row .control-kbm img { width: 24px; height: 23px; object-fit: contain; }
+.control-badge:empty { display: none !important; }
+.input-symbol > img { width: 29px; height: 27px; object-fit: contain; flex: none; }
+.detail-play-with { gap: 16px !important; color: #eee; }
+.detail-play-with .input-symbol { display: inline-flex; }
+.detail-play-with > span:first-child { margin-right: 3px; }
+#detail-inputs { display: flex; flex-wrap: wrap; gap: 15px 25px; }
+#detail-inputs .input-symbol { display: inline-flex; align-items: center; gap: 11px; color: #ddd; font-size: 16px; }
+.input-unavailable { color: #aaa; font-size: 15px; }
+#recent-row > .game-card.selected .console-game-label { bottom: 44px; }
+.library-grid .game-card.focused .control-badge, .library-grid .game-card:hover .control-badge { bottom: 38px; }
+#library-grid .collection-band .game-card .control-badge { bottom: 0; }
+body.home-active.collections-scrolled .topbar { background: linear-gradient(#101214 60%,#101214e6 80%,#10121400); }
+body.home-active.collections-scrolled #controller-prompts { background: #101214f2; padding: 10px 14px; border-radius: 4px; }
+
+@media (max-width: 1100px) {
+  .collection-band { grid-template-columns: 195px minmax(0,1fr); gap: 20px; padding-block: 26px; }
+  .collection-brand > img { width: 34px; height: 34px; }
+  .collection-intro h2, .collection-band .section-heading h2 { font-size: 24px; }
+  .collection-intro { gap: 8px; }
+  .collection-open { min-height: 38px; padding: 8px 13px; font-size: 14px; }
+  #library-grid .collection-band { grid-template-columns: 160px minmax(0,1fr); padding: 20px; }
+  .control-badge, #recent-row .control-badge { gap: 9px; padding: 7px 8px; }
+  .control-badge img, #recent-row .control-kbm img { width: 22px; height: 21px; }
+}
+@media (max-width: 800px) {
+  .collection-band { grid-template-columns: 170px minmax(0,1fr); gap: 15px; }
+  .collection-intro h2, .collection-band .section-heading h2 { font-size: 21px; }
+  .collection-intro p { font-size: 13px; }
+  #library-grid .collection-band { grid-template-columns: minmax(0,1fr); }
+  #library-grid .collection-intro { display: grid; grid-template-columns: 1fr auto; }
+  #library-grid .collection-intro p { grid-row: 2; }
+  #library-grid .collection-intro .collection-count { display: none; }
+  #library-grid .collection-open { grid-column: 2; grid-row: 1/3; }
+}

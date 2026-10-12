@@ -2,15 +2,27 @@
 
 An unofficial, controller-first launcher for your Windows games. It brings a console-style Home screen, a proper game library, and artwork-led game pages to the PC you already use.
 
-> **Community beta · 0.26.0-beta.3.** A purely fan-made project, not an official Xbox app or a Microsoft product. It is not affiliated with Microsoft, Sony, Valve, ASUS, or any game publisher.
+> **Development preview · 0.27.0-beta.11.** A purely fan-made project, not an official Xbox app or a Microsoft product. It is not affiliated with Microsoft, Sony, Valve, ASUS, or any game publisher. This console-dashboard overhaul is being tested locally and has not been published as a GitHub release.
 
-![Illustrative mockup of the latest Home layout with sample game artwork](docs/screenshots/home-mockup.png)
+The new console layout has an enlarged focused Home tile, native Store shelves, My games & apps, and a fullscreen Settings hub. Menu opens game options, Y opens controller search, and B restores your place when leaving a game page. The Xbox button is reserved for Windows Game Bar; there is no replacement Guide.
 
-*Promotional mockup using a sample library; the covers shown are not bundled with the app.*
+This build adds a section-based game page, a compact game-management drawer, a Steam activity profile, and a shorter setup flow. Home uses proper wide backdrops, not enlarged square covers, and labels games known to need keyboard and mouse. Steam's local hidden-game list and recorded playtime are read without an API key. Dark logos get a contrast treatment and transparent padding is framed out without changing the original image.
+
+Collections now pair a source or category panel with a horizontal row of square covers. Input icons sit in the bottom-right corner: controller and keyboard/mouse, keyboard/mouse only, or no badge when support is unknown. The game page uses matching “Play with” icons. Home defaults to your detected Steam name and photo; you can still choose a preset, upload a gamerpic, or set a different name.
+
+Game libraries now has a Steam Family connection for eligible shared games, including uninstalled copies, and a Duplicate games page for choosing a preferred launcher or copy. Shared games use the same artwork and metadata pipeline as owned games. The combined library can show one preferred copy while source filters retain access to every launcher entry. See [library connections](docs/library-connections.md) for setup and preview limitations.
+
+The Store reads public Steam prices without an API key. Steam sign-in and cart pages open in a separate, sandboxed in-app session. They still use Steam's interface and may require its own keyboard, authentication, or browser controls. Steam installs have an in-app progress view based on local manifests; the game becomes playable when Steam reports completion. Steam still handles drive selection, sign-in and game agreements. Windows security and third-party launcher prompts cannot be guaranteed to stay hidden.
+
+![Console Home with a sample game library](docs/screenshots/console-home.png)
+
+*Actual application capture using a sample library. Game artwork is not bundled with the app.*
 
 ![Illustrative mockup of Xbox Preview UI on a ROG Xbox Ally X](docs/screenshots/handheld-mockup.png)
 
-*Handheld composite based on a supplied device image. It is not a photograph of a physical-device test.*
+*Earlier cloud-style layout shown in a handheld composite, based on a supplied device image. It is not a photograph of a physical-device test or the current console layout.*
+
+The library setup now uses a service tile hub with a dedicated connection page for each library, clear progress and confirmation, and immediate connection actions. PC Gamerscore awards a total of 1,000 points per supported game from verified Steam achievements, with per-game progress and an interactive calculator in your profile. See [the beta 11 notes](docs/release-0.27.0-beta.11.md).
 
 ## What it does
 
@@ -32,7 +44,7 @@ An unofficial, controller-first launcher for your Windows games. It brings a con
 
 | Library | Game page |
 | --- | --- |
-| ![Library of sample games](docs/screenshots/library.png) | ![Sample game details page](docs/screenshots/game-details.png) |
+| ![Library of sample games](docs/screenshots/console-library.png) | ![Sample game details page](docs/screenshots/console-game-details.png) |
 
 The screenshots use a sample library; no personal account or installed-game list is included.
 
@@ -49,11 +61,17 @@ The portable build does not need installation for each update. Replace the old `
 
 After the first import, Home opens from a saved library snapshot. A small progress indicator shows the background refresh. Fetched game artwork is saved locally, subject to a 600 MB cache limit and provider availability; it does not include the games themselves.
 
-On first launch, choose a profile and connect your libraries. Setup now offers an optional SteamGridDB artwork key field and a direct link to its API preferences. The app scans locally installed games. For **uninstalled Steam games** and personal playtime, add your own Steam Web API key during setup or later in Settings → Library, make your Steam profile's game details visible to that API key, and enable the uninstalled-games option. A SteamID64 is usually detected from the signed-in desktop client; it is an identifier, not a login.
+On first launch, choose a profile and connect your libraries. Optional artwork and account connections are collapsed until you need them. Installed games, locally recorded Steam hours and Steam's hidden-game preferences need no key. For **uninstalled Steam games** and personal achievement progress, add your own Steam Web API key during setup or later in Settings → Library, make your Steam profile's game details visible to that API key, and enable the uninstalled-games option. A SteamID64 is usually detected from the signed-in desktop client; it is an identifier, not a login. Profile totals cover imported Steam games, not every game you have ever owned. Achievement totals identify the top games whose progress was verified.
+
+The optional startup animation uses the Xbox mark with an original synthesized chime, not Microsoft's console sound recording. Interface sounds can be muted and the animation disabled in Settings → General → Volume & audio. Reduced motion is respected. Personal sound packs can include `startup.wav` alongside `navigation.wav` and `activation.wav`; those user-provided files are not distributed with the app.
 
 SteamGridDB artwork is optional. Add your own SteamGridDB API key in Settings → Library → Artwork & achievement services for community artwork. The release contains no shared SteamGridDB key. Existing private-preview users retain keys already saved locally until they remove or reset them.
 
-For **uninstalled Epic games**, Settings → Library can use a separately installed and signed-in Legendary helper, including supported Heroic installations. Choose `legendary.exe` if it is not found automatically, then enable the Epic uninstalled-games option and scan again. Installing a game opens the Epic Games Launcher. Other stores currently import installed games only.
+For **uninstalled Epic games**, Settings → Library can use a separately installed and signed-in Legendary helper, including supported Heroic installations. Choose `legendary.exe` if it is not found automatically, then select Refresh Epic account. Installing a game opens the Epic Games Launcher.
+
+**Ubisoft Connect** can read its locally cached library. **EA and Battle.net** have optional, separate official-site sign-in windows and cached account-library import in this preview. These new sign-in flows need live-account testing; they are not equivalent to universal launcher login support. Install and launch actions still depend on the relevant desktop client. See [library connections and limitations](docs/library-connections.md).
+
+**PC Gamerscore** is a local score from verified Steam achievements. Each supported game's full catalog shares 1,000 points, with rarer achievements receiving more. Link Steam in Settings → Library, then select Profile → Update Gamerscore. Your game scores shows progress and completion. Score calculator previews hypothetical unlocks without adding earned points. Saved scores remain after uninstalling games and are kept separately for each Steam account.
 
 You can choose **Settings → Clear chosen artwork** to remove manual art selections, or **Reset all launcher data** to return the launcher to its first-run state. Both ask for confirmation. Neither deletes installed games.
 
@@ -65,9 +83,10 @@ You can choose **Settings → Clear chosen artwork** to remove manual art select
 | A | Open a game; play on its detail page |
 | B | Back; from Library, return Home |
 | X | Rescan library |
-| Y | Game options |
-| Menu | Settings |
-| View | Navigation menu |
+| Y | Search your library |
+| Menu | Options for the focused game |
+| View | My games & apps / Home |
+| Xbox button | Left to Windows Game Bar; the launcher does not handle it |
 
 ## What to expect in this preview
 
@@ -90,6 +109,10 @@ npm run dist
 Both artifacts are written to `dist/`. The installer does not silently change Windows' FSE Home app, install a certificate, or register the launcher in the Home-app dropdown. See the separate [FSE setup guide](docs/xbox-mode.md).
 
 ## Legal and attribution
+
+Console layout reference: [DashX by saVantCZ](https://github.com/saVantCZ/DashX). DashX theme code and media are not bundled with this project. System icons use the Segoe MDL2 Assets font supplied by Windows. In Settings → General → Volume & audio, you can load a personal sound folder containing `navigation.wav` and `activation.wav`, with optional `back.wav` and `launch.wav`. Imported sounds stay in your local profile and are not included in builds or uploads.
+
+Ubisoft, EA, Battle.net and Epic Games SVG symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. The brands themselves remain trademarks of their respective owners. The Steam Family service shape was checked against [Valve's client protocol definitions](https://github.com/SteamTracking/Protobufs/blob/master/steam/steammessages_familygroups.steamclient.proto) and [steam-family-library](https://github.com/salah153/steam-family-library).
 
 This is a purely fan-made, unofficial launcher. Xbox, Xbox Game Pass, Microsoft, PlayStation, Steam, SteamGridDB, ASUS, game names, logos, and artwork belong to their respective owners. Nothing here implies their sponsorship, approval, or affiliation. The app does not bundle games, grant licenses, bypass DRM, or provide content you do not own. Artwork, news, screenshots, achievements, and metadata remain subject to their source services' rights and terms.
 

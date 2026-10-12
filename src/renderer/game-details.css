@@ -1,0 +1,53 @@
+/* One scale for the full-screen hero and its reading panels. */
+body.garrison #detail-play > strong { font: inherit; }
+body.garrison #detail-play { font-size: max(20px, calc(26 * var(--u))); }
+body.garrison #game-detail-view { min-width: 0; max-width: 100%; }
+body.garrison .detail-content {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  column-gap: calc(28 * var(--u));
+}
+body.garrison .detail-content > section { min-width: 0; max-width: 100%; grid-column: 1 / -1; order: 0; }
+body.garrison .detail-content > .detail-info { grid-column: 1; }
+body.garrison .detail-content > .detail-capabilities { grid-column: 2; }
+body.garrison .detail-content > .detail-overview { order: 0; }
+body.garrison .detail-gallery { width: 100%; min-width: 0; box-sizing: border-box; overscroll-behavior-x: contain; }
+body.garrison .detail-game-details-card,
+body.garrison .detail-capability-panel,
+body.garrison .detail-overview {
+  font: 400 max(16px, calc(23 * var(--u))) / 1.5 var(--g-font);
+}
+body.garrison .detail-game-details-card,
+body.garrison .detail-capability-panel {
+  padding: calc(30 * var(--u)); border: 0; border-radius: calc(10 * var(--u));
+  background: #232426; box-shadow: none;
+}
+body.garrison .detail-full-description { font: inherit; color: #e5e5e5; }
+body.garrison .detail-full-description.clamped { -webkit-line-clamp: 7; }
+body.garrison .detail-description-more {
+  margin-top: calc(24 * var(--u)); padding: calc(13 * var(--u)) calc(24 * var(--u));
+  font: 600 max(16px, calc(23 * var(--u))) / 1.3 var(--g-font); border-radius: calc(6 * var(--u)); text-decoration: none;
+}
+body.garrison .detail-capabilities > h2 { visibility: hidden; }
+body.garrison .detail-capability-panel { gap: calc(30 * var(--u)); }
+body.garrison .detail-capability-panel h3 { margin: 0 0 calc(15 * var(--u)); font: 600 max(18px, calc(26 * var(--u))) / 1.2 var(--g-font); }
+body.garrison #detail-inputs .input-symbol, body.garrison .input-unavailable { font: inherit; }
+body.garrison .detail-pills { gap: calc(10 * var(--u)); }
+body.garrison .detail-pill { padding: calc(10 * var(--u)) calc(16 * var(--u)); font: inherit; border-radius: calc(6 * var(--u)); }
+body.garrison #detail-inputs .input-symbol svg,
+body.garrison #detail-inputs .input-symbol img { width: calc(30 * var(--u)); height: calc(30 * var(--u)); }
+body.garrison .detail-overview .detail-section-heading { display: block; }
+body.garrison .detail-overview-grid { padding: calc(28 * var(--u)); gap: calc(24 * var(--u)); background: #232426; border: 0; }
+body.garrison .detail-overview-fact { gap: calc(8 * var(--u)); }
+body.garrison .detail-overview-fact span,
+body.garrison .detail-meta-row strong { font: 400 max(16px, calc(22 * var(--u))) / 1.4 var(--g-font); color: #bcbcbc; text-transform: none; }
+body.garrison .detail-overview-fact strong,
+body.garrison .detail-meta-row span { font: 400 max(16px, calc(23 * var(--u))) / 1.4 var(--g-font); color: #fff; }
+body.garrison .detail-meta-row { margin: calc(28 * var(--u)) 0 0; padding: 0 calc(28 * var(--u)); gap: calc(28 * var(--u)); }
+body.garrison .detail-meta-row > div { gap: calc(8 * var(--u)); }
+@media (max-width: 800px) {
+  body.garrison .detail-content { grid-template-columns: minmax(0, 1fr); }
+  body.garrison .detail-content > .detail-capabilities { grid-column: 1; }
+  body.garrison .detail-capabilities > h2 { display: none; }
+}

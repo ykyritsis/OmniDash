@@ -9,4 +9,9 @@ dist/
 .demo-smoke-captures/
 launcher-preview*.png
 local-settings.json
+client_secret*.json
+oauth*.json
+oauth.bin*
+installed-games.json
 .visual-review/
+.removed-google-drive/

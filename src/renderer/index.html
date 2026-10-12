@@ -3,59 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://store-images.s-microsoft.com https://steamdb.info https://*.steamstatic.com https://media.steampowered.com https://*.akamaihd.net https://assets.xboxgamer.pics https://live.staticflickr.com https://image.api.playstation.com https://assets-prd.ignimgs.com; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://store-images.s-microsoft.com https://store-images.microsoft.com https://steamdb.info https://*.steamstatic.com https://media.steampowered.com https://*.akamaihd.net https://assets.xboxgamer.pics https://live.staticflickr.com https://image.api.playstation.com https://assets-prd.ignimgs.com; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob:; connect-src 'self' https://cdn.trailers.xboxservices.com" />
     <title>Xbox Preview UI</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="console.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="native-store.css" />
+    <link rel="stylesheet" href="console-refinement.css" />
+    <link rel="stylesheet" href="collection-bands.css" />
+    <link rel="stylesheet" href="library-management.css" />
+    <link rel="stylesheet" href="garrison.css" />
+    <link rel="stylesheet" href="garrison-match.css" />
+    <link rel="stylesheet" href="garrison-measured.css" />
+    <link rel="stylesheet" href="garrison-parity.css" />
+    <link rel="stylesheet" href="game-details.css" />
   </head>
   <body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="light-wordmark" color-interpolation-filters="sRGB">
+          <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .2126 .7152 .0722 0 0" result="ink-luminance" />
+          <feComponentTransfer in="ink-luminance" result="dark-ink"><feFuncA type="table" tableValues="1 1 0 0 0 0 0 0 0" /></feComponentTransfer>
+          <feComposite in="dark-ink" in2="SourceGraphic" operator="in" result="ink-mask" />
+          <feFlood flood-color="white" result="white-ink" />
+          <feComposite in="white-ink" in2="ink-mask" operator="in" result="light-ink" />
+          <feComposite in="light-ink" in2="SourceGraphic" operator="over" />
+        </filter>
+      </defs>
+    </svg>
     <div id="ambient" class="ambient-layer ambient-active" aria-hidden="true"></div>
     <div id="ambient-next" class="ambient-layer" aria-hidden="true"></div>
     <div class="shade" aria-hidden="true"></div>
     <div class="detail-global-art-stack" aria-hidden="true"><div id="detail-global-art" class="detail-global-art-layer"></div><div id="detail-global-art-next" class="detail-global-art-layer"></div></div>
 
     <header class="topbar">
-      <button class="brand focusable" data-action="toggle-nav" aria-label="Open navigation" aria-expanded="false">
-        <span class="brand-mark" aria-hidden="true"><img src="assets/xbox.svg" alt="" /></span>
-        <small>BETA</small>
-      </button>
+      <div class="g-top-left">
+        <button class="g-xbox-pill focusable" type="button" data-action="g-friends" aria-label="Friends" data-g-label="Friends">
+          <img class="g-xbox-mark" src="assets/xbox.svg" alt="" />
+          <span id="controller-status-button" class="g-pill-status controller-status-button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M3 19.5a6 6 0 0 1 12 0"/><path d="M18 9v6M15 12h6"/></svg><span id="g-pill-count">0</span><span id="controller-status-dot" class="controller-status-dot" aria-hidden="true"></span></span>
+        </button>
+        <button id="g-notifications-button" class="g-icon-button focusable" type="button" data-action="g-notifications" aria-label="Notifications" data-g-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V10a6 6 0 0 1 12 0v6.5l1.6 2H4.4z"/><path d="M10 21h4"/></svg><span id="g-notification-badge" class="g-badge" hidden></span></button>
+      </div>
       <nav class="top-center-nav" aria-label="Main navigation">
-        <button class="top-nav-button focusable active" data-action="home" aria-label="Home" title="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></button>
-        <button class="top-nav-button focusable" data-action="library" aria-label="Library" title="Library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h4v16H3zM10 4h4v16h-4zM17 6l4-1 2 14-4 1z"/></svg></button>
-        <button class="top-nav-button focusable" data-action="toggle-search" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 5 5"/></svg></button>
+        <button class="top-nav-button focusable" data-action="home" aria-label="Home" data-g-label="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.2 12 4l8 6.2V20h-5.5v-5.6h-5V20H4z"/></svg></button>
+        <button class="top-nav-button focusable" data-action="library" aria-label="Library" data-g-label="Library"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4.5" width="3.2" height="15" rx=".6"/><rect x="9.4" y="4.5" width="3.2" height="15" rx=".6"/><path d="m15.2 5.6 3-.9 3.6 14-3 .8z"/></svg></button>
+        <button class="top-nav-button focusable" data-action="dashboard-gamepass" aria-label="Game Pass" data-g-label="Game Pass"><span class="gamepass-glyph" aria-hidden="true">GAME<br>PASS</span></button>
+        <button class="top-nav-button focusable" data-action="dashboard-store" aria-label="Store" data-g-label="Store"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 8h13l-.9 11.2a1.6 1.6 0 0 1-1.6 1.5H8a1.6 1.6 0 0 1-1.6-1.5z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8M12 8v12.6"/></svg></button>
+        <button class="top-nav-button focusable" data-action="toggle-search" aria-label="Search" data-g-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.2 15.2 5 5"/></svg></button>
       </nav>
       <div id="search-popover" class="search-popover" hidden><input id="library-search" class="focusable" type="search" autocomplete="off" placeholder="Search your library" aria-label="Search your library" /></div>
       <div class="top-actions">
-        <button id="controller-status-button" class="icon-button focusable controller-status-button" type="button" data-action="controller-status" aria-label="Controller status: checking" title="Controller status">
-          <img src="assets/controller.svg" alt="" /><span id="controller-status-dot" class="controller-status-dot" aria-hidden="true"></span>
-        </button>
-        <button class="icon-button focusable" data-action="rescan" aria-label="Scan for games" title="Scan for games">
+        <button class="g-icon-button focusable" type="button" data-action="settings" aria-label="Settings" data-g-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="m10.4 3.2-.5 2.3a6.8 6.8 0 0 0-1.8 1l-2.2-.7-1.6 2.8 1.7 1.6a6.9 6.9 0 0 0 0 2.1l-1.7 1.6 1.6 2.8 2.2-.7c.5.4 1.1.8 1.8 1l.5 2.3h3.2l.5-2.3c.7-.2 1.3-.6 1.8-1l2.2.7 1.6-2.8-1.7-1.6a6.9 6.9 0 0 0 0-2.1l1.7-1.6-1.6-2.8-2.2.7a6.8 6.8 0 0 0-1.8-1l-.5-2.3z"/></svg></button>
+        <button id="profile-button" class="profile dashboard-player focusable" type="button" data-action="g-account" aria-label="Account" data-g-label="Account"><span id="profile-avatar"></span><span class="dashboard-player-copy"><strong id="dashboard-player-name">Player</strong><small id="dashboard-player-status">Ready to play</small></span></button>
+        <button class="icon-button focusable dashboard-hidden-action" data-action="rescan" aria-label="Scan for games" title="Scan for games">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-4M4 4v5h5M4 13a8 8 0 0 0 14.9 4M20 20v-5h-5"/></svg>
         </button>
-        <button class="icon-button focusable" data-action="settings" aria-label="Settings" title="Settings">
+        <button class="icon-button focusable dashboard-hidden-action" data-action="settings" aria-label="Settings" title="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-1.55-1.02H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1.02-1.55V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9a1.7 1.7 0 0 0 1.55 1.02H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg>
         </button>
         <button id="power-button" class="icon-button focusable power-button" type="button" data-action="power-menu" aria-label="Power options" title="Power options">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v9"/><path d="M6.35 5.7a9 9 0 1 0 11.3 0"/></svg>
+          <span data-console-icon="power"></span>
         </button>
-        <button id="profile-button" class="profile focusable" type="button" data-action="avatar-picker" aria-label="Open player profile"><span id="profile-avatar"></span></button>
+        <time id="dashboard-clock" class="dashboard-clock"></time>
       </div>
     </header>
-
-    <button id="nav-scrim" class="nav-scrim" type="button" data-action="close-nav" aria-label="Close navigation" hidden></button>
-    <aside id="nav-panel" class="nav-panel" hidden aria-label="Navigation">
-      <div id="nav-feature" class="nav-feature"><div id="nav-feature-bg" class="nav-feature-bg"></div><div id="nav-feature-art" class="nav-feature-art"></div><span id="nav-feature-last">Recently played</span><strong id="nav-feature-title">Your library</strong></div>
-      <div id="nav-achievements" class="nav-achievements" hidden><span id="nav-achievement-count"></span><div class="nav-achievement-track"><span id="nav-achievement-fill"></span></div></div>
-      <button class="nav-panel-item focusable" data-action="home">
-        <span class="nav-panel-icon">⌂</span><span>Home</span>
-      </button>
-      <button class="nav-panel-item focusable" data-action="library">
-        <span class="nav-panel-icon">▥</span><span>Library</span>
-      </button>
-      <div class="nav-divider"></div>
-      <button class="nav-panel-item focusable" data-action="recently-played"><span class="nav-panel-icon">◷</span><span>Recently played</span></button>
-      <button class="nav-panel-item focusable" data-action="give-feedback"><span class="nav-panel-icon">♧</span><span>Give feedback</span></button>
-    </aside>
 
     <main>
       <div id="home-view">
@@ -68,15 +79,16 @@
           </button>
         </section>
 
-        <section class="shelf" aria-labelledby="jump-title">
+        <section class="shelf dashboard-recent" aria-labelledby="jump-title">
           <div class="section-heading">
             <div class="jump-title-wrap">
-              <h2 id="jump-title">Jump back in to</h2>
+              <h2 id="jump-title">Jump back in</h2>
               <div id="jump-logo" class="jump-logo" aria-hidden="true" hidden></div>
             </div>
           </div>
           <div id="recent-row" class="game-row" role="list"></div>
         </section>
+        <section id="dashboard-features" class="dashboard-features" aria-label="Home shortcuts"></section>
 
         <section class="shelf collection-shelf favorites-shelf" id="favorites-shelf" aria-labelledby="favorites-title" hidden><div class="section-heading"><h2 id="favorites-title">Favorites</h2><span>Your picks, ready when you are</span></div><div id="favorites-row" class="game-row" role="list"></div></section>
 
@@ -86,6 +98,7 @@
         </section>
 
         <section class="home-collections" id="home-collections" aria-label="Game collections" hidden>
+          <div id="source-collections" aria-label="Your game libraries"></div>
           <section class="shelf collection-shelf steam-discovery-shelf" aria-labelledby="steam-players-title"><div class="section-heading"><h2 id="steam-players-title">Most played on Steam</h2><span>Top 5 by players right now</span></div><div id="steam-players-row" class="game-row" role="list"></div></section>
           <section class="shelf collection-shelf steam-discovery-shelf" aria-labelledby="steam-sellers-title"><div class="section-heading"><h2 id="steam-sellers-title">Top sellers on Steam</h2><span>Top 5 by revenue</span></div><div id="steam-sellers-row" class="game-row" role="list"></div></section>
           <section class="shelf collection-shelf steam-discovery-shelf" aria-labelledby="steam-upcoming-title"><div class="section-heading"><h2 id="steam-upcoming-title">Popular upcoming on Steam</h2><span>Top 5 upcoming games</span></div><div id="steam-upcoming-row" class="game-row" role="list"></div></section>
@@ -119,6 +132,8 @@
       </div>
 
       <section id="library-view" class="library-view" hidden aria-labelledby="library-heading">
+        <div class="g-library-tabs-row"><nav class="console-library-nav" aria-label="My games and apps"><h1>My games &amp; apps</h1><button class="focusable" data-action="console-library-section" data-section="installed">Installed</button><button class="focusable" data-action="console-library-section" data-section="recent">Recently played</button><button class="focusable" data-action="console-library-section" data-section="queue">Queue</button><button class="focusable active" data-action="console-library-section" data-section="games">My games</button></nav><button class="g-round-add focusable" type="button" data-action="add-game" aria-label="Add a game or app" data-g-label="Add a game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div><div id="g-source-chips" class="g-source-chips" role="tablist" aria-label="Library sources"></div>
+        <div class="console-library-content">
         <div id="steam-connection-banner" class="steam-connection-banner"><span id="steam-connection-text">Checking Steam library connection…</span><div><button class="focusable" type="button" data-action="steam-setup">Steam setup</button><button class="banner-dismiss focusable" type="button" data-action="dismiss-steam-banner" aria-label="Dismiss Steam library setup">×</button></div></div>
         <div class="library-tabs" role="tablist" aria-label="Library sections">
           <button class="library-tab focusable active" data-action="library-tab" data-tab="my-games" role="tab" aria-selected="true">My games</button>
@@ -138,10 +153,12 @@
         <div class="library-heading-row">
           <h1 id="library-heading">My games</h1>
           <select id="library-collection" class="library-sort focusable" aria-label="Filter by collection"><option value="all">All collections</option><option value="favorites">Favorites</option><option value="controller">Controller ready</option><option value="solo">Single player</option><option value="multiplayer">Multiplayer</option><option value="installed">Ready to play</option></select>
-          <select id="library-sort" class="library-sort focusable" aria-label="Sort library"><option value="recent">Last played</option><option value="name">Name</option><option value="provider">Source</option><option value="playtime">Steam hours</option></select>
+          <select id="library-sort" class="library-sort focusable" aria-label="Sort library"><option value="recent">Last played</option><option value="name">Name</option><option value="provider">Source</option><option value="playtime">Steam hours</option><option value="size">Size</option></select>
         </div>
         <div id="library-grid" class="library-grid" role="list"></div>
+        </div>
       </section>
+      <section id="store-view" class="console-store-view" hidden aria-labelledby="store-heading"><div class="console-page-heading"><span data-console-icon="store"></span><h1 id="store-heading">Store</h1></div><div class="console-store-tabs"><button class="focusable active" data-action="console-store-tab" data-tab="popular">Popular</button><button class="focusable" data-action="console-store-tab" data-tab="newReleases">New releases</button><button class="focusable" data-action="console-store-tab" data-tab="free">Free to play</button></div><div id="console-store-grid" class="library-grid" role="list"></div></section>
       <section id="game-detail-view" class="game-detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-hero-art-stack" aria-hidden="true"><div id="detail-hero-art" class="detail-hero-art-layer active"></div><div id="detail-hero-art-next" class="detail-hero-art-layer"></div></div>
         <div class="detail-hero-shade" aria-hidden="true"></div>
@@ -150,9 +167,11 @@
           <h1 id="detail-title">Game</h1><img id="detail-logo" class="detail-logo" alt="" hidden />
           <div id="detail-byline" class="detail-byline"></div>
           <p id="detail-description" class="detail-description"></p>
-          <div class="detail-actions"><button id="detail-play" class="detail-play focusable" type="button" data-action="detail-play"><span class="detail-action-icon" aria-hidden="true">▶</span><strong>Play</strong></button><button id="detail-options-button" class="detail-secondary focusable" type="button" data-action="detail-options"><strong>Game options</strong><small>Manage and personalize</small></button></div>
+          <div id="detail-session-info" class="detail-session-info"></div>
+          <div class="detail-actions"><button id="detail-play" class="detail-play focusable" type="button" data-action="detail-play"><span class="detail-action-icon" aria-hidden="true">▶</span><strong>Play</strong></button><button id="g-detail-favorite" class="detail-secondary g-square-action focusable" type="button" data-action="g-detail-favorite" aria-label="Add to Favorites" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/></svg></button><button id="detail-options-button" class="detail-secondary g-square-action focusable" type="button" data-action="detail-options" aria-label="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></svg><strong>Manage game</strong></button></div>
         </div>
         <div id="detail-rating" class="detail-rating"></div>
+        <nav id="detail-tabs" class="detail-tabs" aria-label="Game sections" role="tablist"><button class="focusable active" role="tab" aria-selected="true" data-action="detail-tab" data-tab="overview">Overview</button><button class="focusable" role="tab" aria-selected="false" data-action="detail-tab" data-tab="media">Screenshots</button><button class="focusable" role="tab" aria-selected="false" data-action="detail-tab" data-tab="achievements">Achievements</button><button class="focusable" role="tab" aria-selected="false" data-action="detail-tab" data-tab="dlc">Add-ons</button><button id="detail-updates-tab" class="focusable" role="tab" aria-selected="false" data-action="detail-tab" data-tab="updates">Updates</button></nav>
         <div class="detail-content">
           <section class="detail-section detail-overview" aria-labelledby="overview-heading"><div class="detail-section-heading"><div><span class="eyebrow">AT A GLANCE</span><h2 id="overview-heading">Overview</h2></div><span id="detail-metadata-source" class="detail-metadata-source"></span></div><div id="detail-overview-grid" class="detail-overview-grid"></div></section>
           <section class="detail-section" aria-labelledby="gallery-heading"><h2 id="gallery-heading">Gallery</h2><div id="detail-gallery" class="detail-gallery" role="list"></div></section>
@@ -169,8 +188,8 @@
       <span class="control-action" id="prompt-a"><kbd class="xb-button xb-a">A</kbd><span>Open</span></span>
       <span class="control-action" id="prompt-b" hidden><kbd class="xb-button xb-b">B</kbd><span>Back</span></span>
       <span class="control-action" id="prompt-x"><kbd class="xb-button xb-x">X</kbd><span>Scan</span></span>
-      <span class="control-action" id="prompt-y"><kbd class="xb-button xb-y">Y</kbd><span>Options</span></span>
-      <span class="control-action" id="prompt-menu"><kbd class="xb-button xb-menu">☰</kbd><span>Settings</span></span>
+      <span class="control-action" id="prompt-y"><kbd class="xb-button xb-y">Y</kbd><span>Search</span></span>
+      <span class="control-action" id="prompt-menu"><kbd class="xb-button xb-menu">☰</kbd><span>Options</span></span>
     </div>
 
     <div id="empty-state" class="empty-state" hidden>
@@ -206,6 +225,8 @@
                 <div class="settings-section-heading"><h3 id="settings-console-heading">Start and navigation</h3></div>
                 <label class="toggle-row"><span><strong>Fullscreen on launch</strong><small>Open directly in the console-style view.</small></span><input class="focusable" id="fullscreen-toggle" type="checkbox" /></label>
                 <label class="toggle-row"><span><strong>Interface sounds</strong><small>Subtle sounds for focus, navigation, and launch.</small></span><input class="focusable" id="sound-toggle" type="checkbox" /></label>
+                <label class="toggle-row"><span><strong>Startup animation</strong><small>Xbox logo animation with an original startup chime. Respects Interface sounds and Reduced motion.</small></span><input class="focusable" id="startup-toggle" type="checkbox" /></label>
+                <div class="console-sound-pack"><p id="sound-pack-status">Use your own navigation and selection sounds. Choose a folder with navigation.wav and activation.wav; back.wav and launch.wav are optional.</p><div><button class="secondary focusable" type="button" data-action="console-sound-import">Choose sound folder</button><button class="secondary focusable" type="button" data-action="console-sound-preview">Preview</button><button class="secondary focusable" type="button" data-action="console-sound-reset">Use default sounds</button></div></div>
               </section>
               <section class="settings-section settings-quick-links"><div class="settings-section-heading"><h3>Quick access</h3></div><button class="settings-link focusable" type="button" data-action="settings-open-apps"><span>Game launchers & apps<small>Open Steam, Epic, and other installed launchers</small></span><b>›</b></button><button class="settings-link focusable" type="button" data-action="settings-open-profile"><span>Player profile<small>Name, gamerpic, and recent games</small></span><b>›</b></button></section>
             </div>
@@ -216,7 +237,7 @@
                 <div class="library-connection-card"><div class="library-connection-heading"><span class="connection-icon">E</span><div><h3>Epic Games</h3><p>Installed games are imported automatically.</p></div><span id="settings-epic-badge" class="connection-state">Checking</span></div><p id="settings-epic-status" class="connection-detail">Checking for Legendary or Heroic…</p><label class="toggle-row"><span><strong>Include uninstalled games</strong><small>Reads your Epic library through a signed-in Legendary helper.</small></span><input class="focusable" id="show-uninstalled-epic-toggle" type="checkbox" /></label><details class="connection-setup"><summary class="focusable">Set up Epic account library</summary><div class="connection-setup-body"><label>Legendary helper<input class="focusable" id="legendary-path" type="text" autocomplete="off" placeholder="Detected automatically, or choose legendary.exe" /></label><div class="settings-data-buttons"><button class="secondary focusable" type="button" data-action="choose-legendary">Choose helper</button><button class="secondary focusable" type="button" data-action="epic-helper-help">Setup guide</button></div><p>Sign in with Legendary or Heroic first, then scan again. Your Epic password is never entered here.</p></div></details></div>
                 <div class="library-connection-card"><div class="library-connection-heading"><span class="connection-icon">+</span><div><h3>Other launchers</h3><p>Xbox, Ubisoft, EA, Battle.net, Rockstar and more.</p></div><span class="connection-state">Installed only</span></div><p class="connection-detail">We detect games already on this PC. Account-owned uninstalled libraries are not connected for these services yet.</p></div>
               </section>
-              <details class="settings-advanced"><summary class="focusable">Artwork & achievement services <small>Optional</small></summary><div class="settings-advanced-content"><p>These keys improve artwork and achievement details; they do not sign you in to a game launcher.</p><label>SteamGridDB API key<input class="focusable" id="sgdb-key" type="password" autocomplete="off" placeholder="Artwork access" /></label><label>Xbox achievement API key<input class="focusable" id="xbox-api-key" type="password" autocomplete="off" placeholder="Optional" /></label><div class="settings-data-buttons"><button class="secondary focusable" type="button" data-action="xbox-open-api-key">Get Xbox key</button></div></div></details>
+              <details class="settings-advanced"><summary class="focusable">Artwork services <small>Optional</small></summary><div class="settings-advanced-content"><p>These keys improve artwork and achievement details; they do not sign you in to a game launcher.</p><label>SteamGridDB API key<input class="focusable" id="sgdb-key" type="password" autocomplete="off" placeholder="Artwork access" /></label></div></details>
             </div>
             <div class="settings-page" data-settings-page="personalization" hidden>
               <section class="settings-section" aria-labelledby="settings-personal-heading">
@@ -260,6 +281,7 @@
         <section class="options-primary-actions">
           <button class="option-button option-play focusable" type="button" data-action="options-launch"><span class="option-action-glyph">▶</span><span class="option-action-copy"><strong>Play</strong><small>Start this game</small></span><span class="option-action-arrow">›</span></button>
           <button class="option-button option-return focusable" id="options-return" type="button" data-action="return-to-game" hidden><span class="option-action-glyph">↩</span><span class="option-action-copy"><strong>Return to game</strong><small>Switch back to your last launch</small></span><span class="option-action-arrow">›</span></button>
+          <button class="option-button option-play focusable" id="options-provider-install" type="button" data-action="download-steam" hidden>Install game</button>
         </section>
         <p class="options-overview-note">Your game. Your way.</p>
         </div>
@@ -314,7 +336,6 @@
         </section>
         <details id="achievement-links-group" class="achievement-links-group"><summary class="focusable">Achievement sources <small>Link another edition when achievements aren't found automatically.</small></summary>
           <div id="achievement-reference-editor" class="achievement-reference-editor"><label for="achievement-reference-id">Steam achievement catalog <small>Link a Steam edition to view its public achievements for this game.</small></label><div><input class="focusable" id="achievement-reference-id" inputmode="numeric" type="text" placeholder="Steam App ID, e.g. 221430" /><button class="secondary focusable" type="button" data-action="save-achievement-reference">Save</button></div></div>
-          <div id="xbox-achievement-reference-editor" class="achievement-reference-editor"><label for="xbox-achievement-title-id">Xbox achievement catalog <small>With an OpenXBL key, matching is automatic from your Xbox title history. Enter a Title ID to link a specific Xbox or Xbox 360 edition.</small></label><div class="xbox-reference-row"><input class="focusable" id="xbox-achievement-title-id" inputmode="numeric" type="text" placeholder="Xbox Title ID" /><select class="focusable" id="xbox-achievement-platform" aria-label="Xbox platform"><option value="auto">Auto</option><option value="xbox">Xbox One / Series</option><option value="xbox360">Xbox 360</option></select><button class="secondary focusable" type="button" data-action="save-xbox-achievement-reference">Save</button></div></div>
         </details>
         </div>
         <footer class="options-footer"><span><kbd class="xb-button xb-b">B</kbd> Back</span><button class="secondary focusable" value="cancel">Done</button></footer>
@@ -359,7 +380,7 @@
         <p class="artwork-step-label">1 · Choose artwork type</p>
         <div class="artwork-slot-tabs" role="tablist" aria-label="Artwork type"><button class="artwork-slot focusable active" type="button" data-action="artwork-slot" data-slot="tile">Square tile</button><button class="artwork-slot focusable" type="button" data-action="artwork-slot" data-slot="hero">Hero background</button><button class="artwork-slot focusable" type="button" data-action="artwork-slot" data-slot="wide">Wide art</button><button class="artwork-slot focusable" type="button" data-action="artwork-slot" data-slot="logo">Game logo</button></div>
         <p class="artwork-step-label">2 · Choose a source</p>
-        <div class="artwork-source-tabs" role="tablist" aria-label="Artwork source"><button class="focusable active" type="button" data-action="artwork-source" data-source="community" role="tab" aria-selected="true">SteamGridDB</button><button class="focusable" type="button" data-action="artwork-source" data-source="steam" role="tab" aria-selected="false">Official Steam</button><button class="focusable" type="button" data-action="artwork-source" data-source="xbox" role="tab" aria-selected="false">Xbox</button><button class="focusable" type="button" data-action="artwork-source" data-source="psn" role="tab" aria-selected="false">PlayStation</button><button class="focusable" type="button" data-action="artwork-source" data-source="ign" role="tab" aria-selected="false">IGN</button></div>
+        <div class="artwork-source-tabs" role="tablist" aria-label="Artwork source"><button class="focusable active" type="button" data-action="artwork-source" data-source="xbox" role="tab" aria-selected="true">Xbox</button><button class="focusable" type="button" data-action="artwork-source" data-source="ign" role="tab" aria-selected="false">IGN</button><button class="focusable" type="button" data-action="artwork-source" data-source="psn" role="tab" aria-selected="false">PlayStation</button><button class="focusable" type="button" data-action="artwork-source" data-source="community" role="tab" aria-selected="false">SteamGridDB</button><button class="focusable" type="button" data-action="artwork-source" data-source="steam" role="tab" aria-selected="false">Official Steam</button></div>
         <p class="artwork-step-label">3 · Find and select an image</p>
         <div class="artwork-search-row">
           <input class="focusable" id="artwork-query" type="search" autocomplete="off" placeholder="Search for a game" />
@@ -391,27 +412,30 @@
 
     <dialog id="avatar-dialog" class="setup-dialog profile-dialog" aria-label="Player profile">
       <button class="profile-close focusable" type="button" data-action="avatar-close" aria-label="Close player profile">×</button>
-      <div class="profile-hero"><div id="profile-large-avatar" class="profile-large-avatar"></div><div class="profile-identity"><span class="eyebrow">PLAYER PROFILE · THIS PC</span><h2 id="profile-name-heading">Player</h2><p>Your local player card for Xbox Preview UI. This does not change or sign in to an Xbox account.</p></div></div>
-      <div class="profile-stats" aria-label="Library statistics"><div><strong id="profile-library-count">0</strong><span>Games</span></div><div><strong id="profile-installed-count">0</strong><span>Installed</span></div><div><strong id="profile-launch-count">0</strong><span>Launches here</span></div></div>
+      <div class="profile-hero"><div id="profile-large-avatar" class="profile-large-avatar"></div><div class="profile-identity"><h2 id="profile-name-heading">Player</h2><p>Steam gaming activity</p></div></div>
+      <div class="profile-stats" aria-label="Steam statistics"><div><strong id="profile-library-count">0</strong><span>Steam games</span></div><div><strong id="profile-installed-count">0</strong><span>Hours played</span></div><div><strong id="profile-launch-count">0</strong><span>Games played</span></div></div>
       <nav class="profile-tabs" role="tablist" aria-label="Player profile"><button class="focusable active" type="button" role="tab" aria-selected="true" data-action="profile-tab" data-page="overview">Overview</button><button class="focusable" type="button" role="tab" aria-selected="false" data-action="profile-tab" data-page="customize">Customize profile</button></nav>
-      <section class="profile-overview" data-profile-page="overview"><h3>Recently played</h3><div id="profile-recent-games"></div><p>Your profile stays on this PC. Xbox friends and account progress are not linked.</p></section>
+      <section class="profile-score-panel" data-profile-page="overview"><div class="profile-score-number"><span class="preview-score-mark" aria-hidden="true">G</span><strong id="profile-score-value">—</strong><span>PC Gamerscore</span></div><div><p id="profile-score-coverage">Your verified achievement collection.</p><small>1,000 possible points per game. Rarer achievements earn a larger share. Personal PC score, separate from your Xbox account.</small></div><div class="pc-score-actions"><button id="profile-score-sync" type="button" class="primary focusable" data-action="profile-score-sync">Update Gamerscore</button><button id="pc-score-calculator-open" type="button" class="secondary focusable">Score calculator</button></div></section>
+      <details class="pc-score-breakdown" data-profile-page="overview"><summary class="focusable">Your game scores</summary><p id="pc-score-source">Verified Steam achievements · saved on this PC</p><div id="pc-score-games"></div></details>
+      <section class="profile-overview" data-profile-page="overview"><div class="profile-section-heading"><h3>Most played</h3><span id="profile-stat-scope">Imported Steam games · hidden games excluded</span></div><div id="profile-recent-games"></div><div class="profile-section-heading"><h3>Achievements</h3><span id="profile-achievement-total"></span></div><div id="profile-achievement-games" class="profile-achievement-games"></div><p id="profile-data-note">Steam playtime recorded on this PC is available without a key.</p></section>
       <section data-profile-page="customize" hidden>
+      <label class="toggle-row"><span><strong>Use my Steam name</strong><small id="profile-steam-identity-note">Automatically uses the Steam account on this PC.</small></span><input id="profile-steam-name" type="checkbox" class="focusable" /></label>
       <label class="setup-field profile-name-field">Player name<input id="profile-name-input" class="focusable" maxlength="32" autocomplete="nickname" placeholder="Player" /></label>
       <div class="profile-upload-row"><button class="secondary focusable" type="button" data-action="choose-custom-gamerpic">Upload gamerpic from this PC</button><small>Images are cropped to a private, local square gamerpic.</small></div>
       <div class="profile-avatar-heading"><div><h3>Choose your gamerpic</h3><p>Xbox 360 and Xbox One community images, plus offline presets.</p></div><span id="profile-source-count" class="profile-source-count">0 stores</span></div>
       <div id="avatar-choices" class="avatar-choices"></div>
       </section>
-      <div class="profile-quick-actions"><button class="secondary focusable" type="button" data-action="profile-library">Open library</button><button class="secondary focusable" type="button" data-action="profile-settings">Settings</button></div>
-      <div class="setup-actions"><button class="secondary focusable" type="button" data-action="avatar-close">Cancel</button><button class="primary focusable" type="button" data-action="profile-save">Save profile</button></div>
+      <div class="setup-actions profile-overview-actions" data-profile-page="overview"><span>Private to this device</span><button class="secondary focusable" type="button" data-action="profile-library">My games & apps</button><button class="secondary focusable" type="button" data-action="profile-settings">Settings</button><button class="primary focusable" type="button" data-action="avatar-close">Done</button></div>
+      <div class="setup-actions" data-profile-page="customize" hidden><button class="secondary focusable" type="button" data-action="avatar-close">Cancel</button><button class="primary focusable" type="button" data-action="profile-save">Save profile</button></div>
     </dialog>
 
     <dialog id="onboarding-dialog" class="setup-dialog onboarding-dialog" aria-label="Welcome to Xbox Preview UI">
       <div class="onboarding-brand"><img src="assets/xbox.svg" alt="" /><span class="eyebrow">XBOX PREVIEW UI</span></div>
       <ol class="onboarding-stepper" aria-label="Setup progress"><li data-onboarding-indicator="0" aria-current="step"><span>1</span><small>Welcome</small></li><li data-onboarding-indicator="1"><span>2</span><small>Player</small></li><li data-onboarding-indicator="2"><span>3</span><small>Libraries</small></li></ol>
       <section class="onboarding-panel" data-onboarding-step="0">
-        <div class="setup-heading"><h2>Your games, together.</h2><p>A controller-first home for the PC games you already own.</p></div>
-        <div class="onboarding-feature-grid"><div><strong>One library</strong><span>Find installed games from your PC launchers in one place.</span></div><div><strong>Made for controller</strong><span>Navigate your collection from the couch or handheld.</span></div><div><strong>Your space</strong><span>Choose a local player name and gamerpic. No account sign-in is required.</span></div></div>
-        <p class="setup-hint">Steam sign-in is optional. Installed libraries are scanned locally; account-only Steam games can be enabled in the next step.</p>
+        <div class="setup-heading"><h2>Welcome home.</h2><p>Let’s set up your place to play.</p></div>
+        <div class="onboarding-feature-grid"><div><i data-console-icon="library"></i><strong>Bring your games</strong><span>Installed games are found automatically.</span></div><div><i data-console-icon="controller"></i><strong>Pick up your controller</strong><span>Or use your keyboard and mouse.</span></div><div><i data-console-icon="person"></i><strong>Make it yours</strong><span>Choose a name and gamerpic for this device.</span></div></div>
+        <p class="setup-hint">No new account needed. You can change everything later in Settings.</p>
       </section>
       <section class="onboarding-panel" data-onboarding-step="1" hidden>
         <div class="setup-heading"><h2>Set up your player.</h2><p>This profile stays on this PC and can be changed later.</p></div>
@@ -419,17 +443,15 @@
         <strong class="setup-label">Choose a gamerpic</strong><div id="onboard-avatar-choices" class="avatar-choices"></div>
       </section>
       <section class="onboarding-panel" data-onboarding-step="2" hidden>
-        <div class="setup-heading"><h2>Connect your library.</h2><p>Installed PC games will be discovered automatically. Add your own artwork key if you want more cover choices.</p></div>
+        <div class="setup-heading"><h2>Your games are coming with you.</h2><p>We’ll find installed games from Steam and your other launchers. No new account required.</p></div>
         <div class="onboarding-service-card"><div class="onboarding-service-mark steam-service-mark"><img src="assets/steam.svg" alt="" /></div><div><strong>Steam</strong><span id="onboard-steam-status">Checking this PC for Steam…</span></div><span id="onboard-steam-check" class="onboard-service-check" hidden aria-label="Steam detected">✓</span><button class="secondary focusable" type="button" data-action="steam-open-client">Open Steam</button></div>
-        <label class="setup-field">SteamGridDB artwork key <span class="setup-optional-label">Optional</span><input id="onboard-sgdb-key" class="focusable" type="password" autocomplete="off" placeholder="Paste your personal API key" /><small>For extra community covers and logos. Sign in to SteamGridDB, open Preferences → API, create a key, then paste it here. <button class="inline-link focusable" type="button" data-action="sgdb-open-api-key">Get a key</button> You can skip this and add it later in Settings.</small></label>
+        <details class="onboarding-optional"><summary class="focusable">More artwork choices <span>Optional</span></summary><label class="setup-field">SteamGridDB artwork key<input id="onboard-sgdb-key" class="focusable" type="password" autocomplete="off" placeholder="Paste your personal API key" /><small>Sign in to SteamGridDB, open Preferences → API, create a key, then paste it here. <button class="inline-link focusable" type="button" data-action="sgdb-open-api-key">Get a key</button> Official cover artwork works without one.</small></label></details>
         <details class="onboarding-optional"><summary class="focusable">Add online library & achievement features <span>Optional</span></summary>
-        <label class="setup-field">Steam Web API key<input id="onboard-steam-key" class="focusable" type="password" autocomplete="off" placeholder="Optional" /><small>Only needed for uninstalled Steam games, hours, and Steam charts. Your SteamID is detected when possible.</small></label>
-        <div class="onboarding-service-card xbox-service-card"><div class="onboarding-service-mark"><img src="assets/xbox.svg" alt="" /></div><div><strong>Xbox achievements</strong><span>Optional · add an OpenXBL API key to show your Xbox and Xbox 360 achievements for matched games.</span></div></div>
-        <label class="setup-field">OpenXBL API key<input id="onboard-xbox-key" class="focusable" type="password" autocomplete="off" placeholder="Optional" /><small>Stored locally. <button class="inline-link focusable" type="button" data-action="xbox-open-api-key">Get a key</button></small></label>
+        <label class="setup-field">Steam Web API key<input id="onboard-steam-key" class="focusable" type="password" autocomplete="off" placeholder="Optional" /><small>For uninstalled games, playtime, and personal achievement progress. Public Store charts do not need a key. Your SteamID is detected when possible.</small></label>
         <details class="setup-advanced"><summary>Advanced account options</summary><label class="setup-field">SteamID64 (normally detected automatically)<input id="onboard-steam-id" class="focusable" inputmode="numeric" placeholder="Detected from Steam when available" /></label><div class="setup-links"><button class="secondary focusable" type="button" data-action="steam-open-privacy">Privacy settings</button><button class="secondary focusable" type="button" data-action="steam-open-api-key">Get API key</button></div></details>
         <label class="setup-check"><input id="onboard-uninstalled" class="focusable" type="checkbox" disabled /><span>Show uninstalled Steam games <small id="onboard-uninstalled-note">Add a Steam Web API key to enable this.</small></span></label>
         </details>
-        <p class="setup-hint">Installed Steam games link automatically without sign-in. To add account-only or uninstalled games, provide a Web API key and make Steam Game details public. Other installed launchers are detected locally.</p>
+        <p class="setup-hint">Hidden Steam games stay hidden. You can add uninstalled games and other account features later in Settings.</p>
       </section>
       <div class="setup-actions onboarding-actions"><button id="onboard-back" class="secondary focusable" type="button" data-action="onboard-back" hidden>Back</button><span id="onboarding-step-label">Step 1 of 3</span><button id="onboard-next" class="primary focusable" type="button" data-action="onboard-next">Continue</button><button id="onboard-finish" class="primary focusable" type="button" data-action="onboard-finish" hidden>Start importing games</button></div>
     </dialog>
@@ -476,6 +498,31 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <dialog id="console-choice-dialog" class="console-choice-dialog" aria-labelledby="console-choice-title"><h2 id="console-choice-title">Choose</h2><div id="console-choice-list"></div><footer><kbd class="xb-button">B</kbd> Back</footer></dialog>
+    <dialog id="console-file-dialog" class="console-file-dialog" aria-labelledby="console-file-title"><div class="console-file-heading"><span data-console-icon="folder"></span><div><h2 id="console-file-title">Choose a game</h2><p id="console-file-path"></p></div></div><div class="console-file-tools"><button class="secondary focusable" data-action="console-file-roots">Locations</button><button class="secondary focusable" data-action="console-file-up">Up one level</button></div><div id="console-file-list" class="console-file-list"></div><footer><button class="secondary focusable" data-action="console-file-cancel">Cancel</button><button id="console-file-select" class="primary focusable" data-action="console-file-select" hidden>Choose this folder</button></footer></dialog>
+    <script src="dashboard.js"></script>
+    <section id="steam-shop" class="steam-shop" aria-label="Steam Store" hidden><header><button class="secondary focusable" data-action="console-shop-close"><kbd class="xb-button">B</kbd> Close Store</button><strong>Steam Store</strong><button class="secondary focusable" data-action="console-shop-back">Back</button><button class="secondary focusable" data-action="console-shop-login">Sign in</button><button class="primary focusable" data-action="console-shop-cart">Cart</button><button class="secondary focusable" data-action="console-shop-reload">Reload</button></header><div class="steam-shop-placeholder">Connecting to Steam…</div><footer><span id="steam-shop-status" role="status">Secure Steam session · sign in directly with Steam</span><span>Esc / B Close · A Select · D-pad Navigate</span></footer></section>
+    <script src="steam-shop.js"></script>
+    <script src="native-store.js"></script>
+    <script src="console-settings.js"></script>
+    <script src="console-library.js"></script>
+    <script src="console-search.js"></script>
+    <script src="interface-audio.js"></script>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"><button class="close-button focusable" data-action="install-close" aria-label="Close installation">×</button><div id="install-cover" class="install-cover"></div><div class="install-copy"><span class="eyebrow">STEAM INSTALLATION</span><h2 id="install-title">Preparing your game</h2><p id="install-status" role="status">Waiting for Steam…</p><progress id="install-progress" max="100" aria-label="Installation progress"></progress><p id="install-help">Confirm the installation in Steam. We’ll track the download here and let you know when it’s ready.</p><div class="install-actions"><button class="primary focusable" data-action="install-steam">Open Steam installation</button><button class="secondary focusable" data-action="install-close">Continue browsing</button></div></div></dialog>
+    <div id="startup-screen" class="startup-screen" aria-hidden="true" hidden><div class="startup-glow"></div><img src="assets/xbox.svg" alt="" /><span>XBOX PREVIEW UI</span><small>Unofficial fan project</small></div>
+    <script src="console-refinement.js"></script>
+    <script src="player-profile.js"></script>
+    <script src="../pc-gamerscore.cjs"></script>
+    <script src="account-libraries.js"></script>
+    <script src="collection-bands.js"></script>
+    <script src="../library-duplicates.cjs"></script>
+    <script src="library-management.js"></script>
     <script src="app.js"></script>
+    <script src="connection-status.js"></script>
+    <script src="library-connections.js"></script>
+    <script src="pc-gamerscore.js"></script>
+    <script src="vendor/hls.light.min.js"></script>
+    <script src="garrison-icons.js"></script>
+    <script src="garrison.js"></script>
   </body>
 </html>

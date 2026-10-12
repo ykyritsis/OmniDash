@@ -1,0 +1,302 @@
+/* Garrison, matched to the hands-on frames: Fluent glyphs, panels and the game page. */
+body.garrison .g-glyph, .g-flyout .g-glyph, .g-manage .g-glyph, #settings-dialog .g-glyph {
+  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; font-style: normal; font-weight: normal; line-height: 1;
+  display: inline-grid; place-items: center; -webkit-font-smoothing: antialiased;
+}
+
+/* Top bar: Fluent glyphs, a ringed circle on focus and a plain label beneath. */
+body.garrison .top-nav-button, body.garrison .g-icon-button { width: clamp(48px, calc(4.2 * var(--g-vp) / 100), 82px); height: clamp(48px, calc(4.2 * var(--g-vp) / 100), 82px); }
+body.garrison .top-nav-button .g-glyph, body.garrison .g-icon-button .g-glyph { font-size: clamp(20px, calc(1.5 * var(--g-vp) / 100), 30px); }
+body.garrison .top-center-nav { gap: clamp(20px, calc(3 * var(--g-vp) / 100), 58px); }
+body.garrison .top-nav-button.focused, body.garrison .g-icon-button.focused, body.garrison #profile-button.focused,
+body.garrison .top-nav-button:focus-visible, body.garrison .g-icon-button:focus-visible {
+  background: rgba(255, 255, 255, .1); box-shadow: 0 0 0 3px #fff, 0 0 18px 5px rgba(255, 255, 255, .35) !important;
+}
+body.garrison .top-nav-button.active::before { display: none; }
+body.garrison .g-gamepass { display: grid; place-items: center; gap: 0; width: clamp(28px, calc(2.1 * var(--g-vp) / 100), 42px); height: clamp(22px, calc(1.6 * var(--g-vp) / 100), 32px); padding: 1px 0; border: 1.5px solid currentColor; border-radius: 4px; }
+body.garrison .g-gamepass b { font: 800 clamp(6px, calc(.42 * var(--g-vp) / 100), 9px)/1.05 var(--g-font); letter-spacing: .02em; }
+body.garrison .g-xbox-pill { height: clamp(42px, calc(3.35 * var(--g-vp) / 100), 64px); gap: clamp(12px, calc(1.1 * var(--g-vp) / 100), 22px); padding: 0 clamp(14px, calc(1.1 * var(--g-vp) / 100), 22px) 0 clamp(6px, calc(.45 * var(--g-vp) / 100), 10px); border-color: rgba(255, 255, 255, .42); }
+body.garrison .g-xbox-mark { width: clamp(28px, calc(2.05 * var(--g-vp) / 100), 40px); height: clamp(28px, calc(2.05 * var(--g-vp) / 100), 40px); }
+body.garrison .g-pill-status .g-glyph { font-size: clamp(18px, calc(1.3 * var(--g-vp) / 100), 26px); }
+body.garrison .g-pill-status .controller-status-dot { display: none; }
+body.garrison .g-badge { top: clamp(6px, calc(.5 * var(--g-vp) / 100), 10px); right: clamp(2px, calc(.3 * var(--g-vp) / 100), 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 4px; background: #3e8e3a; font: 600 12px/18px var(--g-font); }
+.g-nav-tip { padding: 0; border: 0; background: none; box-shadow: none; text-shadow: 0 1px 6px rgba(0, 0, 0, .8); font: 400 clamp(12px, calc(.78 * var(--g-vp) / 100), 15px)/1.2 "Segoe UI", system-ui, sans-serif; }
+
+/* Library: card copy in the order the Xbox app shows it. */
+body.garrison .g-card-text em { display: none; color: var(--g-text-2); font: 400 clamp(12px, calc(.95 * var(--g-vp) / 100), 19px)/1.3 var(--g-font); font-style: normal; }
+body.garrison .g-card-text .g-size { display: none; }
+body.garrison .game-card .g-col { display: none; }
+body.garrison #library-view[data-g-tab="installed"] .library-grid:not(.g-list) .g-card-text em,
+body.garrison #library-view[data-g-tab="recent"] .library-grid:not(.g-list) .g-card-text em { display: block; }
+body.garrison #library-view[data-g-tab="installed"] .library-grid:not(.g-list) .g-status,
+body.garrison #library-view[data-g-tab="recent"] .library-grid:not(.g-list) .g-status { display: none; }
+body.garrison #library-view[data-g-tab="installed"] .library-grid:not(.g-list) .g-size,
+body.garrison #library-view[data-g-tab="recent"] .library-grid:not(.g-list) .g-size { display: block; }
+body.garrison #library-view[data-g-tab="games"] .game-card:not(.not-installed) .g-status { visibility: hidden; }
+body.garrison .g-library-tabs-row { margin-bottom: clamp(18px, 3vh, 48px); }
+body.garrison .g-library-toolbar[hidden] { display: none; }
+body.garrison #library-filter-button .g-glyph, body.garrison .g-sort-pill .g-glyph, body.garrison .g-view-button .g-glyph { font-size: clamp(16px, calc(1.2 * var(--g-vp) / 100), 24px); }
+body.garrison .g-sort-pill .g-glyph { position: absolute; pointer-events: none; }
+body.garrison .g-sort-pill .g-sort-icon { left: clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); }
+body.garrison .g-sort-pill .g-chevron { right: clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); font-size: clamp(12px, calc(.85 * var(--g-vp) / 100), 16px); }
+body.garrison .g-view-button { display: inline-flex; align-items: center; gap: clamp(14px, calc(1.4 * var(--g-vp) / 100), 28px); height: clamp(42px, calc(3.4 * var(--g-vp) / 100), 64px); padding: 0 clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); border: 0; border-radius: var(--g-radius); background: var(--g-surface-2); color: #fff; cursor: pointer; }
+body.garrison .g-view-button .g-chevron { font-size: clamp(12px, calc(.85 * var(--g-vp) / 100), 16px); }
+body.garrison .g-library-toolbar #library-count { margin-right: clamp(4px, calc(.6 * var(--g-vp) / 100), 12px); }
+body.garrison #library-filter-button { width: clamp(50px, calc(4 * var(--g-vp) / 100), 76px); height: clamp(42px, calc(3.4 * var(--g-vp) / 100), 64px); }
+body.garrison .g-sort-pill { height: clamp(42px, calc(3.4 * var(--g-vp) / 100), 64px); }
+body.garrison .library-grid > .game-card { content-visibility: auto; contain-intrinsic-size: auto 340px; }
+
+/* List view */
+body.garrison .library-grid.g-list { display: flex; flex-direction: column; gap: 0; }
+body.garrison .library-grid.g-list .game-card {
+  display: grid; grid-template-columns: clamp(52px, calc(4.2 * var(--g-vp) / 100), 84px) minmax(0, 1fr) 18% 16% 9%; align-items: center; column-gap: clamp(14px, calc(1.4 * var(--g-vp) / 100), 28px);
+  padding: clamp(8px, calc(.7 * var(--g-vp) / 100), 14px) clamp(10px, calc(1 * var(--g-vp) / 100), 20px); border-radius: var(--g-radius); contain-intrinsic-size: auto 110px;
+}
+body.garrison .library-grid.g-list .game-card > img, body.garrison .library-grid.g-list .game-card > .art-fallback { width: 100%; border-radius: 6px; }
+body.garrison .library-grid.g-list .art-fallback .fallback-title { font-size: 9px; }
+body.garrison .library-grid.g-list .game-card:hover { background: var(--g-surface); }
+body.garrison .library-grid.g-list .g-card-text { padding: 0; }
+body.garrison .library-grid.g-list .g-card-text strong { -webkit-line-clamp: 1; font-size: clamp(14px, calc(1.05 * var(--g-vp) / 100), 21px); }
+body.garrison .library-grid.g-list .g-card-text .g-status { visibility: visible; display: block; font-size: clamp(12px, calc(.9 * var(--g-vp) / 100), 18px); }
+body.garrison .library-grid.g-list .g-col { display: block; color: var(--g-text-2); font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.3 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.garrison .library-grid.g-list .game-card.focused { box-shadow: 0 0 0 3px #fff, 0 0 20px 6px rgba(255, 255, 255, .25) !important; }
+
+/* Queue */
+.g-queue { display: flex; flex-direction: column; gap: 10px; grid-column: 1 / -1; }
+.g-queue-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.g-queue-head h2 { margin: 0; font: 600 clamp(18px, calc(1.3 * var(--g-vp) / 100), 26px)/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-queue-row { display: grid; grid-template-columns: clamp(56px, calc(4.4 * var(--g-vp) / 100), 88px) minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 12px 18px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .075); color: #fff; text-align: left; cursor: pointer; }
+.g-queue-art > * { width: 100%; aspect-ratio: 1; border-radius: 6px; object-fit: cover; display: block; }
+.g-queue-copy { display: grid; gap: 6px; }
+.g-queue-copy strong { font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 22px)/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-queue-copy small { color: rgba(255, 255, 255, .72); font-size: clamp(13px, calc(.9 * var(--g-vp) / 100), 18px); }
+.g-progress { display: block; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .16); overflow: hidden; }
+.g-progress i { display: block; height: 100%; background: #fff; }
+.g-queue-percent { font: 600 clamp(14px, calc(1 * var(--g-vp) / 100), 20px)/1 "Segoe UI", system-ui, sans-serif; }
+.g-empty { grid-column: 1 / -1; display: grid; justify-items: center; gap: 10px; padding: 70px 20px; text-align: center; color: rgba(255, 255, 255, .72); }
+.g-empty .g-glyph { font-size: 40px; color: #fff; font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; }
+.g-empty h2 { margin: 0; color: #fff; font: 600 clamp(18px, calc(1.3 * var(--g-vp) / 100), 26px)/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-empty p { margin: 0; }
+
+/* Shared controls */
+.g-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 20px; border: 0; border-radius: 6px; background: rgba(255, 255, 255, .12); color: #fff; font: 600 clamp(14px, calc(.95 * var(--g-vp) / 100), 18px)/1 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; cursor: pointer; }
+.g-button:hover { background: rgba(255, 255, 255, .18); }
+.g-link { display: inline-flex; align-items: center; gap: 6px; padding: 4px 2px; border: 0; border-radius: 4px; background: none; color: #a6dba0; font: 400 clamp(14px, calc(1 * var(--g-vp) / 100), 19px)/1.2 "Segoe UI", system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; white-space: nowrap; }
+.g-link .g-glyph { font-size: .85em; }
+.g-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; min-height: clamp(50px, calc(3.7 * var(--g-vp) / 100), 72px); padding: 10px 14px; border: 0; border-radius: 8px; background: transparent; color: #fff; text-align: left; cursor: pointer; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-setting-row > span:not(.g-glyph) { display: grid; gap: 3px; min-width: 0; }
+.g-setting-row strong { font-weight: 400; font-size: clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px); line-height: 1.25; }
+.g-setting-row small { color: rgba(255, 255, 255, .7); font-size: clamp(13px, calc(.92 * var(--g-vp) / 100), 18px); line-height: 1.35; }
+.g-setting-row:hover { background: rgba(255, 255, 255, .06); }
+.g-setting-row .g-trailing, .g-menu-item .g-trailing { margin-left: auto; font-size: clamp(14px, calc(1 * var(--g-vp) / 100), 18px); color: rgba(255, 255, 255, .85); }
+.g-setting-row[data-tone="danger"] strong { font-weight: 600; }
+.g-setting-info { cursor: default; }
+.g-setting-info:hover { background: transparent; }
+.g-setting-feedback { justify-content: flex-start; }
+.g-setting-feedback > .g-glyph { font-size: 18px; }
+.g-setting-list { display: flex; flex-direction: column; gap: 2px; }
+.g-setting-group { margin: 0 0 24px; }
+.g-setting-group h3 { margin: 0 0 6px; font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.3 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-setting-note { margin: 0 0 14px; color: rgba(255, 255, 255, .72); font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); }
+.g-field { display: grid; gap: 8px; padding: 10px 14px 14px; }
+.g-field-label { color: #fff; font: 400 clamp(14px, calc(1.02 * var(--g-vp) / 100), 20px)/1.3 "Segoe UI", system-ui, sans-serif; }
+.g-field-split { display: flex; justify-content: space-between; }
+.g-field-split span:last-child { color: rgba(255, 255, 255, .7); }
+.g-field-help { color: rgba(255, 255, 255, .65); font-size: clamp(12px, calc(.85 * var(--g-vp) / 100), 16px); }
+.g-select-row { display: flex; align-items: center; gap: clamp(12px, calc(1.2 * var(--g-vp) / 100), 24px); }
+.g-select { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 1 62%; min-width: 0; min-height: clamp(40px, calc(2.8 * var(--g-vp) / 100), 54px); padding: 0 16px; border: 1px solid rgba(255, 255, 255, .14); border-bottom-color: rgba(255, 255, 255, .3); border-radius: 6px; background: #1d1e1e; color: #fff; font: 400 clamp(14px, calc(1 * var(--g-vp) / 100), 19px)/1.25 "Segoe UI", system-ui, sans-serif; }
+.g-select > span { display: grid; gap: 2px; min-width: 0; }
+.g-select b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-select small { color: rgba(255, 255, 255, .7); font-size: .88em; }
+.g-select-tall { min-height: clamp(54px, calc(3.7 * var(--g-vp) / 100), 70px); padding-block: 8px; }
+.g-select .g-glyph { font-size: 13px; color: rgba(255, 255, 255, .85); }
+.g-textarea, .g-input { width: 100%; padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .14); border-bottom-color: rgba(255, 255, 255, .3); border-radius: 6px; background: #1d1e1e; color: #fff; font: 400 clamp(14px, calc(1 * var(--g-vp) / 100), 19px)/1.4 "Segoe UI", system-ui, sans-serif; resize: none; }
+.g-textarea { min-height: clamp(84px, calc(6.2 * var(--g-vp) / 100), 120px); }
+.g-input { flex: 0 1 62%; }
+.g-textarea::placeholder, .g-input::placeholder { color: rgba(255, 255, 255, .62); }
+.g-counter { justify-self: end; color: rgba(255, 255, 255, .7); font-size: clamp(12px, calc(.85 * var(--g-vp) / 100), 16px); }
+.g-close-hint { position: fixed; right: clamp(20px, calc(3.4 * var(--g-vp) / 100), 70px); bottom: clamp(16px, 3vh, 46px); display: inline-flex; align-items: center; gap: 10px; height: clamp(38px, calc(2.7 * var(--g-vp) / 100), 52px); padding: 0 18px 0 10px; border-radius: 999px; background: rgba(28, 29, 29, .95); color: #fff; font: 400 clamp(14px, calc(.98 * var(--g-vp) / 100), 19px)/1 "Segoe UI", system-ui, sans-serif; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); }
+.g-close-hint kbd { display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid #e5484d; border-radius: 50%; background: none; color: #e5484d; font: 600 12px/1 "Segoe UI", system-ui, sans-serif; }
+body:not(.controller-input) .g-close-hint { display: none; }
+.g-manage .focusable.focused, .g-flyout .focusable.focused, #settings-dialog .focusable.focused, #pc-score-calculator .focusable.focused {
+  outline: none !important; box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(0, 0, 0, .5), 0 0 18px 5px rgba(255, 255, 255, .28) !important;
+}
+
+/* Flyouts: account, notifications, view as, game options */
+.g-flyout { padding: 8px; border-radius: 10px; background: #2b2c2c; border-color: rgba(255, 255, 255, .08); }
+.g-flyout header h2 { margin: 6px 10px 8px; font: 600 clamp(15px, calc(1 * var(--g-vp) / 100), 19px)/1.25 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-menu-item { gap: 12px; padding: 10px 12px; font-size: clamp(14px, calc(.95 * var(--g-vp) / 100), 18px); }
+.g-menu-item > .g-glyph { width: 20px; font-size: 16px; }
+.g-menu-item.active { background: rgba(255, 255, 255, .08); }
+.g-game-flyout { width: clamp(220px, calc(15 * var(--g-vp) / 100), 290px); }
+.g-view-flyout { width: clamp(200px, calc(13 * var(--g-vp) / 100), 250px); }
+.g-account-flyout { width: clamp(280px, calc(19 * var(--g-vp) / 100), 360px); }
+.g-presence { display: flex; align-items: center; gap: 10px; margin: 0 4px 6px; padding: 9px 12px; border-radius: 8px; background: rgba(255, 255, 255, .06); font-size: 14px; }
+.g-presence i { width: 10px; height: 10px; border-radius: 50%; background: #6ccb5f; }
+.g-player-copy { display: grid; gap: 4px; }
+.g-player-copy strong { font: 600 16px/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-player-copy small { display: inline-flex; align-items: center; gap: 6px; color: rgba(255, 255, 255, .78); font-size: 13px; }
+
+/* Manage game: Files and storage */
+.g-manage {
+  width: min(1340px, 78vw); height: min(840px, 78vh); max-width: none; max-height: none; margin: auto; padding: clamp(14px, calc(1.2 * var(--g-vp) / 100), 24px); overflow: hidden;
+  display: none; grid-template-columns: clamp(250px, calc(19 * var(--g-vp) / 100), 360px) minmax(0, 1fr); gap: clamp(18px, calc(2 * var(--g-vp) / 100), 40px);
+  border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; background: #262727; color: #fff; box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+.g-manage[open] { display: grid; }
+.g-manage::backdrop { background: rgba(5, 6, 6, .66); }
+.g-manage-side { min-height: 0; }
+.g-manage-card { display: flex; flex-direction: column; height: 100%; padding: clamp(14px, calc(1.2 * var(--g-vp) / 100), 24px); border-radius: 10px; background: #2f3030; }
+.g-manage-eyebrow { color: rgba(255, 255, 255, .78); font-size: clamp(13px, calc(.9 * var(--g-vp) / 100), 17px); }
+.g-manage-card h2 { margin: 6px 0 14px; font: 400 clamp(19px, calc(1.5 * var(--g-vp) / 100), 29px)/1.2 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+.g-manage-card dl { display: grid; gap: 6px; margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.g-manage-card dl div { display: flex; justify-content: space-between; gap: 12px; font-size: clamp(13px, calc(.92 * var(--g-vp) / 100), 17px); }
+.g-manage-card dt { color: rgba(255, 255, 255, .78); }
+.g-manage-card dd { margin: 0; text-align: right; }
+.g-manage-nav { display: flex; flex-direction: column; gap: 4px; }
+.g-nav-item { padding: clamp(9px, calc(.7 * var(--g-vp) / 100), 13px) 12px; border: 0; border-radius: 8px; background: transparent; color: #fff; font-size: clamp(14px, calc(1 * var(--g-vp) / 100), 19px); line-height: 1.2; font-family: inherit; text-align: left; cursor: pointer; }
+.g-nav-item.active { background: rgba(255, 255, 255, .09); }
+.g-nav-item:hover { background: rgba(255, 255, 255, .07); }
+.g-manage-close { margin-top: auto; width: 100%; min-height: clamp(44px, calc(3 * var(--g-vp) / 100), 56px); }
+.g-manage-main { min-height: 0; overflow-y: auto; padding: 4px 18px 60px 4px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .3) transparent; }
+.g-manage-section { padding: 14px 0 6px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.g-manage-section:last-child { border-bottom: 0; }
+.g-manage-section h3 { margin: 4px 14px 6px; font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.3 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+
+/* Settings: the Xbox app's centred panel */
+body.garrison dialog#settings-dialog { width: min(1340px, 74vw); height: min(780px, 72vh); border-radius: 12px; background: #262727; }
+body.garrison #settings-form { grid-template-columns: clamp(240px, 24%, 330px) minmax(0, 1fr); }
+body.garrison .settings-sidebar { gap: 2px; padding: clamp(18px, calc(1.8 * var(--g-vp) / 100), 32px) clamp(10px, calc(.9 * var(--g-vp) / 100), 16px) 20px; background: #2d2e2e; }
+body.garrison .settings-sidebar-brand { margin: 0 10px 18px; }
+body.garrison .settings-sidebar-brand strong { font: 600 clamp(19px, calc(1.45 * var(--g-vp) / 100), 28px)/1.2 var(--g-font); }
+body.garrison .g-settings-player { display: flex; align-items: center; gap: 12px; margin: 0 10px 16px; }
+body.garrison .g-settings-player .g-account-avatar { width: clamp(34px, calc(2.2 * var(--g-vp) / 100), 44px); height: clamp(34px, calc(2.2 * var(--g-vp) / 100), 44px); }
+body.garrison .g-settings-player strong { font-size: clamp(14px, calc(.95 * var(--g-vp) / 100), 17px); }
+body.garrison .settings-tab, body.garrison .settings-sidebar .settings-tab { padding: clamp(9px, calc(.75 * var(--g-vp) / 100), 14px) 12px; border-radius: 8px; font: 400 clamp(14px, calc(1.02 * var(--g-vp) / 100), 19px)/1.2 var(--g-font); }
+body.garrison .settings-sidebar .settings-tab.active { background: rgba(255, 255, 255, .08); font-weight: 600; }
+body.garrison .settings-main, body.garrison #settings-form .dialog-header { background: #262727; }
+body.garrison #settings-form .dialog-header { display: flex; align-items: center; justify-content: space-between; padding: clamp(18px, calc(1.8 * var(--g-vp) / 100), 32px) 0 12px; }
+body.garrison #settings-form .settings-heading-copy h2 { font: 600 clamp(18px, calc(1.35 * var(--g-vp) / 100), 26px)/1.2 var(--g-font); }
+body.garrison #settings-form .close-button { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 6px; color: #fff; }
+body.garrison #settings-form .close-button .g-glyph { font-size: 14px; }
+body.garrison #settings-form .dialog-actions { display: none; }
+body.garrison .settings-scroll { padding: 0 clamp(18px, calc(1.8 * var(--g-vp) / 100), 34px) 40px; }
+body.garrison .settings-page .settings-section, body.garrison .settings-page .settings-section-heading { background: transparent; padding: 0; margin: 0 0 18px; }
+body.garrison .settings-page .settings-section-heading h3 { margin: 0 0 4px; font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.3 var(--g-font); }
+body.garrison .settings-page .settings-section-heading p { color: var(--g-text-2); font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); }
+body.garrison .settings-page .settings-section-heading .eyebrow { display: none; }
+body.garrison .toggle-row, body.garrison .scale-setting { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: clamp(50px, calc(3.7 * var(--g-vp) / 100), 72px); margin: 0; padding: 10px 14px; border: 0; border-radius: 8px; background: transparent; }
+body.garrison .toggle-row:hover, body.garrison .scale-setting:hover { background: rgba(255, 255, 255, .05); }
+body.garrison .toggle-row > span, body.garrison .scale-setting > span:first-child { display: grid; gap: 3px; }
+body.garrison .toggle-row strong, body.garrison .scale-setting strong { font: 400 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.25 var(--g-font); }
+body.garrison .toggle-row small, body.garrison .scale-setting small { color: var(--g-text-2); font: 400 clamp(13px, calc(.92 * var(--g-vp) / 100), 18px)/1.35 var(--g-font); }
+body.garrison .toggle-row input[type="checkbox"] {
+  appearance: none; flex: none; position: relative; width: 44px; height: 22px; margin: 0; border: 1.5px solid rgba(255, 255, 255, .75); border-radius: 11px; background: transparent; cursor: pointer;
+}
+body.garrison .toggle-row input[type="checkbox"]::after { content: ""; position: absolute; top: 3px; left: 4px; width: 13px; height: 13px; border-radius: 50%; background: rgba(255, 255, 255, .85); transition: transform 120ms ease; }
+body.garrison .toggle-row input[type="checkbox"]:checked { border-color: #fff; background: #fff; }
+body.garrison .toggle-row input[type="checkbox"]:checked::after { transform: translateX(21px); background: #1b1b1b; }
+body.garrison .toggle-row input[type="checkbox"]:disabled { opacity: .4; }
+body.garrison .scale-setting input[type="range"] { accent-color: #fff; width: min(260px, 30%); }
+body.garrison .g-mode-card { display: grid; grid-template-columns: clamp(130px, calc(10 * var(--g-vp) / 100), 190px) minmax(0, 1fr) auto; align-items: center; gap: 24px; width: 100%; margin: 0 0 10px; padding: 18px 22px; border: 0; border-radius: 10px; background: #1e1f1f; color: #fff; text-align: left; cursor: pointer; }
+body.garrison .g-mode-card strong { display: block; margin-bottom: 6px; font: 600 clamp(15px, calc(1.05 * var(--g-vp) / 100), 20px)/1.2 var(--g-font); }
+body.garrison .g-mode-card small { color: var(--g-text-2); font-size: clamp(13px, calc(.92 * var(--g-vp) / 100), 17px); }
+body.garrison .g-mode-preview { display: grid; gap: 4px; padding: 10px; border-radius: 6px; background: #2c2d2d; aspect-ratio: 16 / 9; }
+body.garrison .g-mode-full { grid-template-columns: repeat(4, 1fr); align-content: center; }
+body.garrison .g-mode-desktop { grid-template-columns: 1fr 3fr; grid-template-rows: repeat(3, 1fr); }
+body.garrison .g-mode-preview i { border-radius: 2px; background: rgba(255, 255, 255, .22); aspect-ratio: 1; }
+body.garrison .g-mode-desktop i { aspect-ratio: auto; }
+body.garrison .g-mode-desktop i:first-child { grid-row: 1 / -1; }
+body.garrison .g-radio { width: 20px; height: 20px; border: 1.5px solid rgba(255, 255, 255, .7); border-radius: 50%; }
+body.garrison .g-mode-card.active .g-radio { border: 6px solid #fff; }
+body.garrison .settings-help-card, body.garrison .settings-data-actions { padding: 14px; border-radius: 10px; background: rgba(255, 255, 255, .05); }
+body.garrison .settings-data-actions h3 { margin: 0 0 4px; font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.3 var(--g-font); }
+body.garrison .settings-data-actions p { color: var(--g-text-2); }
+body.garrison .settings-data-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+body.garrison .settings-page .secondary, body.garrison .settings-page .primary { min-height: 40px; padding: 0 18px; border: 0; border-radius: 6px; background: rgba(255, 255, 255, .12); color: #fff; font: 600 clamp(13px, calc(.9 * var(--g-vp) / 100), 17px)/1 var(--g-font); }
+body.garrison .settings-page .primary { background: var(--g-green); }
+body.garrison .connection-tile { border: 0; border-radius: 10px; background: rgba(255, 255, 255, .05); }
+body.garrison .connections-intro h3 { font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1.3 var(--g-font); }
+
+/* Gamerscore calculator in the same panel language */
+body.garrison #pc-score-calculator { width: min(1100px, 74vw); max-height: 80vh; border: 1px solid rgba(255, 255, 255, .08); border-radius: 12px; background: #262727; color: #fff; box-shadow: 0 30px 90px rgba(0, 0, 0, .6); }
+body.garrison #pc-score-calculator header .eyebrow { color: var(--g-text-2); letter-spacing: 0; text-transform: none; }
+body.garrison #pc-score-calculator h2 { font: 600 clamp(19px, calc(1.4 * var(--g-vp) / 100), 27px)/1.2 var(--g-font); }
+body.garrison #pc-score-calculator .score-calculator-summary strong { font: 600 clamp(32px, calc(2.6 * var(--g-vp) / 100), 52px)/1 var(--g-display); }
+body.garrison #pc-score-calculator input, body.garrison #pc-score-calculator select { border: 1px solid rgba(255, 255, 255, .14); border-radius: 6px; background: #1d1e1e; color: #fff; }
+body.garrison #pc-score-calculator .secondary { border: 0; border-radius: 6px; background: rgba(255, 255, 255, .12); color: #fff; }
+
+/* Game page: ownership row, square actions and the rating block */
+body.garrison #detail-title, body.garrison #detail-title[hidden] { font-weight: 600; letter-spacing: -.025em; }
+body.garrison .g-own-pill { height: clamp(32px, calc(2.3 * var(--g-vp) / 100), 46px); border: 1.5px solid #5f9e55; background: rgba(32, 58, 30, .72); color: #fff; font-weight: 600; }
+body.garrison .g-own-pill .g-glyph { font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); color: #9ad18f; }
+body.garrison .g-via { font-weight: 600; }
+body.garrison .g-via .g-glyph { font-size: clamp(16px, calc(1.15 * var(--g-vp) / 100), 22px); font-weight: 400; }
+body.garrison #detail-play { min-width: clamp(190px, calc(17 * var(--g-vp) / 100), 330px); height: clamp(54px, calc(4.4 * var(--g-vp) / 100), 86px); border-radius: 6px; background: #4a8c45; font-weight: 600; }
+body.garrison #detail-play:hover { background: #559c4f; }
+body.garrison .g-square-action, body.garrison #detail-options-button { width: clamp(54px, calc(4.4 * var(--g-vp) / 100), 86px); height: clamp(54px, calc(4.4 * var(--g-vp) / 100), 86px); border-radius: 6px; background: rgba(60, 62, 62, .82); border: 1px solid rgba(255, 255, 255, .08); }
+body.garrison .g-square-action .g-glyph { font-size: clamp(16px, calc(1.15 * var(--g-vp) / 100), 22px); }
+body.garrison .g-detail-rating { display: flex; align-items: flex-start; gap: clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); margin-top: clamp(10px, 1.6vh, 26px); color: #fff; font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.5 var(--g-font); }
+body.garrison .g-detail-rating:empty { display: none; }
+body.garrison .g-detail-rating > div { display: grid; gap: 4px; }
+body.garrison .g-detail-rating strong { font-weight: 400; color: #a6dba0; text-decoration: underline; text-underline-offset: 3px; justify-self: start; }
+body.garrison .g-detail-rating span { color: rgba(255, 255, 255, .86); }
+body.garrison .g-age-badge { display: grid; place-items: center; width: clamp(42px, calc(3 * var(--g-vp) / 100), 58px); height: clamp(50px, calc(3.6 * var(--g-vp) / 100), 70px); padding: 2px; border: 2px solid #fff; border-radius: 3px; background: #d0021b; color: #fff; }
+body.garrison .g-age-badge b { font: 800 clamp(20px, calc(1.6 * var(--g-vp) / 100), 30px)/1 var(--g-font); }
+body.garrison .g-age-badge small { font: 700 9px/1 var(--g-font); letter-spacing: .05em; }
+body.garrison #detail-rating { display: none; }
+body.garrison .library-grid.g-list .game-card, body.garrison .library-grid.g-list.dense-results .game-card { aspect-ratio: auto !important; height: auto !important; min-height: 0; width: 100%; overflow: hidden; }
+body.garrison .library-grid.g-list .g-list-head { display: grid; grid-template-columns: clamp(52px, calc(4.2 * var(--g-vp) / 100), 84px) minmax(0, 1fr) 18% 16% 9%; column-gap: clamp(14px, calc(1.4 * var(--g-vp) / 100), 28px); padding: 0 clamp(10px, calc(1 * var(--g-vp) / 100), 20px) 12px; color: rgba(255, 255, 255, .72); font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); }
+body.garrison .library-grid.g-list .g-list-head span:first-child { grid-column: 1 / 3; }
+body.garrison .library-grid:not(.g-list) .g-list-head { display: none; }
+body.garrison .library-grid.g-list .game-card { content-visibility: visible; contain: none; grid-template-rows: auto; grid-auto-rows: auto; align-content: center; }
+body.garrison .library-grid.g-list .game-card { flex: none; }
+
+/* Fluent UI System Icons: filled paths, sized by font-size like a glyph. */
+svg.g-glyph { display: inline-block; flex: none; width: 1em; height: 1em; fill: currentColor !important; stroke: none !important; vertical-align: middle; }
+body.garrison .top-nav-button svg.g-glyph, body.garrison .g-icon-button svg.g-glyph { width: 1em; height: 1em; font-size: clamp(22px, calc(1.75 * var(--g-vp) / 100), 34px); }
+body.garrison .g-pill-status svg.g-glyph { width: 1em; height: 1em; font-size: clamp(18px, calc(1.4 * var(--g-vp) / 100), 27px); }
+
+/* Gamerscore calculator */
+.g-score .g-score-games { flex: 1; min-height: 0; overflow-y: auto; margin: 4px -6px 14px; padding: 0 6px; scrollbar-width: thin; }
+.g-score-title { margin: 6px 4px 14px; font: 600 clamp(19px, calc(1.5 * var(--g-vp) / 100), 29px)/1.2 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+.g-score-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 16px; margin: 0 4px 22px; padding: 18px 20px; border-radius: 10px; background: #2f3030; }
+.g-score-summary strong { display: block; font: 600 clamp(28px, calc(2.3 * var(--g-vp) / 100), 44px)/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+.g-score-summary span { color: rgba(255, 255, 255, .78); font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); }
+.g-score-summary p { grid-column: 1 / -1; margin: 6px 0 0; color: rgba(255, 255, 255, .72); font-size: clamp(13px, calc(.92 * var(--g-vp) / 100), 17px); line-height: 1.45; }
+.g-score-mark { display: inline-grid; place-items: center; width: 1.15em; height: 1.15em; margin-right: .35em; border: 1.5px solid currentColor; border-radius: 50%; font-size: .78em; font-weight: 700; line-height: 1; vertical-align: -.05em; }
+.g-score-mark-large { width: clamp(40px, calc(3 * var(--g-vp) / 100), 58px); height: clamp(40px, calc(3 * var(--g-vp) / 100), 58px); margin: 0; border-width: 2.5px; font-size: clamp(20px, calc(1.5 * var(--g-vp) / 100), 28px); }
+.g-score-head, .g-score-row { display: grid; grid-template-columns: clamp(40px, calc(3 * var(--g-vp) / 100), 56px) minmax(0, 1fr) clamp(130px, calc(13 * var(--g-vp) / 100), 220px) clamp(70px, calc(6 * var(--g-vp) / 100), 100px); align-items: center; gap: 16px; }
+.g-score-head { padding: 0 14px 10px; color: rgba(255, 255, 255, .7); font-size: clamp(12px, calc(.88 * var(--g-vp) / 100), 16px); }
+.g-score-head span:first-child { grid-column: 1 / 3; }
+.g-score-list { display: flex; flex-direction: column; gap: 4px; }
+.g-score-row { padding: 10px 14px; border-radius: 8px; background: rgba(255, 255, 255, .035); }
+.g-score-icon img, .g-score-icon svg { display: block; width: 100%; aspect-ratio: 1; border-radius: 4px; }
+.g-score-icon svg { padding: 8px; background: rgba(255, 255, 255, .06); }
+.g-score-copy { display: grid; gap: 3px; min-width: 0; }
+.g-score-copy strong { font: 600 clamp(14px, calc(1 * var(--g-vp) / 100), 19px)/1.25 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+.g-score-copy small { color: rgba(255, 255, 255, .7); font-size: clamp(12px, calc(.88 * var(--g-vp) / 100), 16px); line-height: 1.35; }
+.g-score-rarity { display: grid; gap: 6px; }
+.g-score-rarity b { font-weight: 400; font-size: clamp(13px, calc(.95 * var(--g-vp) / 100), 18px); }
+.g-score-rarity small { color: rgba(255, 255, 255, .6); }
+.g-score-points { justify-self: end; font: 600 clamp(15px, calc(1.1 * var(--g-vp) / 100), 21px)/1 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; white-space: nowrap; }
+.g-score-loading { display: flex; align-items: center; gap: 14px; padding: 40px 10px; color: rgba(255, 255, 255, .78); }
+.g-spinner { width: 22px; height: 22px; border: 2.5px solid rgba(255, 255, 255, .25); border-top-color: #fff; border-radius: 50%; animation: g-spin 800ms linear infinite; }
+@keyframes g-spin { to { transform: rotate(360deg); } }
+
+/* Sizes on every library tab: installed games show their size, others their status. */
+body.garrison .library-grid:not(.g-list) .game-card:not(.not-installed) .g-size { display: block; }
+body.garrison .library-grid:not(.g-list) .game-card:not(.not-installed) .g-status { display: none; }
+body.garrison .library-grid:not(.g-list) .game-card.not-installed .g-status { display: block; visibility: visible; }
+
+/* Artless tiles: the game's logo, or its title, centred on the tile. */
+body.garrison .game-card > .art-fallback, body.garrison .steam-discovery-art > .art-fallback, body.garrison .g-queue-art > .art-fallback, body.garrison .g-store-art > .art-fallback {
+  display: flex !important; align-items: center; justify-content: center; text-align: center;
+  background: radial-gradient(120% 90% at 50% 20%, hsl(var(--hue), 38%, 30%), hsl(var(--hue), 30%, 12%) 70%, #0b0c0c);
+}
+body.garrison .art-fallback .fallback-scrim { background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .35)); }
+body.garrison .art-fallback .fallback-title { max-width: 82%; margin: 0; text-align: center; font: 700 clamp(14px, calc(1.45 * var(--g-vp) / 100), 28px)/1.12 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -.01em; -webkit-line-clamp: 4; text-shadow: 0 2px 12px rgba(0, 0, 0, .45); }
+body.garrison .art-fallback .tile-logo { max-width: 74% !important; max-height: 44% !important; filter: drop-shadow(0 4px 14px rgba(0, 0, 0, .55)); }
+body.garrison .art-fallback .fallback-art + .fallback-scrim + .tile-logo { max-height: 38% !important; }
+body.garrison .library-grid.g-list .art-fallback .fallback-title { font-size: 8px; }
