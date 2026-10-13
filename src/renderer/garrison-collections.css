@@ -1,0 +1,31 @@
+/* "Browse by publisher": tall key-art cards with the publisher set like a wordmark at the foot. */
+body.garrison .g-publisher-row { margin-top: calc(2.4 * var(--p)); }
+body.garrison .g-publisher-row .section-heading h2 { margin: 0 0 calc(1.2 * var(--p)); font: 600 calc(1.75 * var(--p)) / 1.2 var(--g-font); color: #fff; }
+body.garrison .g-publisher-cards { display: flex; gap: calc(1.1 * var(--p)); overflow-x: auto; scrollbar-width: none; padding: 6px; margin: -6px; scroll-padding-inline: 6px; }
+body.garrison .g-publisher-card { position: relative; flex: none; width: calc(13.6 * var(--p)); aspect-ratio: 307 / 455; padding: 0; border: 0; border-radius: calc(.5 * var(--p)); overflow: hidden; background: #222; color: #fff; cursor: pointer; }
+body.garrison .g-publisher-card img, body.garrison .g-publisher-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+body.garrison .g-publisher-fallback { background: radial-gradient(120% 80% at 50% 20%, hsl(var(--hue) 45% 34%), hsl(var(--hue) 40% 12%)); }
+body.garrison .g-publisher-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, .78) 100%); }
+body.garrison .g-publisher-name { position: absolute; z-index: 1; left: 8%; right: 8%; bottom: 12%; font: 800 calc(1.85 * var(--p)) / 1.05 var(--g-font); letter-spacing: -.01em; text-align: center; text-shadow: 0 2px 12px rgba(0, 0, 0, .7); overflow-wrap: anywhere; }
+body.garrison .g-publisher-card small { position: absolute; z-index: 1; left: 0; right: 0; bottom: 5%; font: 400 calc(1.05 * var(--p)) / 1 var(--g-font); color: rgba(255, 255, 255, .78); text-align: center; }
+body.garrison .g-publisher-row.collection-band { display: block !important; grid-template-columns: none !important; padding: 0 var(--g-gutter) !important; background: none !important; min-height: 0 !important; }
+body.garrison .g-publisher-row.collection-band::before, body.garrison .g-publisher-row.collection-band::after { display: none !important; }
+
+/* Publisher logos set in white over the key art, as in the Xbox app's "Browse by publisher". */
+body.garrison .g-publisher-card .g-publisher-art { filter: saturate(1.05); }
+body.garrison .g-publisher-logo { position: absolute; z-index: 1; left: 14%; right: 14%; bottom: 13%; width: 72%; height: 20%; object-fit: contain; filter: brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0, 0, 0, .6)); }
+body.garrison .g-publisher-card.has-logo .g-publisher-name { display: none; }
+body.garrison .g-publisher-card small { bottom: 5%; }
+
+/* "Your series": wide key-art cards with the series logo. */
+body.garrison .g-series-card { position: relative; flex: none; width: calc(25 * var(--p)); aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: var(--g-radius); overflow: hidden; background: #222; color: #fff; cursor: pointer; }
+body.garrison .g-series-card .g-series-art, body.garrison .g-series-card .g-publisher-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+body.garrison .g-series-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .05) 30%, rgba(0, 0, 0, .72) 100%); }
+body.garrison .g-series-logo { position: absolute; z-index: 1; left: 18%; right: 18%; bottom: 18%; width: 64%; height: 34%; object-fit: contain; filter: drop-shadow(0 2px 12px rgba(0, 0, 0, .7)); }
+body.garrison .g-series-name { position: absolute; z-index: 1; left: 6%; right: 6%; bottom: 20%; font: 800 calc(1.9 * var(--p)) / 1.05 var(--g-font); text-align: center; text-shadow: 0 2px 12px rgba(0, 0, 0, .75); }
+body.garrison .g-series-card small { position: absolute; z-index: 1; left: 0; right: 0; bottom: 6%; font: 400 calc(1.05 * var(--p)) / 1 var(--g-font); color: rgba(255, 255, 255, .8); text-align: center; }
+body.garrison .g-publisher-card img.g-publisher-logo { inset: auto 14% 14% 14%; width: 72%; height: 18%; object-fit: contain; object-position: center bottom; }
+/* Keep the rows to the page width so their cards scroll inside them instead of widening the page. */
+body.garrison #home-collections > *, body.garrison #g-home-rows { min-width: 0; max-width: 100%; }
+body.garrison .g-publisher-row { min-width: 0; max-width: 100%; }
+body.garrison .g-publisher-row .g-publisher-cards { width: 100%; max-width: 100%; min-width: 0; }

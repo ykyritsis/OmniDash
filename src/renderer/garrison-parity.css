@@ -229,3 +229,11 @@ body.garrison #scan-progress, body.garrison #toast { backdrop-filter: none !impo
 body.garrison::before { content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(130% 75% at 50% -12%, #2c3a2f 0%, #19211c 38%, #111312 68%, #0d0e0e 100%); will-change: transform; }
 html:has(body.garrison) { background: #0f1110; }
 body.garrison #g-downloads { margin-top: calc(2.4 * var(--p)); }
+body.garrison .g-queue-pills { display: flex; gap: calc(.8 * var(--p)); }
+body.garrison .g-pill[aria-disabled="true"] { opacity: .45; }
+/* Speed and percent sit at the right end of the status line, above the bar, as in the Xbox queue. */
+body.garrison .g-queue-main { grid-template-columns: calc(6.4 * var(--p)) minmax(0, 1fr); }
+body.garrison .g-queue-line { display: flex; align-items: baseline; justify-content: space-between; gap: calc(1.2 * var(--p)); min-width: 0; }
+body.garrison .g-queue-line small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.garrison .g-queue-line .g-queue-stats { align-self: baseline; padding: 0; gap: calc(.8 * var(--p)); font-size: calc(1.2 * var(--p)); color: #fff; }
+body.garrison .g-queue-line .g-queue-stats b { font-weight: 600; }

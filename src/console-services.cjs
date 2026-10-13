@@ -158,6 +158,20 @@ function createConsoleServices(directory, request = fetch) {
     storeCache.set(key, { at: Date.now(), data: match });
     return match;
   }
-  return {getGamePassCatalog,getXboxStore,findXboxProduct,browseFiles,readGamerpic,getCatalogDetails:async id=>{if(!PRODUCT_ID.test(id))throw Error('Invalid game');const game=(await getGamePassCatalog().catch(()=>[])).find(item=>item.xboxProductId===id);if(game)return game.details;const result=await request(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=&market=US&languages=en-US`,{signal:AbortSignal.timeout(12000)});if(!result.ok)throw Error('Xbox Store details are unavailable');const product=(await result.json()).Products?.[0];if(!product)throw Error('Game is not in the Xbox Store');return mapProduct(product).details;}};
+  // Store search, as in the Xbox app: every PC game matching the words, with prices.
+  async function searchXboxStore(query) {
+    const text = String(query || '').trim().slice(0, 120);
+    if (!text) return [];
+    const key = `find:${text.toLowerCase()}`;
+    const cached = storeCache.get(key);
+    if (cached && Date.now() - cached.at < 30 * 60 * 1000) return cached.data;
+    // Games you can play on PC only, as the PC app's Store does.
+    const filters = Buffer.from(JSON.stringify({ PlayWith: { id: 'PlayWith', choices: [{ id: 'PC' }] } })).toString('base64');
+    const body = await emerald('search/games', { Query: text, Filters: filters, ReturnFilters: false, ChannelKeyToBeUsedInResponse: 'S', ChannelId: '' });
+    const data = (body?.productSummaries || []).map(mapSummary).filter(Boolean).slice(0, 30);
+    storeCache.set(key, { at: Date.now(), data });
+    return data;
+  }
+  return {getGamePassCatalog,getXboxStore,findXboxProduct,searchXboxStore,browseFiles,readGamerpic,getCatalogDetails:async id=>{if(!PRODUCT_ID.test(id))throw Error('Invalid game');const game=(await getGamePassCatalog().catch(()=>[])).find(item=>item.xboxProductId===id);if(game)return game.details;const result=await request(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=&market=US&languages=en-US`,{signal:AbortSignal.timeout(12000)});if(!result.ok)throw Error('Xbox Store details are unavailable');const product=(await result.json()).Products?.[0];if(!product)throw Error('Game is not in the Xbox Store');return mapProduct(product).details;}};
 }
 module.exports = {createConsoleServices,mapProduct};

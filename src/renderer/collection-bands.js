@@ -80,7 +80,7 @@ function renderCollectionBands() {
     ['favorites', 'Favourites', 'The games you keep coming back to.', 'heart'],
     ['controller', 'Pick up and play', 'Games with full or partial controller support.', 'controller'],
     ['solo', 'A world of your own', 'Single-player games from your library.', 'person'],
-    ['multiplayer', 'Better together', 'Multiplayer and co-op games from your library.', 'groups']
+    ['multiplayer', 'Play together', 'Local and couch multiplayer games from your library.', 'groups']
   ];
   document.querySelector('#category-discovery').innerHTML = choices.map(([collection, title, description, icon], index) => collectionBand({ id: `home-collection-${index}`, title, description, icon, collection, games: combinedGames.filter(game => matchesCollection(game, collection)) })).join('');
   document.querySelector('.browse-collections').hidden = !document.querySelector('#category-discovery').children.length;

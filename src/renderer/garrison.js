@@ -79,8 +79,8 @@ function renderGarrisonSourceChips() {
   if (target.hidden) return;
   const present = new Set(state.games.filter(game => !game.isApp).map(game => game.provider));
   const chips = [['all', 'All'], ['favorites', 'Favorites'], ['groups', 'Collections'],
-    ...gSources.filter(([provider]) => present.has(provider)), ...(state.games.some(game => game.isApp) ? [['apps', 'Apps']] : []), ...(state.hiddenGames?.length ? [['hidden', 'Hidden']] : [])];
-  const active = state.gHiddenView ? 'hidden' : state.consoleLibraryGroups ? 'groups' : state.libraryCategory === 'apps' ? 'apps'
+    ...gSources.filter(([provider]) => present.has(provider)), ...(state.games.some(game => game.isApp) ? [['apps', 'Apps']] : [])];
+  const active = state.gHiddenView ? '' : state.consoleLibraryGroups ? 'groups' : state.libraryCategory === 'apps' ? 'apps'
     : state.collectionFilter === 'favorites' ? 'favorites' : state.sourceFilter || 'all';
   const focused = target.contains(document.activeElement) ? document.activeElement.dataset.source : null;
   target.innerHTML = chips.map(([value, label]) => `<button class="g-chip focusable${value === active ? ' active' : ''}" type="button" role="tab" aria-selected="${value === active}" data-action="g-source" data-source="${escapeHtml(value)}">${escapeHtml(label)}</button>`).join('');
@@ -103,7 +103,9 @@ function gQueueRows() {
   }
   for (const [key, row] of rows) {
     const override = gDownloads.overrides.get(key);
-    if (override && Date.now() - override.at < 12000 && row.result.state !== 'installing') row.result.state = override.state;
+    // A press shows straight away; once Steam reports the same state, its live numbers take over.
+    if (override && row.result.live && row.result.state === override.state) gDownloads.overrides.delete(key);
+    else if (override && Date.now() - override.at < 12000 && row.result.state !== 'installing') row.result.state = override.state;
     else if (override) gDownloads.overrides.delete(key);
     row.result.rate = row.result.state === 'downloading' ? (row.result.rate || gDownloads.rates.get(key)?.rate || 0) : 0;
   }
@@ -119,9 +121,8 @@ function gQueueRow({ game, result }) {
   return `<div class="g-queue-row" data-state="${escapeHtml(result.state || 'queued')}">
     <button class="g-queue-main focusable" type="button" data-action="${game.queueOnly ? 'g-noop' : 'select-game'}" data-game-id="${escapeHtml(game.id)}" aria-label="${escapeHtml(game.title)}, ${escapeHtml(gQueueLabels[result.state] || 'Queued')}${percent === null ? '' : ' ' + percent + '%'}">
       <span class="g-queue-art">${gameArt(game)}</span>
-      <span class="g-queue-copy"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gQueueLabels[result.state] || 'Queued')}${size ? ' · ' + size : ''}</small>
+      <span class="g-queue-copy"><strong>${escapeHtml(game.title)}</strong><span class="g-queue-line"><small>${escapeHtml(gQueueLabels[result.state] || 'Queued')}${size ? ' • ' + size : ''}</small><span class="g-queue-stats">${speed ? `<span>${escapeHtml(speed)}</span>` : ''}<b>${percent === null ? '' : (result.estimated ? '≈ ' : '') + percent + '%'}</b></span></span>
         <span class="g-progress${paused ? ' paused' : ''}"><i style="width:${percent ?? 0}%"></i></span></span>
-      <span class="g-queue-stats">${speed ? `<span>${escapeHtml(speed)}</span><span aria-hidden="true">·</span>` : ''}<b>${percent === null ? '' : (result.estimated ? '≈ ' : '') + percent + '%'}</b></span>
     </button>
     ${steam && result.state !== 'waiting' ? `<button class="g-queue-icon focusable" type="button" data-action="g-queue-toggle" data-app-id="${escapeHtml(game.appId)}" aria-label="${paused ? 'Resume' : 'Pause'} ${escapeHtml(game.title)}" title="${paused ? 'Resume' : 'Pause'}">${gIcon(paused ? 'play' : 'pause')}</button>
     <button class="g-queue-icon focusable" type="button" data-action="g-queue-more" data-app-id="${escapeHtml(game.appId)}" aria-label="More options for ${escapeHtml(game.title)}" title="More options for ${escapeHtml(game.title)}">${gIcon('more')}</button>` : ''}
@@ -129,17 +130,19 @@ function gQueueRow({ game, result }) {
 }
 function renderGarrisonQueue() {
   const rows = gQueueRows();
-  const active = rows.filter(row => row.result.state !== 'queued');
+  const active = rows.filter(row => !['queued', 'update'].includes(row.result.state));
+  const updates = rows.filter(row => row.result.state === 'update');
   const upNext = rows.filter(row => row.result.state === 'queued');
   libraryCount.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
-  const allPaused = rows.length && rows.every(row => ['paused', 'queued'].includes(row.result.state));
+  const allPaused = rows.length && rows.every(row => ['paused', 'queued', 'update'].includes(row.result.state));
   const lead = active[0]?.game || upNext[0]?.game;
   const hero = lead?.artwork?.hero || lead?.artwork?.wide || lead?.artwork?.tile || '';
   libraryGrid.innerHTML = rows.length
     ? `<div class="g-queue">${hero ? `<div class="g-queue-backdrop" aria-hidden="true"><img src="${escapeHtml(hero)}" alt="" decoding="async" /></div>` : ''}
-        <div class="g-queue-head"><h2>Active</h2>${rows.some(row => /^\d+$/.test(String(row.game.appId || ''))) ? `<button class="g-pill focusable" type="button" data-action="g-queue-all" data-mode="${allPaused ? 'resume-all' : 'pause-all'}">${allPaused ? 'Resume all' : 'Pause all'}</button>` : ''}</div>
+        <div class="g-queue-head"><h2>Active</h2>${rows.some(row => /^[0-9]+$/.test(String(row.game.appId || ''))) ? `<span class="g-queue-pills"><button class="g-pill focusable" type="button" data-action="g-queue-all" data-mode="resume-all"${rows.some(row => row.result.state === 'paused') ? '' : ' aria-disabled="true"'}>Resume all</button><button class="g-pill focusable" type="button" data-action="g-queue-all" data-mode="pause-all"${allPaused ? ' aria-disabled="true"' : ''}>Pause all</button></span>` : ''}</div>
         <div class="g-queue-list">${active.map(gQueueRow).join('') || '<p class="g-queue-none">Nothing is installing right now.</p>'}</div>
         ${upNext.length ? `<div class="g-queue-head"><h2>Up next</h2></div><div class="g-queue-list">${upNext.map(gQueueRow).join('')}</div>` : ''}
+        ${updates.length ? `<div class="g-queue-head"><h2>Updates available</h2></div><div class="g-queue-list">${updates.map(gQueueRow).join('')}</div>` : ''}
       </div>`
     : `<div class="g-empty">${gIcon('download')}<h2>Your queue is empty</h2><p>Games you install from your library appear here while they download.</p></div>`;
 }
@@ -164,7 +167,7 @@ async function gPollDownloads() {
     // The game page's Installing button reads the same numbers as the Queue.
     for (const item of list) {
       const game = state.games.find(entry => entry.provider === 'Steam' && String(entry.appId) === String(item.appId));
-      if (!game) continue;
+      if (!game || game.installed !== false || item.state === 'update') continue;
       if (!installTracking.has(game.id)) installTracking.set(game.id, { game, at: Date.now() });
       const tracked = installTracking.get(game.id);
       tracked.result = { ...item, installed: false };
@@ -194,7 +197,9 @@ async function gPollDownloads() {
   } catch { /* Steam may be restarting. */ }
   finally {
     gDownloads.running = false;
-    gDownloads.timer = setTimeout(gPollDownloads, visible || installTracking.size ? 2000 : 20000);
+    // Lighter while a game has focus: every 10 s if something is installing, otherwise once a minute.
+    const focused = document.hasFocus();
+    gDownloads.timer = setTimeout(gPollDownloads, visible ? 2000 : installTracking.size ? (focused ? 2000 : 10000) : (focused ? 20000 : 60000));
   }
 }
 function gRefreshQueue(focusSelector = '') {
@@ -222,15 +227,35 @@ async function gEnsureDownloadControls() {
   showToast('Steam is still starting. Try again in a moment.');
   return false;
 }
+// Controls are checked once and remembered, so each press goes straight to Steam.
+let gDownloadControlsLive = 0;
 async function gQueueAction(appId, action) {
-  if (!await gEnsureDownloadControls()) return;
+  if (Date.now() - gDownloadControlsLive > 60000) {
+    if (!await gEnsureDownloadControls()) return;
+    gDownloadControlsLive = Date.now();
+  }
+  // Like a console: the button changes on the press, and Steam catches up behind it.
+  const toggles = ['pause', 'resume', 'pause-all', 'resume-all'].includes(action);
+  const targets = action.endsWith('-all') ? gQueueRows().map(row => String(row.game.appId)) : [String(appId)];
+  const before = new Map(targets.map(key => [key, gDownloads.overrides.get(key)]));
+  if (toggles) for (const key of targets) gDownloads.overrides.set(key, { state: action.startsWith('pause') ? 'paused' : 'downloading', at: Date.now() });
+  if (action === 'remove') {
+    gDownloads.list = gDownloads.list.filter(item => String(item.appId) !== String(appId));
+    for (const [id, tracked] of installTracking) if (String(tracked.game.appId) === String(appId)) installTracking.delete(id);
+    const game = state.games.find(item => item.provider === 'Steam' && String(item.appId) === String(appId));
+    if (game && state.detailGameId === game.id) prepareConsoleGamePage(game);
+  }
+  const focus = action.endsWith('-all') ? `[data-action="g-queue-all"][data-mode="${action}"]` : action === 'remove' ? '.g-queue .focusable' : `[data-action="g-queue-toggle"][data-app-id="${CSS.escape(String(appId))}"]`;
+  gRefreshQueue(focus);
   try {
-    const result = await window.launcher.steamDownloadAction(appId, action);
-    const targets = action.endsWith('-all') ? gQueueRows().map(row => String(row.game.appId)) : [String(appId)];
-    if (['pause', 'resume', 'pause-all', 'resume-all'].includes(action)) for (const key of targets) gDownloads.overrides.set(key, { state: result.status, at: Date.now() });
-    if (action === 'remove') gDownloads.list = gDownloads.list.filter(item => String(item.appId) !== String(appId));
-    gRefreshQueue(action.endsWith('-all') ? '[data-action="g-queue-all"]' : action === 'remove' ? '.g-queue .focusable' : `[data-action="g-queue-toggle"][data-app-id="${CSS.escape(String(appId))}"]`);
-  } catch (error) { showToast(String(error.message || 'Steam could not change this download').replace(/^Error invoking remote method '[^']+': (Error: )?/, '')); }
+    await window.launcher.steamDownloadAction(appId, action);
+    setTimeout(gPollDownloads, 400);
+  } catch (error) {
+    gDownloadControlsLive = 0;
+    for (const [key, value] of before) { if (value) gDownloads.overrides.set(key, value); else gDownloads.overrides.delete(key); }
+    gRefreshQueue(focus);
+    showToast(String(error.message || 'Steam could not change this download').replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+  }
 }
 async function gQueueMore(button) {
   const appId = button.dataset.appId;
@@ -316,9 +341,11 @@ function renderGarrisonHidden() {
   const games = state.hiddenGames || [];
   libraryCount.textContent = `${games.length} hidden`;
   libraryGrid.classList.remove('g-list');
-  libraryGrid.innerHTML = games.length
-    ? games.map(game => `<button class="game-card g-hidden-card focusable" type="button" data-action="g-unhide" data-hidden-id="${escapeHtml(game.id)}" aria-label="Unhide ${escapeHtml(game.title)}">${gameArt({ ...game, artwork: game.artwork || {} })}<span class="g-card-text"><em>${escapeHtml(game.provider)}</em><strong>${escapeHtml(game.title)}</strong><small class="g-status">Select to unhide</small></span></button>`).join('')
-    : `<div class="g-empty">${gIcon('show')}<h2>No hidden games</h2><p>Hide a game from its options menu to keep it out of your library.</p></div>`;
+  // Shown only when asked for (Filter › Show hidden games), as in Steam; they never appear in search.
+  const banner = `<div class="g-hidden-banner"><span>${gIcon('hide')}<strong>Hidden games</strong><small>Games hidden here or in Steam. Select one to unhide it.</small></span><button class="g-hidden-done focusable" type="button" data-action="g-hidden-exit">Stop showing hidden games</button></div>`;
+  libraryGrid.innerHTML = banner + (games.length
+    ? games.map(game => `<button class="game-card g-hidden-card focusable" type="button" data-action="g-unhide" data-hidden-id="${escapeHtml(game.id)}" data-app-id="${escapeHtml(game.appId || '')}" data-steam-hidden="${game.steamHidden ? '1' : ''}" aria-label="Unhide ${escapeHtml(game.title)}">${gameArt({ ...game, artwork: game.artwork || {} })}<span class="g-card-text"><em>${escapeHtml(game.steamHidden ? 'Hidden in Steam' : game.provider)}</em><strong>${escapeHtml(game.title)}</strong><small class="g-status">Select to unhide</small></span></button>`).join('')
+    : `<div class="g-empty">${gIcon('show')}<h2>No hidden games</h2><p>Hide a game from its options menu, or in Steam, to keep it out of your library.</p></div>`);
 }
 const gApplyLibraryResult = applyLibraryResult;
 applyLibraryResult = function (result, ...rest) {
@@ -388,7 +415,7 @@ renderHomeCollections = function () {
     ['home-favorites', 'Favorites', games.filter(game => matchesCollection(game, 'favorites')), 'favorites'],
     ['home-added', 'Recently added', [...games].filter(game => game.addedAt).sort((a, b) => b.addedAt - a.addedAt), 'all'],
     ...state.customCollections.map((group, index) => [`home-custom-${index}`, group.name, games.filter(game => matchesCollection(game, `custom:${group.id}`)), `custom:${group.id}`]),
-    ['home-controller', 'Great with a controller', games.filter(game => ['controller', 'partial'].includes(game.controls) && !recentIds.has(game.id)), 'controller'],
+    ['home-controller', 'Great with a controller', games.filter(game => matchesCollection(game, 'controller') && !recentIds.has(game.id)), 'controller'],
     ['home-together', 'Play together', games.filter(game => matchesCollection(game, 'multiplayer')), 'multiplayer']
   ];
   gHomeRows.innerHTML = rows.filter(([, , list]) => list.length).map(([id, title, list, collection]) => collectionBand({ id, title, description: '', games: list, collection }))
@@ -614,7 +641,11 @@ scanLibrary = function (refreshArt = false, fullScreenImport = false, background
 
 // Home has no full screen backdrop here, so never decode or fetch one while moving focus.
 updateAmbient = function () {};
-document.querySelector('#shuffle-home-screenshots-toggle').closest('label').hidden = true;
+// The Xbox app has neither option: its game pages keep the game's own hero art, and tile corners are fixed.
+for (const id of ['#shuffle-home-screenshots-toggle', '#random-screenshot-background-toggle', '#tile-radius']) {
+  const row = document.querySelector(id)?.closest('label');
+  if (row) { row.hidden = true; row.querySelectorAll('.focusable').forEach(node => node.classList.remove('focusable')); }
+}
 
 // ---------- Store: the Xbox Store's own lists, in the Library's tab bar and cover grid ----------
 const gStoreLists = { popular: 'Popular', newReleases: 'New releases', free: 'Free to play' };
@@ -749,7 +780,7 @@ function renderPlayWithFriends() {
     <div class="game-row collection-covers" role="list">${playing.map(friend => {
       const owned = state.games.find(game => game.provider === 'Steam' && String(game.appId) === friend.gameId);
       const art = owned?.artwork?.tile ? gameArt(owned) : `<img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${escapeHtml(friend.gameId)}/library_600x900.jpg" alt="" loading="lazy" data-fallback="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${escapeHtml(friend.gameId)}/header.jpg" />`;
-      return `<button class="game-card g-friend-card focusable" type="button" role="listitem" data-action="g-friend-join" data-friend-id="${escapeHtml(friend.id)}"><span class="g-friend-art">${art}${gFriendAvatar(friend, 'g-friend-badge')}</span><span class="g-card-text"><strong>${escapeHtml(friend.game)}</strong><small>${escapeHtml(friend.name)}</small><b class="g-friend-action">${friend.lobby ? 'Join game' : 'View profile'}</b></span></button>`;
+      return `<button class="game-card g-friend-card focusable" type="button" role="listitem" data-action="g-friend-join" data-friend-id="${escapeHtml(friend.id)}"><span class="g-friend-art">${art}${gFriendAvatar(friend, 'g-friend-badge')}</span><span class="g-card-text"><strong>${escapeHtml(friend.game)}</strong><small>${escapeHtml(friend.name)}</small><b class="g-friend-action">${friend.lobby ? 'Join game' : 'View game'}</b></span></button>`;
     }).join('')}</div>`;
   if (focused) setFocusedElement(section.querySelector(`[data-friend-id="${CSS.escape(focused)}"]`), { scroll: false });
   refreshFocusables();
@@ -922,7 +953,7 @@ function gManageMarkup(game, storage = null) {
     + (!game.isLauncher ? gAction('g-manage-category', game.isApp ? 'Move to Games' : 'Move to Apps', '', gIcon('chevronRight', 'g-trailing')) : '')
     + (game.isCustom ? gAction('g-manage-edit', 'Edit game details', '', gIcon('edit', 'g-trailing')) : '')
     + (steam ? gAction('g-manage-store', 'View in Steam Store', '', gIcon('open', 'g-trailing')) : '')
-    + gAction('g-game-hide', 'Hide this game', 'Hidden games stay in My games → Hidden.', gIcon('hide', 'g-trailing')));
+    + gAction('g-game-hide', 'Hide this game', 'Show it again from Filter › Show hidden games.', gIcon('hide', 'g-trailing')));
   const achievements = gSection('achievements', 'Achievements',
     `<div class="g-field"><span class="g-field-label">Steam achievement catalog</span><div class="g-select-row"><input id="g-achievement-ref" class="g-input focusable" inputmode="numeric" placeholder="Steam App ID, e.g. 221430" value="${escapeHtml(game.achievementReferenceAppId || '')}" /><button class="g-button focusable" type="button" data-action="g-manage-achievement-ref">Save</button></div><small class="g-field-help">Link a Steam edition to show its achievements for this game.</small></div>`);
   return `<aside class="g-manage-side">
@@ -1008,7 +1039,7 @@ async function garrisonAction(action, source) {
     return true;
   }
   if (action === 'g-queue-more') { await gQueueMore(source); return true; }
-  if (action === 'g-queue-all') { await gQueueAction(gQueueRows().find(row => /^\d+$/.test(String(row.game.appId)))?.game.appId || '0', source.dataset.mode); return true; }
+  if (action === 'g-queue-all') { if (source.getAttribute('aria-disabled') === 'true') return true; await gQueueAction(gQueueRows().find(row => /^\d+$/.test(String(row.game.appId)))?.game.appId || '0', source.dataset.mode); return true; }
   if (action === 'g-noop') return true;
   if (action.startsWith('g-account-')) {
     const key = action.slice(10);
@@ -1054,10 +1085,17 @@ async function garrisonAction(action, source) {
     setFocusedElement(source, { scroll: false });
     return true;
   }
+  if (action === 'g-hidden-exit') {
+    state.gHiddenView = false;
+    renderLibraryView();
+    refreshFocusables();
+    setFocusedElement(document.querySelector('#library-filter-button') || libraryGrid.querySelector('.focusable'), { scroll: false });
+    return true;
+  }
   if (action === 'g-unhide') {
     const id = source.dataset.hiddenId;
     try {
-      await window.launcher.organizeLibrary('unhide', { gameId: id });
+      await window.launcher.organizeLibrary('unhide', { gameId: id, appId: source.dataset.appId || '', steamHidden: source.dataset.steamHidden === '1' });
       const hidden = (state.hiddenGames || []).find(item => item.id === id);
       state.hiddenGames = (state.hiddenGames || []).filter(item => item.id !== id);
       showToast(`${hidden?.title || 'Game'} is back in your library`);
@@ -1069,13 +1107,13 @@ async function garrisonAction(action, source) {
   if (!game) return false;
   if (action === 'g-game-hide') {
     try {
-      await window.launcher.organizeLibrary('hide', { gameId: game.id });
+      const hidden = await window.launcher.organizeLibrary('hide', { gameId: game.id });
       for (const dialog of [gGameMenu, gManage]) if (dialog.open) { dialog.gOpener = null; dialog.close(); }
       state.games = state.games.filter(item => item.id !== game.id);
       state.hiddenGames = [{ id: game.id, title: game.title, provider: game.provider, artwork: game.artwork || null }, ...(state.hiddenGames || [])];
       if (state.view === 'detail' && state.detailGameId === game.id) showView(state.previousView || 'library');
       renderLibrary();
-      showToast(`${game.title} is hidden. Find it in My games → Hidden.`);
+      showToast(`${game.title} is hidden${hidden?.steamSynced ? ' here and in Steam' : ''}. Show it again from Filter › Show hidden games.`);
       refreshFocusables();
       setFocusedElement((state.view === 'library' ? libraryGrid : recentRow).querySelector('.focusable'), { scroll: false });
     } catch (error) { showToast(error.message || 'Could not hide this game'); }
@@ -1092,7 +1130,7 @@ async function garrisonAction(action, source) {
   if (action === 'g-game-details') { gGameMenu.gOpener = null; gGameMenu.close(); openGameDetails(game.id); return true; }
   if (action === 'g-game-uninstall' || action === 'g-manage-uninstall') {
     if (gGameMenu.open) gGameMenu.close();
-    await gGameAction(game, 'uninstall-steam', 'Steam uninstall options opened');
+    await gUninstallGame(game);
     return true;
   }
   if (action === 'g-manage-close') { gManage.close(); return true; }
@@ -1127,6 +1165,19 @@ async function garrisonAction(action, source) {
 
 // ---------- Installs: no pop-up. Play becomes "Installing x%" and the download joins Queue. ----------
 const gInstallLabels = { waiting: 'Waiting for Steam', downloading: 'Installing', installing: 'Installing', paused: 'Paused', ready: 'Play' };
+// Time left: Steam's own estimate when it gives one, otherwise the bytes left at the current speed.
+function gTimeLeft(result = {}) {
+  let seconds = Number(result.secondsLeft) || 0;
+  if (!seconds && result.rate > 0 && result.total > result.downloaded) seconds = (result.total - result.downloaded) * 8 / result.rate;
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  seconds = Math.round(seconds);
+  if (seconds < 60) return `${seconds} sec left`;
+  const minutes = Math.floor(seconds / 60), rest = seconds % 60;
+  if (minutes < 10) return rest ? `${minutes} min ${rest} sec left` : `${minutes} min left`;
+  if (minutes < 60) return `${minutes} min left`;
+  const hours = Math.floor(minutes / 60);
+  return minutes % 60 ? `${hours} hr ${minutes % 60} min left` : `${hours} hr left`;
+}
 function renderGarrisonInstallButton(game, result = {}) {
   if (state.detailGameId !== game.id) return;
   const button = document.querySelector('#detail-play');
@@ -1140,7 +1191,8 @@ function renderGarrisonInstallButton(game, result = {}) {
   if (game.installed !== false && !installTracking.has(game.id)) return;
   button.classList.add('g-installing');
   button.style.setProperty('--g-install', `${percent ?? 0}%`);
-  button.innerHTML = `<span class="g-install-copy"><strong>${gInstallLabels[result.state] || 'Installing'}</strong><small>${percent === null ? 'Preparing…' : (result.estimated ? '≈ ' : '') + percent + '%'}</small></span>`;
+  const left = result.state === 'downloading' ? gTimeLeft(result) : '';
+  button.innerHTML = `<span class="g-install-copy"><strong>${gInstallLabels[result.state] || 'Installing'}</strong><small>${percent === null ? 'Preparing…' : (result.estimated ? '≈ ' : '') + percent + '%' + (left ? ' • ' + left : '')}</small></span>`;
 }
 const gShowSteamInstallation = showSteamInstallation;
 showSteamInstallation = function (game) {
@@ -1254,7 +1306,7 @@ function renderGarrisonTrailers(game, details) {
   gallery.querySelectorAll('.g-trailer').forEach(node => node.remove());
   const productId = details.xboxProductId || game.xboxProductId;
   state.gTrailers = videos.slice(0, 6);
-  if (!videos.length || !productId) return;
+  if (!videos.length) return;
   if (!gallery.querySelector('img')) gallery.innerHTML = '';
   gallery.insertAdjacentHTML('afterbegin', videos.slice(0, 6).map((video, index) => `<button class="g-trailer focusable" type="button" role="listitem" data-action="g-trailer" data-index="${index}" data-product-id="${escapeHtml(productId)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.preview)}" alt="" loading="lazy" /><span class="g-trailer-play">${gIcon('play')}</span></button>`).join(''));
   refreshFocusables();
@@ -1288,7 +1340,7 @@ gPlayer.querySelector('video').addEventListener('pause', () => gTrailerToggle(fa
 function playGarrisonTrailer(index, opener) {
   const video = state.gTrailers?.[index];
   if (!video?.stream || typeof Hls === 'undefined' || !Hls.isSupported()) {
-    window.launcher.openCatalogGame(opener?.dataset.productId).catch(error => showToast(error.message || 'Could not open the Xbox app'));
+    showToast('This trailer can’t be played here');
     return;
   }
   gPlayer.gOpener = opener;
@@ -1554,7 +1606,6 @@ const gSettingsActions = {
   'g-trailer': source => playGarrisonTrailer(Number(source.dataset.index) || 0, source),
   'g-trailer-close': () => gPlayer.close(),
   'g-trailer-toggle': () => togglePlay(),
-  'g-trailer': source => window.launcher.openCatalogGame(source.dataset.productId).catch(error => showToast(error.message || 'Could not open the Xbox app')),
   'g-score-game': async source => { await renderGScore(source.dataset.gameId); setFocusedElement(gScore.querySelector(`.g-nav-item[data-game-id="${CSS.escape(source.dataset.gameId)}"]`), { scroll: false }); },
   'g-set-profile': () => { settingsDialog.close(); return performAction('avatar-picker', document.querySelector('#profile-button')); },
   'g-set-gamerpic': async () => { settingsDialog.close(); await performAction('avatar-picker', document.querySelector('#profile-button')); showProfilePage('customize'); },
@@ -1680,7 +1731,7 @@ navigateConsoleHome = function (direction, current) {
   if (row && direction === 'up') { setFocusedElement(document.querySelector('.top-center-nav [data-action="home"]'), { scroll: false }); return true; }
   if (row && direction === 'down') {
     const band = [...document.querySelectorAll('#home-view .collection-band')].find(item => item.offsetParent !== null);
-    const target = band?.querySelector('.game-row .focusable') || band?.querySelector('.focusable');
+    const target = band?.querySelector('.game-row .focusable, .g-publisher-cards .focusable') || band?.querySelector('.focusable');
     if (target) setFocusedElement(target);
     return true;
   }
@@ -1692,7 +1743,7 @@ navigateCollectionBand = function (direction, current) {
   if (topmostOpenDialog() || !['home', 'library'].includes(state.view)) return false;
   const band = current?.closest('.collection-band');
   if (!band) return false;
-  const covers = [...band.querySelectorAll('.game-row .focusable')];
+  const covers = [...band.querySelectorAll('.game-row .focusable, .g-publisher-cards .focusable')];
   const more = band.querySelector('.collection-open');
   const items = more && more.offsetParent !== null ? [...covers, more] : covers;
   const index = items.indexOf(current);
@@ -1705,7 +1756,7 @@ navigateCollectionBand = function (direction, current) {
   const bands = [...root.querySelectorAll('.collection-band')].filter(item => item.offsetParent !== null);
   const next = bands[bands.indexOf(band) + (direction === 'up' ? -1 : 1)];
   if (next) {
-    const choices = [...next.querySelectorAll('.game-row .focusable')];
+    const choices = [...next.querySelectorAll('.game-row .focusable, .g-publisher-cards .focusable')];
     setFocusedElement(choices[Math.min(Math.max(index, 0), choices.length - 1)] || next.querySelector('.focusable'));
   } else if (direction === 'up') {
     const rows = gLibraryRows();
@@ -1770,7 +1821,7 @@ for (const node of [document.querySelector('main'), document.body, document.docu
 // and the page only scrolls up or down to reach the strip.
 const gSetFocusedElement = setFocusedElement;
 setFocusedElement = function (element, options = {}) {
-  const strip = element?.closest?.('.detail-gallery');
+  const strip = element?.closest?.('.detail-gallery, .g-publisher-cards');
   if (!strip || options.scroll === false) return gSetFocusedElement(element, options);
   gSetFocusedElement(element, { ...options, scroll: false });
   const box = strip.getBoundingClientRect(), item = element.getBoundingClientRect();

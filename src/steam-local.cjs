@@ -187,24 +187,42 @@ function contentLogProgress(text, appId, now = Date.now()) {
   return { state: finished ? 'ready' : state, downloaded: bytes, total: size, rate: active ? rate : 0, percent: size ? Math.min(100, Math.floor(bytes / size * 100)) : null, estimated: true };
 }
 
+// Steam's own download list (SteamClient.Downloads callbacks). Items arrive grouped per client as
+// { item_data: [...] }; each item has paused/active flags and a progress list per phase, where
+// phase 2 is the download and phase 3 is staging (writing to disk). The overview describes the
+// download that's running now, with its network speed in bytes per second.
+const DOWNLOAD_PHASE = 2, STAGING_PHASE = 3;
+function clientDownloadItems(client) {
+  const list = Array.isArray(client?.items) ? client.items : Array.isArray(client?.items?.items) ? client.items.items : [];
+  return list.flatMap(entry => Array.isArray(entry?.item_data) ? entry.item_data : [entry]).filter(Boolean);
+}
 function clientDownloadProgress(client, appId, result) {
   const id = String(appId);
-  const item = Array.isArray(client?.items) ? client.items.find(entry => String(entry.appid) === id) : null;
-  const overview = String(client?.overview?.update_appid) === id ? client.overview : null;
+  const item = clientDownloadItems(client).find(entry => String(entry.appid) === id) || null;
+  const overview = client?.overview && String(client.overview.update_appid) === id ? client.overview : null;
   if (!item && !overview) return null;
   const finite = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0;
-  const doneValue = overview?.update_bytes_downloaded ?? item?.downloaded_bytes;
-  const totalValue = overview?.update_bytes_to_download ?? item?.total_bytes;
-  // Incomplete callbacks are not evidence of zero progress. Let the log or
-  // manifest supply the fallback until Steam sends usable byte counts.
-  if (!finite(doneValue) || !finite(totalValue) || Number(totalValue) <= 0) return null;
-  const total = Number(totalValue), downloaded = Math.min(total, Number(doneValue));
-  const state = item?.paused || client?.overview?.paused ? 'paused'
-    : item?.completed || downloaded >= total ? 'installing' : overview || item?.active ? 'downloading' : 'queued';
-  return { ...result, state, downloaded, total,
+  const phases = overview?.progress || (item?.update_type_info || []).find(info => info?.has_update)?.progress || item?.update_type_info?.[0]?.progress || [];
+  const download = phases[DOWNLOAD_PHASE] || {}, staging = phases[STAGING_PHASE] || {};
+  const total = Number(download.bytes_total) || 0;
+  const downloaded = Math.min(total, Number(download.bytes_in_progress) || 0);
+  const overall = overview ? Number(overview.overall_percent_complete) : Number((item?.update_type_info || []).find(info => info?.has_update)?.overall_percent_complete);
+  // Nothing measurable yet (just queued): let the manifest or log speak instead of showing 0%.
+  if (!total && !(finite(overall) && overall > 0) && !item?.paused && !overview) return null;
+  const staged = Number(staging.bytes_total) > 0 && Number(staging.bytes_in_progress) >= Number(staging.bytes_total);
+  // Steam's pause is global; the game at the front of the queue is the one it paused.
+  const front = Boolean(item && (item.active || Number(item.queue_index) === 0));
+  const state = item?.paused || (client?.overview?.paused && (overview || front)) ? 'paused'
+    : item?.completed || staged ? 'installing'
+    : overview || item?.active ? (total && downloaded >= total ? 'installing' : 'downloading')
+    : item && Number(item.queue_index) < 0 && result?.state === 'update' ? 'update'
+    : 'queued';
+  const percent = total ? Math.min(100, Math.floor(downloaded / total * 100)) : finite(overall) ? Math.min(100, Math.floor(overall)) : result?.percent ?? null;
+  const seconds = Number(overview?.overall_estimated_time_remaining_sec ?? download.estimated_time_remaining_sec);
+  return { ...result, state, downloaded, total: total || result?.total || 0,
     rate: state === 'downloading' && finite(overview?.update_network_bytes_per_second) ? Number(overview.update_network_bytes_per_second) * 8 : 0,
-    secondsLeft: finite(overview?.update_seconds_remaining) ? Number(overview.update_seconds_remaining) : null,
-    percent: Math.floor(downloaded / total * 100), live: true, estimated: false };
+    secondsLeft: Number.isFinite(seconds) && seconds > 0 ? seconds : null, queueIndex: Number.isFinite(Number(item?.queue_index)) ? Number(item.queue_index) : null,
+    percent, live: true, estimated: false };
 }
 
-module.exports = { parseVdf, steamAccountId, extractLocalLibrary, cloudHiddenIds, readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress };
+module.exports = { parseVdf, steamAccountId, extractLocalLibrary, cloudHiddenIds, readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, clientDownloadItems };

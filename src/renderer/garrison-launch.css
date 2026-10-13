@@ -1,0 +1,30 @@
+/* Launch screen: the game's key art full screen with a slow push-in, its logo, and a status line that stays
+   until the game is running. B goes back to the launcher while the game keeps starting. */
+body.garrison .launch-overlay { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; background: #050606; opacity: 0; transition: opacity .38s ease; }
+body.garrison .launch-overlay.active { opacity: 1; }
+body.garrison .launch-art { position: absolute; inset: -3%; background-size: cover; background-position: center 30%; filter: saturate(1.05) brightness(.62); transform: scale(1.04); }
+body.garrison .launch-overlay.active .launch-art { animation: g-launch-push 14s ease-out forwards; }
+@keyframes g-launch-push { from { transform: scale(1.04); } to { transform: scale(1.12); } }
+body.garrison .launch-vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 45%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .35) 55%, rgba(0, 0, 0, .85) 100%), linear-gradient(180deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, .55)); }
+body.garrison .launch-brand { position: absolute; top: calc(3 * var(--p)); left: var(--g-gutter); width: calc(2.6 * var(--p)); height: calc(2.6 * var(--p)); opacity: .9; filter: brightness(10); }
+body.garrison .launch-copy { position: relative; z-index: 1; display: grid; place-items: center; gap: calc(1.2 * var(--p)); max-width: 70vw; transform: translateY(-4vh); }
+body.garrison .launch-copy #launching-title { display: none; }
+body.garrison .launch-game-logo { max-width: min(46vw, calc(44 * var(--p))); max-height: 26vh; object-fit: contain; filter: drop-shadow(0 6px 30px rgba(0, 0, 0, .65)); opacity: 0; transform: translateY(10px) scale(.98); }
+body.garrison .launch-overlay.active .launch-game-logo { animation: g-launch-logo .7s .12s cubic-bezier(.16, 1, .3, 1) forwards; }
+@keyframes g-launch-logo { to { opacity: 1; transform: none; } }
+body.garrison .launch-progress { display: none; }
+body.garrison .g-launch-status { position: absolute; z-index: 1; left: 0; right: 0; bottom: 16vh; display: grid; justify-items: center; gap: calc(.6 * var(--p)); color: #fff; }
+body.garrison .g-launch-status strong { font: 600 calc(1.45 * var(--p)) / 1.2 var(--g-font); letter-spacing: .01em; }
+body.garrison .g-launch-status small { font: 400 calc(1.1 * var(--p)) / 1.2 var(--g-font); color: rgba(255, 255, 255, .72); }
+body.garrison .g-launch-dots { display: flex; gap: calc(.55 * var(--p)); margin-bottom: calc(.6 * var(--p)); }
+body.garrison .g-launch-dots i { width: calc(.62 * var(--p)); height: calc(.62 * var(--p)); border-radius: 50%; background: #fff; opacity: .25; animation: g-launch-dot 1.2s ease-in-out infinite; }
+body.garrison .g-launch-dots i:nth-child(2) { animation-delay: .18s; }
+body.garrison .g-launch-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes g-launch-dot { 0%, 100% { opacity: .22; transform: scale(.85); } 45% { opacity: 1; transform: scale(1); } }
+body.garrison .g-launch-hint { position: absolute; z-index: 1; right: var(--g-gutter); bottom: calc(3 * var(--p)); display: inline-flex; align-items: center; gap: calc(.5 * var(--p)); color: rgba(255, 255, 255, .85); font: 400 calc(1.1 * var(--p)) / 1 var(--g-font); }
+html.reduce-motion body.garrison .launch-art, html.reduce-motion body.garrison .g-launch-dots i { animation: none !important; }
+body.garrison .launch-overlay .launch-copy { position: absolute !important; inset: 0 !important; margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; display: grid !important; place-items: center !important; transform: translateY(-5vh) !important; text-align: center; background: none !important; }
+body.garrison .launch-overlay .launch-game-logo { position: static !important; inset: auto !important; margin: 0 auto !important; width: auto !important; height: auto !important; max-width: min(46vw, calc(44 * var(--p))) !important; max-height: 26vh !important; }
+body.garrison .launch-overlay .launch-brand { padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+body.garrison .launch-overlay .launch-art { filter: saturate(1.05) brightness(.5); }
+body.garrison .launch-overlay .launch-vignette::after { content: ""; position: absolute; left: 50%; top: 42%; width: 62vw; height: 46vh; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0)); }

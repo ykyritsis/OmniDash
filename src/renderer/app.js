@@ -15,7 +15,7 @@ const state = {
   homeAmbientRequestToken: 0,
   homeScreenshotCache: new Map(),
   lastHomeScreenshotByGame: new Map(),
-  shuffleHomeScreenshots: true,
+  shuffleHomeScreenshots: false,
   optionsGameId: null,
   artworkGameId: null,
   artworkSearch: null,
@@ -52,7 +52,7 @@ const state = {
   detailRequestToken: 0,
   detailBackdropLayer: 0,
   lastDetailScreenshotByGame: new Map(),
-  useRandomScreenshotBackground: true,
+  useRandomScreenshotBackground: false,
   onboardingStep: 0,
   profileOriginal: null,
   displayName: 'Player',
@@ -431,9 +431,22 @@ window.launcher.onLibraryArtwork((changes) => {
   const collage = document.querySelector('#dashboard-features .library-collage');
   const visibleIds = new Set([...recentRow.querySelectorAll('.game-card')].map(node => node.dataset.gameId));
   if (collage) collage.innerHTML = displayedLibraryGames().filter((game) => !game.isApp && game.installed !== false && !visibleIds.has(game.id)).slice(0, 4).map((game) => `<span class="library-collage-art">${gameArt(game)}</span>`).join('');
-  renderHomeCollections();
+  scheduleHomeCollections();
   updateControllerPrompts();
 });
+// Artwork arrives in many small batches while it loads in the background. Rebuilding every Home row for
+// each one made navigation hitch, so rows refresh at most every 2.5 seconds, and only while Home is showing.
+let homeCollectionsTimer = 0, homeCollectionsDirty = false;
+function scheduleHomeCollections() {
+  homeCollectionsDirty = true;
+  if (homeCollectionsTimer) return;
+  homeCollectionsTimer = setTimeout(() => {
+    homeCollectionsTimer = 0;
+    if (state.view !== 'home' || document.hidden || topmostOpenDialog()) return;
+    homeCollectionsDirty = false;
+    renderHomeCollections();
+  }, 2500);
+}
 document.addEventListener('error', (event) => {
   const image = event.target;
   if (!(image instanceof HTMLImageElement) || !image.dataset.artGameId) return;
@@ -687,7 +700,7 @@ function updateControllerPrompts() {
   };
   const catalogDetail = state.view === 'detail' && !state.games.some(game => game.id === state.detailGameId);
   setPrompt(promptA, Boolean(selectedGame) || state.view === 'store', state.view === 'store' || catalogDetail ? 'View' : state.view === 'detail' && selectedGame?.installed !== false ? 'Play' : state.view === 'detail' && selectedGame ? 'Install' : 'Open');
-  setPrompt(promptB, state.view !== 'home', state.view === 'library' ? 'Home' : 'Back');
+  setPrompt(promptB, state.view !== 'home', state.view === 'library' && !state.libraryQueue ? 'Home' : 'Back');
   setPrompt(promptX, false, 'Scan');
   setPrompt(promptY, state.view === 'home' || state.view === 'library', 'Search');
   setPrompt(promptMenu, Boolean(selectedGame) && state.view !== 'store' && !catalogDetail, 'Options');
@@ -726,13 +739,13 @@ function renderLibraryView() {
     && (state.installFilter === 'all' || (game.installed !== false) === (state.installFilter === 'installed'))
     && (state.sourceFilter === 'all' || game.provider === state.sourceFilter)
     && matchesCollection(game, state.collectionFilter || 'all'));
-  const source = filtered.filter((game) => state.libraryTab === 'play-history' ? (game.playCount || 0) > 0
+  const source = filtered.filter((game) => state.libraryTab === 'play-history' ? (game.playCount || 0) > 0 || lastPlayedAt(game) > 0
     : state.libraryTab === 'my-games' ? game.installed !== false || game.steamOwned || game.steamFamilyShared || game.epicOwned || Boolean(game.accountLibrary) : true);
   if (state.librarySort === 'name') source.sort((a, b) => a.title.localeCompare(b.title));
   else if (state.librarySort === 'provider') source.sort((a, b) => a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title));
   else if (state.librarySort === 'playtime') source.sort((a, b) => (b.steamPlaytimeMinutes || 0) - (a.steamPlaytimeMinutes || 0) || a.title.localeCompare(b.title));
   else if (state.librarySort === 'size') source.sort((a, b) => (b.sizeOnDisk || 0) - (a.sizeOnDisk || 0) || a.title.localeCompare(b.title));
-  else if (state.libraryTab === 'play-history') source.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+  else if (state.libraryTab === 'play-history' || state.librarySort === 'recent') source.sort((a, b) => lastPlayedAt(b) - lastPlayedAt(a) || (b.playCount || 0) - (a.playCount || 0) || a.title.localeCompare(b.title));
   const categoryName = state.libraryCategory === 'apps' ? 'Apps' : state.libraryCategory === 'games' ? 'Games' : 'Full library';
   const activeSection = state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
     : state.installFilter === 'installed' && !state.consoleLibraryGroups && state.libraryCategory !== 'apps' ? 'installed' : 'games';
@@ -850,9 +863,10 @@ function matchesCollection(game, collection) {
   if (collection === 'favorites') return libraryCopyIds(game).some(id=>state.favoriteGameIds.includes(id));
   if (collection === 'family-shared') return game.steamFamilyShared === true;
   if (collection.startsWith('custom:')) return libraryCopyIds(game).some(id=>state.customCollections.find((item) => item.id === collection.slice(7))?.gameIds.includes(id));
-  if (collection === 'controller') return ['controller', 'partial'].includes(game.controls);
+  // Steam's own store filters: Full controller support, and Local & party (shared/split screen, LAN, Remote Play Together).
+  if (collection === 'controller') return game.controls === 'controller';
   if (collection === 'solo') return /single-player/i.test(categories);
-  if (collection === 'multiplayer') return /multi.?player|co-op|coop|split screen|online pvp|online pve/i.test(categories);
+  if (collection === 'multiplayer') return /shared\/split screen|lan (pvp|co-op)|remote play together/i.test(categories);
   if (collection === 'installed') return game.installed !== false;
   return true;
 }
@@ -1005,11 +1019,17 @@ function renderSelectedGameNews(game) {
     if (!items.length) { newsShelf.hidden = true; newsRow.innerHTML = ''; return; }
     const steamHeader = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${encodeURIComponent(game.appId)}/header.jpg`;
     const fallbackArt = game.artwork?.wide || game.artwork?.hero || game.artwork?.tile || '';
+    // Each post shows its own image; posts without one take the game's screenshots in turn, so cards don't repeat.
+    const pool = [...new Set([...(state.galleryImages || []).map(galleryThumb), game.artwork?.hero, game.artwork?.wide, steamHeader].filter(Boolean))];
+    let spare = 0;
     const markup = items.length ? items.map((item, index) => {
-      const subtitle = String(item.contents || '').slice(0, 90) || 'Read the latest update';
+      const subtitle = String(item.contents || '').slice(0, 140) || 'Read the latest update';
+      const art = item.image || pool[spare++ % pool.length] || fallbackArt;
+      const kind = /patch|hotfix|update|notes|changelog|fix/i.test(item.title) ? 'Patch notes' : 'News';
+      const when = item.date ? relativeTime(Number(item.date) * 1000) : '';
       return `<button class="news-card focusable" role="listitem" data-action="open-news" data-news-index="${index}" aria-label="${escapeHtml(item.title)}">
-        <img class="news-card-art" src="${escapeHtml(steamHeader)}" data-fallback="${escapeHtml(fallbackArt)}" alt="" loading="lazy" />
-        <span class="news-card-shade"></span><span class="news-card-copy"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(subtitle)}</span></span>
+        <img class="news-card-art" src="${escapeHtml(art)}" data-fallback="${escapeHtml(fallbackArt || steamHeader)}" alt="" loading="lazy" decoding="async" />
+        <span class="news-card-shade"></span><span class="news-card-copy"><small class="news-card-meta">${escapeHtml([kind, when].filter(Boolean).join(' • '))}</small><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(subtitle)}</span></span>
       </button>`;
     }).join('') : '<p class="news-loading">No recent English-language Steam news for this game.</p>';
     newsRow.classList.add('news-changing');
@@ -1128,7 +1148,8 @@ function setFocusedElement(element, { scroll = true } = {}) {
   element.focus({ preventScroll: true });
   if (element.classList.contains('game-card') && element.dataset.gameId) selectGame(element.dataset.gameId, false, element);
   if (!scroll) return;
-  const behavior = document.documentElement.classList.contains('reduce-motion') ? 'instant' : 'smooth';
+  // Held directions scroll instantly; stacking smooth scrolls is what makes held movement feel laggy.
+  const behavior = document.documentElement.classList.contains('reduce-motion') || state.navRepeat ? 'instant' : 'smooth';
   if (scrollCollectionIntoView(element, behavior)) return;
   element.scrollIntoView({ behavior, block: element.closest('#random-row') ? 'center' : 'nearest', inline: 'center' });
   const mainScroller = document.querySelector('main');
@@ -1418,7 +1439,7 @@ function openGameDetails(gameId) {
       });
     }
     document.querySelector('#detail-gallery').innerHTML = images.length
-      ? images.map((url, index) => `<button class="detail-gallery-item focusable" type="button" data-action="detail-gallery-select" data-gallery-index="${index}" aria-label="View screenshot ${index + 1}"><img src="${escapeHtml(url)}" alt="Screenshot ${index + 1} of ${escapeHtml(game.title)}" loading="lazy" /></button>`).join('')
+      ? images.map((url, index) => `<button class="detail-gallery-item focusable" type="button" data-action="detail-gallery-select" data-gallery-index="${index}" aria-label="View screenshot ${index + 1}"><img src="${escapeHtml(galleryThumb(url))}" alt="Screenshot ${index + 1} of ${escapeHtml(game.title)}" ${index < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" /></button>`).join('')
       : '<p>No screenshots available from this game’s store listing.</p>';
     document.querySelector('#detail-rating').textContent = [details.ageRating ? `Age rating ${details.ageRating}` : '', details.metacriticScore ? `Metacritic ${Number(details.metacriticScore)}` : ''].filter(Boolean).join(' · ');
     const playModes = (details.categories || []).filter((category) => /^(single-player|multi-player|online co-op|local co-op|shared\/split screen co-op|Xbox online co-op|Xbox online multiplayer)/i.test(category)).slice(0, 2).join(' · ');
@@ -1452,7 +1473,7 @@ function openGameDetails(gameId) {
       if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
       dlcNote.textContent = result.items?.length ? `Showing ${result.items.length}${result.total > result.items.length ? ` of ${result.total}` : ''} add-ons from Steam. “Owned” appears only when verified in your visible Steam library.` : 'No DLC listing is available for this game.';
       const dlcGrid = document.querySelector('#detail-dlc-grid');
-      dlcGrid.innerHTML = (result.items || []).map((item) => `<div class="detail-dlc-item${item.image ? ' has-image' : ' no-image'}">${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />` : ''}<div class="detail-dlc-copy"><strong>${escapeHtml(item.title)}</strong>${item.owned ? '<span class="dlc-owned">Owned</span>' : ''}</div></div>`).join('');
+      dlcGrid.innerHTML = (result.items || []).map((item) => `<button type="button" class="detail-dlc-item focusable${item.image ? ' has-image' : ' no-image'}" data-action="g-open-link" data-url="https://store.steampowered.com/app/${escapeHtml(item.id)}/" aria-label="${escapeHtml(item.title)}${item.owned ? ', owned' : item.price ? ', ' + escapeHtml(item.price) : ''}">${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />` : ''}<span class="detail-dlc-copy"><strong>${escapeHtml(item.title)}</strong><small class="${item.owned ? 'dlc-owned' : 'dlc-price'}">${item.owned ? 'Owned' : escapeHtml(item.price || 'Add-on')}</small></span></button>`).join('');
       dlcGrid.querySelectorAll('.detail-dlc-item img').forEach((image) => image.addEventListener('error', () => {
         image.closest('.detail-dlc-item')?.classList.replace('has-image', 'no-image');
         image.remove();
@@ -1586,20 +1607,31 @@ async function launchSelectedGame(optionsOverride) {
       game.artwork.logo = logo;
     }
   }).catch(() => {});
+  const status = document.querySelector('#launch-status');
+  const via = document.querySelector('#launch-via');
+  if (status) status.textContent = 'Starting';
+  if (via) via.textContent = ['PC', 'Custom'].includes(game.provider) ? '' : `Launching with ${game.provider === 'Xbox PC' ? 'the Xbox app' : game.provider}`;
+  launchOverlay.dataset.gameId = launchId;
   launchOverlay.hidden = false;
   requestAnimationFrame(() => launchOverlay.classList.add('active'));
+  // Still waiting after a while: say so, so it doesn't look stuck.
+  const slow = setTimeout(() => { if (status) status.textContent = game.provider === 'Steam' ? 'Waiting for Steam' : 'Still starting'; }, 9000);
   try {
     await Promise.all([
-      window.launcher.launchGame(state.selectedGameId, optionsOverride),
-      new Promise((resolve) => setTimeout(resolve, 2100))
+      (rememberLaunch(state.selectedGameId), window.launcher.launchGame(state.selectedGameId, optionsOverride)),
+      new Promise((resolve) => setTimeout(resolve, 1200))
     ]);
-    await refreshActiveGameSession();
     game.playCount = (game.playCount || 0) + 1;
     promoteRecentlyLaunchedGame(game);
-    showToast(`Launching ${game.title}`);
+    // Stay on the launch screen until the game is actually running (or the player backs out).
+    const result = await window.launcher.waitGameStarted(launchId, 90000).catch(() => ({ started: false }));
+    await refreshActiveGameSession();
+    if (!result.started && !result.cancelled) showToast(`${game.title} is taking a while to start`);
   } catch (error) {
     showToast(error.message || 'Could not launch this game');
   } finally {
+    clearTimeout(slow);
+    delete launchOverlay.dataset.gameId;
     launchOverlay.classList.remove('active');
     setTimeout(() => { launchOverlay.hidden = true; }, 380);
   }
@@ -1951,9 +1983,9 @@ async function openSettings() {
   document.querySelector('#text-size-value').textContent = `${Math.round((settings.textScale || 1) * 100)}%`;
   document.querySelector('#high-contrast-focus-toggle').checked = Boolean(settings.highContrastFocus);
   document.querySelector('#random-screenshot-background-toggle').checked = settings.useRandomScreenshotBackground !== false;
-  state.useRandomScreenshotBackground = settings.useRandomScreenshotBackground !== false;
+  state.useRandomScreenshotBackground = false; // Xbox keeps the game's own hero art behind its page.
   document.querySelector('#shuffle-home-screenshots-toggle').checked = settings.shuffleHomeScreenshots !== false;
-  state.shuffleHomeScreenshots = settings.shuffleHomeScreenshots !== false;
+  state.shuffleHomeScreenshots = false;
   settingsDialog.showModal();
   // Account toggles load asynchronously; snapshot again once they settle unless the player has edited them.
   state.settingsTouched = false;
@@ -2576,7 +2608,7 @@ document.addEventListener('focusin', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (!launchOverlay.hidden) { event.preventDefault(); return; }
+  if (!launchOverlay.hidden) { event.preventDefault(); if (event.key === 'Escape' || event.key === 'Backspace') cancelLaunchWait(); return; }
   const activeModal = topmostOpenDialog();
   if (activeModal && event.key === 'Tab') {
     refreshFocusables();
@@ -2710,8 +2742,8 @@ async function saveSettingsForm({ close = true } = {}) {
     state.soundEffects = document.querySelector('#sound-toggle').checked;
     state.showUninstalledSteam = document.querySelector('#show-uninstalled-toggle').checked;
     state.showUninstalledEpic = document.querySelector('#show-uninstalled-epic-toggle').checked;
-    state.useRandomScreenshotBackground = document.querySelector('#random-screenshot-background-toggle').checked;
-    state.shuffleHomeScreenshots = document.querySelector('#shuffle-home-screenshots-toggle').checked;
+    state.useRandomScreenshotBackground = false;
+    state.shuffleHomeScreenshots = false;
     state.ambientKey = '';
     const selectedGame = state.games.find((game) => game.id === state.selectedGameId);
     if (selectedGame) updateAmbient(selectedGame, true);
@@ -2866,10 +2898,11 @@ let gamepadPollTimer = null;
 
 function scheduleGamepadPoll() {
   if (gamepadPollTimer !== null || document.visibilityState !== 'visible' || !document.hasFocus()) return;
-  gamepadPollTimer = setTimeout(() => {
+  // Every frame, so a press lands on the next frame like a console.
+  gamepadPollTimer = requestAnimationFrame(() => {
     gamepadPollTimer = null;
-    requestAnimationFrame(pollGamepad);
-  }, 24);
+    pollGamepad();
+  });
 }
 
 function pollGamepad() {
@@ -2887,6 +2920,7 @@ function pollGamepad() {
     if (state.gamepadIndex !== gamepad.index) focusForGamepad(gamepad);
     const pressed = gamepad.buttons.map((button) => Boolean(button.pressed || button.value > .55));
     const justPressed = (index) => pressed[index] && !state.previousButtons[index];
+    if (!launchOverlay.hidden && justPressed(1)) cancelLaunchWait();
     if (state.fullScreenImport || !launchOverlay.hidden) { state.previousButtons = pressed; return; }
     if (justPressed(0)) {
       if (document.activeElement instanceof HTMLSelectElement) openConsoleChoice(document.activeElement);
@@ -2914,26 +2948,41 @@ function pollGamepad() {
       try { performAction('toggle-search'); } finally { state.controllerClick = false; }
     }
     if (justPressed(8) && !document.querySelector('dialog[open]')) toggleNav();
-    if (justPressed(4) && !document.querySelector('dialog[open]')) document.querySelector('main').scrollBy({ top: -window.innerHeight * .75, behavior: 'smooth' });
-    if (justPressed(5) && !document.querySelector('dialog[open]')) document.querySelector('main').scrollBy({ top: window.innerHeight * .75, behavior: 'smooth' });
-    if (justPressed(12)) gamepadMove('up');
-    if (justPressed(13)) gamepadMove('down');
-    if (justPressed(14)) galleryDialog.open ? showGalleryImage(state.galleryIndex - 1) : gamepadMove('left');
-    if (justPressed(15)) galleryDialog.open ? showGalleryImage(state.galleryIndex + 1) : gamepadMove('right');
-
+    if (justPressed(4) && !document.querySelector('dialog[open]')) (window.gPageScroll ? window.gPageScroll(-1) : document.querySelector('main').scrollBy({ top: -window.innerHeight * .75, behavior: 'smooth' }));
+    if (justPressed(5) && !document.querySelector('dialog[open]')) (window.gPageScroll ? window.gPageScroll(1) : document.querySelector('main').scrollBy({ top: window.innerHeight * .75, behavior: 'smooth' }));
+    // Directions behave like a console: one move on press, then repeats after a short hold that speed up.
+    // The stick uses a dead zone with hysteresis so it doesn't flicker between directions.
     const now = performance.now();
-    if (now - state.lastAxisMove > 210) {
-      const [x = 0, y = 0] = gamepad.axes;
-      if (x < -.42) { galleryDialog.open ? showGalleryImage(state.galleryIndex - 1) : gamepadMove('left'); state.lastAxisMove = now; }
-      else if (x > .42) { galleryDialog.open ? showGalleryImage(state.galleryIndex + 1) : gamepadMove('right'); state.lastAxisMove = now; }
-      else if (y < -.42) { gamepadMove('up'); state.lastAxisMove = now; }
-      else if (y > .42) { gamepadMove('down'); state.lastAxisMove = now; }
-      else if (gamepad.mapping !== 'standard') {
-        const [hatX = 0, hatY = 0] = gamepad.axes.slice(6, 8);
-        if (hatX < -.5) { gamepadMove('left'); state.lastAxisMove = now; }
-        else if (hatX > .5) { gamepadMove('right'); state.lastAxisMove = now; }
-        else if (hatY < -.5) { gamepadMove('up'); state.lastAxisMove = now; }
-        else if (hatY > .5) { gamepadMove('down'); state.lastAxisMove = now; }
+    const [x = 0, y = 0] = gamepad.axes;
+    const held = state.heldDirection;
+    const engage = .5, release = .32;
+    const stick = Math.abs(x) >= Math.abs(y)
+      ? (x <= -(held === 'left' ? release : engage) ? 'left' : x >= (held === 'right' ? release : engage) ? 'right' : '')
+      : (y <= -(held === 'up' ? release : engage) ? 'up' : y >= (held === 'down' ? release : engage) ? 'down' : '');
+    let hat = '';
+    if (gamepad.mapping !== 'standard') {
+      const [hatX = 0, hatY = 0] = gamepad.axes.slice(6, 8);
+      hat = hatX < -.5 ? 'left' : hatX > .5 ? 'right' : hatY < -.5 ? 'up' : hatY > .5 ? 'down' : '';
+    }
+    const direction = pressed[12] ? 'up' : pressed[13] ? 'down' : pressed[14] ? 'left' : pressed[15] ? 'right' : stick || hat;
+    const step = which => {
+      if (galleryDialog.open && (which === 'left' || which === 'right')) showGalleryImage(state.galleryIndex + (which === 'left' ? -1 : 1));
+      else gamepadMove(which);
+    };
+    if (!direction) state.heldDirection = '';
+    else if (direction !== held) {
+      state.heldDirection = direction;
+      state.heldSince = now;
+      state.lastRepeat = now;
+      state.navRepeat = false;
+      step(direction);
+    } else {
+      const heldFor = now - state.heldSince;
+      const interval = heldFor > 1600 ? 65 : heldFor > 900 ? 85 : 110;
+      if (heldFor > 380 && now - state.lastRepeat >= interval) {
+        state.lastRepeat = now;
+        state.navRepeat = true;
+        try { step(direction); } finally { state.navRepeat = false; }
       }
     }
     state.previousButtons = pressed;
@@ -2968,13 +3017,13 @@ window.addEventListener('focus', () => {
 });
 
 window.addEventListener('blur', () => {
-  if (gamepadPollTimer !== null) clearTimeout(gamepadPollTimer);
+  if (gamepadPollTimer !== null) cancelAnimationFrame(gamepadPollTimer);
   gamepadPollTimer = null;
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') {
-    if (gamepadPollTimer !== null) clearTimeout(gamepadPollTimer);
+    if (gamepadPollTimer !== null) cancelAnimationFrame(gamepadPollTimer);
     gamepadPollTimer = null;
     return;
   }
@@ -3007,8 +3056,8 @@ window.launcher.getSettings().then(async (settings) => {
   state.favoriteGameIds = Array.isArray(settings.favoriteGameIds) ? settings.favoriteGameIds : [];
   state.customCollections = Array.isArray(settings.customCollections) ? settings.customCollections : [];
   refreshActiveGameSession().catch(() => {});
-  state.useRandomScreenshotBackground = settings.useRandomScreenshotBackground !== false;
-  state.shuffleHomeScreenshots = settings.shuffleHomeScreenshots !== false;
+  state.useRandomScreenshotBackground = false; // Xbox keeps the game's own hero art behind its page.
+  state.shuffleHomeScreenshots = false;
   state.soundEffects = settings.soundEffects !== false;
   runStartupSequence(settings);
   selectedAvatarId = settings.avatarId || 'one-orbit';
@@ -3049,3 +3098,31 @@ scheduleGamepadPoll();
 updateConnectivityActivity();
 refreshControllerStatus();
 settingsDialog.addEventListener('input', () => { state.settingsTouched = true; }); settingsDialog.addEventListener('change', () => { state.settingsTouched = true; });
+
+// Gallery tiles load a small copy; the viewer opens the full image.
+function galleryThumb(url) {
+  const value = String(url || '');
+  if (/steamstatic\.com\/.*\.1920x1080\.jpg/.test(value)) return value.replace('.1920x1080.jpg', '.600x338.jpg');
+  if (/store-images\.s-microsoft\.com\//.test(value) && !/[?&]w=/.test(value)) return `${value}${value.includes('?') ? '&' : '?'}w=720`;
+  return value;
+}
+
+// When a game was last played, from whichever launcher knows: Steam's own record or a launch from here.
+function lastPlayedAt(game) {
+  let launched = 0;
+  try { launched = Number(JSON.parse(localStorage.getItem('lastLaunched') || '{}')[game.id]) || 0; } catch { /* Storage unavailable. */ }
+  return Math.max(Number(game.steamLastPlayed) || 0, Number(game.lastPlayed) || 0, launched);
+}
+function rememberLaunch(gameId) {
+  try {
+    const map = JSON.parse(localStorage.getItem('lastLaunched') || '{}');
+    map[gameId] = Date.now();
+    localStorage.setItem('lastLaunched', JSON.stringify(map));
+  } catch { /* Storage unavailable. */ }
+}
+
+// B on the launch screen returns to the launcher; the game keeps starting.
+function cancelLaunchWait() {
+  const gameId = launchOverlay.dataset.gameId;
+  if (gameId) window.launcher.cancelGameWait(gameId).catch(() => {});
+}

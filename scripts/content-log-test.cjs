@@ -48,16 +48,36 @@ assert.equal(stale.rate, 0);
 assert.equal(stale.state, 'queued');
 console.log('content log progress ok');
 
+// Steam's real callback shape (captured read-only from this PC's Steam client).
 const { clientDownloadProgress } = require('../src/steam-local.cjs');
-const manifest = { installed: false, state: 'downloading', downloaded: 0, total: 1000, percent: 0 };
-const overview = { update_appid: 42, update_bytes_downloaded: 740, update_bytes_to_download: 1000, update_network_bytes_per_second: 10, update_seconds_remaining: 26 };
-const exact = clientDownloadProgress({ overview, items: [{ appid: 42, downloaded_bytes: 0, total_bytes: 1000 }] }, 42, manifest);
-assert.equal(exact.percent, 74);
-assert.equal(exact.rate, 80);
-assert.equal(exact.estimated, false);
-assert.equal(clientDownloadProgress({ overview }, 42, manifest).percent, 74);
-assert.equal(clientDownloadProgress({ overview: { ...overview, paused: true } }, 42, manifest).rate, 0);
-assert.equal(clientDownloadProgress({ overview: { ...overview, update_bytes_downloaded: 1000 } }, 42, manifest).installed, false);
-assert.equal(clientDownloadProgress({ items: [{ appid: 42 }] }, 42, manifest), null);
-assert.equal(clientDownloadProgress({ overview }, 7, manifest), null);
-console.log('PASS live Steam counters override stale 0% manifests, partial callbacks, pause and staging');
+const phases = (download, total, staged = 0, stageTotal = 0) => [{}, {}, { bytes_in_progress: download, bytes_total: total, estimated_time_remaining_sec: -1 }, { bytes_in_progress: staged, bytes_total: stageTotal }, {}, {}, {}];
+const manifest = { installed: false, state: 'downloading', downloaded: 0, total: 0, percent: 0 };
+const pausedItem = { appid: 1721110, active: false, paused: true, completed: false, queue_index: -1, update_type_info: [{ has_update: true, progress: phases(2325825712, 5630004048, 2561720551, 5940063701), overall_percent_complete: 41 }] };
+const idle = { update_appid: 0, update_network_bytes_per_second: 0, progress: phases(0, 0), overall_percent_complete: 0, paused: false };
+const pausedResult = clientDownloadProgress({ overview: idle, items: [{ remote_client_id: '0', item_data: [{ appid: 730, active: false, paused: false, update_type_info: [{ has_update: false, progress: phases(0, 0) }] }, pausedItem] }] }, 1721110, manifest);
+assert.equal(pausedResult.state, 'paused');
+assert.equal(pausedResult.percent, 41);
+assert.equal(pausedResult.downloaded, 2325825712);
+assert.equal(pausedResult.total, 5630004048);
+assert.equal(pausedResult.rate, 0);
+// The running download: the overview carries live bytes and speed (bytes per second).
+const runningOverview = { update_appid: 1721110, update_network_bytes_per_second: 39e6, progress: phases(4166203000, 5630004048, 3000000000, 5940063701), overall_percent_complete: 74, overall_estimated_time_remaining_sec: 38, paused: false };
+const liveResult = clientDownloadProgress({ overview: runningOverview, items: [{ item_data: [{ ...pausedItem, active: true, paused: false }] }] }, 1721110, manifest);
+assert.equal(liveResult.state, 'downloading');
+assert.equal(liveResult.percent, 74);
+assert.equal(liveResult.rate, 312e6);
+assert.equal(liveResult.secondsLeft, 38);
+assert.equal(liveResult.estimated, false);
+// Everything paused globally.
+assert.equal(clientDownloadProgress({ overview: { ...runningOverview, paused: true }, items: [] }, 1721110, manifest).state, 'paused');
+// Download finished, now writing files.
+assert.equal(clientDownloadProgress({ overview: { ...runningOverview, progress: phases(5630004048, 5630004048, 100, 5940063701) } }, 1721110, manifest).state, 'installing');
+// Queued with nothing measured yet defers to the manifest or log.
+assert.equal(clientDownloadProgress({ overview: idle, items: [{ item_data: [{ appid: 42, active: false, paused: false, queue_index: 1, update_type_info: [{ has_update: true, progress: phases(0, 0), overall_percent_complete: 0 }] }] }] }, 42, manifest), null);
+assert.equal(clientDownloadProgress({ overview: idle, items: [] }, 7, manifest), null);
+console.log('PASS live Steam counters from the real callback shape: paused, running, global pause, staging, queued');
+// Steam's global pause: the overview no longer names the game, but the front of the queue is paused.
+const globalPause = clientDownloadProgress({ overview: { ...idle, paused: true }, items: [{ item_data: [{ appid: 55, active: false, paused: false, queue_index: 0, update_type_info: [{ has_update: true, progress: phases(500, 1000), overall_percent_complete: 50 }] }] }] }, 55, manifest);
+assert.equal(globalPause.state, 'paused');
+assert.equal(globalPause.percent, 50);
+console.log('PASS global pause marks the front of the queue as paused');

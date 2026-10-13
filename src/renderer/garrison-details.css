@@ -1,0 +1,61 @@
+/* Game page "Game details", measured from the Xbox app in full screen (Jez Corden's video, 8:10–8:20).
+   Sizes are percentages of the window width through --p, so they hold at any resolution. */
+body.garrison .detail-content { display: block; }
+body.garrison .detail-content > .detail-overview,
+body.garrison .detail-content > .detail-info,
+body.garrison .detail-content > .detail-capabilities { display: none !important; }
+
+/* Play button label: semibold, about 1.6% of the window width as in the video. */
+body.garrison #detail-play strong, body.garrison #detail-play .g-install-copy strong { font: 600 calc(1.55 * var(--p)) / 1.15 var(--g-font) !important; }
+body.garrison #detail-play .g-install-copy small { font: 400 calc(1.2 * var(--p)) / 1.2 var(--g-font) !important; }
+
+body.garrison .g-details { margin-top: calc(3 * var(--p)); }
+body.garrison .g-details > h2 { margin: 0 0 calc(1.6 * var(--p)); font: 600 calc(1.75 * var(--p)) / 1.2 var(--g-font); color: #fff; }
+body.garrison .g-details-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(1.2 * var(--p)); align-items: stretch; }
+body.garrison .g-details-card { min-width: 0; padding: calc(1.8 * var(--p)); border-radius: calc(.6 * var(--p)); background: rgba(255, 255, 255, .055); color: #fff; }
+body.garrison .g-details-card h3 { margin: 0 0 calc(1.6 * var(--p)); font: 600 calc(1.4 * var(--p)) / 1.25 var(--g-font); color: #fff; }
+body.garrison .g-details-loading { min-height: calc(22 * var(--p)); background: linear-gradient(90deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .07), rgba(255, 255, 255, .04)); background-size: 200% 100%; animation: g-details-shimmer 1.4s ease-in-out infinite; }
+@keyframes g-details-shimmer { to { background-position: -200% 0; } }
+
+/* Description card */
+body.garrison .g-details-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(1.2 * var(--p)); margin: 0 0 calc(1.2 * var(--p)); }
+body.garrison .g-details-facts dt { margin: 0; font: 600 calc(1.3 * var(--p)) / 1.3 var(--g-font); color: #fff; }
+body.garrison .g-details-facts dd { margin: 0; font: 400 calc(1.3 * var(--p)) / 1.3 var(--g-font); color: rgba(255, 255, 255, .86); overflow-wrap: anywhere; }
+body.garrison .g-details-text { margin: calc(.4 * var(--p)) 0 0; font: 400 calc(1.3 * var(--p)) / 1.38 var(--g-font); color: rgba(255, 255, 255, .9); white-space: pre-line; }
+body.garrison .g-details-text.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); }
+body.garrison .g-details-more { display: inline-flex; align-items: center; margin: calc(1.4 * var(--p)) 0 0 calc(-.7 * var(--p)); padding: calc(.5 * var(--p)) calc(.7 * var(--p)); border: 0; border-radius: calc(.35 * var(--p)); background: none; color: #fff; font: 700 calc(1.4 * var(--p)) / 1.2 var(--g-font); cursor: pointer; }
+body.garrison .g-details-more:hover { background: rgba(255, 255, 255, .08); }
+
+/* Playable on / with / Capabilities: bordered boxes, not pills */
+body.garrison .g-details-play h3 + .g-chip-row { margin-bottom: calc(2 * var(--p)); }
+body.garrison .g-details-play .g-chip-row:last-child { margin-bottom: 0; }
+body.garrison .g-chip-row { display: flex; flex-wrap: wrap; gap: calc(1.1 * var(--p)); }
+body.garrison .g-chip-box { display: inline-flex; align-items: center; gap: calc(.7 * var(--p)); min-height: calc(3.1 * var(--p)); padding: calc(.5 * var(--p)) calc(1.4 * var(--p)); border: 1px solid rgba(255, 255, 255, .07); border-radius: calc(.4 * var(--p)); background: rgba(255, 255, 255, .025); font: 400 calc(1.4 * var(--p)) / 1.2 var(--g-font); color: #fff; }
+body.garrison .g-chip-box svg.g-glyph { flex: none; width: calc(1.5 * var(--p)); height: calc(1.5 * var(--p)); font-size: calc(1.5 * var(--p)); }
+body.garrison .g-chip-box small { display: block; margin-top: calc(.15 * var(--p)); font-size: calc(1.05 * var(--p)); color: rgba(255, 255, 255, .7); }
+body.garrison .g-caps .g-chip-box { min-height: calc(3.8 * var(--p)); padding: 0 calc(1.5 * var(--p)); }
+
+/* System requirements */
+body.garrison .g-details-reqs { margin-top: calc(1.2 * var(--p)); }
+body.garrison .g-reqs-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(2.4 * var(--p)); }
+body.garrison .g-reqs-columns dl { display: grid; grid-template-columns: minmax(calc(10 * var(--p)), auto) minmax(0, 1fr); gap: calc(1.2 * var(--p)) calc(1.6 * var(--p)); margin: 0; }
+body.garrison .g-reqs-columns dt, body.garrison .g-reqs-columns dd { margin: 0; font: 400 calc(1.35 * var(--p)) / 1.45 var(--g-font); }
+body.garrison .g-reqs-columns dt { color: rgba(255, 255, 255, .9); }
+body.garrison .g-reqs-columns dd { color: #fff; overflow-wrap: anywhere; }
+body.garrison .g-details-reqs.clamped .g-reqs-columns { max-height: calc(13 * var(--p)); overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent); mask-image: linear-gradient(180deg, #000 60%, transparent); }
+
+/* Installation, online service and publisher info, in two plain columns */
+body.garrison .g-details-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(2.4 * var(--p)); margin-top: calc(3 * var(--p)); padding: 0 calc(.2 * var(--p)); }
+body.garrison .g-details-info section { margin-bottom: calc(2.6 * var(--p)); }
+body.garrison .g-details-info h3 { margin: 0 0 calc(1 * var(--p)); font: 400 calc(1.45 * var(--p)) / 1.3 var(--g-font); color: #fff; }
+body.garrison .g-details-info p { margin: 0; font: 400 calc(1.45 * var(--p)) / 1.65 var(--g-font); color: rgba(255, 255, 255, .86); overflow-wrap: anywhere; }
+body.garrison .g-details-links { display: flex; flex-direction: column; align-items: flex-start; gap: calc(.4 * var(--p)); }
+body.garrison .g-details-link { display: inline-flex; align-items: center; gap: calc(.5 * var(--p)); margin: calc(.6 * var(--p)) 0 0 calc(-.5 * var(--p)); padding: calc(.35 * var(--p)) calc(.5 * var(--p)); border: 0; border-radius: calc(.35 * var(--p)); background: none; color: #fff; font: 400 calc(1.45 * var(--p)) / 1.3 var(--g-font); text-decoration: underline; text-underline-offset: .18em; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+body.garrison .g-details-links .g-details-link { margin-top: 0; }
+body.garrison .g-details-link svg.g-glyph { flex: none; width: calc(1.3 * var(--p)); height: calc(1.3 * var(--p)); font-size: calc(1.3 * var(--p)); }
+body.garrison .g-details-link:hover { background: rgba(255, 255, 255, .08); }
+
+@media (max-aspect-ratio: 4/3) {
+  body.garrison .g-details-cards, body.garrison .g-details-info, body.garrison .g-reqs-columns { grid-template-columns: minmax(0, 1fr); }
+}
+body.garrison .g-reqs-columns dd.g-req-note { grid-column: 1 / -1; color: rgba(255, 255, 255, .72); }

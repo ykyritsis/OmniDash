@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://store-images.s-microsoft.com https://store-images.microsoft.com https://steamdb.info https://*.steamstatic.com https://media.steampowered.com https://*.akamaihd.net https://assets.xboxgamer.pics https://live.staticflickr.com https://image.api.playstation.com https://assets-prd.ignimgs.com; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob:; connect-src 'self' https://cdn.trailers.xboxservices.com" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://store-images.s-microsoft.com https://store-images.microsoft.com https://steamdb.info https://*.steamstatic.com https://media.steampowered.com https://*.akamaihd.net https://assets.xboxgamer.pics https://live.staticflickr.com https://image.api.playstation.com https://assets-prd.ignimgs.com https://upload.wikimedia.org https://commons.wikimedia.org https://thumb.wikimedia.org https://i.ytimg.com; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob:; connect-src 'self' https://cdn.trailers.xboxservices.com https://video.akamai.steamstatic.com https://video.fastly.steamstatic.com https://video.cloudflare.steamstatic.com" />
     <title>Xbox Preview UI</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="console.css" />
@@ -17,6 +17,13 @@
     <link rel="stylesheet" href="garrison-measured.css" />
     <link rel="stylesheet" href="garrison-parity.css" />
     <link rel="stylesheet" href="game-details.css" />
+    <link rel="stylesheet" href="garrison-details.css" />
+    <link rel="stylesheet" href="garrison-collections.css" />
+    <link rel="stylesheet" href="garrison-queue-menus.css" />
+    <link rel="stylesheet" href="garrison-add-game.css" />
+    <link rel="stylesheet" href="garrison-sections.css" />
+    <link rel="stylesheet" href="garrison-launch.css" />
+    <link rel="stylesheet" href="garrison-filter.css" />
   </head>
   <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -495,6 +502,8 @@
       <img class="launch-brand" src="assets/xbox.svg" alt="Xbox" />
       <div class="launch-copy"><strong id="launching-title">Launching…</strong><img id="launch-game-logo" class="launch-game-logo" alt="" hidden /><span id="launching-game" hidden></span></div>
       <div class="launch-progress" aria-hidden="true"><span></span></div>
+      <div class="g-launch-status"><span class="g-launch-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong id="launch-status">Starting</strong><small id="launch-via"></small></div>
+      <span class="g-launch-hint"><kbd class="xb-button xb-b">B</kbd>Back</span>
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -524,5 +533,13 @@
     <script src="vendor/hls.light.min.js"></script>
     <script src="garrison-icons.js"></script>
     <script src="garrison.js"></script>
+    <script src="garrison-details.js"></script>
+    <script src="garrison-collections.js"></script>
+    <script src="garrison-queue-menus.js"></script>
+    <script src="garrison-add-game.js"></script>
+    <script src="garrison-filter.js"></script>
+    <script src="garrison-artwork-key.js"></script>
+    <script src="garrison-store-search.js"></script>
+    <script src="garrison-motion.js"></script>
   </body>
 </html>

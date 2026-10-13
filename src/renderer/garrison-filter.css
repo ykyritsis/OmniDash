@@ -1,0 +1,46 @@
+/* Filter flyout, matching the sort and view menus. */
+body.garrison .g-filter-flyout { width: calc(22 * var(--p)); max-height: 74vh; padding: calc(.6 * var(--p)); display: none; flex-direction: column; overflow: hidden; }
+body.garrison .g-filter-flyout[open] { display: flex; }
+body.garrison .g-filter-flyout header h2 { margin: calc(.4 * var(--p)) calc(.6 * var(--p)) calc(.6 * var(--p)); font: 600 calc(1.35 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-filter-groups { overflow-y: auto; scrollbar-width: thin; padding: 2px; }
+body.garrison .g-filter-group + .g-filter-group { margin-top: calc(.4 * var(--p)); padding-top: calc(.4 * var(--p)); border-top: 1px solid rgba(255, 255, 255, .08); }
+body.garrison .g-filter-group h3 { margin: calc(.5 * var(--p)) calc(.6 * var(--p)) calc(.3 * var(--p)); font: 600 calc(1.05 * var(--p)) / 1.2 var(--g-font); color: rgba(255, 255, 255, .6); }
+body.garrison .g-filter-option { min-height: calc(3.1 * var(--p)); font-size: calc(1.3 * var(--p)); }
+body.garrison .g-filter-option .g-trailing { margin-left: auto; width: calc(1.3 * var(--p)); height: calc(1.3 * var(--p)); }
+body.garrison .g-filter-option.active { background: none; font-weight: 600; }
+body.garrison .g-filter-foot { padding-top: calc(.4 * var(--p)); border-top: 1px solid rgba(255, 255, 255, .08); }
+
+/* Source chips like the Xbox app: no fills; the selected one is bold white, the rest grey; edges fade. */
+body.garrison .g-source-chips { gap: calc(1.4 * var(--p)); -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 calc(2.5 * var(--p)), #000 calc(100% - 4 * var(--p)), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 calc(2.5 * var(--p)), #000 calc(100% - 4 * var(--p)), transparent 100%); padding-left: calc(2.5 * var(--p)); margin-left: calc(-2.5 * var(--p)); }
+body.garrison .g-chip { height: calc(4 * var(--p)); padding: 0 calc(1.3 * var(--p)); border: 0; border-radius: 999px; background: none !important; color: rgba(255, 255, 255, .72); font: 600 calc(1.4 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-chip.active { color: #fff; font-weight: 700; background: none !important; }
+body.garrison .g-chip:hover { color: #fff; }
+body.garrison .g-key-row .g-key-field input { width: calc(24 * var(--p)); height: calc(3.2 * var(--p)); padding: 0 calc(1 * var(--p)); border: 1px solid rgba(255, 255, 255, .14); border-radius: calc(.4 * var(--p)); background: rgba(0, 0, 0, .25); color: #fff; font: 400 calc(1.2 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-choice .g-input { width: 100%; height: calc(3.4 * var(--p)); margin: 0 0 calc(.4 * var(--p)); padding: 0 calc(1 * var(--p)); border: 1px solid rgba(255, 255, 255, .14); border-radius: calc(.4 * var(--p)); background: rgba(0, 0, 0, .25); color: #fff; font: 400 calc(1.2 * var(--p)) / 1 var(--g-font); }
+
+/* Hidden games, shown only from Filter › Show hidden games. */
+body.garrison .g-hidden-banner { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: calc(1.5 * var(--p)); padding: calc(1.1 * var(--p)) calc(1.4 * var(--p)); border-radius: calc(.6 * var(--p)); background: rgba(255, 255, 255, .06); }
+body.garrison .g-hidden-banner > span { display: grid; grid-template-columns: auto 1fr; column-gap: calc(1 * var(--p)); align-items: center; }
+body.garrison .g-hidden-banner .g-glyph { grid-row: span 2; width: calc(2 * var(--p)); height: calc(2 * var(--p)); }
+body.garrison .g-hidden-banner strong { font: 600 calc(1.4 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-hidden-banner small { color: rgba(255, 255, 255, .66); font-size: calc(1.15 * var(--p)); }
+body.garrison .g-hidden-done { height: calc(3.4 * var(--p)); padding: 0 calc(1.6 * var(--p)); border: 0; border-radius: calc(.4 * var(--p)); background: rgba(255, 255, 255, .12); color: #fff; font: 600 calc(1.2 * var(--p)) / 1 var(--g-font); white-space: nowrap; }
+body.garrison .g-hidden-done:hover, body.garrison .g-hidden-done.focused { background: rgba(255, 255, 255, .2); }
+
+/* Store search, like the Xbox app's: a rounded field above the lists; results replace the grid. */
+body.garrison .g-store-toolbar { display: flex; align-items: center; gap: calc(1.6 * var(--p)); }
+body.garrison .g-store-search { position: relative; display: flex; align-items: center; width: min(calc(36 * var(--p)), 60%); height: calc(3.8 * var(--p)); padding: 0 calc(1.2 * var(--p)); border-radius: 999px; background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .72); }
+body.garrison .g-store-search:focus-within { background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-store-search > .g-glyph { flex: none; width: calc(1.7 * var(--p)); height: calc(1.7 * var(--p)); }
+body.garrison .g-store-search input { flex: 1; min-width: 0; height: 100%; margin-left: calc(.8 * var(--p)); border: 0; outline: 0; background: none; color: #fff; font: 400 calc(1.35 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-store-search input::placeholder { color: rgba(255, 255, 255, .6); }
+body.garrison .g-store-search input::-webkit-search-cancel-button { display: none; }
+body.garrison .g-store-search input.focused { box-shadow: none !important; outline: 0 !important; }
+body.garrison .g-store-search-clear { display: grid; place-items: center; width: calc(2.6 * var(--p)); height: calc(2.6 * var(--p)); padding: 0; border: 0; border-radius: 50%; background: none; color: #fff; }
+body.garrison .g-store-search-clear[hidden] { display: none; }
+body.garrison .g-store-search-clear .g-glyph { width: calc(1.3 * var(--p)); height: calc(1.3 * var(--p)); }
+body.garrison .g-store-results-head { grid-column: 1 / -1; margin: calc(1 * var(--p)) 0 0; font: 600 calc(1.5 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-store-results-head:first-child { margin-top: 0; }
+body.garrison #store-view.g-store-searching .console-store-tabs { opacity: .45; }
+body.garrison .g-store-search { margin-right: auto; }
+body.garrison label[hidden], body.garrison .toggle-row[hidden], body.garrison .scale-setting[hidden] { display: none !important; }

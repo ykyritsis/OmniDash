@@ -1,4 +1,16 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer: electronIpc } = require('electron');
+
+// Errors from the main process reach the page as plain messages, without Electron's
+// "Error invoking remote method '…': TypeError:" prefix.
+const ipcRenderer = {
+  on: (...args) => electronIpc.on(...args),
+  removeListener: (...args) => electronIpc.removeListener(...args),
+  send: (...args) => electronIpc.send(...args),
+  invoke: (...args) => electronIpc.invoke(...args).catch(error => {
+    const message = String(error?.message || error || '').replace(/^Error invoking remote method '[^']+': (?:\w*Error: )?/, '');
+    throw new Error(/^fetch failed$/i.test(message) ? 'Couldn’t connect. Check your internet connection and try again.' : message);
+  })
+};
 
 contextBridge.exposeInMainWorld('launcher', {
   cancelLibraryConnect: () => ipcRenderer.invoke('accounts:cancel-connect'),
@@ -15,6 +27,8 @@ contextBridge.exposeInMainWorld('launcher', {
   onLibraryTrending: (callback) => { const listener = (_event, data) => callback(data); ipcRenderer.on('library:trending', listener); return () => ipcRenderer.removeListener('library:trending', listener); },
   onLibraryArtwork: (callback) => { const listener = (_event, data) => callback(data); ipcRenderer.on('library:artwork', listener); return () => ipcRenderer.removeListener('library:artwork', listener); },
   launchGame: (gameId, launchOptions) => ipcRenderer.invoke('game:launch', gameId, launchOptions),
+  waitGameStarted: (gameId, timeoutMs) => ipcRenderer.invoke('game:wait-started', gameId, timeoutMs),
+  cancelGameWait: (gameId) => ipcRenderer.invoke('game:wait-cancel', gameId),
   getActiveGameSession: () => ipcRenderer.invoke('game:active-session'),
   returnToGame: (gameId) => ipcRenderer.invoke('game:return', gameId),
   organizeLibrary: (action, payload) => ipcRenderer.invoke('library:organize', action, payload),
@@ -30,6 +44,7 @@ contextBridge.exposeInMainWorld('launcher', {
   getGameLogo: (gameId) => ipcRenderer.invoke('artwork:logo', gameId),
   getGameNews: (gameId) => ipcRenderer.invoke('news:get', gameId),
   getGameDetails: (gameId) => ipcRenderer.invoke('game:details', gameId),
+  openLink: (url) => ipcRenderer.invoke('app:open-link', url),
   getGameStorage: (gameId) => ipcRenderer.invoke('game:storage', gameId),
   getGamerscoreBreakdown: (gameId) => ipcRenderer.invoke('gamerscore:breakdown', gameId),
   openRatingInfo: (system) => ipcRenderer.invoke('app:rating-info', system),
@@ -46,12 +61,15 @@ contextBridge.exposeInMainWorld('launcher', {
   getSteamDownloadControls: () => ipcRenderer.invoke('steam:download-controls'),
   setSteamDownloadControls: (enabled) => ipcRenderer.invoke('steam:set-download-controls', enabled),
   steamDownloadAction: (appId, action) => ipcRenderer.invoke('steam:download-action', appId, action),
+  getSteamUninstallStatus: (gameId) => ipcRenderer.invoke('steam:uninstall-status', gameId),
   getImportSources: () => ipcRenderer.invoke('library:import-sources'),
   setUninstalledImport: (id, enabled) => ipcRenderer.invoke('library:set-uninstalled', id, enabled),
   friendAction: (action, friendId, appId, lobbyId) => ipcRenderer.invoke('friends:action', action, friendId, appId, lobbyId),
   getSteamDiscovery: () => ipcRenderer.invoke('steam:discovery'),
   onSteamDiscoveryArtwork: (callback) => { const listener = (_event, data) => callback(data); ipcRenderer.on('steam:discovery-artwork', listener); return () => ipcRenderer.removeListener('steam:discovery-artwork', listener); },
   getSteamDiscoveryDetails: (appId) => ipcRenderer.invoke('steam:discovery-details', appId),
+  getSteamStoreItem: (appId) => ipcRenderer.invoke('steam:store-item', appId),
+  searchStore: (query) => ipcRenderer.invoke('store:search', query),
   openSteamStore: (appId) => ipcRenderer.invoke('steam:open-store', appId),
   getOwnedDlc: (gameId) => ipcRenderer.invoke('game:owned-dlc', gameId),
   getGameAchievements: (gameId) => ipcRenderer.invoke('game:achievements', gameId),
@@ -59,6 +77,8 @@ contextBridge.exposeInMainWorld('launcher', {
   saveAchievementReference: (gameId, appId) => ipcRenderer.invoke('game:achievement-reference:save', gameId, appId),
   openNews: (url) => ipcRenderer.invoke('news:open', url),
   addGame: (path) => ipcRenderer.invoke('game:add', path),
+  getStartMenuApps: () => ipcRenderer.invoke('apps:start-menu'),
+  getPublisherLogo: (name) => ipcRenderer.invoke('art:publisher-logo', name),
   bulkAddGames: (path) => ipcRenderer.invoke('game:bulk-add', path),
   browseFiles: (path, kind) => ipcRenderer.invoke('app:browse-files', path, kind),
   readGamerpic: (path) => ipcRenderer.invoke('app:read-gamerpic', path),
