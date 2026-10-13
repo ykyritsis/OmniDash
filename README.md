@@ -2,9 +2,9 @@
 
 An unofficial, controller-first launcher for your Windows games. It brings a console-style Home screen, a proper game library, and artwork-led game pages to the PC you already use.
 
-> **Development preview · 0.27.0-beta.12.** A purely fan-made project, not an official Xbox app or a Microsoft product. It is not affiliated with Microsoft, Sony, Valve, ASUS, or any game publisher. This console-dashboard overhaul is being tested locally and has not been published as a GitHub release.
+> **Development preview · 0.27.0-beta.13.** A purely fan-made project, not an official Xbox app or a Microsoft product. It is not affiliated with Microsoft, Sony, Valve, ASUS, or any game publisher. This console-dashboard overhaul is published as GitHub pre-releases for testing.
 
-Beta 12 follows the Xbox PC app's full screen mode closely. It adds an Xbox-style Queue with real Steam pause, resume and cancel; Store search with prices; pages for games you don't own; hidden games that stay in sync with Steam; and smoother controller scrolling. See [the beta 12 notes](docs/release-0.27.0-beta.12.md).
+Beta 13 fixes controller navigation and finishes the Xbox-style menus ([notes](docs/release-0.27.0-beta.13.md)). Beta 12 follows the Xbox PC app's full screen mode closely. It adds an Xbox-style Queue with real Steam pause, resume and cancel; Store search with prices; pages for games you don't own; hidden games that stay in sync with Steam; and smoother controller scrolling. See [the beta 12 notes](docs/release-0.27.0-beta.12.md).
 
 The new console layout has an enlarged focused Home tile, native Store shelves, My games & apps, and a fullscreen Settings hub. Menu opens game options, Y opens controller search, and B restores your place when leaving a game page. The Xbox button is reserved for Windows Game Bar; there is no replacement Guide.
 

@@ -44,3 +44,14 @@ body.garrison .g-store-results-head:first-child { margin-top: 0; }
 body.garrison #store-view.g-store-searching .console-store-tabs { opacity: .45; }
 body.garrison .g-store-search { margin-right: auto; }
 body.garrison label[hidden], body.garrison .toggle-row[hidden], body.garrison .scale-setting[hidden] { display: none !important; }
+
+/* Sort pill: a button now, opening the Sort by flyout. */
+body.garrison .g-sort-button { padding: 0; border: 0; background: none; color: inherit; font: inherit; border-radius: 999px; }
+body.garrison .g-sort-button .g-sort-pill { pointer-events: none; }
+body.garrison .g-sort-button .g-sort-label { white-space: nowrap; }
+body.garrison .g-sort-flyout { width: calc(20 * var(--p)); padding: calc(.6 * var(--p)); }
+body.garrison .g-sort-flyout header h2 { margin: calc(.4 * var(--p)) calc(.6 * var(--p)) calc(.6 * var(--p)); font: 600 calc(1.35 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-sort-button .g-sort-label { display: inline-flex; align-items: center; height: 100%; padding: 0 clamp(46px, calc(3.6 * var(--g-vp) / 100), 70px) 0 clamp(44px, calc(3.4 * var(--g-vp) / 100), 68px); color: #fff; font: 400 calc(1.45 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-sort-button.focused .g-sort-pill, body.garrison .g-sort-button:focus-visible .g-sort-pill { box-shadow: 0 0 0 3px #fff; }
+body.garrison .g-sort-button:hover .g-sort-pill { background: rgba(255, 255, 255, .16); }
+body.garrison #g-sort-button select { display: none !important; }

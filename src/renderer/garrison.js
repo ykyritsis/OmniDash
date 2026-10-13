@@ -896,7 +896,13 @@ openGameOptions = function (gameId = state.selectedGameId) {
   const game = state.games.find(item => item.id === gameId);
   if (!game) return;
   state.optionsGameId = game.id;
-  if (game.isApp) { gOpenGameOptions(gameId); return; }
+  // Apps get the same Xbox menu: Open, and Hide for anything you added.
+  if (game.isApp) {
+    const anchor = document.activeElement?.dataset?.gameId === game.id ? document.activeElement : [...document.querySelectorAll('.game-card[data-game-id]')].find(item => item.dataset.gameId === game.id && item.offsetParent !== null);
+    openGFlyout(gGameMenu, anchor || document.activeElement, `<header class="g-menu-head g-menu-head-plain"><h2>${escapeHtml(game.title)}</h2></header>
+      <div class="g-menu-group">${gRow('g-game-play', 'open', 'Open')}${game.isLauncher ? '' : gRow('g-game-hide', 'hide', 'Hide app')}</div>`, anchor);
+    return;
+  }
   const card = document.activeElement?.dataset?.gameId === game.id ? document.activeElement
     : state.view === 'detail' ? document.querySelector('#detail-options-button')
       : [...document.querySelectorAll('.game-card[data-game-id]')].find(item => item.dataset.gameId === game.id && item.offsetParent !== null);
@@ -1698,7 +1704,34 @@ navigateConsoleLibrary = function (direction, current) {
     return direction === 'up';
   }
   const queue = current.closest('.g-queue');
-  if (current.parentElement !== libraryGrid && !queue) return false;
+  // The Queue is laid out in rows (back, Resume/Pause all, then each download with its pause and "…"
+  // buttons): left and right move along a row, up and down move between rows, as in the Xbox app.
+  if (queue) {
+    const lines = [];
+    for (const item of [...queue.querySelectorAll('.focusable')].filter(node => node.offsetParent !== null)) {
+      const rect = item.getBoundingClientRect(), middle = rect.top + rect.height / 2;
+      const line = lines.find(entry => Math.abs(entry.middle - middle) < Math.max(18, rect.height / 2));
+      if (line) line.items.push(item); else lines.push({ middle, items: [item] });
+    }
+    lines.sort((a, b) => a.middle - b.middle);
+    for (const line of lines) line.items.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+    const at = lines.findIndex(line => line.items.includes(current));
+    if (at < 0) return false;
+    const line = lines[at].items, place = line.indexOf(current);
+    if (direction === 'left' || direction === 'right') {
+      const next = line[place + (direction === 'left' ? -1 : 1)];
+      if (next) setFocusedElement(next);
+      return true;
+    }
+    const target = lines[at + (direction === 'up' ? -1 : 1)];
+    if (target) {
+      // Moving between downloads keeps the same kind of button (the row, pause, or "…").
+      const same = target.items.length === line.length ? target.items[place] : gNearest(target.items, current.getBoundingClientRect());
+      setFocusedElement(same);
+    } else if (direction === 'up') setFocusedElement(document.querySelector('.top-center-nav [data-action="library"]') || document.querySelector('.topbar .focusable'));
+    return true;
+  }
+  if (current.parentElement !== libraryGrid) return false;
   const cards = queue ? [...queue.querySelectorAll('.focusable')] : [...libraryGrid.children].filter(item => item.classList.contains('focusable'));
   const index = cards.indexOf(current), columns = queue ? 1 : gGridColumns();
   const column = index % columns;

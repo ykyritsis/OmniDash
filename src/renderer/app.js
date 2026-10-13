@@ -1179,9 +1179,20 @@ function moveFocus(direction) {
   const oy = origin.top + origin.height / 2;
   let best = null;
   let bestScore = Infinity;
+  // The top bar stays on screen while the page scrolls, so it is always "just above". Going up from the
+  // page reaches it only once nothing else is above, instead of jumping out of a section halfway down.
+  const fromPage = direction === 'up' && !current.closest('.topbar') && !topmostOpenDialog();
+  let barBest = null;
+  let barScore = Infinity;
 
   for (const candidate of state.focusables) {
     if (candidate === current) continue;
+    if (fromPage && candidate.closest('.topbar')) {
+      const rect = candidate.getBoundingClientRect();
+      const score = Math.abs(rect.left + rect.width / 2 - ox) + Math.abs(rect.top - oy);
+      if (score < barScore) { barScore = score; barBest = candidate; }
+      continue;
+    }
     const rect = candidate.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -1194,6 +1205,7 @@ function moveFocus(direction) {
     const score = primary + secondary * 2.8;
     if (score < bestScore) { bestScore = score; best = candidate; }
   }
+  if (!best && barBest) best = barBest;
   if (best) setFocusedElement(best);
   else if (topmostOpenDialog()) {
     const choices = state.focusables;

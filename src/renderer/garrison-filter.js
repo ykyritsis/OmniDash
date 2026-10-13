@@ -63,3 +63,66 @@ performAction = async function (action, source) {
   }
   return gFilterPerform(action, source);
 };
+
+// Sort, as in the Xbox app: a pill showing the current order that opens a flyout, not a Windows dropdown.
+const gSortMenu = gFlyout('g-sort-dialog', 'g-sort-flyout', 'Sort by');
+(function buildSortButton() {
+  const select = document.querySelector('#library-sort');
+  const pill = select?.closest('.g-sort-pill');
+  if (!pill) return;
+  select.hidden = true;
+  select.classList.remove('focusable');
+  select.tabIndex = -1;
+  const button = document.createElement('button');
+  button.id = 'g-sort-button';
+  button.type = 'button';
+  button.className = 'g-sort-button focusable';
+  button.dataset.action = 'g-sort-menu';
+  button.setAttribute('aria-haspopup', 'dialog');
+  pill.replaceWith(button);
+  button.append(pill);
+  pill.append(select);
+  pill.insertAdjacentHTML('beforeend', '<span class="g-sort-label"></span>');
+  pill.append(pill.querySelector('.g-chevron'));
+  gSyncSortButton();
+})();
+function gSyncSortButton() {
+  const select = document.querySelector('#library-sort');
+  const button = document.querySelector('#g-sort-button');
+  if (!select || !button) return;
+  const label = select.selectedOptions[0]?.textContent || 'Last played';
+  button.querySelector('.g-sort-label').textContent = label;
+  button.hidden = Boolean(state.consoleLibraryGroups);
+  button.setAttribute('aria-label', `Sort by ${label}`);
+}
+function gSortMarkup() {
+  const select = document.querySelector('#library-sort');
+  return `<header><h2>Sort by</h2></header>${[...select.options].map(option => {
+    const on = option.value === select.value;
+    return `<button class="g-menu-item g-filter-option focusable${on ? ' active' : ''}" type="button" role="menuitemradio" aria-checked="${on}" data-action="g-sort-set" data-value="${escapeHtml(option.value)}"><span>${escapeHtml(option.textContent)}</span>${on ? gIcon('check', 'g-trailing') : ''}</button>`;
+  }).join('')}`;
+}
+const gSortPerform = performAction;
+performAction = async function (action, source) {
+  if (action === 'g-sort-menu') {
+    const button = document.querySelector('#g-sort-button');
+    openGFlyout(gSortMenu, button, gSortMarkup(), button);
+    const box = button.getBoundingClientRect();
+    gSortMenu.style.cssText = `left:${Math.max(12, box.left)}px;top:${box.bottom + 8}px;right:auto;bottom:auto`;
+    setFocusedElement(gSortMenu.querySelector('.g-filter-option.active') || gSortMenu.querySelector('.focusable'), { scroll: false });
+    return;
+  }
+  if (action === 'g-sort-set') {
+    const select = document.querySelector('#library-sort');
+    select.value = source.dataset.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    gSyncSortButton();
+    gSortMenu.gOpener = null;
+    gSortMenu.close();
+    setFocusedElement(document.querySelector('#g-sort-button'), { scroll: false });
+    return;
+  }
+  return gSortPerform(action, source);
+};
+const gSortRenderLibrary = renderLibraryView;
+renderLibraryView = function (...args) { const result = gSortRenderLibrary.apply(this, args); gSyncSortButton(); return result; };
