@@ -13,3 +13,6 @@ body.garrison #detail-title, body.garrison #detail-title[hidden] { font-size: ca
 /* The focus ring eases in instead of jumping, so moving between items reads as one motion. Low
    specificity (:where), so elements with their own transitions keep them. */
 :where(body.garrison) .focusable { transition: box-shadow 120ms cubic-bezier(.2, 0, 0, 1), background-color 120ms ease, outline-color 120ms ease; }
+
+/* Asleep (launcher in the background): nothing animates. */
+body.g-asleep *, body.g-asleep *::before, body.g-asleep *::after { animation-play-state: paused !important; transition: none !important; }

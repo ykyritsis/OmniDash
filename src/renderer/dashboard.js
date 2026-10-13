@@ -281,4 +281,5 @@ document.querySelectorAll('select').forEach(select=>{
 });
 hydrateConsoleIcons();
 updateConsoleClock();
-setInterval(()=>{if(document.visibilityState==='visible')updateConsoleClock();},30000);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.hasFocus())updateConsoleClock();},30000);
+window.addEventListener('focus',()=>updateConsoleClock());

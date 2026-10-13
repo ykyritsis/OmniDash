@@ -868,10 +868,14 @@ async function fetchGameDetails(game) {
   const memory = gameDetailCache.get(game.id);
   if (memory && Date.now() - memory.at < 15 * 60 * 1000) return memory.data;
   const disk = (await loadDetailDisk())[game.id];
+  // Like a console's title cache: a page seen in the last day opens straight from disk with no network
+  // at all; older copies (up to a week) still open at once and refresh behind the page.
+  if (disk?.data && Date.now() - disk.at < 24 * 60 * 60 * 1000) { gameDetailCache.set(game.id, { at: Date.now(), data: disk.data }); return disk.data; }
   const fresh = fetchGameDetailsFresh(game).then(data => {
+    delete detailDisk[game.id];
     detailDisk[game.id] = { at: Date.now(), data };
     const keys = Object.keys(detailDisk);
-    if (keys.length > 400) delete detailDisk[keys[0]];
+    for (let index = 0; index < keys.length - 1500; index++) delete detailDisk[keys[index]];
     saveDetailDisk();
     return data;
   });
@@ -2203,7 +2207,10 @@ function registerIpc() {
     try {
       while (Date.now() < deadline) {
         if (launchWaitCancel.delete(gameId)) return { started: false, cancelled: true };
-        if (game.provider === 'Steam' && game.appId && await steamRunningAppId() === String(game.appId)) return { started: true, via: 'steam' };
+        if (game.provider === 'Steam' && game.appId && await steamRunningAppId() === String(game.appId)) {
+          if (activeGameSession?.gameId === gameId) activeGameSession.seenRunning = true;
+          return { started: true, via: 'steam' };
+        }
         // Storefront pop-ups can take focus first, so losing focus only counts once it has lasted a moment.
         const away = blurredAt && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused() && Date.now() - blurredAt > 1500;
         if (away && (game.provider !== 'Steam' || Date.now() - started > 8000)) return { started: true, via: 'window' };
@@ -2216,15 +2223,26 @@ function registerIpc() {
     } finally { mainWindow?.removeListener('blur', onBlur); }
   });
   ipcMain.handle('game:wait-cancel', (_event, gameId) => { launchWaitCancel.add(String(gameId)); return true; });
-  ipcMain.handle('game:active-session', () => {
+  ipcMain.handle('game:active-session', async () => {
     if (!activeGameSession) return null;
-    const age = Date.now() - activeGameSession.launchedAt;
-    if (age > (activeGameSession.pid ? 4 * 60 * 60 * 1000 : 30 * 60 * 1000)) { activeGameSession = null; return null; }
-    if (activeGameSession.pid) {
-      try { process.kill(activeGameSession.pid, 0); }
+    const session = activeGameSession;
+    const age = Date.now() - session.launchedAt;
+    if (age > (session.pid ? 4 * 60 * 60 * 1000 : 30 * 60 * 1000)) { activeGameSession = null; return null; }
+    if (session.pid) {
+      try { process.kill(session.pid, 0); }
       catch { activeGameSession = null; return null; }
+      return { gameId: session.gameId, verified: true };
     }
-    return { gameId: activeGameSession.gameId, verified: Boolean(activeGameSession.pid) };
+    // Steam games start through Steam, so there's no process to watch; Steam's own "running game" value
+    // says whether it's still open. Closing the game ends the session at once.
+    const game = currentLibrary.find(item => item.id === session.gameId);
+    if (game?.provider === 'Steam' && game.appId && process.env.NEBULA_DEMO !== '1') {
+      const running = await steamRunningAppId() === String(game.appId);
+      if (running) { session.seenRunning = true; return { gameId: session.gameId, verified: true }; }
+      // Not running: closed after it ran, or it never started within two minutes.
+      if (session.seenRunning || age > 2 * 60 * 1000) { if (activeGameSession === session) activeGameSession = null; return null; }
+    }
+    return { gameId: session.gameId, verified: false };
   });
   ipcMain.handle('game:return', (_event, gameId) => {
     if (!activeGameSession || activeGameSession.gameId !== gameId) throw new Error('This is not the last launched game.');

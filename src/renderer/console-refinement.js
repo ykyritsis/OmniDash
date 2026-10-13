@@ -166,7 +166,8 @@ async function pollSteamInstalls() {
     }
   } finally {
     installPollRunning = false;
-    if (installTracking.size && !document.hidden) installTimer = setTimeout(pollSteamInstalls, 2500);
+    // In the background (a game in front) progress is checked far less often; focus brings it back at once.
+    if (installTracking.size && !document.hidden) installTimer = setTimeout(pollSteamInstalls, document.hasFocus() ? 2500 : 15000);
   }
 }
 

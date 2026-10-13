@@ -790,7 +790,10 @@ document.addEventListener('error', event => {
   if (image?.tagName === 'IMG' && image.dataset.fallback && image.src !== image.dataset.fallback) image.src = image.dataset.fallback;
 }, true);
 refreshGarrisonFriends();
-setInterval(() => { if (document.visibilityState === 'visible') refreshGarrisonFriends(); }, 60000);
+// Friends refresh only while the launcher is in front; coming back refreshes them if they're stale.
+let gFriendsAt = Date.now();
+setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus()) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } }, 60000);
+window.addEventListener('focus', () => { if (Date.now() - gFriendsAt > 60000) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } });
 
 // ---------- Notifications ----------
 const gNotices = [];
@@ -1314,7 +1317,9 @@ function renderGarrisonTrailers(game, details) {
   state.gTrailers = videos.slice(0, 6);
   if (!videos.length) return;
   if (!gallery.querySelector('img')) gallery.innerHTML = '';
-  gallery.insertAdjacentHTML('afterbegin', videos.slice(0, 6).map((video, index) => `<button class="g-trailer focusable" type="button" role="listitem" data-action="g-trailer" data-index="${index}" data-product-id="${escapeHtml(productId)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.preview)}" alt="" loading="lazy" /><span class="g-trailer-play">${gIcon('play')}</span></button>`).join(''));
+  // Some older Steam trailers have no preview image; those show the game's first screenshot instead.
+  const still = galleryThumb((details.screenshots || [])[0] || game.artwork?.wide || game.artwork?.hero || '');
+  gallery.insertAdjacentHTML('afterbegin', videos.slice(0, 6).map((video, index) => `<button class="g-trailer focusable" type="button" role="listitem" data-action="g-trailer" data-index="${index}" data-product-id="${escapeHtml(productId)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.preview || still)}" alt="" ${index < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${still ? ` data-fallback="${escapeHtml(still)}"` : ''} /><span class="g-trailer-play">${gIcon('play')}</span></button>`).join(''));
   refreshFocusables();
 }
 
