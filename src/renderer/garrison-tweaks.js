@@ -1,6 +1,6 @@
-// Library from the top bar always opens fresh, as in the Xbox app: the first tab, no filters, at the top.
+// Library from the top bar always opens fresh, as in the Xbox app: on Installed, no filters, at the top.
 // (Back from a game page still returns to the exact spot; only the Library button resets.)
-const gLibraryHome = (() => document.querySelector('.console-library-nav .active, .console-library-nav [aria-selected="true"]')?.dataset.section || 'installed')();
+const gLibraryHome = 'installed';
 const gTweaksPerform = performAction;
 performAction = async function (action, source) {
   if (action === 'library' && source?.closest?.('.topbar')) {

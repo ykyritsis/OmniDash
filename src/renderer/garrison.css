@@ -250,7 +250,7 @@ body.garrison .console-store-tabs { display: inline-flex; gap: 6px; padding: 8px
 body.garrison .console-store-tabs button { height: clamp(40px, calc(3.6 * var(--g-vp) / 100), 70px); padding: 0 clamp(16px, calc(1.6 * var(--g-vp) / 100), 30px); border: 0; border-radius: 999px; background: transparent; color: var(--g-text-2); font: 600 clamp(15px, calc(1.3 * var(--g-vp) / 100), 26px)/1 var(--g-font); }
 body.garrison .console-store-tabs button.active { color: #fff; background: var(--g-surface-2); }
 body.garrison #browse-steam-shop { height: clamp(40px, calc(3.2 * var(--g-vp) / 100), 60px); padding: 0 24px; border: 0; border-radius: var(--g-radius); background: var(--g-surface-2); color: #fff; font: 600 clamp(14px, calc(1 * var(--g-vp) / 100), 20px)/1 var(--g-font); }
-body.garrison .console-catalog-card .g-card-text { display: none; }
+body.garrison .console-catalog-card .console-game-label { display: none; }
 
 /* ---------- Game page ---------- */
 body.garrison .game-detail-view { position: relative; min-height: 100vh; padding: 0; background: none; }

@@ -108,7 +108,8 @@ function renderConsoleStore() {
   if(!gamepass) { renderNativeStore(grid); return; }
   grid.className='library-grid';
   const games = state.gamePassCatalog || [];
-  grid.innerHTML = games.length ? games.map(game => `<button class="game-card focusable console-catalog-card" data-action="gamepass-game" data-catalog-id="${escapeHtml(game.id)}" role="listitem" aria-label="${escapeHtml(game.title)}">${gameArt(game)}<span class="console-game-label">${escapeHtml(game.title)}</span></button>`).join('') : '<p class="console-store-empty">'+(state.gamePassError ? 'Game Pass is unavailable right now. Try again later.' : 'Getting games ready…')+'</p>';
+  const caption = typeof gCatalogCardText === 'function' ? gCatalogCardText : game => `<span class="console-game-label">${escapeHtml(game.title)}</span>`;
+  grid.innerHTML = games.length ? games.map(game => `<button class="game-card focusable console-catalog-card" data-action="gamepass-game" data-catalog-id="${escapeHtml(game.id)}" role="listitem" aria-label="${escapeHtml(game.title)}">${gameArt(game)}${caption(game)}</button>`).join('') : '<p class="console-store-empty">'+(state.gamePassError ? 'Game Pass is unavailable right now. Try again later.' : 'Getting games ready…')+'</p>';
   refreshFocusables();
 }
 async function openConsoleStore(gamepass = false) {

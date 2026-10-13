@@ -180,7 +180,7 @@ const gInputSvg = {
   kbm: gIconPaths[gIconNames.kbm] || ''
 };
 function gInputBadge(card) {
-  const game = state.games.find(item => item.id === card.dataset.gameId);
+  const game = state.games.find(item => item.id === card.dataset.gameId) || (card.dataset.catalogId && state.gamePassCatalog?.find(item => item.id === card.dataset.catalogId));
   card.querySelector('.g-input-badge')?.remove();
   if (!game || game.isApp) return;
   const controls = game.controls || 'unknown';
@@ -194,7 +194,7 @@ const gFocusTop = setFocusedElement;
 setFocusedElement = function (element, options = {}) {
   const result = gFocusTop(element, options);
   if (!element) return result;
-  if (element.classList?.contains('game-card') && element.dataset.gameId) gInputBadge(element);
+  if (element.classList?.contains('game-card') && (element.dataset.gameId || element.dataset.catalogId)) gInputBadge(element);
   // Reaching the header (or the first row under it) scrolls the page fully back up.
   if (options.scroll !== false && !topmostOpenDialog() && (element.closest?.('.topbar') || element.closest?.('#recent-row') || element.closest?.('.console-library-nav') || element.closest?.('.g-library-tabs-row'))) {
     const main = document.querySelector('main');

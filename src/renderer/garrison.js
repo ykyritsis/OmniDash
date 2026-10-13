@@ -1693,8 +1693,8 @@ navigateConsoleLibrary = function (direction, current) {
       return true;
     }
     const origin = current.getBoundingClientRect();
-    if (direction === 'up' && rowIndex > 0) { setFocusedElement(gNearest(rows[rowIndex - 1], origin), { scroll: false }); return true; }
-    if (direction === 'down' && rowIndex < rows.length - 1) { setFocusedElement(gNearest(rows[rowIndex + 1], origin), { scroll: false }); return true; }
+    if (direction === 'up' && rowIndex > 0) { setFocusedElement(gNearest(rows[rowIndex - 1], origin)); return true; }
+    if (direction === 'down' && rowIndex < rows.length - 1) { setFocusedElement(gNearest(rows[rowIndex + 1], origin)); return true; }
     if (direction === 'down') {
       const first = [...libraryGrid.querySelectorAll(':scope > .focusable, .g-queue .focusable')].slice(0, gGridColumns());
       if (first.length) setFocusedElement(gNearest(first, origin));
@@ -1747,8 +1747,8 @@ navigateConsoleLibrary = function (direction, current) {
     return true;
   }
   if (index - columns >= 0) { setFocusedElement(cards[index - columns]); return true; }
-  if (rows.length) setFocusedElement(gNearest(rows[rows.length - 1], current.getBoundingClientRect()), { scroll: false });
-  document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+  // Up from the first row of games: the filter bar, with the page scrolled back to the top.
+  if (rows.length) setFocusedElement(gNearest(rows[rows.length - 1], current.getBoundingClientRect()));
   return true;
 };
 

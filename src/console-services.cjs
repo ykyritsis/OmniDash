@@ -26,13 +26,16 @@ function mapProduct(product) {
     releaseDate:market.OriginalReleaseDate ? new Date(market.OriginalReleaseDate).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}) : '',
     screenshots:images.filter(image=>image.ImagePurpose === 'Screenshot').map(image=>imageUrl(image,1920)).filter(Boolean).slice(0,12),metadataSource:'Xbox Store',dlcStatus:'unavailable'
   };
-  return {id:`gamepass-${product.ProductId}`,xboxProductId:product.ProductId,title:localized.ProductTitle,provider:'Xbox',installed:false,discoveryOnly:true,controls:'unknown',artwork,details};
+  // Input, as the Xbox app shows it: games that also run on Xbox consoles play with a controller; every PC
+  // game here plays with mouse and keyboard.
+  const onConsole = attributes.some(item => (item.ApplicablePlatforms || []).includes('Xbox') || ['ConsoleGen9Optimized','ConsoleKeyboardMouse','XPA','ConsoleCrossGen'].includes(item.Name));
+  return {id:`gamepass-${product.ProductId}`,xboxProductId:product.ProductId,title:localized.ProductTitle,provider:'Xbox',installed:false,discoveryOnly:true,controls:onConsole ? 'partial' : 'kbm',artwork,details};
 }
 function createConsoleServices(directory, request = fetch) {
   let catalogPromise;
   let catalog = [];
   async function readCatalog() {
-    try { const saved = JSON.parse(await fs.readFile(path.join(directory,'gamepass-catalog.json'),'utf8')); if(saved.version===1 && Array.isArray(saved.games)) return saved; } catch {}
+    try { const saved = JSON.parse(await fs.readFile(path.join(directory,'gamepass-catalog.json'),'utf8')); if(saved.version===2 && Array.isArray(saved.games)) return saved; } catch {}
     return null;
   }
   async function fetchCatalog() {
@@ -57,7 +60,7 @@ function createConsoleServices(directory, request = fetch) {
     games.sort((a,b)=>ranks.get(a.xboxProductId)-ranks.get(b.xboxProductId));
     await fs.mkdir(directory,{recursive:true});
     const target=path.join(directory,'gamepass-catalog.json');
-    await fs.writeFile(target+'.tmp',JSON.stringify({version:1,savedAt:Date.now(),games}));
+    await fs.writeFile(target+'.tmp',JSON.stringify({version:2,savedAt:Date.now(),games}));
     await fs.rename(target+'.tmp',target);
     catalog=games;
     return games;

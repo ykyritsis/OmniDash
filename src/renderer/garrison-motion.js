@@ -111,7 +111,7 @@ function gRevealFocused(element) {
     const topPad = isMain ? Math.max(110, innerHeight * .14) : 24, bottomPad = isMain ? 90 : 24;
     let target = goal;
     // The first row under the header (or the header area, or a game page's top) shows the very top of the page.
-    if (isMain && (element.closest('#recent-row') || element.closest('.g-library-tabs-row') || element.closest('.console-library-nav') || element.closest('.detail-actions') || element.id === 'detail-play')) target = 0;
+    if (isMain && (element.closest('#recent-row') || element.closest('.g-library-tabs-row') || element.closest('.console-library-nav') || element.closest('.g-library-toolbar') || element.closest('#g-source-chips') || element.closest('.detail-actions') || element.id === 'detail-play')) target = 0;
     else if (top - topPad < goal) target = top - topPad;
     else if (bottom + bottomPad > goal + box.height) target = bottom + bottomPad - box.height;
     if (target !== 0) gKeepVisible(page, 'y', top, bottom);

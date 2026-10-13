@@ -141,3 +141,12 @@ performAction = async function (action, source) {
   }
   return gSearchPerform(action, source);
 };
+
+// Game Pass tiles carry the same title block as library tiles, with "Owned" for games you have.
+// Owned titles are looked up once per library, not once per tile.
+let gOwnedIndex = { games: null, titles: new Set(), products: new Set() };
+function gCatalogCardText(game) {
+  if (gOwnedIndex.games !== state.games) gOwnedIndex = { games: state.games, titles: new Set(state.games.map(item => normalizeConsoleTitle(item.title))), products: new Set(state.games.map(item => item.xboxProductId).filter(Boolean)) };
+  const owned = gOwnedIndex.products.has(game.xboxProductId) || gOwnedIndex.titles.has(normalizeConsoleTitle(game.title));
+  return `<span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small class="g-status">${owned ? 'Owned' : 'Game Pass'}</small></span>`;
+}
