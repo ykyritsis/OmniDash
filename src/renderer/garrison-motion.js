@@ -7,8 +7,10 @@
 // also tried to scroll the page sideways, so it isn't used either.
 document.head.insertAdjacentHTML('beforeend', '<style id="g-motion-style">body.garrison main, body.garrison .game-row, body.garrison .detail-gallery, body.garrison .collection-covers, body.garrison .library-grid { scroll-behavior: auto !important; }</style>');
 const gMotion = new Map();
-// Time constant of the follow, in ms: about 95% of the way in 3× this. Repeats follow tighter.
-const gFollow = { press: 45, repeat: 28, page: 60 };
+// A critically damped spring (no overshoot): it starts at once but builds speed, then glides in, and a
+// new press keeps the current speed instead of restarting. Stiffness in rad/s: about 95% of the way
+// in 4.7 ÷ this, so 17 ≈ 280 ms for a press. Held repeats follow tighter so the page keeps up.
+const gFollow = { press: 17, repeat: 24, page: 13 };
 function gSetScroll(element, axis, value) {
   element.scrollTo(axis === 'x' ? { left: value, behavior: 'instant' } : { top: value, behavior: 'instant' });
 }
@@ -27,19 +29,26 @@ function gAnimateScroll(element, axis, target, duration) {
   if (!entry) { entry = {}; gMotion.set(element, entry); }
   const running = entry[axis];
   if (reduce || !duration) { gStopScroll(element, axis); gSetScroll(element, axis, goal); return; }
-  const tau = duration <= 120 ? gFollow.repeat : duration >= 220 ? gFollow.page : gFollow.press;
-  if (running) { running.goal = goal; running.tau = tau; return; }
+  const omega = duration <= 120 ? gFollow.repeat : duration >= 220 ? gFollow.page : gFollow.press;
+  if (running) { running.goal = goal; running.omega = omega; return; }
   if (Math.abs(goal - element[key]) < 1) return;
-  const motion = { goal, tau, pos: element[key], set: element[key], last: performance.now(), frame: 0 };
+  const motion = { goal, omega, pos: element[key], vel: 0, set: element[key], last: performance.now(), frame: 0 };
   entry[axis] = motion;
   const step = now => {
     if (entry[axis] !== motion) return;
     // Something else moved it (a wheel, a re-render, a new page): stop, rather than fight it.
     if (Math.abs(element[key] - motion.set) > 3 || !element.isConnected) { delete entry[axis]; return; }
-    const dt = Math.min(40, Math.max(1, now - motion.last));
+    let dt = Math.min(48, Math.max(1, now - motion.last)) / 1000;
     motion.last = now;
-    motion.pos += (motion.goal - motion.pos) * (1 - Math.exp(-dt / motion.tau));
-    const done = Math.abs(motion.goal - motion.pos) < .5;
+    // Small fixed steps keep the spring stable on slow frames.
+    while (dt > 0) {
+      const h = Math.min(dt, .008);
+      const accel = motion.omega * motion.omega * (motion.goal - motion.pos) - 2 * motion.omega * motion.vel;
+      motion.vel += accel * h;
+      motion.pos += motion.vel * h;
+      dt -= h;
+    }
+    const done = Math.abs(motion.goal - motion.pos) < .5 && Math.abs(motion.vel) < 20;
     gSetScroll(element, axis, done ? motion.goal : motion.pos);
     motion.set = element[key];
     if (done) { delete entry[axis]; return; }
@@ -47,8 +56,10 @@ function gAnimateScroll(element, axis, target, duration) {
   };
   motion.frame = requestAnimationFrame(step);
 }
-// While the follow catches up, keep the focused item at least fully on screen right now.
+// While a held direction races ahead of the spring, keep the focused item at least fully on screen.
+// Single presses never jump: the spring carries the whole distance.
 function gKeepVisible(scroller, axis, start, end) {
+  if (!state.navRepeat) return;
   const key = axis === 'x' ? 'scrollLeft' : 'scrollTop';
   const size = axis === 'x' ? scroller.clientWidth : scroller.clientHeight;
   const now = scroller[key];

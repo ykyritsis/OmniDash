@@ -1,0 +1,15 @@
+/* Fine adjustments, loaded last. Sizes use the same --u unit as garrison-measured.css. */
+
+/* Top bar: the bell sits closer to the Xbox pill; settings and the profile picture sit together. */
+body.garrison .g-top-left { gap: calc(6 * var(--u)); }
+body.garrison .top-actions { gap: calc(6 * var(--u)); }
+
+/* Game page: the heart and "…" fill more of their square buttons. */
+body.garrison #g-detail-favorite svg, body.garrison #detail-options-button svg { width: calc(40 * var(--u)) !important; height: calc(40 * var(--u)) !important; }
+
+/* Game page title: 15% smaller (124 → 105). */
+body.garrison #detail-title, body.garrison #detail-title[hidden] { font-size: calc(105 * var(--u)) !important; }
+
+/* The focus ring eases in instead of jumping, so moving between items reads as one motion. Low
+   specificity (:where), so elements with their own transitions keep them. */
+:where(body.garrison) .focusable { transition: box-shadow 120ms cubic-bezier(.2, 0, 0, 1), background-color 120ms ease, outline-color 120ms ease; }

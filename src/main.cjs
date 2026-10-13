@@ -170,9 +170,35 @@ function writeLibrarySnapshot(result, scanEpoch) {
   return operation;
 }
 
+// Settings hold every artwork choice and key, so a save interrupted by a crash or shutdown must never
+// cost them: saves go to a temporary file that replaces the old one in a single step, the previous good
+// copy is kept as settings.json.bak, and a damaged file is read from that backup instead.
+async function readSettingsFile() {
+  for (const file of [settingsPath(), `${settingsPath()}.bak`]) {
+    try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { /* Missing or damaged; try the backup. */ }
+  }
+  throw new Error('No readable settings.');
+}
+async function writeSettingsFile(text) {
+  const target = settingsPath(), temp = `${target}.tmp`;
+  await fs.writeFile(temp, text, 'utf8');
+  try { JSON.parse(await fs.readFile(temp, 'utf8')); } catch { throw new Error('Settings could not be saved.'); }
+  // Keep the last good copy before replacing it.
+  try { const current = await fs.readFile(target, 'utf8'); JSON.parse(current); await fs.writeFile(`${target}.bak`, current, 'utf8'); } catch { /* No good copy to keep. */ }
+  for (let attempt = 0; ; attempt++) {
+    try { await fs.rename(temp, target); return; }
+    catch (error) {
+      // Windows can briefly lock the file (antivirus, OneDrive); retry, then fall back to a direct write.
+      if (attempt < 4) { await new Promise(resolve => setTimeout(resolve, 60 * (attempt + 1))); continue; }
+      await fs.writeFile(target, text, 'utf8');
+      await fs.rm(temp, { force: true }).catch(() => {});
+      return;
+    }
+  }
+}
 async function readSettings() {
   try {
-    const saved = JSON.parse(await fs.readFile(settingsPath(), 'utf8'));
+    const saved = await readSettingsFile();
     return { ...SETTINGS_DEFAULTS, ...saved, showUninstalledSteam: Boolean(saved.showUninstalledSteam && saved.steamApiKey), uiScale: saved.uiScale === 0.7 && !saved.uiScaleCustomized ? 1 : saved.uiScale ?? SETTINGS_DEFAULTS.uiScale, steamGridDbKey: saved.steamGridDbKey || process.env.NEBULA_SGDB_KEY || '' };
   } catch {
     if (process.env.NEBULA_DEMO === '1') return { ...SETTINGS_DEFAULTS, onboardingComplete: true, fullscreen: false };
@@ -367,7 +393,7 @@ function writeSettings(next, { replaceArtwork = false } = {}) {
       }
     }
     await fs.mkdir(path.dirname(settingsPath()), { recursive: true });
-    await fs.writeFile(settingsPath(), JSON.stringify(settings, null, 2), 'utf8');
+    await writeSettingsFile(JSON.stringify(settings, null, 2));
     return settings;
   });
   settingsWriteQueue = operation.catch(() => {});
@@ -377,7 +403,7 @@ function writeSettings(next, { replaceArtwork = false } = {}) {
 function replaceSettings(next) {
   const operation = settingsWriteQueue.then(async () => {
     await fs.mkdir(path.dirname(settingsPath()), { recursive: true });
-    await fs.writeFile(settingsPath(), JSON.stringify(next, null, 2), 'utf8');
+    await writeSettingsFile(JSON.stringify(next, null, 2));
     return next;
   });
   settingsWriteQueue = operation.catch(() => {});
