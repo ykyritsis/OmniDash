@@ -41,7 +41,7 @@
   }
 
   // Settings › Experience gets an Updates row with a manual check.
-  const experience = document.querySelector('[data-settings-page="experience"]');
+  const experience = document.querySelector('[data-settings-page="g-account"]') || document.querySelector('[data-settings-page="experience"]');
   if (experience) {
     experience.insertAdjacentHTML('beforeend', `<section class="g-setting-group" id="g-updates"><h3>Updates</h3><div class="g-setting-list"><button class="g-setting-row focusable" type="button" id="g-update-check" data-action="g-update-check"><span><strong>Check for updates</strong><small>Checking…</small></span>${gIcon('refresh', 'g-trailing')}</button></div></section>`);
   }

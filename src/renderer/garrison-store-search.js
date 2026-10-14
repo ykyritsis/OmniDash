@@ -9,6 +9,12 @@ function gRememberSteamGame(game) {
   state.steamDiscovery.gViewed = [game, ...list.filter(item => item.id !== game.id)].slice(0, 60);
   return game;
 }
+// Xbox Store results have to be known to the game page, or it opens empty.
+function gRememberXboxGame(game) {
+  const list = Array.isArray(state.xboxStore?.gRemembered) ? state.xboxStore.gRemembered : [];
+  state.xboxStore = { ...(state.xboxStore || {}), gRemembered: [game, ...list.filter(item => item.id !== game.id)].slice(0, 60) };
+  return game;
+}
 function gOwnedCopy(game) {
   return state.games.find(item => (game.appId && item.provider === 'Steam' && String(item.appId) === String(game.appId))
     || (game.xboxProductId && item.xboxProductId === game.xboxProductId) || normalizeConsoleTitle(item.title) === normalizeConsoleTitle(game.title));
@@ -129,6 +135,7 @@ performAction = async function (action, source) {
     const owned = gOwnedCopy(game);
     if (owned) { await openGameDetails(owned.id); return; }
     if (kind === 'steam') gRememberSteamGame(game);
+    else gRememberXboxGame(game);
     await openGameDetails(game.id);
     return;
   }

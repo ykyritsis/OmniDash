@@ -175,6 +175,6 @@ function createConsoleServices(directory, request = fetch) {
     storeCache.set(key, { at: Date.now(), data });
     return data;
   }
-  return {getGamePassCatalog,getXboxStore,findXboxProduct,searchXboxStore,browseFiles,readGamerpic,getCatalogDetails:async id=>{if(!PRODUCT_ID.test(id))throw Error('Invalid game');const game=(await getGamePassCatalog().catch(()=>[])).find(item=>item.xboxProductId===id);if(game)return game.details;const result=await request(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=&market=US&languages=en-US`,{signal:AbortSignal.timeout(12000)});if(!result.ok)throw Error('Xbox Store details are unavailable');const product=(await result.json()).Products?.[0];if(!product)throw Error('Game is not in the Xbox Store');return mapProduct(product).details;}};
+  return {getGamePassCatalog,getXboxStore,findXboxProduct,searchXboxStore,browseFiles,readGamerpic,getCatalogDetails:async id=>{if(!PRODUCT_ID.test(id))throw Error('Invalid game');const game=(await getGamePassCatalog().catch(()=>[])).find(item=>item.xboxProductId===id);if(game)return game.details;const result=await request(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=${id}&market=US&languages=en-US`,{signal:AbortSignal.timeout(12000)});if(!result.ok)throw Error('Xbox Store details are unavailable');const product=(await result.json()).Products?.[0];if(!product)throw Error('Game is not in the Xbox Store');return mapProduct(product).details;}};
 }
 module.exports = {createConsoleServices,mapProduct};

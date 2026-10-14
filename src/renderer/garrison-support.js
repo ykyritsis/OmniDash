@@ -1,6 +1,6 @@
 // Support: copy diagnostics, export and restore settings, a safe-mode notice, and a Cancel while launching.
 (function buildSupport() {
-  const experience = document.querySelector('[data-settings-page="experience"]');
+  const experience = document.querySelector('[data-settings-page="g-account"]') || document.querySelector('[data-settings-page="experience"]');
   if (experience) {
     experience.insertAdjacentHTML('beforeend', `<section class="g-setting-group" id="g-support"><h3>Support &amp; backup</h3><div class="g-setting-list">
       <button class="g-setting-row focusable" type="button" data-action="g-support-copy"><span><strong>Copy diagnostics</strong><small>Version, start-up state, the last launch and recent activity. Keys and your user folder are removed.</small></span>${gIcon('open', 'g-trailing')}</button>

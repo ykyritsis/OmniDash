@@ -2,7 +2,7 @@
 
 Built-in updates and a logo-only splash.
 
-- **Updates are built in.** The launcher checks this project's GitHub releases in the background, a short while after it starts and then every six hours. A new build downloads quietly while you play, and it's checked against the release's SHA-256 checksum before anything is installed. A small card appears with **Restart to update**; if you ignore it, the update installs the next time you close the launcher. Settings → Experience has a **Check for updates** row.
+- **Updates are built in.** The launcher checks this project's GitHub releases in the background, a short while after it starts and then every six hours. A new build downloads quietly while you play, and it's checked against the release's SHA-256 checksum before anything is installed. A small card appears with **Restart to update**; if you ignore it, the update installs the next time you close the launcher. Settings → Account has a **Check for updates** row.
 - **Nothing is replaced while a game is running.** A game started from the launcher counts as running, so an update waits until it closes.
 - **Both builds update.** The installer updates itself with a silent install and reopens. The portable .exe replaces its own file and restarts.
 - **Logo-only splash.** The startup screen shows the Xbox mark with no text.
