@@ -33,7 +33,7 @@ document.querySelector('#profile-steam-name').addEventListener('change', event =
   refreshFocusables();
 });
 function renderPlayerScore(result) {
-  const value = result.checked ? result.points.toLocaleString() : '—';
+  const value = result.checked ? result.points.toLocaleString() : 'Not yet';
   const header = document.querySelector('#dashboard-player-status');
   header.innerHTML = `<span class="preview-score-mark" aria-hidden="true">G</span> ${value}<span class="preview-score-caption">PC Gamerscore</span>`;
   header.title = `PC Gamerscore · ${result.checked} tracked Steam games verified`;
