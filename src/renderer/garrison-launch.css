@@ -1,5 +1,5 @@
 /* Launch screen: the game's key art full screen with a slow push-in, its logo, and a status line that stays
-   until the game is running. B goes back to the launcher while the game keeps starting. */
+   until the game is running. B cancels a pending launch. */
 body.garrison .launch-overlay { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; background: #050606; opacity: 0; transition: opacity .38s ease; }
 body.garrison .launch-overlay.active { opacity: 1; }
 body.garrison .launch-art { position: absolute; inset: -3%; background-size: cover; background-position: center 30%; filter: saturate(1.05) brightness(.62); transform: scale(1.04); }
@@ -28,3 +28,15 @@ body.garrison .launch-overlay .launch-game-logo { position: static !important; i
 body.garrison .launch-overlay .launch-brand { padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
 body.garrison .launch-overlay .launch-art { filter: saturate(1.05) brightness(.5); }
 body.garrison .launch-overlay .launch-vignette::after { content: ""; position: absolute; left: 50%; top: 42%; width: 62vw; height: 46vh; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0)); }
+body.garrison #steam-game-launch-dialog { width: min(760px, 88vw); max-height: 86vh; padding: 30px; border: 1px solid #68716c; border-radius: 18px; background: #171d1a; color: #fff; box-shadow: 0 24px 100px #000b; }
+body.garrison #steam-game-launch-dialog::backdrop { background: #0009; backdrop-filter: blur(12px); }
+body.garrison #steam-game-launch-dialog header { display: block; margin-bottom: 18px; }
+body.garrison #steam-game-launch-dialog h2 { margin: 8px 0 0; font-size: clamp(23px, 2.7vw, 34px); }
+body.garrison #steam-game-launch-dialog small { color: #9cbea8; letter-spacing: .16em; font-size: 12px; }
+body.garrison .steam-launch-body { color: #cdd8d1; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 22px; }
+body.garrison .steam-launch-body.license { max-height: 30vh; overflow-y: auto; padding: 16px; background: #0c100e; border-radius: 8px; font-size: 15px; }
+body.garrison .steam-launch-choices { display: grid; gap: 12px; }
+body.garrison .steam-launch-choices button { width: 100%; min-height: 54px; height: auto; padding: 14px 20px; text-align: left; white-space: normal; font-size: clamp(16px, 1.5vw, 21px); }
+body.garrison .steam-license-scroll { display: flex; gap: 12px; margin-bottom: 16px; }
+body.garrison #steam-launch-detail { margin: 0; max-width: 75vw; overflow-wrap: anywhere; text-align: center; color: #d2ddd6; }
+body.garrison #steam-launch-progress { width: min(420px, 70vw); height: 8px; accent-color: #99ceac; }

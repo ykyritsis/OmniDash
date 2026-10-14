@@ -1,0 +1,64 @@
+const { app, ipcMain } = require('electron');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const output = path.resolve(__dirname, '../.visual-review/steam-launch-ui');
+process.env.NEBULA_DEMO = '1'; process.env.NEBULA_REVIEW = '1';
+process.env.NEBULA_DEMO_USER_DATA = path.join(output, 'profile');
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+app.on('browser-window-created', (_, win) => {
+  win.webContents.once('did-finish-load', async () => {
+    const result = { launched: [], responses: [] };
+    let finishWait;
+    try {
+      await fs.mkdir(output, { recursive: true }); await pause(4000);
+      win.setFullScreen(false); win.setContentSize(1280, 800);
+      const run = code => win.webContents.executeJavaScript(code);
+      for (const name of ['game:launch-prepare', 'game:launch', 'game:wait-started', 'game:launch-respond', 'game:wait-cancel']) ipcMain.removeHandler(name);
+      ipcMain.handle('game:launch-prepare', () => ({ choices: [{ index: 0, label: 'Multiplayer' }, { index: 1, label: 'Exo Survival' }, { index: 2, label: 'Exo Zombies' }] }));
+      ipcMain.handle('game:launch', (_, id, args, index) => { result.launched.push({ id, index }); return true; });
+      ipcMain.handle('game:wait-started', () => new Promise(resolve => { finishWait = resolve; }));
+      ipcMain.handle('game:launch-respond', (_, id, request, value) => { result.responses.push({ id, request, value }); finishWait?.({ started: true }); return true; });
+      ipcMain.handle('game:wait-cancel', () => { finishWait?.({ cancelled: true }); return true; });
+      await run(`for(const d of document.querySelectorAll('dialog[open]'))d.close(); document.querySelector('#startup-screen').hidden=true; state.selectedGameId=state.games.find(g=>g.installed!==false&&!g.isApp).id; launchSelectedGame(); true`);
+      await pause(500);
+      assert.equal(await run(`steamLaunchUI.isOpen()`), true);
+      await fs.writeFile(path.join(output, 'modes-1280.png'), (await win.webContents.capturePage()).toPNG());
+      await run(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); true`);
+      await pause(1500);
+      assert.equal(result.launched[0]?.index, 1, 'keyboard/controller focus selects the actual mode ID');
+      const id = result.launched[0].id;
+      win.webContents.send('launch:status', { gameId: id, text: 'Installing required components', detail: 'DirectX first-time setup', progress: 35 });
+      await pause(300);
+      assert.equal(await run(`document.querySelector('#launch-status').textContent`), 'Installing required components');
+      assert.equal(await run(`document.querySelector('#steam-launch-progress').value`), 35);
+      await fs.writeFile(path.join(output, 'first-time-setup-1280.png'), (await win.webContents.capturePage()).toPNG());
+      win.webContents.send('launch:status', { gameId: id, text: 'Installing required components', prompt: { id: 'redist-1', title: 'A required component could not be installed', body: 'Steam could not finish first-time setup. You can cancel and retry, or try launching anyway.', options: [{ value: 'cancel', label: 'Cancel launch' }, { value: 'IgnoreInstallError', label: 'Try launching anyway' }] } });
+      await pause(300);
+      await fs.writeFile(path.join(output, 'setup-prompt-1280.png'), (await win.webContents.capturePage()).toPNG());
+      await run(`document.querySelector('#steam-game-launch-dialog [data-choice="1"]').click(); true`);
+      await pause(700);
+      assert.equal(result.responses[0]?.value, 'IgnoreInstallError');
+      assert.equal(await run('launchOverlay.hidden'), true);
+      await run('launchSelectedGame(); true'); await pause(250);
+      await run(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); true`);
+      await pause(500);
+      assert.equal(await run('launchOverlay.hidden'), true);
+      assert.equal(result.launched.length, 1, 'Back during mode selection never launches');
+      await run(`launchSelectedGame(); true`); await pause(300);
+      win.focus();
+      await run(`window.testPad={id:'Xbox Controller',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))}; Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[testPad]}); focusForGamepad(testPad); true`);
+      const press = async index => {
+        await run(`testPad.buttons[${index}]={pressed:true,value:1}; pollGamepad(); true`); await pause(50);
+        await run(`testPad.buttons[${index}]={pressed:false,value:0}; pollGamepad(); true`); await pause(50);
+      };
+      await press(13); await press(13); await press(0); await pause(1400);
+      assert.equal(result.launched[1]?.index, 2, 'D-pad and A select Zombies');
+      await press(1); await pause(500);
+      assert.equal(await run('launchOverlay.hidden'), true, 'controller B cancels a pending launch');
+      result.ok = true;
+      await fs.writeFile(path.join(output, 'result.json'), JSON.stringify(result, null, 2)); app.exit(0);
+    } catch (error) { await fs.mkdir(output, { recursive: true }); await fs.writeFile(path.join(output, 'result.json'), JSON.stringify({ ...result, error: error.stack }, null, 2)); app.exit(1); }
+  });
+});
+require('../src/main.cjs');

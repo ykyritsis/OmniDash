@@ -9,6 +9,7 @@ const { createArtworkCache } = require('./artwork-cache.cjs');
 const { createConsoleServices } = require('./console-services.cjs');
 const { createSoundPack } = require('./sound-pack.cjs');
 const { createSteamShop } = require('./steam-shop.cjs');
+const { createSteamLaunch } = require('./steam-launch.cjs');
 const { createStoreOffers } = require('./store-offers.cjs');
 const { createPlayerProfile, profileMode, defaultAvatarId } = require('./player-profile.cjs');
 const { createAccountLibraries } = require('./account-libraries.cjs');
@@ -2150,7 +2151,38 @@ function registerIpc() {
     }
     return true;
   });
-  ipcMain.handle('game:launch', async (_event, gameId, launchOptions) => {
+  const steamLaunch = createSteamLaunch({ evaluate: (...args) => steamClientEval(...args) });
+  async function prepareSteamLaunch(game) {
+    if (!await exists(await steamControlFlag())) return { setupRequired: true, choices: [] };
+    const steamExe = await steamExecutableFile();
+    if (!steamExe) throw new Error('Steam was not found on this PC.');
+    if (!await steamClientIsRunning()) {
+      launchStatus(game.id, 'Starting Steam in the background');
+      spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    }
+    const deadline = Date.now() + 90000;
+    let lastError;
+    while (Date.now() < deadline) {
+      if (launchWaitCancel.has(game.id)) throw new Error('Launch cancelled.');
+      if (await steamSignedIn()) {
+        try { return { choices: await steamLaunch.prepare(game) }; }
+        catch (error) { lastError = error; }
+      } else launchStatus(game.id, 'Waiting for Steam to sign in');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // A live but incompatible client should fail clearly instead of silently launching a default mode.
+      if (lastError && /cannot hand|does not support|launch controls are unavailable/.test(lastError.message)) throw lastError;
+    }
+    throw new Error(lastError ? 'Steam controls are not ready. Restart Steam, then try again.' : 'Sign in to Steam, then try again.');
+  }
+  ipcMain.handle('game:launch-prepare', async (_event, gameId) => {
+    const game = currentLibrary.find(item => item.id === gameId);
+    if (!game || game.installed === false) throw new Error('Install this game before launching it.');
+    launchWaitCancel.delete(gameId);
+    if (game.provider !== 'Steam' || !/^\d+$/.test(String(game.appId)) || process.env.NEBULA_DEMO === '1') return { choices: [] };
+    return prepareSteamLaunch(game);
+  });
+  ipcMain.handle('game:launch-respond', (_event, gameId, requestId, value) => steamLaunch.respond(gameId, requestId, value));
+  ipcMain.handle('game:launch', async (_event, gameId, launchOptions, launchIndex) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
     lastLaunch = { gameId, title: game.title, provider: game.provider, at: Date.now(), result: '' };
@@ -2164,22 +2196,14 @@ function registerIpc() {
       if (!launcher?.executable || !await exists(launcher.executable)) throw Error('Battle.net client was not found. Scan your library after installing it.');
       await launchExecutable(launcher.executable, [`--exec=launch ${game.providerId}`], path.dirname(launcher.executable));
     } else if (game.provider === 'Steam' && /^\d+$/.test(String(game.appId)) && process.env.NEBULA_DEMO !== '1') {
-      // Steam closed: start it silently in the background (tray only, no window) and wait until it's signed in,
-      // so the game starts instead of the launch screen waiting on a Steam that isn't there.
-      const steamExe = await steamExecutableFile();
-      if (!steamExe) throw new Error('Steam was not found on this PC.');
-      if (!await steamClientIsRunning()) {
-        launchStatus(gameId, 'Starting Steam in the background');
-        spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-        setTimeout(() => launchStatus(gameId, 'Waiting for Steam to sign in'), 4000);
-        for (let waited = 0; waited < 90000 && !await steamSignedIn() && !launchWaitCancel.has(String(gameId)); waited += 500) await new Promise((resolve) => setTimeout(resolve, 500));
-        if (launchWaitCancel.delete(String(gameId))) { if (lastLaunch) lastLaunch.result = 'cancelled while Steam started'; throw new Error('Launch cancelled.'); }
-        if (!await steamSignedIn()) throw new Error('Steam did not start. Open Steam once and sign in, then try again.');
-        // Give Steam a moment to finish its start-up work before it accepts a game.
-        await new Promise((resolve) => setTimeout(resolve, 2500));
-      }
+      if (launchWaitCancel.has(gameId)) throw new Error('Launch cancelled.');
+      const prepared = await prepareSteamLaunch(game);
+      if (prepared.setupRequired) throw new Error('Enable Steam controls to launch games inside the app.');
+      const index = launchIndex ?? (prepared.choices.length === 1 ? prepared.choices[0].index : undefined);
+      if (launchWaitCancel.has(gameId)) throw new Error('Launch cancelled.');
       launchStatus(gameId, `Starting ${game.title}`);
-      await launchExecutable(steamExe, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(steamExe));
+      await steamLaunch.start(game, index, optionText);
+      if (launchWaitCancel.has(gameId)) { await steamLaunch.cancel(gameId); throw new Error('Launch cancelled.'); }
     } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
         await launchExecutable(game.steamExecutable, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(game.steamExecutable));
@@ -2222,14 +2246,14 @@ function registerIpc() {
     resolve(hex ? String(parseInt(hex, 16)) : '');
   }));
   // Tells the launch screen what it's waiting for, so a long wait never looks stuck.
-  const launchStatus = (gameId, text) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('launch:status', { gameId, text }); };
+  const launchStatus = (gameId, text, extra = {}) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('launch:status', { gameId, text, ...extra }); };
   // Steam's install folder, found on the drives it's installed to.
   const steamExecutableFile = async () => {
     for (const root of await findSteamRoots()) if (await exists(path.join(root, 'steam.exe'))) return path.join(root, 'steam.exe');
     return '';
   };
   // Steam is signed in once its registry "ActiveUser" holds a user id.
-  const steamSignedIn = () => new Promise(resolve => execFile('reg.exe', ['query', 'HKCU\Software\Valve\Steam\ActiveProcess', '/v', 'ActiveUser'], { windowsHide: true, timeout: 1500 }, (error, stdout) => {
+  const steamSignedIn = () => new Promise(resolve => execFile('reg.exe', ['query', 'HKCU\\Software\\Valve\\Steam\\ActiveProcess', '/v', 'ActiveUser'], { windowsHide: true, timeout: 1500 }, (error, stdout) => {
     const hex = !error && String(stdout).match(/ActiveUser\s+REG_DWORD\s+0x([0-9a-f]+)/i)?.[1];
     resolve(Boolean(hex && parseInt(hex, 16)));
   }));
@@ -2237,7 +2261,38 @@ function registerIpc() {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) return { started: false };
     if (process.env.NEBULA_DEMO === '1') { await new Promise(resolve => setTimeout(resolve, 2500)); return { started: true, via: 'demo' }; }
-    launchWaitCancel.delete(gameId);
+    if (steamLaunch.has(gameId)) {
+      // First-time redistributables can take much longer than a normal game launch.
+      const deadline = Date.now() + 15 * 60 * 1000;
+      try {
+        while (Date.now() < deadline) {
+          if (launchWaitCancel.has(gameId)) {
+            await steamLaunch.cancel(gameId);
+            if (activeGameSession?.gameId === gameId) activeGameSession = null;
+            return { started: false, cancelled: true };
+          }
+          const snapshot = await steamLaunch.poll(gameId);
+          launchStatus(gameId, snapshot.status.text, snapshot.status);
+          if (snapshot.error) throw new Error(snapshot.error);
+          if (snapshot.ended) {
+            const started = snapshot.task === 'Completed';
+            if (activeGameSession?.gameId === gameId) {
+              if (started) activeGameSession.seenRunning = true;
+              else activeGameSession = null;
+            }
+            if (lastLaunch?.gameId === gameId) lastLaunch.result = snapshot.task;
+            if (!started && snapshot.task !== 'Cancelled' && !snapshot.handoff) throw new Error('Steam could not finish starting this game. Please try again.');
+            return { started, cancelled: snapshot.task === 'Cancelled', handoff: Boolean(snapshot.handoff) };
+          }
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+        throw new Error('First-time setup took longer than 15 minutes. Launch again to retry.');
+      } catch (error) {
+        await steamLaunch.cancel(gameId).catch(() => {});
+        if (activeGameSession?.gameId === gameId) activeGameSession = null;
+        throw error;
+      } finally { steamLaunch.forget(gameId); launchWaitCancel.delete(gameId); }
+    }
     const started = Date.now(), deadline = started + Math.max(5000, Math.min(Number(timeoutMs) || 90000, 120000));
     launchStatus(gameId, game.provider === 'Steam' ? 'Waiting for Steam to open the game' : `Waiting for ${game.title} to open`);
     const slowNote = setTimeout(() => launchStatus(gameId, 'Still loading. Some games take a while the first time'), 25000);
@@ -2265,7 +2320,7 @@ function registerIpc() {
       return { started: false };
     } finally { clearTimeout(slowNote); mainWindow?.removeListener('blur', onBlur); }
   });
-  ipcMain.handle('game:wait-cancel', (_event, gameId) => { launchWaitCancel.add(String(gameId)); return true; });
+  ipcMain.handle('game:wait-cancel', async (_event, gameId) => { launchWaitCancel.add(String(gameId)); await steamLaunch.cancel(gameId); return true; });
   ipcMain.handle('game:active-session', async () => {
     if (!activeGameSession) return null;
     const session = activeGameSession;
@@ -2280,6 +2335,7 @@ function registerIpc() {
     // says whether it's still open. Closing the game ends the session at once.
     const game = currentLibrary.find(item => item.id === session.gameId);
     if (game?.provider === 'Steam' && game.appId && process.env.NEBULA_DEMO !== '1') {
+      if (steamLaunch.has(session.gameId)) return { gameId: session.gameId, verified: false };
       const running = await steamRunningAppId() === String(game.appId);
       if (running) { session.seenRunning = true; return { gameId: session.gameId, verified: true }; }
       // Not running: closed after it ran, or it never started within two minutes.
@@ -2628,7 +2684,7 @@ function registerIpc() {
           if (!waiting) return;
           steamClient.pending.delete(message.id);
           clearTimeout(waiting.timer);
-          if (message.result?.exceptionDetails || message.error) waiting.reject(new Error('Steam could not change this download.'));
+          if (message.result?.exceptionDetails || message.error) waiting.reject(new Error(message.result?.exceptionDetails?.exception?.description?.split('\n')[0]?.replace(/^Error: /, '') || 'Steam could not complete this action.'));
           else waiting.resolve(message.result?.result?.value);
         };
         const drop = () => {
@@ -2717,7 +2773,9 @@ function registerIpc() {
     if (!path.isAbsolute(flag)) throw new Error('Steam was not found on this PC.');
     if (enabled) await fs.writeFile(flag, '', 'utf8'); else await fs.rm(flag, { force: true });
     // Steam reads the setting when it starts. Restart it quietly unless a game is running.
-    if (!activeGameSession && process.env.NEBULA_DEMO !== '1') {
+    const runningId = await steamRunningAppId();
+    const mayRestart = !activeGameSession && (!runningId || runningId === '0');
+    if (mayRestart && process.env.NEBULA_DEMO !== '1') {
       const steamExe = path.join(path.dirname(flag), 'steam.exe');
       if (await steamRunning()) {
         await shell.openExternal('steam://exit');
@@ -2725,7 +2783,7 @@ function registerIpc() {
       }
       if (await exists(steamExe)) spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
     }
-    return { enabled: Boolean(enabled), restarted: !activeGameSession };
+    return { enabled: Boolean(enabled), restarted: mayRestart };
   });
   // After a silent uninstall, the game counts as installed until Steam has removed its manifest.
   const uninstallWatch = new Set();

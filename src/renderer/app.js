@@ -88,7 +88,7 @@ function topmostOpenDialog() {
 
 function navigateBack() {
   if (!steamShopSurface.hidden) { window.launcher.shopCommand('close'); return; }
-  if (!launchOverlay.hidden) return;
+  if (!launchOverlay.hidden) { cancelLaunchWait(); return; }
   playUiSound('back');
   const modal = topmostOpenDialog();
   if (modal) {
@@ -1624,26 +1624,46 @@ async function launchSelectedGame(optionsOverride) {
   if (status) status.textContent = 'Starting';
   if (via) via.textContent = ['PC', 'Custom'].includes(game.provider) ? '' : `Launching with ${game.provider === 'Xbox PC' ? 'the Xbox app' : game.provider}`;
   launchOverlay.dataset.gameId = launchId;
+  delete launchOverlay.dataset.cancelled;
+  window.steamLaunchUI?.reset();
   launchOverlay.hidden = false;
   requestAnimationFrame(() => launchOverlay.classList.add('active'));
   // Still waiting after a while: say so, so it doesn't look stuck.
   delete launchOverlay.dataset.liveStatus;
   const slow = setTimeout(() => { if (status && !launchOverlay.dataset.liveStatus) status.textContent = game.provider === 'Steam' ? 'Waiting for Steam' : 'Still starting'; }, 9000);
   try {
+    let prepared = await window.launcher.prepareGameLaunch(launchId);
+    if (launchOverlay.dataset.cancelled) return;
+    if (prepared.setupRequired) {
+      const enable = await window.steamLaunchUI.choose({ title: 'Enable Steam launch controls', body: 'Steam needs a one-time restart to show launch modes and first-time setup here. Finish any running Steam game before continuing.', options: [{ value: 'enable', label: 'Enable and restart Steam' }, { value: null, label: 'Cancel' }] });
+      if (enable !== 'enable' || launchOverlay.dataset.cancelled) return;
+      const result = await window.launcher.setSteamDownloadControls(true);
+      if (launchOverlay.dataset.cancelled) return;
+      if (!result.restarted) throw new Error('Close your running Steam game, then restart Steam to enable launch controls.');
+      prepared = await window.launcher.prepareGameLaunch(launchId);
+    }
+    if (launchOverlay.dataset.cancelled) return;
+    let launchIndex = prepared.choices?.[0]?.index;
+    if (prepared.choices?.length > 1) {
+      launchIndex = await window.steamLaunchUI.choose({ title: 'What would you like to launch?', body: game.title, options: [...prepared.choices.map(choice => ({ value: choice.index, label: choice.label })), { value: null, label: 'Cancel' }] });
+      if (launchIndex == null) return;
+    }
+    if (launchOverlay.dataset.cancelled) return;
     await Promise.all([
-      (rememberLaunch(state.selectedGameId), window.launcher.launchGame(state.selectedGameId, optionsOverride)),
+      (rememberLaunch(launchId), window.launcher.launchGame(launchId, optionsOverride, launchIndex)),
       new Promise((resolve) => setTimeout(resolve, 1200))
     ]);
     game.playCount = (game.playCount || 0) + 1;
     promoteRecentlyLaunchedGame(game);
     // Stay on the launch screen until the game is actually running (or the player backs out).
-    const result = await window.launcher.waitGameStarted(launchId, 90000).catch(() => ({ started: false }));
+    const result = await window.launcher.waitGameStarted(launchId, 90000);
     await refreshActiveGameSession();
-    if (!result.started && !result.cancelled) showToast(`${game.title} is taking a while to start`);
+    if (!result.started && !result.cancelled && !result.handoff) showToast(`${game.title} is taking a while to start`);
   } catch (error) {
     showToast(error.message || 'Could not launch this game');
   } finally {
     clearTimeout(slow);
+    window.steamLaunchUI?.reset();
     delete launchOverlay.dataset.gameId;
     launchOverlay.classList.remove('active');
     setTimeout(() => { launchOverlay.hidden = true; }, 380);
@@ -2621,7 +2641,7 @@ document.addEventListener('focusin', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (!launchOverlay.hidden) { event.preventDefault(); if (event.key === 'Escape' || event.key === 'Backspace') cancelLaunchWait(); return; }
+  if (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen()) { event.preventDefault(); if (event.key === 'Escape' || event.key === 'Backspace') cancelLaunchWait(); return; }
   const activeModal = topmostOpenDialog();
   if (activeModal && event.key === 'Tab') {
     refreshFocusables();
@@ -2933,8 +2953,8 @@ function pollGamepad() {
     if (state.gamepadIndex !== gamepad.index) focusForGamepad(gamepad);
     const pressed = gamepad.buttons.map((button) => Boolean(button.pressed || button.value > .55));
     const justPressed = (index) => pressed[index] && !state.previousButtons[index];
-    if (!launchOverlay.hidden && justPressed(1)) cancelLaunchWait();
-    if (state.fullScreenImport || !launchOverlay.hidden) { state.previousButtons = pressed; return; }
+    if (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen() && justPressed(1)) cancelLaunchWait();
+    if (state.fullScreenImport || (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen())) { state.previousButtons = pressed; return; }
     if (justPressed(0)) {
       if (document.activeElement instanceof HTMLSelectElement) openConsoleChoice(document.activeElement);
       else if (document.activeElement instanceof HTMLInputElement && ['text', 'search', 'password', 'number'].includes(document.activeElement.type)) openControllerKeyboard(document.activeElement);
@@ -3134,8 +3154,10 @@ function rememberLaunch(gameId) {
   } catch { /* Storage unavailable. */ }
 }
 
-// B on the launch screen returns to the launcher; the game keeps starting.
+// B cancels pending Steam setup; completed games are never stopped here.
 function cancelLaunchWait() {
+  launchOverlay.dataset.cancelled = '1';
+  window.steamLaunchUI?.reset();
   const gameId = launchOverlay.dataset.gameId;
   if (gameId) window.launcher.cancelGameWait(gameId).catch(() => {});
 }
