@@ -610,7 +610,7 @@ const gOnboardActions = {
     } catch (error) { showToast(error.message || 'Could not finish setup'); }
   }
 };
-// A simple name prompt using the launcher's on-screen keyboard friendly input.
+// A name prompt with a standard text field for the native Windows keyboard.
 function gAskName(initial) {
   return new Promise(resolve => {
     const dialog = document.createElement('dialog');

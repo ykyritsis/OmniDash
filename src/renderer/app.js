@@ -45,7 +45,6 @@ const state = {
   customArtworkSearch: null,
   customArtworkChoice: null,
   resetKind: null,
-  keyboardTarget: null,
   controllerClick: false,
   previousView: 'home',
   detailGameId: null,
@@ -56,7 +55,6 @@ const state = {
   onboardingStep: 0,
   profileOriginal: null,
   displayName: 'Player',
-  keyboardShift: false,
   galleryImages: [],
   galleryIndex: 0,
   librarySort: 'recent',
@@ -197,10 +195,7 @@ const resetConfirmDialog = document.querySelector('#reset-confirm-dialog');
 const customArtworkGames = document.querySelector('#custom-artwork-games');
 const customArtworkResults = document.querySelector('#custom-artwork-results');
 const customArtworkStatus = document.querySelector('#custom-artwork-status');
-const keyboardDialog = document.querySelector('#controller-keyboard-dialog');
 const newsPreviewDialog = document.querySelector('#news-preview-dialog');
-const keyboardKeys = document.querySelector('#keyboard-keys');
-const keyboardPreview = document.querySelector('#keyboard-preview');
 let visibleAmbient = ambient;
 const avatarDialog = document.querySelector('#avatar-dialog');
 const onboardingDialog = document.querySelector('#onboarding-dialog');
@@ -1885,47 +1880,6 @@ async function runCustomArtworkSearch(sgdbGameId = '') {
   } catch (error) { customArtworkStatus.textContent = error.message || 'Artwork search failed. You can still save the game.'; }
 }
 
-function openControllerKeyboard(target) {
-  if (!(target instanceof HTMLInputElement) || !['text', 'search', 'password', 'number'].includes(target.type) || keyboardDialog.open) return;
-  state.keyboardTarget = target;
-  state.keyboardShift = false;
-  keyboardPreview.textContent = target.value || 'Type to search…';
-  keyboardDialog.showModal();
-  setTimeout(() => setFocusedElement(keyboardKeys.querySelector('.keyboard-key')), 0);
-}
-
-function typeControllerKey(key) {
-  const target = state.keyboardTarget;
-  if (!target) return;
-  if (key === 'done' || key === 'enter') {
-    keyboardDialog.close();
-    if (target === customGameName) setTimeout(() => runCustomArtworkSearch(), 0);
-    return;
-  }
-  if (key === 'shift') { state.keyboardShift = !state.keyboardShift; return; }
-  if (key === 'left' || key === 'right') {
-    const next = Math.max(0, Math.min(target.value.length, (target.selectionStart ?? target.value.length) + (key === 'left' ? -1 : 1)));
-    target.setSelectionRange(next, next);
-    return;
-  }
-  const start = target.selectionStart ?? target.value.length;
-  const end = target.selectionEnd ?? start;
-  if (key === 'backspace') target.setRangeText('', Math.max(0, start === end ? start - 1 : start), end, 'end');
-  else if (key === 'clear') target.value = '';
-  else target.setRangeText(key === 'space' ? ' ' : state.keyboardShift ? key.toUpperCase() : key, start, end, 'end');
-  target.dispatchEvent(new Event('input', { bubbles: true }));
-  keyboardPreview.textContent = target.value || 'Type to search…';
-}
-
-const keyboardRows = [
-  [['Clear', 'clear', 'side'], ...[...'1234567890'].map((key) => [key, key]), ['⌫', 'backspace', 'side']],
-  [['‹', 'left', 'side'], ...[...'QWERTYUIOP'].map((key) => [key, key.toLowerCase()]), ['›', 'right', 'side']],
-  [['⇧', 'shift', 'side'], ...[...'ASDFGHJKL'].map((key) => [key, key.toLowerCase()]), ['.', '.'], ['↵', 'enter', 'side']],
-  [['⇧', 'shift', 'side'], ...[...'ZXCVBNM'].map((key) => [key, key.toLowerCase()]), [',', ','], [';', ';'], [':', ':'], ['!', '!']]
-];
-keyboardKeys.innerHTML = keyboardRows.map((row) => row.map(([label, key, cls]) => `<button class="keyboard-key focusable ${cls || ''}" type="button" data-action="keyboard-key" data-key="${key}">${label}</button>`).join('')).join('') +
-  '<button class="keyboard-key wide focusable" type="button" data-action="keyboard-key" data-key="clear">Clear</button><button class="keyboard-key space focusable" type="button" data-action="keyboard-key" data-key="space">Space</button><button class="keyboard-key wide focusable" type="button" data-action="keyboard-key" data-key="done">Done</button>';
-
 async function scanLibrary(refreshArt = false, fullScreenImport = false, backgroundRefresh = false) {
   state.backgroundLibraryRefresh = backgroundRefresh;
   heroSubtitle.textContent = refreshArt ? 'Refreshing your game artwork…' : 'Scanning Steam and Epic Games…';
@@ -2287,8 +2241,6 @@ async function performAction(action, source) {
     } catch (error) { showToast(error.message || 'Could not save setup'); }
     return;
   }
-  if (action === 'keyboard-key') { typeControllerKey(source.dataset.key); return; }
-  if (action === 'keyboard-done') { keyboardDialog.close(); return; }
   if (action === 'cancel-custom') { customGameDialog.close(); return; }
   if (action === 'console-search-close') { document.querySelector('#console-search-dialog').close(); return; }
   if (action === 'console-search-game') {
@@ -2857,13 +2809,6 @@ for (const dialog of document.querySelectorAll('dialog')) {
     }
     setTimeout(() => {
       if (state.view !== openerView) return;
-      if (dialog === keyboardDialog && state.keyboardTarget?.isConnected) {
-        const target = state.keyboardTarget;
-        state.keyboardTarget = null;
-        refreshFocusables();
-        if (target.offsetParent !== null) setFocusedElement(target);
-        return;
-      }
       const activeDialog = topmostOpenDialog();
       if (opener?.isConnected && opener.offsetParent !== null && (!activeDialog || activeDialog.contains(opener))) {
         refreshFocusables();
@@ -2957,7 +2902,7 @@ function pollGamepad() {
     if (state.fullScreenImport || (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen())) { state.previousButtons = pressed; return; }
     if (justPressed(0)) {
       if (document.activeElement instanceof HTMLSelectElement) openConsoleChoice(document.activeElement);
-      else if (document.activeElement instanceof HTMLInputElement && ['text', 'search', 'password', 'number'].includes(document.activeElement.type)) openControllerKeyboard(document.activeElement);
+      else if (isTextEntry(document.activeElement)) openNativeKeyboard(document.activeElement);
       else { state.controllerClick = true; document.activeElement?.click(); state.controllerClick = false; }
     }
     let modalBackHandled = false;
@@ -2973,10 +2918,8 @@ function pollGamepad() {
         if (state.games.some(game => game.id === gameId)) openGameOptions(gameId);
       }
     }
-    if (keyboardDialog.open && justPressed(2)) typeControllerKey('backspace');
     // X has no global action in the Xbox app; a full library scan was too easy to trigger by accident.
-    if (keyboardDialog.open && justPressed(3)) typeControllerKey('space');
-    else if (justPressed(3) && !document.querySelector('dialog[open]') && ['home','library'].includes(state.view)) {
+    if (justPressed(3) && !document.querySelector('dialog[open]') && ['home','library'].includes(state.view)) {
       state.controllerClick = true;
       try { performAction('toggle-search'); } finally { state.controllerClick = false; }
     }

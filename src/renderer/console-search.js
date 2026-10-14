@@ -33,7 +33,7 @@ function openConsoleSearch(selectedGameId = '') {
   dialog.showModal();
   const selected = [...dialog.querySelectorAll('.console-search-game')].find(card => card.dataset.gameId === selectedGameId);
   setFocusedElement(selected || librarySearch, { scroll: false });
-  if (state.controllerClick && !selected) openControllerKeyboard(librarySearch);
+  if (state.controllerClick && !selected) openNativeKeyboard(librarySearch);
 }
 
 function navigateConsoleSearch(direction, current) {

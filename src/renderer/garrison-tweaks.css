@@ -40,6 +40,12 @@ body.garrison #home-view .collection-band .game-row .game-card { flex-basis: cal
 /* Artwork and title are enough; omit the redundant action and installed-game metadata. */
 body.garrison #home-view .collection-band .game-card .g-card-text::after { content: none; }
 body.garrison #home-view #g-home-rows .game-card .g-card-text > :not(strong) { display: none; }
+/* Each card ends after its own title, even when a neighbouring title wraps. */
+body.garrison #home-view .collection-band .game-row.collection-covers { align-items: flex-start; }
+body.garrison #home-view .collection-band .game-row .game-card { min-height: 0; }
+/* Clip the selected card's gradient and input badge to the artwork corners.
+   Its outer box shadow remains free to draw the complete selection ring. */
+body.garrison #recent-row > .game-card { overflow: hidden; }
 
 /* Friends' activity uses the same horizontal shelf and controller navigation as games. */
 body.garrison .g-activity-band { margin-top: calc(3 * var(--p)); }

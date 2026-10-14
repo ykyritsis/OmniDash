@@ -13,6 +13,7 @@ const ipcRenderer = {
 };
 
 contextBridge.exposeInMainWorld('launcher', {
+  showNativeKeyboard: () => ipcRenderer.invoke('keyboard:show'),
   cancelLibraryConnect: () => ipcRenderer.invoke('accounts:cancel-connect'),
   cancelSteamFamilyConnect: () => ipcRenderer.invoke('steam:family-cancel-connect'),
   onConnectionProgress: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('connection:progress', listener); return () => ipcRenderer.removeListener('connection:progress', listener); },

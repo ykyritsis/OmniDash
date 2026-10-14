@@ -1,0 +1,27 @@
+THREAD TITLE
+Xbox Preview UI — beta 25
+
+POST 1
+I've been working on Xbox Preview UI, a full-screen Windows game launcher with controller navigation. It brings your installed games into one library, with game pages, download controls and supported Steam launch choices inside the app.
+
+Beta 25 is available here:
+https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.25
+
+Grab the Setup executable to install it.
+
+Attachment: discord-square.jpg
+
+POST 2
+This update cleans up the home cards: no extra grey space beneath short titles, and the selected cards now have proper rounded corners. I've also removed the old custom keyboard so text entry uses the native Windows touch keyboard throughout.
+
+Here's a look at the library, onboarding and game page. The screenshots use a sample library; the device shots are illustrative mockups.
+
+Attachments: screenshot-library.png, promo-onboarding.jpg, promo-game-page.jpg
+
+POST 3
+If you try it on a Windows handheld, I'd love feedback on navigation and the native keyboard. Include your device, Windows version and what happened if something doesn't work.
+
+Project, setup and source:
+https://github.com/ykyritsis/xbox-cloud-preview-on-pc
+
+It's an unofficial community project, with no Microsoft or Xbox affiliation.

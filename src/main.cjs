@@ -23,6 +23,8 @@ const { createSteamFamilyLibrary } = require('./steam-family.cjs');
 const { duplicateGroups, providers: duplicateProviders } = require('./library-duplicates.cjs');
 const storeOffers = createStoreOffers();
 const { runPowerAction } = require('./power-actions.cjs');
+const { createNativeKeyboard } = require('./native-keyboard.cjs');
+const showNativeKeyboard = createNativeKeyboard({ demo: process.env.NEBULA_DEMO === '1' });
 const { parseSteamCommunityAchievements, safeSteamIcon } = require('./steam-public-achievements.cjs');
 
 if (process.env.NEBULA_DEMO === '1') {
@@ -1774,6 +1776,12 @@ async function searchArtwork(query, selectedGameId = '') {
 }
 
 function registerIpc() {
+  ipcMain.handle('keyboard:show', event => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    if (!owner || owner.isDestroyed()) throw new Error('The text-entry window is unavailable.');
+    const handle = owner.getNativeWindowHandle();
+    return showNativeKeyboard(handle.length === 8 ? handle.readBigUInt64LE() : BigInt(handle.readUInt32LE()));
+  });
   ipcMain.handle('artwork:official-steam', async (_event, gameId, requestedAppId) => {
     const game = currentLibrary.find(item => item.id === gameId);
     if (!game) throw new Error('Import this game before choosing artwork.');

@@ -1,0 +1,31 @@
+XBOX PREVIEW UI — BETA 25 / REVISED KIT
+
+github-hero.jpg / .png: 1920 x 1080, app name, blue icon and screenshot.
+github-social.jpg / .png: 1280 x 640, repository social preview.
+discord-square.jpg / .png: 1080 x 1080, ROG Ally announcement card.
+promo-rog-ally.jpg / .png: 1920 x 1080, branded handheld mockup.
+promo-laptop.jpg / .png: 1920 x 1080, branded laptop mockup.
+promo-desktop.jpg / .png: 1920 x 1080, branded desktop mockup.
+promo-onboarding.jpg / .png: 1920 x 1080, welcome and library setup screenshots.
+promo-libraries.jpg / .png: 1920 x 1080, library connection setup on a laptop.
+promo-library.jpg / .png: 1920 x 1080, game library on the ROG Ally.
+promo-game-page.jpg / .png: 1920 x 1080, Forza Horizon 5 game page on a desktop monitor.
+mockup-*.png: original generated device mockups without promotional headings.
+app-icon.svg / .png: exact existing application icon from build/icon.*.
+logo-wordmark.png: transparent wordmark using the existing icon.
+screenshot-home.png / screenshot-library.png: actual beta 25 renderer captures at 1920 x 1080.
+screenshot-handheld.png: actual beta 25 renderer capture at 1280 x 720.
+screenshot-onboarding.png / screenshot-libraries.png / screenshot-game-page.png: actual beta 25 renderer captures at 1920 x 1080.
+
+The sample library contains Forza Horizon 5, Minecraft, Halo Infinite, Cyberpunk 2077, Elden Ring, Red Dead Redemption 2, Sea of Thieves, Gears 5, DOOM Eternal, Starfield, The Witcher 3 and Hogwarts Legacy. It does not use the user's personal game library. The profile uses a generic built-in avatar.
+
+Device mockups are generated illustrations based on these screenshots, not photographs or evidence of a test on physical hardware. Screenshots remain separate from the generated mockups.
+
+Use JPEG files for posting and PNG files as masters. The app icon is unchanged. This kit accompanies the beta 25 GitHub release. github-social.jpg is available for the repository social-preview setting.
+
+artboards.html contains editable promotional copy and layout. scripts/promo-render.cjs exports the layouts. scripts/promo-demo-assets.cjs retrieves public game art; scripts/promo-capture.cjs captures the renderer. PROMPTS.txt records the built-in image-generation prompts. DISCORD-POST.txt contains a three-message Discord thread draft and attachment suggestions.
+
+Game artwork, device designs and platform marks belong to their respective owners. See README Legal and attribution. Square cover sources:
+https://www.xbox.com/en-US/games/store/elden-ring/9P3J32CTXLRZ
+https://www.xbox.com/en-us/games/store/red-dead-redemption-2/bpswgqbw7r3g
+https://www.xbox.com/en-US/games/store/doom-eternal-standard-edition/9P5S26314HWQ

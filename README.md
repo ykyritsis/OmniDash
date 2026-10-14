@@ -1,157 +1,160 @@
 # Xbox Preview UI
 
-**A controller-first launcher for every game on your PC, styled after the Xbox PC app's full screen mode.**
+<img src="docs/promo/beta25-v2/github-hero.jpg" alt="Xbox Preview UI beta 25, with the app's blue icon and a sample library" width="100%">
 
-Xbox Preview UI brings a console-style home screen, a full-screen library and artwork-led game pages to the games you already have, from Steam, Epic, Xbox PC, and other launchers. Steam fills the gaps the Xbox app leaves: Steam's own downloads, hidden games, news and achievements all work from inside the launcher.
+A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-> **Development preview.** An unofficial, fan-made project. It is not affiliated with Microsoft, Sony, Valve, ASUS, or any game publisher. See [Legal and attribution](#legal-and-attribution).
+**[Download beta 25](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.25/Xbox-Preview-UI-Setup-0.27.0-beta.25.exe)** · [Setup](#getting-started) · [Beta 25 notes](docs/release-0.27.0-beta.25.md)
 
-<p align="center">
-  <img src="docs/screenshots/console-home.png" alt="Home screen with a focused game and recently played row" width="92%">
-</p>
+- Browse installed games from Steam, Epic, Xbox PC and other launchers.
+- Use a controller, mouse or keyboard.
+- Select supported Steam launch modes and follow first-run setup.
+- Manage downloads, favourites, collections and artwork.
+
+Unofficial community project. Images show beta 25 with a sample library; available builds are listed on the Releases page.
+
+## Screenshots
+
+<img src="docs/promo/beta25-v2/screenshot-library.png" alt="Beta 25 library with sample games" width="100%">
+
+<img src="docs/promo/beta25-v2/promo-game-page.jpg" alt="Forza Horizon 5 game page on a desktop monitor mockup" width="100%">
+
+[Onboarding](docs/promo/beta25-v2/promo-onboarding.jpg) · [Library connections](docs/promo/beta25-v2/promo-libraries.jpg) · [Library on ROG Ally](docs/promo/beta25-v2/promo-library.jpg)
+
+## Device mockups
+
+| ROG Ally | Laptop |
+| --- | --- |
+| <img src="docs/promo/beta25-v2/promo-rog-ally.jpg" alt="ROG Ally mockup" width="100%"> | <img src="docs/promo/beta25-v2/promo-laptop.jpg" alt="Laptop mockup" width="100%"> |
+
+[Desktop mockup](docs/promo/beta25-v2/promo-desktop.jpg) · [Full screenshot](docs/promo/beta25-v2/screenshot-home.png)
+
+Device images are illustrative mockups based on app captures, not photographs of a hardware test.
+
+## Beta 25
+
+- Home cards fit their titles without extra grey space.
+- Selected card overlays follow the rounded corners.
+- Text entry uses the native Windows touch keyboard. The old custom keyboard has been removed.
+
+[Full release notes](docs/release-0.27.0-beta.25.md)
 
 ## Download
 
-Get the latest build from the **[Releases page](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases)**.
+Get **[beta 25 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.25)**. Download the Setup executable for your handheld or desktop.
 
-| File | Use it for |
+| File | Choose this for |
 | --- | --- |
-| `Xbox-Preview-UI-Setup-x.y.z.exe` | A normal installed copy with a Start menu entry and uninstaller. |
-| `Xbox-Preview-UI-Portable-x.y.z.exe` | No installation. Replace the old file with the new one to update; your settings stay in Windows app data. |
-| `SHA256SUMS.txt` | Checksums, so you can confirm the download wasn't altered. |
+| `Xbox-Preview-UI-Setup-x.y.z.exe` | An installed copy with a Start menu entry and uninstaller. |
+| `Xbox-Preview-UI-Portable-x.y.z.exe` | Running without installation. Replace the executable to update; settings remain in Windows app data. |
+| `SHA256SUMS.txt` | Verifying the downloaded files. |
 
 Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Choose **More info → Run anyway** if you trust the source.
 
-To run from source, install Node.js 20 or newer:
+## Getting started
 
-```powershell
-npm install
-npm start
-```
+1. Install or unpack your downloaded build, then choose a profile.
+2. Connect your libraries. Installed games are discovered from local launchers and manifests.
+3. Optionally add a **SteamGridDB key** in **Settings → Manage games → Artwork** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
+4. Enable **Steam download controls** from the Queue to pause and resume Steam downloads. The connection stays on this PC (`127.0.0.1`).
 
-## Features
+Installed Steam games, recorded local playtime and Steam's hidden-game list need no API key. A Steam Web API key enables additional account data, including uninstalled games, personal achievement progress and verified friend presence, subject to your Steam privacy settings.
 
-### Home
+## More under the hood
 
-- **Jump back in:** recently played games, with the last game you launched first.
-- **Play together:** games in your library with local or party multiplayer.
-- **Browse by publisher and series:** rows of covers you can scroll with a controller, with logos where they're available.
-- **News for the selected game:** Steam news with its own art, labelled as patch notes or news, official posts first.
-- Wide backdrops and a focused tile that enlarges as you move through the shelf.
+<details>
+<summary><strong>Home, library and game pages</strong></summary>
 
-### Library
+- Jump back in, Recently added, favourites, custom collections, controller-friendly games and multiplayer shelves.
+- Steam friend activity shows verified friends who are currently in a game.
+- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and grid/list layouts.
+- Launcher discovery for Steam, Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon where installed locally.
+- Artwork-led game pages with descriptions, screenshots, trailers where available, input support and achievements.
+- Manage artwork, files, shortcuts, collections, favourites, hiding and uninstalling from game options.
+- Steam hidden games stay hidden until you choose to show them; hiding a Steam game syncs with Steam.
+- Return to game is available while a tracked game is running.
 
-- **Installed, Recently played, Queue and My games** tabs, like the Xbox app.
-- **Filter** (install state, launcher, collection, and **Show hidden games**) and **Sort** (last played, alphabetical, source, Steam hours, size) menus that match the Xbox app.
-- **Grid or list view**, with input icons on each tile: controller, keyboard and mouse, or both.
-- Launcher chips for quick switching between Steam, Epic, Xbox PC and others.
-- **Favorites** and custom collections.
-- **Hidden games** follow Steam's own Hidden list. Hiding a Steam game hides it in Steam too. Hidden games stay out of search until you choose Show hidden games.
-- The **Library button always opens Installed**, with no filters and at the top of the page.
+</details>
 
-### Game pages
+<details>
+<summary><strong>Steam, downloads and account connections</strong></summary>
 
-- Screenshots, a trailer where one is available, description, rating, supported languages and controller support.
-- **Play, Install** or **Buy** on the main button, with the Steam price for games you don't own.
-- A **Manage game** panel for artwork, files, shortcuts, collections, Favorites, Hide and Uninstall.
-- Launching shows a progress screen until the game is actually running, then returns you to the game page with **Return to game** available while it runs.
-- Steam achievements (public catalog, with unlock progress when your Steam account is linked).
+- Supported Steam launch choices appear in a controller-friendly dialog before launch.
+- Launch progress follows game startup and first-run setup; supported Steam requests appear in the app.
+- Steam Queue controls include pause, resume, move to top, pause/resume all and cancellation through Steam.
+- Steam Family libraries, Steam achievements and PC Gamerscore from verified achievements.
+- Steam sign-in and cart pages use a separate sandboxed in-app browser session.
+- Xbox Store browsing, PC Game Pass catalog and Steam search results for additional games.
+- Account integrations have different setup requirements. See [library connections](docs/library-connections.md).
 
-### Queue and downloads
+</details>
 
-- Steam's download queue, laid out like the Xbox app's Queue page.
-- **Pause, resume, move to top,** and **Pause all / Resume all**, using Steam's own download controls.
-- **Remove from queue cancels the download.** A game that never finished installing has its partial files removed too, through Steam's uninstall.
-- Time left and speed for the current download, and a notification when a game finishes.
+<details>
+<summary><strong>Personalisation, performance and updates</strong></summary>
 
-### Store
-
-- **Xbox Store** browse lists (popular, new releases, free to play) with prices, ratings and trailers.
-- **Search** the Xbox Store for PC games, with **More on Steam** results for games Xbox doesn't sell. Steam results show real covers and prices.
-- **Game Pass** catalog, with titles and input icons.
-- Any game can open a full page, owned or not.
-- **Play with friends → View game** opens the game's page even if you don't own it.
-
-### Controller and keyboard
-
-- Full controller navigation with smooth, responsive scrolling. The selection and the page move together, so the item you're on is never left off screen.
-- Works with mouse and keyboard too.
-- The launcher goes to sleep when a game is in front: animations pause and nothing refreshes in the background, so it costs almost nothing while you play.
-
-### Artwork and metadata
-
-- Covers, backdrops and logos come from the Xbox Store, IGN, PlayStation and, optionally, SteamGridDB. You can replace any of them yourself.
-- Artwork and game details are saved locally, so returning to a library you've already seen is quick and works offline.
-- Game pages load their details and screenshots in the background as you move over a tile, so they open ready.
-
-### Settings
-
-- **Manage games** holds your launchers, the **Artwork** section for your SteamGridDB key, and library options.
-- Interface scale, reduced motion and high-contrast focus.
-- Optional interface sounds, with the option to load your own sound pack.
+- Interface scaling, reduced motion and high-contrast focus.
+- Optional interface sounds and local sound packs.
+- Artwork and metadata caches for quicker return visits; manual artwork replacement.
+- Background work and animations pause while a game is in front.
+- Built-in update checks, verified downloads and installation on restart or app exit.
 - Power menu with confirmed sleep, restart and shutdown.
-- Built-in updates: the launcher checks in the background, downloads and verifies new builds, and installs them when you choose "Restart to update" or next close the launcher. Settings → Account has a manual check.
+- Optional Xbox Mode Home app integration: [setup guide](docs/xbox-mode.md).
 
-### Steam and other launchers
-
-- Finds installed Steam games, plus Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon where they're installed locally.
-- Steam sign-in and cart pages open in a separate, sandboxed in-app session.
-- Steam Family shared games can be added to your library.
-- A Steam profile with playtime and **PC Gamerscore**: a local score from verified Steam achievements.
-
-## Setup
-
-1. **Install or unpack** the build you downloaded.
-2. **Choose a profile**, then connect your libraries. Optional connections are collapsed until you need them.
-3. **Add a SteamGridDB key** (optional) in **Settings → Manage games → Artwork**. It fills in artwork for games other stores don't have. Get a free key at steamgriddb.com under Preferences → API.
-4. **Steam downloads from the Queue:** to pause and resume, turn on Steam download controls once from the Queue page. The launcher then talks to Steam on this PC only (127.0.0.1).
-
-Installed games, recorded Steam playtime and Steam's hidden-game list need no key. A **Steam Web API key** adds uninstalled Steam games, personal achievement progress and live friend presence. Add it in Settings with your Steam profile's game details visible to that key.
+</details>
 
 ## Controller controls
 
 | Input | Action |
 | --- | --- |
 | D-pad / left stick | Move focus |
-| A | Open a game, or play from its page |
-| B | Back. From the Library, return Home |
-| X | Rescan library |
+| A | Select, open a game, or activate the focused action |
+| B | Back; return Home from the Library |
 | Y | Search |
 | Menu | Options for the focused game |
 | View | My games & apps, or Home |
-| Xbox button | Opens Windows Game Bar; the launcher doesn't handle it |
+| Xbox button | Windows Game Bar |
 
-## Build from source
+## Run or build from source
+
+Install Node.js 20 or newer, then:
 
 ```powershell
-npm run dist:portable
-npm run dist
+npm install
+npm start
 ```
 
-Both write to `dist/`. The installer doesn't change Windows' Full Screen Experience Home app or install a certificate. For the optional Xbox Mode home app, see [Xbox Mode setup](docs/xbox-mode.md).
+Create Windows builds:
 
-## Limits of this preview
+```powershell
+npm run dist
+npm run dist:portable
+```
 
-- Launcher discovery reads local manifests and installed-game folders. It isn't a sync with every store's account.
-- Uninstalled Steam games, personal playtime and achievement progress depend on Steam's API and your profile's visibility.
-- For a game that isn't on Steam, a matching Steam achievement list is shown for reference only; it doesn't show your unlocks.
-- Artwork and metadata come from public endpoints that can rate-limit, change, or have no match. A missing cover shows the game's title until one is found, or you can choose one yourself.
-- SteamDB offers no API and doesn't permit automated scraping, so it isn't used. Game Options lets you enter a Steam App ID to match a game by hand.
-- Steam may show its own launch popups; the launcher asks Steam to start quietly but can't always suppress them.
-- Epic uninstalled-game support needs a separately installed and signed-in Legendary helper. See [library connections](docs/library-connections.md) for setup and limits.
+Builds are written to `dist/`. The installer does not change Windows' Full Screen Experience Home app or install a certificate. See [Xbox Mode setup](docs/xbox-mode.md) for the optional integration.
 
-## Release notes
+## Preview limits
 
-| Release | Highlights |
+- Discovery reads local manifests and installed-game folders; it is not a complete account sync with every store.
+- Steam account data depends on API access and profile visibility. Achievement catalogs for matching non-Steam editions are reference-only unless linked progress is available.
+- Artwork and metadata sources can rate-limit, change or have no match. You can supply your own artwork.
+- Some Steam dialogs, third-party launchers, sign-in windows and Windows prompts can still appear externally.
+- Native keyboard placement is managed by Windows. Beta 25 was checked at handheld resolution and against Windows InputPane, but not on the physical handheld.
+- Epic uninstalled-game support needs a signed-in Legendary helper. See [library connections](docs/library-connections.md).
+- SteamDB is not scraped; Game Options lets you enter a Steam App ID manually.
+
+## Recent changes
+
+| Preview | Highlights |
 | --- | --- |
-| [0.27.0-beta.16](docs/release-0.27.0-beta.16.md) | Sleep in the background, instant game pages, accurate Return to game. |
-| [0.27.0-beta.15](docs/release-0.27.0-beta.15.md) | Library scrolling fix, Game Pass titles and input icons. |
-| [0.27.0-beta.14](docs/release-0.27.0-beta.14.md) | Smoother movement, Library reset, crash-safe settings. |
-| [0.27.0-beta.13](docs/release-0.27.0-beta.13.md) | Controller navigation fixes, Xbox-style Sort and app menus. |
-| [0.27.0-beta.12](docs/release-0.27.0-beta.12.md) | Store search, pages for games you don't own, Steam-synced hidden games, Queue controls. |
-| [0.27.0-beta.11](docs/release-0.27.0-beta.11.md) | Steam Family connection, PC Gamerscore. |
+| [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |
+| [Beta 24](docs/release-0.27.0-beta.24.md) | Steam launch choices, setup status and supported launch prompts. |
+| [Beta 23](docs/release-0.27.0-beta.23.md) | Larger home shelves, verified friend activity and update installer fixes. |
 
 Older notes are in [docs/](docs).
+
+## Share the project
+
+The [downloadable beta 25 promo kit](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.25/Xbox-Preview-UI-Beta25-Promo-Kit-v2.zip) ([browse files](docs/promo/beta25-v2)) includes GitHub banners, Discord graphics, transparent logos, screenshots, editable layouts and [ready-to-paste Discord copy](docs/promo/beta25-v2/DISCORD-POST.txt). Use the [asset guide](docs/promo/beta25-v2/ASSET-GUIDE.txt) for dimensions and posting notes. The kit uses the app's existing blue icon. Device mockups were generated with the built-in image tool using the included screenshots as references.
 
 ## Legal and attribution
 

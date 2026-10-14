@@ -397,9 +397,6 @@ body.detail-active .topbar { display: none; }
 .console-file-entry svg { width: 24px; height: 24px; stroke: white; fill: none; stroke-width: 1.5; }
 .console-file-entry strong { flex: 1; font-size: 19px; font-weight: 400; }
 .console-file-dialog footer { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
-#controller-keyboard-dialog { border-radius: 0; border: 0; background: #101010; }
-.keyboard-key { color: #fff; background: #333; border-radius: 0; border-color: #101010; }
-.keyboard-key.focused { color: #111; background: #fff; outline-color: #fff; }
 .console-search-dialog { width: 100vw; max-width: none; height: 100vh; max-height: none; margin: 0; padding: 6vh var(--gutter) 10vh; background: #202020; overflow-y: auto; border-radius: 0; }
 .console-search-dialog header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
 .console-search-dialog h2 { margin: 0; font-size: 44px; font-weight: 300; }
@@ -417,7 +414,6 @@ body.detail-active .topbar { display: none; }
 .console-search-empty { grid-column: 1/-1; padding: 9vh 0; color: #bbb; text-align: center; }
 .console-search-empty .console-glyph { font-size: 65px; }
 .console-search-empty h3 { color: #fff; font-size: 26px; font-weight: 400; }
-body:has(#controller-keyboard-dialog[open]) .console-search-dialog { padding-bottom: 45vh; }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 @media (max-width: 1100px) {
   .dashboard-player-copy small { display: none; }
