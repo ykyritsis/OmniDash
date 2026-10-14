@@ -2169,13 +2169,16 @@ function registerIpc() {
       const steamExe = await steamExecutableFile();
       if (!steamExe) throw new Error('Steam was not found on this PC.');
       if (!await steamClientIsRunning()) {
+        launchStatus(gameId, 'Starting Steam in the background');
         spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+        setTimeout(() => launchStatus(gameId, 'Waiting for Steam to sign in'), 4000);
         for (let waited = 0; waited < 90000 && !await steamSignedIn() && !launchWaitCancel.has(String(gameId)); waited += 500) await new Promise((resolve) => setTimeout(resolve, 500));
         if (launchWaitCancel.delete(String(gameId))) { if (lastLaunch) lastLaunch.result = 'cancelled while Steam started'; throw new Error('Launch cancelled.'); }
         if (!await steamSignedIn()) throw new Error('Steam did not start. Open Steam once and sign in, then try again.');
         // Give Steam a moment to finish its start-up work before it accepts a game.
         await new Promise((resolve) => setTimeout(resolve, 2500));
       }
+      launchStatus(gameId, `Starting ${game.title}`);
       await launchExecutable(steamExe, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(steamExe));
     } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
@@ -2218,6 +2221,8 @@ function registerIpc() {
     const hex = !error && String(stdout).match(/RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i)?.[1];
     resolve(hex ? String(parseInt(hex, 16)) : '');
   }));
+  // Tells the launch screen what it's waiting for, so a long wait never looks stuck.
+  const launchStatus = (gameId, text) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('launch:status', { gameId, text }); };
   // Steam's install folder, found on the drives it's installed to.
   const steamExecutableFile = async () => {
     for (const root of await findSteamRoots()) if (await exists(path.join(root, 'steam.exe'))) return path.join(root, 'steam.exe');
@@ -2234,6 +2239,8 @@ function registerIpc() {
     if (process.env.NEBULA_DEMO === '1') { await new Promise(resolve => setTimeout(resolve, 2500)); return { started: true, via: 'demo' }; }
     launchWaitCancel.delete(gameId);
     const started = Date.now(), deadline = started + Math.max(5000, Math.min(Number(timeoutMs) || 90000, 120000));
+    launchStatus(gameId, game.provider === 'Steam' ? 'Waiting for Steam to open the game' : `Waiting for ${game.title} to open`);
+    const slowNote = setTimeout(() => launchStatus(gameId, 'Still loading. Some games take a while the first time'), 25000);
     let blurredAt = 0;
     const onBlur = () => { blurredAt = Date.now(); };
     mainWindow?.on('blur', onBlur);
@@ -2256,7 +2263,7 @@ function registerIpc() {
         await new Promise(resolve => setTimeout(resolve, 600));
       }
       return { started: false };
-    } finally { mainWindow?.removeListener('blur', onBlur); }
+    } finally { clearTimeout(slowNote); mainWindow?.removeListener('blur', onBlur); }
   });
   ipcMain.handle('game:wait-cancel', (_event, gameId) => { launchWaitCancel.add(String(gameId)); return true; });
   ipcMain.handle('game:active-session', async () => {

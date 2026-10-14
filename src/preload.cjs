@@ -125,5 +125,6 @@ contextBridge.exposeInMainWorld('launcher', {
   copyDiagnostics: () => ipcRenderer.invoke('diagnostics:copy'),
   exportSettings: () => ipcRenderer.invoke('backup:export'),
   importSettings: () => ipcRenderer.invoke('backup:import'),
+  onLaunchStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('launch:status', listener); return () => ipcRenderer.removeListener('launch:status', listener); },
   onUpdateStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('updater:status', listener); return () => ipcRenderer.removeListener('updater:status', listener); }
 });

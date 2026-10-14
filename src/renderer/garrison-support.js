@@ -11,6 +11,14 @@
   const overlayCopy = document.querySelector('#launch-overlay .launch-copy');
   if (overlayCopy) overlayCopy.insertAdjacentHTML('beforeend', '<button class="g-launch-cancel focusable" type="button" data-action="g-launch-cancel">Cancel</button>');
 
+  // The launch screen says what it's waiting for, stage by stage, as the main process reports it.
+  window.launcher.onLaunchStatus?.(({ gameId, text }) => {
+    if (launchOverlay.hidden || launchOverlay.dataset.gameId !== gameId) return;
+    launchOverlay.dataset.liveStatus = '1';
+    const status = document.querySelector('#launch-status');
+    if (status) status.textContent = text;
+  });
+
   // Safe mode: the launcher says so once, and background work waits for a normal start.
   window.gSafeMode = false;
   window.launcher.getSafeMode().then(safe => {

@@ -1627,7 +1627,8 @@ async function launchSelectedGame(optionsOverride) {
   launchOverlay.hidden = false;
   requestAnimationFrame(() => launchOverlay.classList.add('active'));
   // Still waiting after a while: say so, so it doesn't look stuck.
-  const slow = setTimeout(() => { if (status) status.textContent = game.provider === 'Steam' ? 'Waiting for Steam' : 'Still starting'; }, 9000);
+  delete launchOverlay.dataset.liveStatus;
+  const slow = setTimeout(() => { if (status && !launchOverlay.dataset.liveStatus) status.textContent = game.provider === 'Steam' ? 'Waiting for Steam' : 'Still starting'; }, 9000);
   try {
     await Promise.all([
       (rememberLaunch(state.selectedGameId), window.launcher.launchGame(state.selectedGameId, optionsOverride)),
