@@ -2780,54 +2780,15 @@ function registerIpc() {
     }
     return { status };
   });
-  // Steam friends for the Xbox friends pill and "Play with friends". Live presence needs the
-  // player's own Web API key; without one, names come from the Steam client's local cache.
-  let friendsCache = { at: 0, data: null };
+  // Steam's cached persona names are not evidence of friendship.
+  const steamFriends = require('./steam-friends.cjs').createSteamFriends();
   ipcMain.handle('friends:list', async (_event, force = false) => {
-    if (!force && friendsCache.data && Date.now() - friendsCache.at < 45000) return friendsCache.data;
-    if (process.env.NEBULA_DEMO === '1') return { status: 'demo', friends: [] };
+    if (process.env.NEBULA_DEMO === '1') return { status: 'demo', friends: [], online: 0 };
     const settings = await readSettings();
-    const steamId = String(settings.steamId64 || await detectSteamId64()).trim();
-    if (!/^7656119\d{10}$/.test(steamId)) return { status: 'no-account', friends: [] };
-    const personaState = (value) => ['offline', 'online', 'busy', 'away', 'snooze', 'online', 'online'][Number(value)] || 'offline';
-    // The Steam client keeps the friends list locally, even when it is private to the Web API.
-    const accountId = String(BigInt(steamId) - 76561197960265728n);
-    const local = [];
-    for (const root of await findSteamRoots()) {
-      try {
-        const text = await fs.readFile(path.join(root, 'userdata', accountId, 'config', 'localconfig.vdf'), 'utf8');
-        const section = parseSteamVdf(text).userlocalconfigstore?.friends || {};
-        for (const [id, entry] of Object.entries(section)) {
-          if (!/^\d+$/.test(id) || id === accountId || typeof entry !== 'object' || !entry.name) continue;
-          local.push({ id: String(BigInt(id) + 76561197960265728n), name: String(entry.name).slice(0, 64), avatar: /^[0-9a-f]{40}$/i.test(entry.avatar || '') ? `https://avatars.steamstatic.com/${entry.avatar}_medium.jpg` : null, state: 'unknown', game: '', gameId: '', lobby: '' });
-        }
-        break;
-      } catch { /* Try the next Steam library root. */ }
-    }
-    let data = null;
-    if (settings.steamApiKey) try {
-      const get = async (url) => { const response = await fetch(url, { signal: AbortSignal.timeout(8000) }); if (!response.ok) throw new Error(`Steam returned ${response.status}`); return response.json(); };
-      const list = await get(`https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=${encodeURIComponent(settings.steamApiKey)}&steamid=${steamId}&relationship=friend`).catch(() => ({}));
-      const listed = (list.friendslist?.friends || []).map((friend) => String(friend.steamid)).filter((id) => /^\d{17}$/.test(id));
-      const ids = [...new Set(listed.length ? listed : local.map((friend) => friend.id))].slice(0, 300);
-      const players = [];
-      for (let index = 0; index < ids.length; index += 100) {
-        const batch = await get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${encodeURIComponent(settings.steamApiKey)}&steamids=${ids.slice(index, index + 100).join(',')}`);
-        players.push(...(batch.response?.players || []));
-      }
-      if (players.length) data = { status: 'ready', friends: players.map((player) => ({
-        id: String(player.steamid), name: String(player.personaname || 'Steam friend').slice(0, 64),
-        avatar: safeSteamIcon(player.avatarmedium || player.avatar), state: personaState(player.personastate),
-        game: player.gameextrainfo ? String(player.gameextrainfo).slice(0, 120) : '', gameId: /^\d+$/.test(String(player.gameid || '')) ? String(player.gameid) : '',
-        lobby: /^\d+$/.test(String(player.lobbysteamid || '')) ? String(player.lobbysteamid) : '', lastOnline: Number(player.lastlogoff) * 1000 || 0
-      })) };
-    } catch { /* Fall back to the local list without presence. */ }
-    if (!data) data = { status: local.length ? 'local' : 'unavailable', friends: local };
-    const order = { online: 0, busy: 1, away: 2, snooze: 3, unknown: 4, offline: 5 };
-    data.friends.sort((a, b) => Number(Boolean(b.game)) - Number(Boolean(a.game)) || order[a.state] - order[b.state] || a.name.localeCompare(b.name));
-    data.online = data.friends.filter((friend) => friend.state !== 'offline' && friend.state !== 'unknown').length;
-    friendsCache = { at: Date.now(), data };
-    return data;
+    return steamFriends.list({
+      steamId: settings.steamId64 || await detectSteamId64(),
+      apiKey: settings.steamApiKey, force: force === true
+    });
   });
   ipcMain.handle('friends:action', async (_event, action, friendId, appId = '', lobbyId = '') => {
     if (!/^\d{17}$/.test(String(friendId))) throw new Error('Unknown friend.');
@@ -3410,7 +3371,7 @@ const updater = createUpdater({
   isGameRunning: () => Boolean(activeGameSession),
   log: message => console.log(message)
 });
-app.on('will-quit', () => updater.applyOnQuit());
+app.on('before-quit', event => updater.applyOnQuit(event));
 
 app.whenReady().then(async () => {
   registerIpc();

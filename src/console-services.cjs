@@ -8,6 +8,28 @@ const imageUrl = (image, width) => {
   url.searchParams.set('w', String(width));
   return url.href;
 };
+function storeXboxInfo(product, attributes, localized) {
+  const optimized = product.Properties?.XboxConsoleGenOptimized || [];
+  const compatible = product.Properties?.XboxConsoleGenCompatible || [];
+  const onPc = attributes.some(item => (item.ApplicablePlatforms || []).includes('Desktop')) || attributes.some(item => item.Name === 'XPA')
+    || (product.DisplaySkuAvailabilities || []).some(entry => (entry.Sku?.Properties?.Packages || []).some(pack => (pack.PlatformDependencies || []).some(dep => /Desktop/i.test(dep.PlatformName || ''))));
+  const platforms = [
+    ...(onPc ? ['PC'] : []),
+    ...(optimized.includes('ConsoleGen9') || compatible.includes('ConsoleGen9') ? ['Xbox Series X|S'] : []),
+    ...(compatible.includes('ConsoleGen8') ? ['Xbox One'] : [])
+  ];
+  return {
+    attributes: attributes.map(entry => ({ name: String(entry.Name || ''), platforms: (entry.ApplicablePlatforms || []).map(String) })).filter(entry => entry.name),
+    platforms: platforms.length ? platforms : ['PC'],
+    playAnywhere: attributes.some(item => item.Name === 'XPA'),
+    consoleOptimized: optimized.includes('ConsoleGen9'),
+    installTerms: String(product.DisplaySkuAvailabilities?.[0]?.Sku?.Properties?.InstallationTerms || ''),
+    address: String(localized.PublisherAddress || '').trim(),
+    supportUri: String(localized.SupportUri || '').trim(),
+    websiteUri: String(localized.PublisherWebsiteUri || '').trim(),
+    productId: String(product.ProductId || '')
+  };
+}
 function mapProduct(product) {
   const localized = product.LocalizedProperties?.[0] || {};
   const images = localized.Images || [];
@@ -24,8 +46,11 @@ function mapProduct(product) {
     title:localized.ProductTitle,description:clean(localized.ShortDescription || localized.ProductDescription),fullDescription:clean(localized.ProductDescription || localized.ShortDescription),
     developer:localized.DeveloperName || '',publisher:localized.PublisherName || '',genres:product.Properties?.Categories || [],categories,
     releaseDate:market.OriginalReleaseDate ? new Date(market.OriginalReleaseDate).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}) : '',
-    screenshots:images.filter(image=>image.ImagePurpose === 'Screenshot').map(image=>imageUrl(image,1920)).filter(Boolean).slice(0,12),metadataSource:'Xbox Store',dlcStatus:'unavailable'
+    screenshots:images.filter(image=>image.ImagePurpose === 'Screenshot').map(image=>imageUrl(image,1920)).filter(Boolean).slice(0,12),metadataSource:'Xbox Store',dlcStatus:'unavailable',
+    // The same "Playable on" and "Capabilities" data owned Xbox games get, so Store pages show them too.
+    xboxInfo:storeXboxInfo(product, attributes, localized)
   };
+  details.controllerSupport = details.xboxInfo.platforms.some(name => /^Xbox/.test(name)) ? 'controller' : 'unknown';
   // Input, as the Xbox app shows it: games that also run on Xbox consoles play with a controller; every PC
   // game here plays with mouse and keyboard.
   const onConsole = attributes.some(item => (item.ApplicablePlatforms || []).includes('Xbox') || ['ConsoleGen9Optimized','ConsoleKeyboardMouse','XPA','ConsoleCrossGen'].includes(item.Name));
@@ -35,7 +60,7 @@ function createConsoleServices(directory, request = fetch) {
   let catalogPromise;
   let catalog = [];
   async function readCatalog() {
-    try { const saved = JSON.parse(await fs.readFile(path.join(directory,'gamepass-catalog.json'),'utf8')); if(saved.version===2 && Array.isArray(saved.games)) return saved; } catch {}
+    try { const saved = JSON.parse(await fs.readFile(path.join(directory,'gamepass-catalog.json'),'utf8')); if(saved.version===3 && Array.isArray(saved.games)) return saved; } catch {}
     return null;
   }
   async function fetchCatalog() {
@@ -60,7 +85,7 @@ function createConsoleServices(directory, request = fetch) {
     games.sort((a,b)=>ranks.get(a.xboxProductId)-ranks.get(b.xboxProductId));
     await fs.mkdir(directory,{recursive:true});
     const target=path.join(directory,'gamepass-catalog.json');
-    await fs.writeFile(target+'.tmp',JSON.stringify({version:2,savedAt:Date.now(),games}));
+    await fs.writeFile(target+'.tmp',JSON.stringify({version:3,savedAt:Date.now(),games}));
     await fs.rename(target+'.tmp',target);
     catalog=games;
     return games;

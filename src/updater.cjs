@@ -122,42 +122,25 @@ async function sha256(file) {
   return hash.digest('hex');
 }
 
-// Waits for this app to close, then swaps the file in and starts the new copy. Retries while Windows still
-// holds the old file, and deletes itself afterwards.
-function portableScript({ pid, from, to }) {
-  return [
-    '@echo off',
-    ':wait',
-    `tasklist /FI "PID eq ${pid}" 2>nul | find "${pid}" >nul`,
-    'if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)',
-    ':copy',
-    `move /Y "${from}" "${to}" >nul 2>&1`,
-    'if errorlevel 1 (timeout /t 1 /nobreak >nul & goto copy)',
-    `start "" "${to}"`,
-    '(goto) 2>nul & del "%~f0"',
-    ''
-  ].join('\r\n');
+// JScript runs under the GUI Windows Script Host, so Terminal cannot open a console tab.
+function swapScript(config) {
+  if (!Number.isSafeInteger(config.pid) || config.pid < 1) throw new Error('Invalid launcher PID');
+  return 'var config = ' + JSON.stringify({ timeoutMs: 30000, pollMs: 250, ...config }) + ';\r\n'
+    + fs.readFileSync(path.join(__dirname, 'update-helper.js'), 'utf8');
 }
-// Waits for this app to close, then runs the installer silently over the current install and starts it again.
-function installerScript({ pid, setup }) {
-  return [
-    '@echo off',
-    ':wait',
-    `tasklist /FI "PID eq ${pid}" 2>nul | find "${pid}" >nul`,
-    'if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait)',
-    `"${setup}" /S --force-run`,
-    '(goto) 2>nul & del "%~f0"',
-    ''
-  ].join('\r\n');
-}
+function portableScript(options) { return swapScript({ ...options, mode: 'portable' }); }
+function installerScript(options) { return swapScript({ ...options, mode: 'installer' }); }
 
-function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentVersion = app.getVersion() }) {
+function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentVersion = app.getVersion(), requestText = getText, download = downloadTo }) {
   const portable = Boolean(process.env.PORTABLE_EXECUTABLE_FILE);
   const workDir = path.join(os.tmpdir(), 'xbox-preview-ui-update');
   let status = { state: 'idle', version: '', progress: 0, error: '', checkedAt: 0 };
   let ready = null;      // { version, file, sumsVerified } once a verified build is waiting to be applied
   let busy = false;
   let timer = null;
+  let swapPromise = null;
+  let quitting = false;
+  let skipOnQuit = false;
 
   function publish(next) {
     status = { ...status, ...next };
@@ -170,20 +153,20 @@ function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentV
 
   async function check({ force = false } = {}) {
     if (!app.isPackaged) return snapshot();
-    if (busy) return snapshot();
+    if (busy || swapPromise || quitting) return snapshot();
     if (ready && !force) return snapshot();
     busy = true;
     publish({ state: 'checking', error: '' });
     try {
-      const releases = JSON.parse(await getText(`https://api.github.com/repos/${REPO}/releases?per_page=6`));
+      const releases = JSON.parse(await requestText(`https://api.github.com/repos/${REPO}/releases?per_page=6`));
       const found = pickRelease(releases, { portable });
       const newer = found && compareVersions(found.version, currentVersion) > 0;
       if (!newer) { publish({ state: 'current', version: currentVersion, checkedAt: Date.now() }); return snapshot(); }
       await fsp.mkdir(workDir, { recursive: true });
       const target = path.join(workDir, found.name);
       publish({ state: 'downloading', version: found.version, progress: 0 });
-      const sums = parseChecksums(await getText(found.sumsUrl));
-      await downloadTo(found.url, `${target}.partial`, { onProgress: fraction => publish({ progress: fraction }) });
+      const sums = parseChecksums(await requestText(found.sumsUrl));
+      await download(found.url, `${target}.partial`, { onProgress: fraction => publish({ progress: fraction }) });
       const expected = sums.get(found.name);
       const actual = await sha256(`${target}.partial`);
       if (!expected || actual !== expected) {
@@ -206,30 +189,75 @@ function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentV
 
   // Starts the swap script. The script waits for this process to exit, so it's safe to call while the window is open.
   function startSwap() {
-    if (!ready) return false;
-    const scriptPath = path.join(workDir, `apply-${Date.now()}.cmd`);
-    const script = portable
-      ? portableScript({ pid: process.pid, from: ready.file, to: process.env.PORTABLE_EXECUTABLE_FILE })
-      : installerScript({ pid: process.pid, setup: ready.file });
-    fs.mkdirSync(workDir, { recursive: true });
-    fs.writeFileSync(scriptPath, script, 'utf8');
-    spawn('cmd.exe', ['/d', '/c', `"${scriptPath}"`], { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true }).unref();
-    return true;
+    if (swapPromise) return swapPromise;
+    swapPromise = (async () => {
+      const scriptPath = path.join(workDir, `apply-${process.pid}-${Date.now()}.js`);
+      const readyFile = `${scriptPath}.ready`, errorFile = `${scriptPath}.error`;
+      const options = { pid: process.pid, readyFile, errorFile };
+      const script = portable
+        ? portableScript({ ...options, from: ready.file, to: process.env.PORTABLE_EXECUTABLE_FILE })
+        : installerScript({ ...options, setup: ready.file });
+      fs.mkdirSync(workDir, { recursive: true });
+      // A BOM lets Windows Script Host read non-ASCII Windows usernames and paths correctly.
+      fs.writeFileSync(scriptPath, '\ufeff' + script, 'utf16le');
+      const host = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'wscript.exe');
+      const child = spawn(host, ['//B', '//Nologo', '//E:JScript', '//T:120', scriptPath], { detached: true, stdio: 'ignore', windowsHide: true });
+      let failed = null;
+      child.on('error', error => { failed = error; });
+      child.on('exit', code => { failed ||= new Error(`Update helper stopped (${code}).`); });
+      child.unref();
+      try {
+        // Do not close a working launcher unless the helper confirms it can run.
+        const deadline = Date.now() + 8000;
+        while (!fs.existsSync(readyFile)) {
+          if (failed) throw failed;
+          if (fs.existsSync(errorFile)) throw new Error(fs.readFileSync(errorFile, 'utf16le').replace(/^\ufeff/, ''));
+          if (Date.now() >= deadline) throw new Error('The update helper could not start. Run the downloaded installer manually.');
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        return true;
+      } catch (error) {
+        // Stop only the helper we created, never another app or game.
+        try { child.kill(); } catch {}
+        for (const file of [scriptPath, readyFile]) fs.rmSync(file, { force: true });
+        throw error;
+      }
+    })();
+    swapPromise.catch(() => { swapPromise = null; });
+    return swapPromise;
   }
 
   // "Restart to update": refuses while a game is running, since the restart would close it.
-  function installNow() {
+  async function installNow() {
+    if (quitting) return true;
     if (!ready) throw new Error('No update is ready yet.');
     if (isGameRunning?.()) throw new Error('Close your game first. The update installs when the launcher closes.');
     publish({ state: 'installing' });
-    startSwap();
-    app.quit();
-    return true;
+    try {
+      await startSwap();
+      if (quitting) return true;
+      quitting = true;
+      // beforeunload can cancel app.quit(). Exit this launcher after allowing normal cleanup.
+      const exitTimer = setTimeout(() => app.exit(0), 4000);
+      exitTimer.unref?.();
+      app.quit();
+      return true;
+    } catch (error) {
+      publish({ state: 'error', error: error.message });
+      log(`Update could not start: ${error.message}`);
+      throw error;
+    }
   }
 
   // Quietly applies a ready update when the launcher closes. It never waits for a game to finish.
-  function applyOnQuit() {
-    if (ready && !isGameRunning?.()) startSwap();
+  function applyOnQuit(event) {
+    if (!ready || quitting || skipOnQuit || isGameRunning?.()) return;
+    event.preventDefault();
+    installNow().catch(() => {
+      // A failed helper must not trap an ordinary attempt to close the app.
+      skipOnQuit = true;
+      app.quit();
+    });
   }
 
   function start() {

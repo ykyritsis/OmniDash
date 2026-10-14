@@ -33,16 +33,21 @@ body.garrison .g-launch-cancel:hover, body.garrison .g-launch-cancel.focused { b
 /* Search everything: section headings and the store cards from the Store. */
 body.garrison #console-search-results .g-search-head { grid-column: 1 / -1; margin: calc(1.2 * var(--p)) 0 calc(.2 * var(--p)); font: 600 calc(1.2 * var(--p)) / 1.2 var(--g-font); color: rgba(255, 255, 255, .6); }
 
-/* Friends' activity: a quiet list. */
+/* Home shelves are 20% larger, including My games. Other views keep their scale. */
+body.garrison #home-view { --g-home-row-scale: 1.2; --g-tile: calc(clamp(130px, calc(14 * var(--g-vp) / 100), 300px) * var(--g-home-row-scale)); }
+/* dashboard.css's :not(#recent-row) gives collection cards a different base width. */
+body.garrison #home-view .collection-band .game-row .game-card { flex-basis: calc(clamp(180px, 15vw, 300px) * var(--g-home-row-scale)); width: calc(clamp(180px, 15vw, 300px) * var(--g-home-row-scale)); min-width: 0; }
+/* Artwork and title are enough; omit the redundant action and installed-game metadata. */
+body.garrison #home-view .collection-band .game-card .g-card-text::after { content: none; }
+body.garrison #home-view #g-home-rows .game-card .g-card-text > :not(strong) { display: none; }
+
+/* Friends' activity uses the same horizontal shelf and controller navigation as games. */
 body.garrison .g-activity-band { margin-top: calc(3 * var(--p)); }
+body.garrison #g-friends-activity[hidden] { display: none; }
 body.garrison .g-activity-count { color: rgba(255, 255, 255, .55); font-size: calc(1.2 * var(--p)); }
-body.garrison .g-activity-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(22 * var(--p)), 1fr)); gap: calc(.8 * var(--p)); }
-body.garrison .g-activity-row { display: flex; align-items: center; gap: calc(1 * var(--p)); min-width: 0; padding: calc(.8 * var(--p)) calc(1 * var(--p)); border: 0; border-radius: calc(.8 * var(--p)); background: rgba(255, 255, 255, .05); color: #fff; text-align: left; }
-body.garrison .g-activity-row:hover, body.garrison .g-activity-row.focused { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 2px #fff; }
-body.garrison .g-activity-copy { display: flex; flex-direction: column; min-width: 0; }
-body.garrison .g-activity-copy strong { font: 600 calc(1.25 * var(--p)) / 1.2 var(--g-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.garrison .g-activity-copy small { color: rgba(255, 255, 255, .6); font-size: calc(1.05 * var(--p)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-body.garrison .g-activity-row em { margin-left: auto; color: rgba(255, 255, 255, .45); font-style: normal; font-size: calc(1.05 * var(--p)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+body.garrison .g-activity-player { display: flex; align-items: center; gap: calc(.65 * var(--p)); margin-top: calc(.65 * var(--p)); min-width: 0; }
+body.garrison .g-activity-player .g-friend-avatar { width: clamp(24px, calc(2.2 * var(--p)), 40px); height: clamp(24px, calc(2.2 * var(--p)), 40px); }
+body.garrison .g-activity-player small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Search panel in the Garrison look: a full-height dark sheet, a rounded field, and tiles in a grid like the Store's. */
 body.garrison .console-search-dialog { width: 100vw; max-width: none; height: 100vh; max-height: none; margin: 0; padding: calc(3.2 * var(--p)) calc(4 * var(--p)); border: 0; background: #0c0d0e; color: #fff; }

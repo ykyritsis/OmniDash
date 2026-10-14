@@ -746,8 +746,13 @@ function gFriendStatus(friend) {
 function gFriendAvatar(friend, className = 'g-friend-avatar') {
   return `<span class="${className} g-presence-${friend.game ? 'playing' : friend.state}">${friend.avatar ? `<img src="${escapeHtml(friend.avatar)}" alt="" loading="lazy" />` : `<b>${escapeHtml(friend.name.slice(0, 1).toUpperCase())}</b>`}<i></i></span>`;
 }
+let gFriendsRequest = 0;
 async function refreshGarrisonFriends(force = false) {
-  try { state.gFriends = await window.launcher.getFriends(force); } catch { state.gFriends = { status: 'unavailable', friends: [], online: 0 }; }
+  const request = ++gFriendsRequest;
+  let result;
+  try { result = await window.launcher.getFriends(force); } catch { result = { status: 'unavailable', friends: [], online: 0 }; }
+  if (request !== gFriendsRequest) return;
+  state.gFriends = result;
   const online = state.gFriends.online || 0;
   document.querySelector('#g-pill-count').textContent = online > 9 ? '9+' : String(online);
   renderPlayWithFriends();
@@ -758,32 +763,14 @@ function gFriendsMarkup() {
   const others = friends.filter(friend => !active.includes(friend));
   const row = friend => `<button class="g-friend focusable" type="button" data-action="g-friend-chat" data-friend-id="${escapeHtml(friend.id)}">${gFriendAvatar(friend)}<span class="g-friend-copy"><strong>${escapeHtml(friend.name)}</strong><small>${escapeHtml(gFriendStatus(friend))}</small></span>${friend.lobby && friend.gameId ? `<span class="g-friend-join">Join</span>` : ''}</button>`;
   const empty = status === 'no-account' ? 'Sign in to Steam on this PC to see your friends.'
+    : status === 'needs-api-key' ? 'Connect your Steam account in Settings → Manage games to see your friends and live activity.'
     : status === 'unavailable' ? 'Your friends could not be loaded. Check your connection and Steam account in Settings → Manage games.' : 'No friends yet.';
   return `<header class="g-friends-head"><h2>${gIcon('friends')}Friends</h2><span><button class="g-icon-small focusable" type="button" data-action="g-friend-add" aria-label="Add a friend">${gIcon('addFriend')}</button><button class="g-icon-small focusable" type="button" data-action="g-friends-refresh" aria-label="Refresh friends">${gIcon('refresh')}</button></span></header>
-    ${status === 'local' ? '<p class="g-friends-note">Showing friends saved by Steam on this PC. Link your Steam account for live status.</p>' : ''}
-    ${friends.length ? `${active.length ? `<h3>Online (${active.length})</h3>${active.map(row).join('')}` : ''}${others.length ? `<h3>${status === 'local' ? 'Friends' : 'Offline'} (${others.length})</h3>${others.map(row).join('')}` : ''}` : `<p class="g-friends-note">${empty}</p>`}`;
+    ${status === 'partial' ? '<p class="g-friends-note">Some live statuses could not be loaded. Refresh to try again.</p>' : ''}
+    ${friends.length ? `${active.length ? `<h3>Online (${active.length})</h3>${active.map(row).join('')}` : ''}${others.length ? `<h3>${others.some(friend => friend.state === 'unknown') ? 'Other friends' : 'Offline'} (${others.length})</h3>${others.map(row).join('')}` : ''}` : `<p class="g-friends-note">${empty}</p>`}`;
 }
 function renderPlayWithFriends() {
-  let section = document.querySelector('#g-play-with-friends');
-  const playing = (state.gFriends.friends || []).filter(friend => friend.game && friend.gameId);
-  if (!section) {
-    section = document.createElement('section');
-    section.id = 'g-play-with-friends';
-    section.className = 'collection-band g-friends-band';
-    section.setAttribute('aria-labelledby', 'g-play-with-friends-title');
-    document.querySelector('.dashboard-recent').after(section);
-  }
-  section.hidden = !playing.length;
-  if (!playing.length) { section.innerHTML = ''; return; }
-  const focused = section.contains(document.activeElement) ? document.activeElement.dataset.friendId : null;
-  section.innerHTML = `<div class="collection-intro"><h2 id="g-play-with-friends-title"><span class="collection-brand"><span>Play with friends</span></span></h2></div>
-    <div class="game-row collection-covers" role="list">${playing.map(friend => {
-      const owned = state.games.find(game => game.provider === 'Steam' && String(game.appId) === friend.gameId);
-      const art = owned?.artwork?.tile ? gameArt(owned) : `<img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${escapeHtml(friend.gameId)}/library_600x900.jpg" alt="" loading="lazy" data-fallback="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${escapeHtml(friend.gameId)}/header.jpg" />`;
-      return `<button class="game-card g-friend-card focusable" type="button" role="listitem" data-action="g-friend-join" data-friend-id="${escapeHtml(friend.id)}"><span class="g-friend-art">${art}${gFriendAvatar(friend, 'g-friend-badge')}</span><span class="g-card-text"><strong>${escapeHtml(friend.game)}</strong><small>${escapeHtml(friend.name)}</small><b class="g-friend-action">${friend.lobby ? 'Join game' : 'View game'}</b></span></button>`;
-    }).join('')}</div>`;
-  if (focused) setFocusedElement(section.querySelector(`[data-friend-id="${CSS.escape(focused)}"]`), { scroll: false });
-  refreshFocusables();
+  window.renderFriendsActivity?.();
 }
 document.addEventListener('error', event => {
   const image = event.target;
@@ -792,8 +779,8 @@ document.addEventListener('error', event => {
 refreshGarrisonFriends();
 // Friends refresh only while the launcher is in front; coming back refreshes them if they're stale.
 let gFriendsAt = Date.now();
-setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus()) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } }, 60000);
-window.addEventListener('focus', () => { if (Date.now() - gFriendsAt > 60000) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } });
+setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus()) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } }, 20000);
+window.addEventListener('focus', () => { if (Date.now() - gFriendsAt > 20000) { gFriendsAt = Date.now(); refreshGarrisonFriends(); } });
 
 // ---------- Notifications ----------
 const gNotices = [];
