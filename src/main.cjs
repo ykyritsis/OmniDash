@@ -2154,6 +2154,19 @@ function registerIpc() {
       const launcher = currentLibrary.find(item => item.isLauncher && item.provider === 'Battle.net');
       if (!launcher?.executable || !await exists(launcher.executable)) throw Error('Battle.net client was not found. Scan your library after installing it.');
       await launchExecutable(launcher.executable, [`--exec=launch ${game.providerId}`], path.dirname(launcher.executable));
+    } else if (game.provider === 'Steam' && /^\d+$/.test(String(game.appId)) && process.env.NEBULA_DEMO !== '1') {
+      // Steam closed: start it silently in the background (tray only, no window) and wait until it's signed in,
+      // so the game starts instead of the launch screen waiting on a Steam that isn't there.
+      const steamExe = await steamExecutableFile();
+      if (!steamExe) throw new Error('Steam was not found on this PC.');
+      if (!await steamClientIsRunning()) {
+        spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+        for (let waited = 0; waited < 90000 && !await steamSignedIn(); waited += 500) await new Promise((resolve) => setTimeout(resolve, 500));
+        if (!await steamSignedIn()) throw new Error('Steam did not start. Open Steam once and sign in, then try again.');
+        // Give Steam a moment to finish its start-up work before it accepts a game.
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+      await launchExecutable(steamExe, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(steamExe));
     } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
         await launchExecutable(game.steamExecutable, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(game.steamExecutable));
@@ -2195,6 +2208,16 @@ function registerIpc() {
     const hex = !error && String(stdout).match(/RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i)?.[1];
     resolve(hex ? String(parseInt(hex, 16)) : '');
   }));
+  // Steam's install folder, found on the drives it's installed to.
+  const steamExecutableFile = async () => {
+    for (const root of await findSteamRoots()) if (await exists(path.join(root, 'steam.exe'))) return path.join(root, 'steam.exe');
+    return '';
+  };
+  // Steam is signed in once its registry "ActiveUser" holds a user id.
+  const steamSignedIn = () => new Promise(resolve => execFile('reg.exe', ['query', 'HKCU\Software\Valve\Steam\ActiveProcess', '/v', 'ActiveUser'], { windowsHide: true, timeout: 1500 }, (error, stdout) => {
+    const hex = !error && String(stdout).match(/ActiveUser\s+REG_DWORD\s+0x([0-9a-f]+)/i)?.[1];
+    resolve(Boolean(hex && parseInt(hex, 16)));
+  }));
   ipcMain.handle('game:wait-started', async (_event, gameId, timeoutMs = 90000) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) return { started: false };
@@ -2211,9 +2234,11 @@ function registerIpc() {
           if (activeGameSession?.gameId === gameId) activeGameSession.seenRunning = true;
           return { started: true, via: 'steam' };
         }
-        // Storefront pop-ups can take focus first, so losing focus only counts once it has lasted a moment.
-        const away = blurredAt && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused() && Date.now() - blurredAt > 1500;
-        if (away && (game.provider !== 'Steam' || Date.now() - started > 8000)) return { started: true, via: 'window' };
+        // Losing focus is not proof that a game is running: Steam and other launchers take focus while the game
+        // is still loading. Steam games are judged only by Steam's running-game value above, and anything else
+        // needs focus to stay away for several seconds before the launch screen hands over.
+        const away = blurredAt && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused() && Date.now() - blurredAt > 4000;
+        if (away && game.provider !== 'Steam') return { started: true, via: 'window' };
         if (activeGameSession?.gameId === gameId && activeGameSession.pid && Date.now() - started > 4000) {
           try { process.kill(activeGameSession.pid, 0); return { started: true, via: 'process' }; } catch { /* Exited or handed off. */ }
         }
