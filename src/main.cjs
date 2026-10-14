@@ -15,6 +15,7 @@ const { readGogOwned, readAmazonOwned } = require('./local-owned-libraries.cjs')
 const { normalizeTitle, titleMatchScore, titleNeedsRecheck } = require('./title-match.cjs');
 const { libraryKey, installLibrariesByDrive } = require('./steam-install-libraries.cjs');
 const { readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, clientDownloadItems, parseVdf: parseSteamVdf } = require('./steam-local.cjs');
+const { createUpdater } = require('./updater.cjs');
 const { createSteamFamilyLibrary } = require('./steam-family.cjs');
 const { duplicateGroups, providers: duplicateProviders } = require('./library-duplicates.cjs');
 const storeOffers = createStoreOffers();
@@ -3262,6 +3263,9 @@ function registerIpc() {
   });
   ipcMain.handle('app:power', (_event, action) => runPowerAction(action, { demo: process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1' }));
   ipcMain.handle('app:quit', () => app.quit());
+  ipcMain.handle('updater:status', () => updater.status());
+  ipcMain.handle('updater:check', () => updater.check({ force: true }));
+  ipcMain.handle('updater:install', () => updater.installNow());
 }
 
 async function createWindow() {
@@ -3340,8 +3344,19 @@ async function createWindow() {
   }
 }
 
+// Built-in updates: checks GitHub in the background and installs a verified build when you choose or when the
+// launcher closes. A game the launcher started counts as running, so nothing is replaced under it.
+const updater = createUpdater({
+  app,
+  getWindow: () => mainWindow,
+  isGameRunning: () => Boolean(activeGameSession),
+  log: message => console.log(message)
+});
+app.on('will-quit', () => updater.applyOnQuit());
+
 app.whenReady().then(async () => {
   registerIpc();
+  updater.start();
   if (process.env.NEBULA_SGDB_KEY) {
     const saved = await readSettings();
     if (!saved.steamGridDbKey) await writeSettings({ steamGridDbKey: process.env.NEBULA_SGDB_KEY });

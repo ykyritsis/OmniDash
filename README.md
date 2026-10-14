@@ -90,6 +90,7 @@ npm start
 - Interface scale, reduced motion and high-contrast focus.
 - Optional interface sounds, with the option to load your own sound pack.
 - Power menu with confirmed sleep, restart and shutdown.
+- Built-in updates: the launcher checks in the background, downloads and verifies new builds, and installs them when you choose "Restart to update" or next close the launcher. Settings → Experience has a manual check.
 
 ### Steam and other launchers
 

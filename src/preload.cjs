@@ -117,5 +117,9 @@ contextBridge.exposeInMainWorld('launcher', {
   openFseSetup: () => ipcRenderer.invoke('app:fse-setup'),
   minimizeLauncher: () => ipcRenderer.invoke('app:minimize-to-taskbar'),
   quit: () => ipcRenderer.invoke('app:quit'),
-  powerAction: (action) => ipcRenderer.invoke('app:power', action)
+  powerAction: (action) => ipcRenderer.invoke('app:power', action),
+  getUpdateStatus: () => ipcRenderer.invoke('updater:status'),
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  installUpdate: () => ipcRenderer.invoke('updater:install'),
+  onUpdateStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('updater:status', listener); return () => ipcRenderer.removeListener('updater:status', listener); }
 });

@@ -440,7 +440,7 @@ setTimeout(() => loadXboxStore().then(() => { if (state.view === 'home') renderH
 // ---------- Boot: green bloom, the Xbox sphere with a light sweep and ring pulse, then Home rises ----------
 (function buildBoot() {
   const screen = document.querySelector('#startup-screen');
-  screen.innerHTML = '<div class="g-boot-bloom"></div><div class="g-boot-ring"></div><div class="g-boot-mark"><img src="assets/xbox.svg" alt="" /><span class="g-boot-sweep"></span></div><span class="g-boot-word">XBOX PREVIEW UI</span>';
+  screen.innerHTML = '<div class="g-boot-bloom"></div><div class="g-boot-ring"></div><div class="g-boot-mark"><img src="assets/xbox.svg" alt="" /><span class="g-boot-sweep"></span></div>';
 })();
 runStartupSequence = function (settings) {
   if (settings.startupAnimation === false) return;
