@@ -121,5 +121,9 @@ contextBridge.exposeInMainWorld('launcher', {
   getUpdateStatus: () => ipcRenderer.invoke('updater:status'),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
+  getSafeMode: () => ipcRenderer.invoke('app:safe-mode'),
+  copyDiagnostics: () => ipcRenderer.invoke('diagnostics:copy'),
+  exportSettings: () => ipcRenderer.invoke('backup:export'),
+  importSettings: () => ipcRenderer.invoke('backup:import'),
   onUpdateStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('updater:status', listener); return () => ipcRenderer.removeListener('updater:status', listener); }
 });

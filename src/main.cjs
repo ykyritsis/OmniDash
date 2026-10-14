@@ -1,4 +1,6 @@
-const { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, shell, safeStorage } = require('electron');
+const support = require('./support.cjs');
+support.installLogCapture();
 const fs = require('fs/promises');
 const path = require('path');
 const { fileURLToPath } = require('url');
@@ -48,6 +50,11 @@ const steamDiscoveryArtworkCache = new Map();
 let steamDiscoveryArtworkRunning = false;
 const publicSteamAchievementCache = new Map();
 let activeGameSession = null;
+// The last game launched from here, for diagnostics: what was started and whether it got going.
+let lastLaunch = null;
+let safeMode = false;
+let startupGuard = null;
+let rendererRecoveries = 0;
 const installRequests = new Map();
 let publisherLocalStatus = { ubisoftStatus:'not-scanned', ubisoftCount:0 };
 
@@ -2146,6 +2153,7 @@ function registerIpc() {
   ipcMain.handle('game:launch', async (_event, gameId, launchOptions) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
+    lastLaunch = { gameId, title: game.title, provider: game.provider, at: Date.now(), result: '' };
     if (game.installed === false) throw new Error('This game is not installed. Choose Install on its game page first.');
     const optionText = String(launchOptions ?? game.launchOptions ?? '').trim();
     if (optionText.length > 512 || /[\r\n\0]/.test(optionText)) throw new Error('Steam launch options must be a single line under 512 characters.');
@@ -2162,7 +2170,8 @@ function registerIpc() {
       if (!steamExe) throw new Error('Steam was not found on this PC.');
       if (!await steamClientIsRunning()) {
         spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-        for (let waited = 0; waited < 90000 && !await steamSignedIn(); waited += 500) await new Promise((resolve) => setTimeout(resolve, 500));
+        for (let waited = 0; waited < 90000 && !await steamSignedIn() && !launchWaitCancel.has(String(gameId)); waited += 500) await new Promise((resolve) => setTimeout(resolve, 500));
+        if (launchWaitCancel.delete(String(gameId))) { if (lastLaunch) lastLaunch.result = 'cancelled while Steam started'; throw new Error('Launch cancelled.'); }
         if (!await steamSignedIn()) throw new Error('Steam did not start. Open Steam once and sign in, then try again.');
         // Give Steam a moment to finish its start-up work before it accepts a game.
         await new Promise((resolve) => setTimeout(resolve, 2500));
@@ -2230,9 +2239,10 @@ function registerIpc() {
     mainWindow?.on('blur', onBlur);
     try {
       while (Date.now() < deadline) {
-        if (launchWaitCancel.delete(gameId)) return { started: false, cancelled: true };
+        if (launchWaitCancel.delete(gameId)) { if (lastLaunch?.gameId === gameId) lastLaunch.result = 'cancelled'; return { started: false, cancelled: true }; }
         if (game.provider === 'Steam' && game.appId && await steamRunningAppId() === String(game.appId)) {
           if (activeGameSession?.gameId === gameId) activeGameSession.seenRunning = true;
+          if (lastLaunch?.gameId === gameId) lastLaunch.result = 'running (Steam)';
           return { started: true, via: 'steam' };
         }
         // Losing focus is not proof that a game is running: Steam and other launchers take focus while the game
@@ -3264,6 +3274,38 @@ function registerIpc() {
   ipcMain.handle('app:power', (_event, action) => runPowerAction(action, { demo: process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1' }));
   ipcMain.handle('app:quit', () => app.quit());
   ipcMain.handle('updater:status', () => updater.status());
+  ipcMain.handle('app:safe-mode', () => safeMode);
+  ipcMain.handle('diagnostics:copy', async () => {
+    const settings = await readSettings();
+    const text = support.buildDiagnostics({
+      version: app.getVersion(), packaged: app.isPackaged, portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
+      electronVersion: process.versions.electron, platform: process.platform, release: require('os').release(), locale: app.getLocale(),
+      settings, lastLaunch, updater: updater.status(), safeMode, startup: startupGuard?.snapshot()
+    });
+    clipboard.writeText(text);
+    return { characters: text.length };
+  });
+  ipcMain.handle('backup:export', async () => {
+    const settings = await readSettings();
+    const choice = await dialog.showMessageBox(mainWindow, {
+      type: 'question', buttons: ['Leave keys out', 'Include keys', 'Cancel'], defaultId: 0, cancelId: 2,
+      title: 'Export settings', message: 'Include your API keys in the backup?',
+      detail: 'Keys let whoever opens the file use them. Leave them out to share a backup safely.'
+    });
+    if (choice.response === 2) return { status: 'cancelled' };
+    const picked = await dialog.showSaveDialog(mainWindow, { title: 'Save settings backup', defaultPath: `xbox-preview-ui-settings-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'Settings backup', extensions: ['json'] }] });
+    if (picked.canceled || !picked.filePath) return { status: 'cancelled' };
+    const backup = support.buildBackup(settings, { includeKeys: choice.response === 1, version: app.getVersion() });
+    await fs.writeFile(picked.filePath, JSON.stringify(backup, null, 2), 'utf8');
+    return { status: 'saved', file: path.basename(picked.filePath), includesKeys: backup.includesKeys, count: Object.keys(backup.data).length };
+  });
+  ipcMain.handle('backup:import', async () => {
+    const picked = await dialog.showOpenDialog(mainWindow, { title: 'Open settings backup', properties: ['openFile'], filters: [{ name: 'Settings backup', extensions: ['json'] }] });
+    if (picked.canceled || !picked.filePaths[0]) return { status: 'cancelled' };
+    const parsed = support.parseBackup(await fs.readFile(picked.filePaths[0], 'utf8'));
+    await writeSettings(parsed.data, { replaceArtwork: true });
+    return { status: 'restored', file: path.basename(picked.filePaths[0]), count: Object.keys(parsed.data).length, includesKeys: parsed.includesKeys };
+  });
   ipcMain.handle('updater:check', () => updater.check({ force: true }));
   ipcMain.handle('updater:install', () => updater.installNow());
 }
@@ -3293,6 +3335,15 @@ async function createWindow() {
   });
   mainWindow.setMenu(null);
   steamShop = createSteamShop(mainWindow, { WebContentsView:require('electron').WebContentsView, ipcMain });
+  // A healthy start means the window loaded and stayed up. Two starts in a row that never got there make the
+  // next start run in safe mode (see support.cjs).
+  mainWindow.webContents.once('did-finish-load', () => setTimeout(() => startupGuard?.healthy(), 20000));
+  // If the page itself crashes, reload it, but not in a loop.
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error(`Launcher page stopped (${details.reason})`);
+    startupGuard?.crashed();
+    if (details.reason !== 'clean-exit' && rendererRecoveries++ < 3 && mainWindow && !mainWindow.isDestroyed()) setTimeout(() => mainWindow?.webContents.reload(), 800);
+  });
   mainWindow.once('ready-to-show', () => {
     if (XBOX_MODE) mainWindow.setFullScreen(true);
     if (!process.env.NEBULA_CAPTURE && !process.env.NEBULA_CAPTURE_SET && !process.env.NEBULA_REVIEW) mainWindow.show();
@@ -3356,7 +3407,10 @@ app.on('will-quit', () => updater.applyOnQuit());
 
 app.whenReady().then(async () => {
   registerIpc();
-  updater.start();
+  startupGuard = support.createStartupGuard(path.join(app.getPath('userData'), 'startup-state.json'));
+  safeMode = await startupGuard.begin();
+  if (safeMode) console.warn('Starting in safe mode after repeated start-up problems: background refresh, prefetch and update checks are off.');
+  if (!safeMode) updater.start();
   if (process.env.NEBULA_SGDB_KEY) {
     const saved = await readSettings();
     if (!saved.steamGridDbKey) await writeSettings({ steamGridDbKey: process.env.NEBULA_SGDB_KEY });

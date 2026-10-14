@@ -16,3 +16,42 @@ body.garrison #detail-title, body.garrison #detail-title[hidden] { font-size: ca
 
 /* Asleep (launcher in the background): nothing animates. */
 body.g-asleep *, body.g-asleep *::before, body.g-asleep *::after { animation-play-state: paused !important; transition: none !important; }
+
+/* Artwork progress: a quiet pill at the bottom centre with a hairline, instead of a card in the corner. */
+body.garrison .scan-progress, body.garrison .scan-progress.background-refresh { top: auto; right: auto; bottom: calc(2.2 * var(--p)); left: 50%; transform: translateX(-50%); width: auto; min-width: calc(24 * var(--p)); max-width: min(70vw, calc(64 * var(--p))); padding: calc(.75 * var(--p)) calc(1.6 * var(--p)) calc(.95 * var(--p)); border: 0; border-radius: 999px; background: rgba(18, 18, 18, .74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: none; color: rgba(255, 255, 255, .78); overflow: hidden; }
+body.garrison .scan-progress .scan-progress-top { display: flex; align-items: center; gap: calc(1.2 * var(--p)); }
+body.garrison .scan-progress .scan-progress-top strong { font: 500 calc(1.15 * var(--p)) / 1.2 var(--g-font); color: rgba(255, 255, 255, .72); white-space: nowrap; }
+body.garrison .scan-progress #scan-percent { font: 500 calc(1.1 * var(--p)) / 1 var(--g-font); color: rgba(255, 255, 255, .5); font-variant-numeric: tabular-nums; }
+body.garrison .scan-progress p { margin: calc(.35 * var(--p)) 0 0; font-size: calc(1.05 * var(--p)); color: rgba(255, 255, 255, .45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.garrison .scan-progress .scan-track { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; margin: 0; border-radius: 0; background: transparent; }
+body.garrison .scan-progress #scan-fill { display: block; height: 100%; background: rgba(255, 255, 255, .8); transition: width 400ms ease; }
+
+/* Launch screen Cancel. */
+body.garrison .g-launch-cancel { margin-top: calc(1.6 * var(--p)); height: calc(3.2 * var(--p)); padding: 0 calc(2 * var(--p)); border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; background: rgba(0, 0, 0, .3); color: #fff; font: 600 calc(1.2 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-launch-cancel:hover, body.garrison .g-launch-cancel.focused { background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 2px #fff; }
+
+/* Search everything: section headings and the store cards from the Store. */
+body.garrison #console-search-results .g-search-head { grid-column: 1 / -1; margin: calc(1.2 * var(--p)) 0 calc(.2 * var(--p)); font: 600 calc(1.2 * var(--p)) / 1.2 var(--g-font); color: rgba(255, 255, 255, .6); }
+
+/* Friends' activity: a quiet list. */
+body.garrison .g-activity-band { margin-top: calc(3 * var(--p)); }
+body.garrison .g-activity-count { color: rgba(255, 255, 255, .55); font-size: calc(1.2 * var(--p)); }
+body.garrison .g-activity-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(22 * var(--p)), 1fr)); gap: calc(.8 * var(--p)); }
+body.garrison .g-activity-row { display: flex; align-items: center; gap: calc(1 * var(--p)); min-width: 0; padding: calc(.8 * var(--p)) calc(1 * var(--p)); border: 0; border-radius: calc(.8 * var(--p)); background: rgba(255, 255, 255, .05); color: #fff; text-align: left; }
+body.garrison .g-activity-row:hover, body.garrison .g-activity-row.focused { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-activity-copy { display: flex; flex-direction: column; min-width: 0; }
+body.garrison .g-activity-copy strong { font: 600 calc(1.25 * var(--p)) / 1.2 var(--g-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.garrison .g-activity-copy small { color: rgba(255, 255, 255, .6); font-size: calc(1.05 * var(--p)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.garrison .g-activity-row em { margin-left: auto; color: rgba(255, 255, 255, .45); font-style: normal; font-size: calc(1.05 * var(--p)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+
+/* Search panel in the Garrison look: a full-height dark sheet, a rounded field, and tiles in a grid like the Store's. */
+body.garrison .console-search-dialog { width: 100vw; max-width: none; height: 100vh; max-height: none; margin: 0; padding: calc(3.2 * var(--p)) calc(4 * var(--p)); border: 0; background: #0c0d0e; color: #fff; }
+body.garrison .console-search-dialog > header h2 { font: 600 calc(2.2 * var(--p)) / 1.1 var(--g-font); }
+body.garrison .console-search-dialog #search-popover input[type="search"] { width: 100%; height: calc(4.2 * var(--p)); padding: 0 calc(1.6 * var(--p)); border: 0; border-radius: 999px; background: rgba(255, 255, 255, .08); color: #fff; font: 400 calc(1.5 * var(--p)) / 1 var(--g-font); outline: 0; }
+body.garrison .console-search-dialog #search-popover input[type="search"]:focus, body.garrison .console-search-dialog #search-popover input[type="search"].focused { box-shadow: 0 0 0 2px #fff; }
+body.garrison .console-search-dialog #console-search-count { margin: calc(1 * var(--p)) 0 0; color: rgba(255, 255, 255, .55); font-size: calc(1.2 * var(--p)); }
+body.garrison #console-search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(17 * var(--p)), 1fr)); gap: calc(1.4 * var(--p)) calc(1.2 * var(--p)); margin-top: calc(1.6 * var(--p)); align-content: start; }
+body.garrison #console-search-results .g-store-card { width: auto; }
+body.garrison #console-search-results .g-search-head { margin: calc(1.6 * var(--p)) 0 0; }
+body.garrison #console-search-results .g-search-head:first-child { margin-top: 0; }
+body.garrison #console-search-results .console-search-empty { grid-column: 1 / -1; color: rgba(255, 255, 255, .7); }

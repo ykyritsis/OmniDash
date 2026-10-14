@@ -58,6 +58,7 @@ function gPreloadImage(url) {
   if (gPrefetchImages.length > 24) gPrefetchImages.shift();
 }
 async function gPrefetchGame(gameId) {
+  if (window.gSafeMode) return;
   const game = state.games.find(item => item.id === gameId);
   if (!game || game.isApp || gPrefetchBusy || gPrefetched.has(gameId)) return;
   gPrefetchBusy = true;
