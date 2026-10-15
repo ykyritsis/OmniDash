@@ -7,6 +7,9 @@ const { fileURLToPath } = require('url');
 const { spawn, execFile } = require('child_process');
 const { createArtworkCache } = require('./artwork-cache.cjs');
 const { createConsoleServices } = require('./console-services.cjs');
+const ratings = require('./region-ratings.cjs');
+const { uniqueVideos, uniqueScreenshots } = require('./renderer/media-utils.js');
+const { createSteamStoreLookup } = require('./steam-store-lookup.cjs');
 const { createSoundPack } = require('./sound-pack.cjs');
 const { createSteamShop } = require('./steam-shop.cjs');
 const { createSteamLaunch } = require('./steam-launch.cjs');
@@ -47,6 +50,7 @@ let mainWindow;
 let steamShop;
 let currentLibrary = [];
 const gameDetailCache = new Map();
+const gameDetailRequests = new Map();
 let steamChartsCache = { at: 0, apiKey: '', ranks: new Map(), status: 'empty' };
 let steamDiscoveryCache = { at: 0, data: null };
 const steamDiscoveryArtworkCache = new Map();
@@ -76,6 +80,7 @@ async function localSteamLibrary() {
 }
 
 const SETTINGS_DEFAULTS = {
+  region: 'auto',
   steamGridDbKey: '',
   steamApiKey: '',
   steamId64: '',
@@ -134,7 +139,10 @@ function librarySnapshotPath() {
 }
 
 const artworkCache = createArtworkCache(path.join(path.dirname(settingsPath()), 'artwork-cache'));
-const consoleServices = createConsoleServices(path.join(path.dirname(settingsPath()), 'catalog-cache'));
+let playerRegion = 'auto';
+let windowsHomeCountry = '';
+const consoleServices = createConsoleServices(path.join(path.dirname(settingsPath()), 'catalog-cache'), fetch, { getCountry: steamCountry });
+const steamLookup = createSteamStoreLookup({ getCountry: steamCountry });
 const soundPack = createSoundPack(path.join(path.dirname(settingsPath()), 'personalization'));
 const playerProfile = createPlayerProfile(path.join(path.dirname(settingsPath()), 'profile-cache'));
 function connectionProgress(data) {
@@ -231,7 +239,7 @@ async function fetchSteamCurrentPopularity(apiKey) {
   try {
     const url = new URL('https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/');
     url.searchParams.set('key', apiKey);
-    url.searchParams.set('input_json', JSON.stringify({ context: { language: 'english', country_code: 'US' }, data_request: { include_basic_info: true } }));
+    url.searchParams.set('input_json', JSON.stringify({ context: { language: 'english', country_code: steamCountry() }, data_request: { include_basic_info: true } }));
     const response = await fetch(url, { signal: AbortSignal.timeout(9000) });
     if (!response.ok) throw new Error(`Steam charts returned ${response.status}`);
     const body = await response.json();
@@ -254,13 +262,13 @@ function decodeSteamText(value) {
 }
 
 function steamCountry() {
-  const region = (Intl.DateTimeFormat().resolvedOptions().locale.match(/-([A-Z]{2})$/) || [])[1];
-  return region || 'AU';
+  const { locale, timeZone } = Intl.DateTimeFormat().resolvedOptions();
+  return ratings.resolveCountry({ region: playerRegion, country: windowsHomeCountry || (app.isReady() ? app.getLocaleCountryCode?.().toUpperCase() : ''), locale, timeZone });
 }
-function steamPrice(price) {
-  if (!price) return { list: 0, msrp: 0, discount: 0, currency: 'USD' };
-  const list = (Number(price.final) || 0) / 100, msrp = (Number(price.initial) || 0) / 100;
-  return { list, msrp, discount: msrp > list ? Math.round((1 - list / msrp) * 100) : 0, currency: String(price.currency || 'USD') };
+async function detectWindowsHomeCountry() {
+  if (process.platform !== 'win32' || process.env.NEBULA_DEMO === '1') return '';
+  return new Promise(resolve => execFile('reg.exe', ['query', 'HKCU\\Control Panel\\International\\Geo', '/v', 'Name'],
+    { windowsHide: true, timeout: 1500 }, (_error, stdout) => resolve(String(stdout || '').match(/\bName\s+REG_SZ\s+([A-Z]{2})\b/)?.[1] || '')));
 }
 function steamStoreArt(appId) {
   const base = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/`;
@@ -268,27 +276,7 @@ function steamStoreArt(appId) {
 }
 // Name and price for Steam games, in batches (IStoreBrowseService answers without a key).
 async function steamStoreItems(appIds) {
-  const url = new URL('https://api.steampowered.com/IStoreBrowseService/GetItems/v1/');
-  url.searchParams.set('input_json', JSON.stringify({ ids: appIds.map(appid => ({ appid: Number(appid) })), context: { language: 'english', country_code: steamCountry() }, data_request: { include_basic_info: true, include_assets: true } }));
-  const response = await fetch(url, { signal: AbortSignal.timeout(9000) });
-  if (!response.ok) return [];
-  const body = await response.json();
-  return (body?.response?.store_items || []).filter(item => item?.success === 1 && item.appid).map(item => {
-    const option = item.best_purchase_option;
-    const cents = Number(option?.final_price_in_cents), original = Number(option?.original_price_in_cents) || cents;
-    // Steam's own asset paths: newer games keep their covers under hashed folders the plain URLs miss.
-    const assets = item.assets || {};
-    const asset = name => assets[name] && assets.asset_url_format ? `https://shared.akamai.steamstatic.com/store_item_assets/${String(assets.asset_url_format).replace('${FILENAME}', assets[name])}` : null;
-    const fallback = steamStoreArt(item.appid);
-    const tile = asset('library_capsule_2x') || asset('library_capsule');
-    const artwork = { ...fallback, tile: tile || asset('header') || fallback.tile, grid: tile || asset('header') || fallback.grid, hero: asset('library_hero') || fallback.hero, wide: asset('header') || fallback.wide };
-    return { appId: String(item.appid), title: String(item.name || ''), type: steamAppTypes[Number(item.type)] || 'game', artwork,
-      price: option ? { list: cents / 100, msrp: original / 100, discount: Number(option.discount_pct) || 0, currency: steamCurrency(option.formatted_final_price), formatted: String(option.formatted_final_price || '') } : item.is_free ? { list: 0, msrp: 0, discount: 0, currency: 'USD' } : null };
-  });
-}
-function steamCurrency(formatted) {
-  const text = String(formatted || '');
-  return /NZ\$/.test(text) ? 'NZD' : /A\$/.test(text) ? 'AUD' : /CDN\$|C\$/.test(text) ? 'CAD' : /€/.test(text) ? 'EUR' : /£/.test(text) ? 'GBP' : /¥/.test(text) ? 'JPY' : 'USD';
+  return steamLookup.getItems(appIds);
 }
 function steamDiscoveryItem(appId, title, rank, extra = {}) {
   return { id: `steam-discovery-${appId}`, appId: String(appId), title: decodeSteamText(title), provider: 'Steam', discoveryOnly: true, installed: false, rank, artwork: { tile: null, tileIsSquare: false }, ...extra };
@@ -831,36 +819,11 @@ function scheduleScreenshotCache(game, details) {
   artworkCacheTask = Promise.allSettled([artworkCacheTask, task]);
 }
 
-// Age ratings: PEGI in PEGI regions, ESRB elsewhere, then the store's own minimum age.
-const ESRB_AGES = { ec: '3', e: '6', e10: '10', t: '13', m: '17', ao: '18', rp: '' };
-function preferredRatingSystems() {
-  const region = (Intl.DateTimeFormat().resolvedOptions().locale.split('-')[1] || app.getLocaleCountryCode?.() || '').toUpperCase();
-  return ['US', 'CA', 'MX'].includes(region) ? ['ESRB', 'PEGI', 'USK'] : region === 'DE' ? ['USK', 'PEGI', 'ESRB'] : ['PEGI', 'ESRB', 'USK'];
-}
-function steamAgeRating(item) {
-  const ratings = item.ratings || {};
-  for (const system of preferredRatingSystems()) {
-    const entry = ratings[system.toLowerCase()];
-    if (!entry?.rating) continue;
-    const raw = String(entry.rating).toLowerCase();
-    const value = system === 'ESRB' ? ESRB_AGES[raw] ?? raw : raw.replace(/\D/g, '');
-    if (value) return { system, value, label: system === 'ESRB' ? raw.toUpperCase() : value, descriptors: String(entry.descriptors || '').replace(/\s*[\r\n]+\s*/g, ', ').trim() };
-  }
-  const age = Number(item.required_age) || 0;
-  return age ? { system: preferredRatingSystems()[0], value: String(age), label: String(age), descriptors: '' } : null;
-}
-function xboxAgeRating(product) {
-  const ratings = product.MarketProperties?.[0]?.ContentRatings || [];
-  for (const system of preferredRatingSystems()) {
-    const entry = ratings.find((item) => String(item.RatingSystem || '').toUpperCase() === system);
-    if (!entry?.RatingId) continue;
-    const raw = String(entry.RatingId).split(':').pop().toLowerCase();
-    const value = system === 'ESRB' ? ESRB_AGES[raw] ?? raw : raw.replace(/\D/g, '');
-    if (!value) continue;
-    const descriptors = (entry.RatingDescriptors || []).map((item) => String(item).split(':').pop().replace(/([a-z])([A-Z])/g, '$1 $2')).join(', ');
-    return { system, value, label: system === 'ESRB' ? raw.toUpperCase() : value, descriptors };
-  }
-  return null;
+const xboxAgeRating = product => ratings.xboxAgeRating(product, steamCountry());
+const detailCacheKey = (id, country = steamCountry()) => `v2:${country}:${id}`;
+function invalidateGameDetails(id) {
+  for (const key of gameDetailCache.keys()) if (key === id || key.endsWith(`:${id}`)) gameDetailCache.delete(key);
+  if (detailDisk) for (const key of Object.keys(detailDisk)) if (key === id || key.endsWith(`:${id}`)) delete detailDisk[key];
 }
 
 // Game pages open from a copy saved on disk (up to a week old) while a fresh copy loads behind it.
@@ -876,25 +839,29 @@ function saveDetailDisk() {
   detailDiskTimer = setTimeout(() => fs.writeFile(detailDiskFile(), JSON.stringify(detailDisk)).catch(() => {}), 2000);
 }
 async function fetchGameDetails(game) {
-  const memory = gameDetailCache.get(game.id);
+  const country = steamCountry(), key = detailCacheKey(game.id, country);
+  const memory = gameDetailCache.get(key);
   if (memory && Date.now() - memory.at < 15 * 60 * 1000) return memory.data;
-  const disk = (await loadDetailDisk())[game.id];
+  const disk = (await loadDetailDisk())[key];
   // Like a console's title cache: a page seen in the last day opens straight from disk with no network
   // at all; older copies (up to a week) still open at once and refresh behind the page.
-  if (disk?.data && Date.now() - disk.at < 24 * 60 * 60 * 1000) { gameDetailCache.set(game.id, { at: Date.now(), data: disk.data }); return disk.data; }
-  const fresh = fetchGameDetailsFresh(game).then(data => {
-    delete detailDisk[game.id];
-    detailDisk[game.id] = { at: Date.now(), data };
+  if (disk?.data && Date.now() - disk.at < 24 * 60 * 60 * 1000) { gameDetailCache.set(key, { at: Date.now(), data: disk.data }); return disk.data; }
+  let fresh = gameDetailRequests.get(key);
+  if (!fresh) fresh = fetchGameDetailsFresh(game, country).then(data => {
+    delete detailDisk[key];
+    detailDisk[key] = { at: Date.now(), data };
     const keys = Object.keys(detailDisk);
     for (let index = 0; index < keys.length - 1500; index++) delete detailDisk[keys[index]];
     saveDetailDisk();
     return data;
-  });
+  }).finally(() => gameDetailRequests.delete(key));
+  gameDetailRequests.set(key, fresh);
   if (disk?.data && Date.now() - disk.at < 7 * 24 * 60 * 60 * 1000) { fresh.catch(() => {}); return disk.data; }
   return fresh;
 }
-async function fetchGameDetailsFresh(game) {
-  const cached = gameDetailCache.get(game.id);
+async function fetchGameDetailsFresh(game, country = steamCountry()) {
+  const key = detailCacheKey(game.id, country);
+  const cached = gameDetailCache.get(key);
   if (cached && Date.now() - cached.at < 15 * 60 * 1000) return cached.data;
   const fallback = {
     title: game.title, provider: game.provider, description: '', fullDescription: '', genres: [], developer: '', publisher: '', releaseDate: '',
@@ -907,8 +874,8 @@ async function fetchGameDetailsFresh(game) {
   const applyXboxSummary = async (details) => {
     const summary = await xboxSummaryRequest;
     if (!summary) return details;
-    if (summary.rating?.label) details.rating = summary.rating;
-    if (summary.videos?.length) details.videos = summary.videos;
+    details.rating = ratings.chooseRating(country, details.rating, summary.rating);
+    details.videos = uniqueVideos([...(summary.videos || []), ...(details.videos || [])], { playableOnly: true });
     details.xboxProductId ||= summary.xboxProductId;
     details.publisher ||= summary.publisher;
     if (!details.description && summary.description) details.description = details.fullDescription = summary.description;
@@ -917,21 +884,21 @@ async function fetchGameDetailsFresh(game) {
   const xboxFallback = async () => {
     const xboxDetails = await fetchXboxCatalogDetails(game.title);
     const result = await applyXboxSummary(xboxDetails ? { ...fallback, ...xboxDetails } : { ...fallback });
-    gameDetailCache.set(game.id, { at: Date.now(), data: result });
+    result.screenshots = uniqueScreenshots(result.screenshots);
+    gameDetailCache.set(key, { at: Date.now(), data: result });
     scheduleScreenshotCache(game, result);
     return result;
   };
   let appId = /^\d+$/.test(String(game.achievementReferenceAppId || game.appId || '')) ? String(game.achievementReferenceAppId || game.appId) : '';
   if (!appId) try {
-    const search = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(game.title)}&l=english&cc=US`, { signal: AbortSignal.timeout(7000) });
-    const results = (await search.json()).items || [];
-    const match = [...results].sort((a, b) => titleMatchScore(game.title, b.name) - titleMatchScore(game.title, a.name))[0];
-    if (match?.id && titleMatchScore(game.title, match.name) >= 90) appId = String(match.id);
+    const results = await steamLookup.search(game.title);
+    const match = [...results].sort((a, b) => titleMatchScore(game.title, b.title) - titleMatchScore(game.title, a.title))[0];
+    if (match?.appId && titleMatchScore(game.title, match.title) >= 90) appId = match.appId;
   } catch { /* An imported title may not have a Steam store listing. */ }
   if (!appId) return xboxFallback();
   const xboxDetailsRequest = fetchXboxCatalogDetails(game.title).catch(() => null);
   try {
-    const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&l=english`, {
+    const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&l=english&cc=${country}`, {
       headers: { 'Accept-Language': 'en-US,en;q=0.9' }, signal: AbortSignal.timeout(10000)
     });
     if (!response.ok) return xboxFallback();
@@ -970,7 +937,7 @@ async function fetchGameDetailsFresh(game) {
     const dlcIds = (item.dlc || []).map(String).filter((id) => /^\d+$/.test(id)).slice(0, 50);
     details.dlcIds = dlcIds;
     details.dlcStatus = dlcIds.length ? 'needs-check' : 'none-listed';
-    details.rating = steamAgeRating(item);
+    details.rating = ratings.steamAgeRating(item, country);
     // Metadata follows the artwork order: the Xbox Store first, Steam fills the gaps.
     const xbox = await xboxDetailsRequest;
     if (xbox) {
@@ -980,24 +947,26 @@ async function fetchGameDetailsFresh(game) {
       if (xbox.genres?.length) details.genres = [...new Set([...xbox.genres, ...details.genres])].slice(0, 5);
       if (!details.screenshots.length) details.screenshots = xbox.screenshots || [];
       if (!details.categories.length) details.categories = xbox.categories || [];
-      if (xbox.rating) details.rating = xbox.rating;
+      details.rating = ratings.chooseRating(country, details.rating, xbox.rating);
       details.xboxInfo = xbox.xboxInfo;
       details.metadataSource = 'Xbox Store · Steam';
     }
     await applyXboxSummary(details);
     // Steam's own trailers (HLS) play in the launcher's player when the Xbox listing has none.
-    if (!details.videos?.length) {
-      details.videos = (item.movies || []).map(movie => ({
+    {
+      const steamVideos = (item.movies || []).map(movie => ({
         title: String(movie.name || 'Trailer'),
         preview: String(movie.thumbnail || '').replace(/movie\.293x165\.jpg/, 'movie.600x338.jpg'),
         stream: String(movie.hls_h264 || '')
-      })).filter(video => /^https:\/\/video\.(akamai|fastly|cloudflare)\.steamstatic\.com\/[^\s"]+\.m3u8(\?|$)/.test(video.stream) && /^https:\/\/[^/]*steamstatic\.com\//.test(video.preview)).slice(0, 6);
+      })).filter(video => /^https:\/\/video\.(akamai|fastly|cloudflare)\.steamstatic\.com\/[^\s"]+\.m3u8(\?|$)/.test(video.stream) && /^https:\/\/[^/]*steamstatic\.com\//.test(video.preview));
+      details.videos = uniqueVideos([...(details.videos || []), ...steamVideos], { playableOnly: true }).slice(0, 6);
     }
     // Small copies for the gallery strip; the full size opens in the viewer.
+    details.screenshots = uniqueScreenshots(details.screenshots.length ? details.screenshots : fallback.screenshots);
     details.screenshotThumbs = details.screenshots.map(url => String(url).replace(/\.1920x1080\.jpg/, '.600x338.jpg'));
     if (details.rating && !details.ageRating) details.ageRating = `${details.rating.value}+`;
     if (!details.screenshots.length) details.screenshots = fallback.screenshots;
-    gameDetailCache.set(game.id, { at: Date.now(), data: details });
+    gameDetailCache.set(key, { at: Date.now(), data: details });
     scheduleScreenshotCache(game, details);
     return details;
   } catch { return xboxFallback(); }
@@ -1037,10 +1006,9 @@ async function fetchGameAchievements(game) {
   const referenceOnly = game.provider !== 'Steam';
   if (!appId && referenceOnly) {
     try {
-      const search = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(game.title)}&l=english&cc=US`, { signal: AbortSignal.timeout(7000) });
-      const results = (await search.json()).items || [];
-      const match = [...results].sort((a, b) => titleMatchScore(game.title, b.name) - titleMatchScore(game.title, a.name))[0];
-      if (match?.id && titleMatchScore(game.title, match.name) >= 82) appId = String(match.id);
+      const results = await steamLookup.search(game.title);
+      const match = [...results].sort((a, b) => titleMatchScore(game.title, b.title) - titleMatchScore(game.title, a.title))[0];
+      if (match?.appId && titleMatchScore(game.title, match.title) >= 82) appId = match.appId;
     } catch { /* A non-Steam game may have no Steam edition. */ }
   }
   if (appId) {
@@ -1115,7 +1083,7 @@ function catalogImageUrl(image) {
 
 async function fetchXboxCatalogArtwork(title) {
   try {
-    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=US&languages=en-US&fieldsTemplate=details&platformdependencyname=windows.xbox`;
+    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=${steamCountry()}&languages=en-${steamCountry()}&fieldsTemplate=details&platformdependencyname=windows.xbox`;
     const response = await fetch(endpoint, { signal: AbortSignal.timeout(4500) });
     if (!response.ok) return null;
     const body = await response.json();
@@ -1161,7 +1129,7 @@ async function fetchXboxCatalogArtwork(title) {
 
 async function fetchXboxCatalogDetails(title) {
   try {
-    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=US&languages=en-US&fieldsTemplate=details&platformdependencyname=windows.xbox`;
+    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=${steamCountry()}&languages=en-${steamCountry()}&fieldsTemplate=details&platformdependencyname=windows.xbox`;
     const response = await fetch(endpoint, { signal: AbortSignal.timeout(6500) });
     if (!response.ok) return null;
     const body = await response.json();
@@ -1239,7 +1207,7 @@ const steamCategoryNames = { 1: 'Multi-player', 2: 'Single-player', 9: 'Co-op', 
 const steamAppTypes = ['game', 'demo', 'mod', 'movie', 'dlc', 'guide', 'software', 'video', 'series', 'episode', 'hardware', 'music', 'beta', 'tool', 'advertising'];
 // Store details for many games in one call. The old appdetails endpoint no longer answers for more than one app,
 // so the whole library came back without categories and the controller and Play together lists stayed empty.
-async function fetchSteamAppDetails(appIds, countryCode = 'AU') {
+async function fetchSteamAppDetails(appIds, countryCode = steamCountry()) {
   try {
     const url = new URL('https://api.steampowered.com/IStoreBrowseService/GetItems/v1/');
     url.searchParams.set('input_json', JSON.stringify({ ids: appIds.map(appid => ({ appid: Number(appid) })), context: { language: 'english', country_code: countryCode },
@@ -1809,7 +1777,7 @@ function registerIpc() {
   ipcMain.handle('library:cached', () => readLibrarySnapshot());
   ipcMain.handle('settings:get', async () => {
     const settings = await readSettings();
-    return { ...settings, steamId64: settings.steamId64 || await detectSteamId64() };
+    return { ...settings, country: steamCountry(), steamId64: settings.steamId64 || await detectSteamId64() };
   });
   ipcMain.handle('steam:local-status', async () => {
     const [roots, steamId64, recentSteamId64, clientRunning] = await Promise.all([findSteamRoots(), detectSteamId64(), detectRecentSteamId64(), steamClientIsRunning()]);
@@ -2047,6 +2015,11 @@ function registerIpc() {
   ipcMain.handle('settings:save', async (_event, incoming) => {
     const existing = await readSettings();
     const allowed = {};
+    if ('region' in incoming) {
+      const region = String(incoming.region || 'auto');
+      if (region !== 'auto' && !/^[A-Z]{2}$/.test(region)) throw new Error('Choose a valid region.');
+      allowed.region = region;
+    }
     if ('steamId64' in incoming) {
       const steamId64 = String(incoming.steamId64 || '').trim();
       if (steamId64 && !/^\d{17}$/.test(steamId64)) throw new Error('SteamID64 must be exactly 17 digits.');
@@ -2106,6 +2079,11 @@ function registerIpc() {
     if ('useRandomScreenshotBackground' in incoming) allowed.useRandomScreenshotBackground = Boolean(incoming.useRandomScreenshotBackground);
     if ('shuffleHomeScreenshots' in incoming) allowed.shuffleHomeScreenshots = Boolean(incoming.shuffleHomeScreenshots);
     const saved = await writeSettings(allowed);
+    const previousCountry = steamCountry();
+    playerRegion = saved.region || 'auto';
+    if (previousCountry !== steamCountry()) {
+      steamDiscoveryCache = { at: 0, data: null };
+    }
     if (mainWindow) {
       mainWindow.setFullScreen(saved.fullscreen);
       mainWindow.webContents.setZoomFactor(1);
@@ -3006,21 +2984,13 @@ function registerIpc() {
     const normal = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const [xbox, steam] = await Promise.all([
       consoleServices.searchXboxStore(text).catch(() => []),
-      (async () => {
-        const response = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(text)}&l=english&cc=${steamCountry()}`, { signal: AbortSignal.timeout(9000) });
-        if (!response.ok) return [];
-        const body = await response.json();
-        return (body?.items || []).filter(item => item.type === 'app' && /^\d+$/.test(String(item.id)) && item.platforms?.windows !== false).slice(0, 20)
-          .map(item => steamDiscoveryItem(item.id, item.name, 0, { id: `steam-store-${item.id}`, price: steamPrice(item.price), controls: item.controller_support === 'full' ? 'controller' : 'unknown',
-            artwork: steamStoreArt(item.id) }));
-      })().catch(() => [])
+      steamLookup.search(text).then(items => items.map(item => steamDiscoveryItem(item.appId, item.title, 0, {
+        id: `steam-store-${item.appId}`, price: item.price, controls: item.controls, artwork: item.artwork
+      }))).catch(() => [])
     ]);
     // Games only (no soundtracks or tools), with Steam's real covers and prices.
-    const details = steam.length ? new Map((await steamStoreItems(steam.map(item => item.appId)).catch(() => [])).map(item => [item.appId, item])) : new Map();
-    const games = steam.filter(item => !details.size || details.get(item.appId)?.type === 'game')
-      .map(item => details.has(item.appId) ? { ...item, artwork: details.get(item.appId).artwork, price: details.get(item.appId).price ?? item.price } : item);
     const onXbox = new Set(xbox.map(item => normal(item.title)));
-    return { xbox, steam: games.filter(item => !onXbox.has(normal(item.title))) };
+    return { xbox, steam: steam.filter(item => !onXbox.has(normal(item.title))) };
   });
   ipcMain.handle('steam:open-store', async (_event, appId) => {
     if (!/^\d{1,10}$/.test(String(appId))) throw new Error('Invalid Steam app ID.');
@@ -3048,7 +3018,7 @@ function registerIpc() {
     else delete achievementReferenceAppIds[gameId];
     await writeSettings({ achievementReferenceAppIds });
     game.achievementReferenceAppId = appId;
-    gameDetailCache.delete(gameId); if (detailDisk) delete detailDisk[gameId];
+    invalidateGameDetails(gameId);
     return appId;
   });
   ipcMain.handle('artwork:save', async (_event, gameId, selection) => {
@@ -3091,7 +3061,7 @@ function registerIpc() {
     return fresh;
   });
   ipcMain.handle('app:rating-info', async (_event, system) => {
-    const urls = { PEGI: 'https://pegi.info/what-do-the-labels-mean', ESRB: 'https://www.esrb.org/ratings-guide/', USK: 'https://usk.de/en/home/age-classification-for-games-and-apps/', 'COB-AU': 'https://www.classification.gov.au/classification-ratings/what-do-ratings-mean', OFLC: 'https://www.classificationoffice.govt.nz/' };
+    const urls = { PEGI: 'https://pegi.info/what-do-the-labels-mean', ESRB: 'https://www.esrb.org/ratings-guide/', USK: 'https://usk.de/en/home/age-classification-for-games-and-apps/', 'COB-AU': 'https://www.classification.gov.au/classification-ratings/what-are-ratings', 'OFLC-NZ': 'https://www.classificationoffice.govt.nz/', CERO: 'https://www.cero.gr.jp/en/publics/index/17/', GRAC: 'https://www.grac.or.kr/english/', DJCTQ: 'https://www.gov.br/mj/pt-br/assuntos/seus-direitos/classificacao-1' };
     await shell.openExternal(urls[String(system)] || urls.PEGI);
     return true;
   });
@@ -3115,7 +3085,7 @@ function registerIpc() {
   ipcMain.handle('app:get-sound-pack', () => soundPack.get());
   ipcMain.handle('shop:offers', (event, appId) => {
     if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame)throw Error('Untrusted Store request');
-    return storeOffers.get(appId, app.getLocaleCountryCode() || 'US');
+    return storeOffers.get(appId, steamCountry());
   });
   ipcMain.handle('shop:open', (event, destination) => {
     if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw Error('Untrusted Store request');
@@ -3298,7 +3268,7 @@ function registerIpc() {
       } };
     }
     await writeSettings({ customGames, artwork });
-    gameDetailCache.delete(id); if (detailDisk) delete detailDisk[id];
+    invalidateGameDetails(id);
     return customGame;
   });
   ipcMain.handle('app:minimize-to-taskbar', () => {
@@ -3440,6 +3410,8 @@ const updater = createUpdater({
 app.on('before-quit', event => updater.applyOnQuit(event));
 
 app.whenReady().then(async () => {
+  windowsHomeCountry = await detectWindowsHomeCountry();
+  playerRegion = (await readSettings()).region || 'auto';
   registerIpc();
   startupGuard = support.createStartupGuard(path.join(app.getPath('userData'), 'startup-state.json'));
   safeMode = await startupGuard.begin();

@@ -33,6 +33,7 @@ function gStoreSearchField() {
   const input = toolbar.querySelector('#g-store-query');
   input.value = gStoreSearch.query;
   input.addEventListener('input', () => {
+    gStoreSearch.request++;
     clearTimeout(gStoreSearch.timer);
     gStoreSearch.timer = setTimeout(() => gRunStoreSearch(input.value), 380);
   });
@@ -44,8 +45,8 @@ function gStoreSearchField() {
 async function gRunStoreSearch(value, focusResults = false) {
   const query = String(value || '').trim();
   gStoreSearch.query = query;
-  if (query.length < 2) { gStoreSearch.results = null; gStoreSearch.loading = false; renderConsoleStore(); return; }
   const request = ++gStoreSearch.request;
+  if (query.length < 2) { gStoreSearch.results = null; gStoreSearch.loading = false; renderConsoleStore(); return; }
   gStoreSearch.loading = true;
   renderConsoleStore();
   let results;
@@ -61,11 +62,33 @@ async function gRunStoreSearch(value, focusResults = false) {
   if (focusResults) setFocusedElement(document.querySelector('#console-store-grid .g-store-card') || document.querySelector('#g-store-query'), { scroll: true });
 }
 function gClearStoreSearch() {
+  clearTimeout(gStoreSearch.timer);
   gStoreSearch.query = ''; gStoreSearch.results = null; gStoreSearch.loading = false; gStoreSearch.request++;
   const input = document.querySelector('#g-store-query');
   if (input) input.value = '';
   renderConsoleStore();
   setFocusedElement(input, { scroll: false });
+}
+function resetRegionViews() {
+  gStoreEpoch++;
+  gStoreRequest = null;
+  state.xboxStore = null;
+  clearTimeout(gStoreSearch.timer);
+  gStoreSearch.request++;
+  gStoreSearch.results = null;
+  gStoreSearch.loading = false;
+  gPrefetched.clear();
+  storeOfferEpoch++;
+  storeOfferCache.clear(); storeOfferTimes.clear(); storeOfferRequests.clear(); storeOfferFailures.clear();
+  const epoch = gStoreEpoch;
+  window.launcher.getSteamDiscovery().then(discovery => {
+    if (epoch !== gStoreEpoch) return;
+    state.steamDiscovery = discovery;
+    renderHomeCollections();
+    if (state.view === 'store') renderConsoleStore();
+  }).catch(() => {});
+  if (gStoreSearch.query.length >= 2) gRunStoreSearch(gStoreSearch.query);
+  loadXboxStore(true);
 }
 function gStoreResultCard(game, kind) {
   const owned = gOwnedCopy(game);

@@ -1,0 +1,530 @@
+{
+  "tools": [
+    "Built-in image_gen",
+    "Direct composition of authentic promotional artwork and logo"
+  ],
+  "date": "2026-10-15",
+  "artDirection": "Approved EA card: authentic promotional source imagery, restrained campaign layout and faithful flat logos.",
+  "assets": [
+    {
+      "kind": "publisher",
+      "name": "EA",
+      "file": "src/renderer/assets/collections/publishers/ea.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://store-images.s-microsoft.com/image/apps.31981.13880594673876343.1289e898-a927-48c2-a81c-660602f0234e.4d6fb83d-168a-4e0e-95b5-176024f67202"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 190996,
+      "prompt": "Use case: precise-object-edit\nInput image: reference and edit target, authentic promotional artwork.\nTask: Rework the supplied campaign artwork into a finished publisher collection card for a PC game library. Use the supplied actual sports campaign photograph as the entire visual foundation. Keep the two athletes, faces, kits and believable stadium photography faithful. Reframe into a 2:3 portrait publisher card. Remove the FC26 / Standard Edition lockup. Place the real flat white EA monogram small and crisp in the lower third. No invented worlds, symbols, glossy logo effects or replacement players.\nArt direction: authentic publisher promotional design, professional key-art crop and quiet graphic layout. Preserve source illustration or photography instead of painting a new generic AI scene. Simple coherent composition, restrained realistic contrast, no metallic 3D type, no shiny embossed logos, no neon glow added, no invented collage, no decorative fantasy objects, no oversaturated orange-blue lighting. Maintain accurate original character identity and materials. Logo should occupy roughly 25-40% of card width, crisp and flat. Leave the bottom 10% visually quiet for a small game-count overlay. No UI mockup or frame. Only branding text \"EA\"."
+    },
+    {
+      "kind": "publisher",
+      "name": "Ubisoft",
+      "file": "src/renderer/assets/collections/publishers/ubisoft.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/7e28d06f1f49bfdf57f0eca2f570f3a0b3fb09b0/library_hero.jpg?t=1789746114",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Ubisoft%20logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 162029,
+      "prompt": "Use case: precise-object-edit.\nEdit image 1 into a finished 2:3 portrait publisher collection card. Image 2 supplies the authentic publisher logo. Image 3 is the approved EA card: match only its restrained promotional design, believable source imagery, crisp flat logo treatment and spacing. Do not copy EA players or the EA mark.\nPreserve the two supplied Assassin's Creed Shadows protagonists exactly, their faces, costume construction and the restrained red campaign background. Keep the female shinobi and male samurai as the real campaign subjects, with no replacement cast. Remove game title branding and place the exact Ubisoft spiral plus wordmark from image 2 in flat white.\nThis is a careful campaign-art crop/edit, not a new generic fantasy illustration. Preserve the supplied real game artwork and its original art direction. Extend only background where the portrait framing requires it. Use one coherent image, no collage or mixed franchises. Maintain recognizable exact original characters, faces, proportions, outfits and materials. No invented scenery, extra characters, decorative symbols, glossy embossed lettering, metallic 3D logos, added neon, excessive orange-blue grading, painterly smoothing or fantasy clutter. Clean publisher logo centered around 80% image height, readable flat graphic, approximately 35-55% card width (long wordmark can be 65%). Bottom 10% visually quiet for a count overlay. No UI, borders or edition labels. Only the supplied publisher's authentic branding should appear."
+    },
+    {
+      "kind": "publisher",
+      "name": "Activision",
+      "file": "src/renderer/assets/collections/publishers/activision.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/996580/library_hero.jpg?t=1781038162",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Activision.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 184548,
+      "prompt": "Use case: precise-object-edit. Create a 2:3 portrait publisher collection card from image 1 (edit target), using image 2 as the logo reference. Use the supplied actual Spyro Reignited campaign image, keep Spyro and the game-rendered cartoon materials faithful. A simple portrait crop/extension of the source castle background, not a new fantasy world. Add the exact Activision logo from image 2 in flat white near 80% height. Authentic promotional artwork with clean graphic branding; keep original source imagery and accurate forms. No shiny logo effects, no UI or borders, no extra text, no generic AI reinterpretation. Leave bottom 10% quiet for game count."
+    },
+    {
+      "kind": "publisher",
+      "name": "Bethesda",
+      "file": "src/renderer/assets/collections/publishers/bethesda.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/library_hero.jpg?t=1786648247",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Bethesda%20Softworks%20Logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 184741,
+      "prompt": "Use case: precise-object-edit.\nEdit image 1 into a finished 2:3 portrait publisher collection card. Image 2 supplies the authentic publisher logo. Image 3 is the approved EA card: match only its restrained promotional design, believable source imagery, crisp flat logo treatment and spacing. Do not copy EA players or the EA mark.\nUse the supplied Skyrim Dragonborn key art exactly as the visual foundation: the authentic horned helmet, rugged armor and muted snowy landscape. Reframe the most prominent Dragonborn into one coherent portrait campaign crop. Remove Skyrim title text; place the exact Bethesda wordmark from image 2 in flat white.\nThis is a careful campaign-art crop/edit, not a new generic fantasy illustration. Preserve the supplied real game artwork and its original art direction. Extend only background where the portrait framing requires it. Use one coherent image, no collage or mixed franchises. Maintain recognizable exact original characters, faces, proportions, outfits and materials. No invented scenery, extra characters, decorative symbols, glossy embossed lettering, metallic 3D logos, added neon, excessive orange-blue grading, painterly smoothing or fantasy clutter. Clean publisher logo centered around 80% image height, readable flat graphic, approximately 35-55% card width (long wordmark can be 65%). Bottom 10% visually quiet for a count overlay. No UI, borders or edition labels. Only the supplied publisher's authentic branding should appear."
+    },
+    {
+      "kind": "publisher",
+      "name": "Devolver Digital",
+      "file": "src/renderer/assets/collections/publishers/devolver-digital.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1978590/library_hero.jpg?t=1757596248",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Devolver%20Digital%20logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 184972,
+      "prompt": "Use case: precise-object-edit.\nImage 1: supplied promotional artwork to edit. Image 2: authentic logo reference. Image 3: approved EA card, composition/branding restraint reference only; do not copy its players or logo.\nCreate a finished 2:3 portrait publisher collection card by cropping/editing the genuine image 1. Keep the authentic Anger Foot illustrated campaign, exactly its hand-drawn punk character design and print-like colors. Reframe the main kicking character from the reference into portrait without inventing extra figures. Use the exact Devolver Digital typographic lockup from image 2 in crisp white.\nRetain the actual source characters and style faithfully. Extend only source background to fit. Clean official-feeling promotional design like image 3. No generic AI reinterpretation, no collage/mashup, no newly invented characters or scenery. Keep the source lighting, colors, materials and proportions. No metallic/embossed/3D logo, no excessive lens flare, invented fantasy props or orange-blue grading. Publisher mark centered around 80% height, roughly 45-60% width, with bottom 10% quiet for a count overlay. No borders/UI/edition labels. Only the named publisher mark."
+    },
+    {
+      "kind": "publisher",
+      "name": "SEGA",
+      "file": "src/renderer/assets/collections/publishers/sega.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2055290/library_hero.jpg?t=1785747980",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/SEGA%20logo%20JPN.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 179958,
+      "prompt": "Use case: precise-object-edit.\nImage 1: supplied promotional artwork to edit. Image 2: authentic logo reference. Image 3: approved EA card, composition/branding restraint reference only; do not copy its players or logo.\nCreate a finished 2:3 portrait publisher collection card by cropping/editing the genuine image 1. Preserve the exact Sonic Colors game-rendered Sonic and Wisps, genuine cartoon game materials, clean colorful promotional graphics. Use the exact SEGA striped logo from image 2, as a flat white graphic near the lower third. Retain Sonic's identity and proportions.\nRetain the actual source characters and style faithfully. Extend only source background to fit. Clean official-feeling promotional design like image 3. No generic AI reinterpretation, no collage/mashup, no newly invented characters or scenery. Keep the source lighting, colors, materials and proportions. No metallic/embossed/3D logo, no excessive lens flare, invented fantasy props or orange-blue grading. Publisher mark centered around 80% height, roughly 45-60% width, with bottom 10% quiet for a count overlay. No borders/UI/edition labels. Only the named publisher mark."
+    },
+    {
+      "kind": "publisher",
+      "name": "Capcom",
+      "file": "src/renderer/assets/collections/publishers/capcom.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/582010/library_hero.jpg?t=1791439347",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Capcom%20logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 205643,
+      "prompt": "Use case: precise-object-edit. Create a 2:3 portrait publisher collection card from image 1 (edit target), using image 2 as the logo reference. Use this actual supplied Monster Hunter World coastal campaign art, keep the original monster and hunter render and natural scenery faithful. A simple portrait reframe, without adding objects. Add the actual yellow-and-blue CAPCOM logo from image 2 near 80% height, flat and crisp. Authentic promotional artwork with clean graphic branding; keep original source imagery and accurate forms. No shiny logo effects, no UI or borders, no extra text, no generic AI reinterpretation. Leave bottom 10% quiet for game count."
+    },
+    {
+      "kind": "publisher",
+      "name": "2K",
+      "file": "src/renderer/assets/collections/publishers/2k.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/8870/library_hero.jpg?t=1728673518",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/2K%202021%20Logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 165174,
+      "prompt": "Use case: precise-object-edit.\nImage 1: supplied promotional artwork to edit. Image 2: authentic logo reference. Image 3: approved EA card, composition/branding restraint reference only; do not copy its players or logo.\nCreate a finished 2:3 portrait publisher collection card by cropping/editing the genuine image 1. Preserve the supplied BioShock Infinite campaign's exact Elizabeth and Booker, clothing, painterly campaign materials and floating city. Reframe the main characters into a clean portrait crop. Use the white 2K monogram from image 2 without its red square background, a clean flat white signature.\nRetain the actual source characters and style faithfully. Extend only source background to fit. Clean official-feeling promotional design like image 3. No generic AI reinterpretation, no collage/mashup, no newly invented characters or scenery. Keep the source lighting, colors, materials and proportions. No metallic/embossed/3D logo, no excessive lens flare, invented fantasy props or orange-blue grading. Publisher mark centered around 80% height, roughly 45-60% width, with bottom 10% quiet for a count overlay. No borders/UI/edition labels. Only the named publisher mark."
+    },
+    {
+      "kind": "publisher",
+      "name": "tinyBuild",
+      "file": "src/renderer/assets/collections/publishers/tinybuild.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1321680/library_hero.jpg?t=1784143360",
+        "https://static.wixstatic.com/media/e63cf6_aa6182430da44d8aa814aff587988cfd~mv2.png"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 140960,
+      "prompt": "Use case: precise-object-edit.\nInput image 1: real promotional artwork, edit target. Image 2: exact publisher-logo reference. Image 3: approved EA card, style/composition reference only; do not copy its subjects or branding.\nMake a finished 2:3 portrait publisher collection card from image 1. Preserve the exact Hello Neighbor 2 character model, exaggerated game proportions, knitted vest, shovel pose, expression and teal forest from image 1. Use the authentic tinyBuild lockup from image 2, retaining its flat brand colors. No redesign of the logo.\nMatch the restrained official promotional layout of image 3, with source artwork faithfully preserved, a quiet readable flat mark and no decorative overlays. Crop/reframe the source; extend only matching background where needed. No generic AI reinterpretation, no cross-game collage, no extra invented characters or objects, no added neon or grading, no embossed/metallic/3D branding. Accurate original faces, outfits, materials and proportions. Publisher logo centered around 80% image height, readable at a small card size, roughly 45-65% card width. Leave bottom 10% quiet for a game-count overlay. No UI mockup, frame or edition labels. Only exact publisher branding."
+    },
+    {
+      "kind": "publisher",
+      "name": "Xbox Game Studios",
+      "file": "src/renderer/assets/collections/publishers/xbox-game-studios.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1551360/library_hero.jpg?t=1788546569",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Xbox%20Game%20Studios.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 209738,
+      "prompt": "Use case: precise-object-edit. Create a 2:3 portrait publisher collection card from image 1 (edit target), using image 2 as the logo reference. Use the actual supplied Forza Horizon 5 promotional image, preserve the red Mercedes and the Mexican coastal road, realistic lighting and photography. Make a simple portrait campaign crop centered on the genuine car. Add the exact Xbox Game Studios logo from image 2 in flat white near 80% height. Authentic promotional artwork with clean graphic branding; keep original source imagery and accurate forms. No shiny logo effects, no UI or borders, no extra text, no generic AI reinterpretation. Leave bottom 10% quiet for game count."
+    },
+    {
+      "kind": "publisher",
+      "name": "THQ Nordic",
+      "file": "src/renderer/assets/collections/publishers/thq-nordic.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/606280/library_hero.jpg?t=1754079090",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/THQ%20Nordic%20logo%202016.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 220442,
+      "prompt": "Use case: precise-object-edit.\nInput image 1: real promotional artwork, edit target. Image 2: exact publisher-logo reference. Image 3: approved EA card, style/composition reference only; do not copy its subjects or branding.\nMake a finished 2:3 portrait publisher collection card from image 1. Keep the actual Darksiders III promotional Fury, her exact armor, purple hair and pose, and original ruined environment/materials. Do not redesign the character or embellish this campaign with new fantasy objects. Use the real THQ NORDIC wordmark from image 2 with white letters and the brand-red Q.\nMatch the restrained official promotional layout of image 3, with source artwork faithfully preserved, a quiet readable flat mark and no decorative overlays. Crop/reframe the source; extend only matching background where needed. No generic AI reinterpretation, no cross-game collage, no extra invented characters or objects, no added neon or grading, no embossed/metallic/3D branding. Accurate original faces, outfits, materials and proportions. Publisher logo centered around 80% image height, readable at a small card size, roughly 45-65% card width. Leave bottom 10% quiet for a game-count overlay. No UI mockup, frame or edition labels. Only exact publisher branding."
+    },
+    {
+      "kind": "publisher",
+      "name": "Deep Silver",
+      "file": "src/renderer/assets/collections/publishers/deep-silver.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1449560/library_hero.jpg?t=1744671980",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Deep%20Silver%20Logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 222925,
+      "prompt": "Use case: precise-object-edit.\nInput image 1: real promotional artwork, edit target. Image 2: exact publisher-logo reference. Image 3: approved EA card, style/composition reference only; do not copy its subjects or branding.\nMake a finished 2:3 portrait publisher collection card from image 1. Preserve the genuine supplied Metro Exodus campaign: lone character within ruined snowy railway tunnel, muted monochrome grading, bleak real concrete and snow. Reframe the character/tunnel in portrait without new subjects. Use the supplied Deep Silver symbol + stacked wordmark in flat white, remove the black rounded-box behind it.\nMatch the restrained official promotional layout of image 3, with source artwork faithfully preserved, a quiet readable flat mark and no decorative overlays. Crop/reframe the source; extend only matching background where needed. No generic AI reinterpretation, no cross-game collage, no extra invented characters or objects, no added neon or grading, no embossed/metallic/3D branding. Accurate original faces, outfits, materials and proportions. Publisher logo centered around 80% image height, readable at a small card size, roughly 45-65% card width. Leave bottom 10% quiet for a game-count overlay. No UI mockup, frame or edition labels. Only exact publisher branding."
+    },
+    {
+      "kind": "publisher",
+      "name": "Square Enix",
+      "file": "src/renderer/assets/collections/publishers/square-enix.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1462040/library_hero.jpg?t=1789446715",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Square%20Enix%20logo.svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 169949,
+      "prompt": "Use case: precise-object-edit.\nInput image 1: real promotional artwork, edit target. Image 2: exact publisher-logo reference. Image 3: approved EA card, style/composition reference only; do not copy its subjects or branding.\nMake a finished 2:3 portrait publisher collection card from image 1. Keep the supplied Final Fantasy VII Remake campaign's exact Cloud, Aerith, Tifa, Barret and Red XIII, original detailed game models and costumes, group composition on the industrial rooftop, natural sunset colors. Reframe into a portrait group crop using the original Midgar backdrop. Add the authentic SQUARE ENIX mark from image 2, flat white lettering with red E details, in the lower third.\nMatch the restrained official promotional layout of image 3, with source artwork faithfully preserved, a quiet readable flat mark and no decorative overlays. Crop/reframe the source; extend only matching background where needed. No generic AI reinterpretation, no cross-game collage, no extra invented characters or objects, no added neon or grading, no embossed/metallic/3D branding. Accurate original faces, outfits, materials and proportions. Publisher logo centered around 80% image height, readable at a small card size, roughly 45-65% card width. Leave bottom 10% quiet for a game-count overlay. No UI mockup, frame or edition labels. Only exact publisher branding."
+    },
+    {
+      "kind": "series",
+      "name": "Sonic",
+      "file": "src/renderer/assets/collections/series/sonic.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2055290/library_hero.jpg?t=1785747980",
+        "https://cdn.akamai.steamstatic.com/steam/apps/2055290/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 161535,
+      "prompt": "Use case: precise-object-edit.\nAsset: finished widescreen 16:9 series collection banner, landscape.\nInput image 1 is authentic promotional artwork, edit target. Image 2 is an authentic logo reference; use only the specified franchise portion. Image 3 is the approved EA design reference: keep the same promotional restraint, faithful original source imagery and crisp graphic mark, adapted to landscape; do not copy its subjects or logo.\nPreserve the actual supplied Sonic Colors campaign's exact Sonic model and Wisps with clean blue/cyan promotional shapes. Main Sonic on the right. Use only the SONIC word from image 2 as a faithful flat yellow-with-blue-outline brand mark on the left, omit COLORS/ULTIMATE and any lens flare treatment. No invented characters or scenery.\nA clean professional source-art edit/crop. Preserve exact original character identity, models, costumes, poses, texture, lighting and art direction. Extend only background as necessary; retain one coherent campaign image. No generic AI scene, no collage, no extra characters/props, no invented fantasy objects, no painterly reimagining, no added neon/embossed/3D/metallic logo. Brand mark readable at a small banner size with generous margins, left third, about 30-40% image width. Bottom 12% quiet for game count overlay. No edition labels, subtitle, UI mockup or frame. Only franchise branding \"Sonic\". Output one full-bleed 16:9 landscape image."
+    },
+    {
+      "kind": "series",
+      "name": "Tom Clancy’s",
+      "file": "src/renderer/assets/collections/series/tom-clancys.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/365590/dddf558c1fc5d2a6a7b0050357e0b30de91c0b6b/library_hero.jpg?t=1782421726",
+        "https://cdn.akamai.steamstatic.com/steam/apps/365590/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 180650,
+      "prompt": "Use case: precise-object-edit.\nAsset: finished full-bleed 16:9 landscape series collection banner.\nInput image 1: real promotional artwork, edit target. Image 2: authentic brand reference, use only named franchise portion. Image 3: approved EA card, graphic restraint/style reference only, not its people or logo.\nUse the authentic supplied The Division campaign artwork: its three original Division agents, accurate jackets/backpacks and snowy New York street. Frame the agents primarily on the right, keep the source subdued and realistic. Place the authentic TOM CLANCY'S small agent-silhouette wordmark from image 2 in flat white on the left, omit THE DIVISION subtitle. Do not invent combat.\nCareful promotional source-art reframe, not an invented fantasy image. Retain exact original characters, costumes, poses, materials, coloring and scene. Extend only matching background to fit 16:9. One coherent composition, no collage, no new characters or embellishments. Clean flat official-feeling franchise mark occupying left third, readable in a small banner, about 30-40% width with generous margins. Bottom 12% quiet for count overlay. No embossed/3D logo, added glow/neon, extra scenery, edition text, UI or frame. Only \"Tom Clancy’s\" franchise branding."
+    },
+    {
+      "kind": "series",
+      "name": "Hitman",
+      "file": "src/renderer/assets/collections/series/hitman.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1659040/371975eece1ddb63b604d2e17d69d142ca157a23/library_hero.jpg?t=1791442074",
+        "https://cdn2.steamgriddb.com/logo/c95bde732620770a1a1281c30875ded3.png"
+      ],
+      "sourceDimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 70807,
+      "prompt": "Use case: precise-object-edit.\nAsset: finished full-bleed 16:9 landscape series collection banner.\nInput image 1: real promotional artwork, edit target. Image 2: authentic brand reference, use only named franchise portion. Image 3: approved EA card, graphic restraint/style reference only, not its people or logo.\nKeep the exact supplied Agent 47 portrait: bald head, face mostly shadowed, black suit, white shirt, red tie, subtle original red rim lighting and world map. Character on right, faithful source identity and materials. Place the actual simple widely spaced HITMAN wordmark from image 2 on the left in flat white, no white box, omit WORLD OF ASSASSINATION.\nCareful promotional source-art reframe, not an invented fantasy image. Retain exact original characters, costumes, poses, materials, coloring and scene. Extend only matching background to fit 16:9. One coherent composition, no collage, no new characters or embellishments. Clean flat official-feeling franchise mark occupying left third, readable in a small banner, about 30-40% width with generous margins. Bottom 12% quiet for count overlay. No embossed/3D logo, added glow/neon, extra scenery, edition text, UI or frame. Only \"Hitman\" franchise branding."
+    },
+    {
+      "kind": "series",
+      "name": "Need for Speed",
+      "file": "src/renderer/assets/collections/series/need-for-speed.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1328660/library_hero.jpg?t=1779987591",
+        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1328660/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 106275,
+      "prompt": "Use case: precise-object-edit.\nAsset: finished full-bleed 16:9 landscape series collection banner.\nInput image 1: authentic promotional artwork, edit target. Image 2: supporting authentic logo reference; use only named franchise branding. Image 3: approved EA card, visual restraint and clean graphic branding reference only, do not copy its subjects or logo.\nPreserve both actual supplied Hot Pursuit campaign cars, their true body shapes and liveries, overhead chase angle, source asphalt and restrained original lighting. Reframe cars primarily on right to give logo space. Place only the exact italic NEED FOR SPEED wordmark from image 2 on the left, flat white, omit HOT PURSUIT/REMASTERED and icon. No invented road/cars or additional neon.\nSource-art edit/crop with authentic marketing design. Preserve original characters, faces, forms, gear, materials, colors and scene style exactly; extend only matching background where required for 16:9. One coherent campaign image, no collage or generic AI reimagining. Crisp readable flat franchise mark in left third, roughly 30-40% width with generous margins. Bottom 12% quiet for count overlay. No embossed/3D lettering, invented symbols, glow, clutter, UI, borders or edition labels. Only franchise branding \"Need for Speed\"."
+    },
+    {
+      "kind": "series",
+      "name": "Battlefield",
+      "file": "src/renderer/assets/collections/series/battlefield.jpg",
+      "method": "Built-in image_gen",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2807960/7165682cb6055d92bd2aafd940edbe70cb33ff6b/library_hero.jpg?t=1792019454",
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2807960/5efba891507f611d94ef6685cc2af7cd0640f55d/library_capsule_2x.jpg?t=1792019454"
+      ],
+      "sourceDimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 111331,
+      "prompt": "Use case: precise-object-edit.\nAsset: finished full-bleed 16:9 landscape series collection banner.\nInput image 1: authentic promotional artwork, edit target. Image 2: supporting authentic logo reference; use only named franchise branding. Image 3: approved EA card, visual restraint and clean graphic branding reference only, do not copy its subjects or logo.\nKeep the actual supplied Battlefield 6 campaign character and blue/purple original city-photo double exposure exactly, original equipment and posture, subdued campaign lighting. Frame the main source subject on right. Use only the flat white BATTLEFIELD wordmark visible in image 2, omit 6, REDSEC, SEASON 5 and all other text. Do not add scenery, people, effects or equipment.\nSource-art edit/crop with authentic marketing design. Preserve original characters, faces, forms, gear, materials, colors and scene style exactly; extend only matching background where required for 16:9. One coherent campaign image, no collage or generic AI reimagining. Crisp readable flat franchise mark in left third, roughly 30-40% width with generous margins. Bottom 12% quiet for count overlay. No embossed/3D lettering, invented symbols, glow, clutter, UI, borders or edition labels. Only franchise branding \"Battlefield\"."
+    },
+    {
+      "kind": "publisher",
+      "name": "Warner Bros. Games",
+      "file": "src/renderer/assets/collections/publishers/warner-bros-games.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1971870/library_hero.jpg?t=1778795130",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Warner%20Bros.%20Games%20logo%20(December%202023).svg?width=600"
+      ],
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "bundledDimensions": {
+        "width": 640,
+        "height": 960
+      },
+      "bytes": 156833,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"publisher\",\"name\":\"Warner Bros. Games\",\"slug\":\"warner-bros-games\",\"art\":\"1971870-hero.jpg\",\"logo\":\"logo-warner-bros-games.png\",\"focalX\":0.5,\"logoCrop\":[0,0,1,0.73],\"position\":\"bottom\",\"logoWidth\":0.36,\"logoHeight\":0.19}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Call of Duty",
+      "file": "src/renderer/assets/collections/series/call-of-duty.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/311210/library_hero.jpg?t=1780963650",
+        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/311210/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 84990,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Call of Duty\",\"slug\":\"call-of-duty\",\"art\":\"311210-hero.jpg\",\"logo\":\"series-311210-logo.png\",\"focalX\":0.35,\"logoCrop\":[0,0,1,0.685],\"position\":\"left\",\"logoWidth\":0.36}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Resident Evil",
+      "file": "src/renderer/assets/collections/series/resident-evil.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2050650/library_hero.jpg?t=1772502922",
+        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2050650/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 102495,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Resident Evil\",\"slug\":\"resident-evil\",\"art\":\"2050650-hero.jpg\",\"logo\":\"series-2050650-logo.png\",\"focalX\":0.29,\"logoCrop\":[0,0,0.9,1],\"position\":\"right\",\"logoWidth\":0.36}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Assassin’s Creed",
+      "file": "src/renderer/assets/collections/series/assassins-creed.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3159330/7e28d06f1f49bfdf57f0eca2f570f3a0b3fb09b0/library_hero.jpg?t=1789746114",
+        "https://cdn.akamai.steamstatic.com/steam/apps/3159330/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 118107,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Assassin’s Creed\",\"slug\":\"assassins-creed\",\"art\":\"3159330-hero.jpg\",\"logo\":\"series-3159330-logo.png\",\"focalX\":0.36,\"logoCrop\":[0,0,1,0.505],\"position\":\"left\",\"logoWidth\":0.35}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "LEGO",
+      "file": "src/renderer/assets/collections/series/lego.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2215200/13de41454ce344b06e48991a665a45175c037522/library_hero.jpg?t=1789746326",
+        "https://cdn2.steamgriddb.com/logo/cd14ec673077aaf075159ad0e473d899.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 97774,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"LEGO\",\"slug\":\"lego\",\"art\":\"2215200-hero.jpg\",\"logo\":\"series-2215200-logo.png\",\"focalX\":0.38,\"logoCrop\":[0,0,0.238,1],\"position\":\"left\",\"logoWidth\":0.2}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Metal Gear",
+      "file": "src/renderer/assets/collections/series/metal-gear.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://store-images.s-microsoft.com/image/apps.50480.65636291532456667.5893b5ba-43c6-42b7-afce-10638cd992d8.9784ce0a-05fb-4c8b-9238-6003d4b99982",
+        "https://store-images.s-microsoft.com/image/apps.50480.65636291532456667.5893b5ba-43c6-42b7-afce-10638cd992d8.9784ce0a-05fb-4c8b-9238-6003d4b99982"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 82809,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Metal Gear\",\"slug\":\"metal-gear\",\"art\":\"311340-hero.jpg\",\"logo\":\"311340-hero.jpg\",\"recipe\":\"metal-gear\",\"position\":\"right\",\"logoWidth\":0.46}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Far Cry",
+      "file": "src/renderer/assets/collections/series/far-cry.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/298110/1d4391b3ac261db0247358b6b79650ea9eead883/library_hero.jpg?t=1785362767",
+        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/298110/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 165217,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Far Cry\",\"slug\":\"far-cry\",\"art\":\"298110-hero.jpg\",\"logo\":\"series-298110-logo.png\",\"focalX\":0.3,\"logoCrop\":[0,0,0.84,1],\"grayOnly\":true,\"position\":\"right\",\"logoWidth\":0.36}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    },
+    {
+      "kind": "series",
+      "name": "Batman: Arkham",
+      "file": "src/renderer/assets/collections/series/batman-arkham.jpg",
+      "method": "Direct composition of authentic promotional artwork and logo",
+      "references": [
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/208650/library_hero.jpg?t=1745534372",
+        "https://cdn.akamai.steamstatic.com/steam/apps/208650/logo.png"
+      ],
+      "sourceDimensions": {
+        "width": 1680,
+        "height": 945
+      },
+      "bundledDimensions": {
+        "width": 960,
+        "height": 540
+      },
+      "bytes": 102294,
+      "prompt": "Direct promotional composition: preserve original campaign artwork and logo pixels; {\"kind\":\"series\",\"name\":\"Batman: Arkham\",\"slug\":\"batman-arkham\",\"art\":\"208650-hero.jpg\",\"logo\":\"series-208650-logo.png\",\"focalX\":0.42,\"recipe\":\"batman\",\"position\":\"left\",\"logoWidth\":0.35}. User authorized direct artwork/logo composition after the image generator rejected this edit."
+    }
+  ],
+  "textFallbacks": []
+}

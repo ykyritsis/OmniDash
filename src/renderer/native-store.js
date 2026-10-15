@@ -1,4 +1,5 @@
 const storeOfferCache=new Map(), storeOfferTimes=new Map(), storeOfferRequests=new Set(), storeOfferFailures=new Map();
+let storeOfferEpoch = 0;
 const storeTileAnimations=new Map();
 const storeLabels={mostPlayed:'Most played',topSellers:'Top paid games',upcoming:'Games coming soon'};
 function nativeStoreGame(id) {
@@ -76,14 +77,16 @@ function requestStoreOffer(game) {
   if(Date.now()-(storeOfferTimes.get(id)||0)>900000)storeOfferCache.delete(id);
   if(!storeOfferCache.has(id)&&!storeOfferRequests.has(id)&&Date.now()-(storeOfferFailures.get(id)||0)>30000) {
     storeOfferRequests.add(id);
+    const epoch = storeOfferEpoch;
     window.launcher.getStoreOffers(game.appId).then(offer=>{
+      if (epoch !== storeOfferEpoch) return;
       storeOfferCache.set(id,offer);
       storeOfferTimes.set(id,Date.now());
       storeOfferFailures.delete(id);
       if(storeOfferCache.size>128) {const oldest=storeOfferCache.keys().next().value;storeOfferCache.delete(oldest);storeOfferTimes.delete(oldest);}
       document.querySelectorAll('[data-price-app]').forEach(node=>{if(node.dataset.priceApp===id)node.textContent=storePrice(offer);});
       if(state.view==='store'&&state.storeSelectedId===game.id)selectNativeStoreGame(game);
-    }).catch(()=>{storeOfferFailures.set(id,Date.now());if(storeOfferFailures.size>128)storeOfferFailures.delete(storeOfferFailures.keys().next().value);}).finally(()=>storeOfferRequests.delete(id));
+    }).catch(()=>{if(epoch!==storeOfferEpoch)return;storeOfferFailures.set(id,Date.now());if(storeOfferFailures.size>128)storeOfferFailures.delete(storeOfferFailures.keys().next().value);}).finally(()=>{if(epoch===storeOfferEpoch)storeOfferRequests.delete(id);});
   }
 }
 function navigateNativeStore(direction,current) {

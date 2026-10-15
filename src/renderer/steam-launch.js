@@ -31,7 +31,9 @@
       const button = document.createElement('button');
       button.className = 'secondary focusable'; button.type = 'button';
       button.dataset.action = 'steam-launch-choice'; button.dataset.choice = index;
-      button.textContent = option.label;
+      const label = document.createElement('span'); label.textContent = option.label;
+      const arrow = document.createElement('span'); arrow.className = 'steam-launch-choice-arrow'; arrow.textContent = '›'; arrow.setAttribute('aria-hidden', 'true');
+      button.append(label, arrow);
       return button;
     }));
     dialog.showModal(); body.scrollTop = 0;

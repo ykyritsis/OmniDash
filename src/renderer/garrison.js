@@ -663,12 +663,14 @@ async function loadXboxStore(force = false) {
   if (state.xboxStore?.status === 'ready' && !force) return state.xboxStore;
   if (gStoreRequest) return gStoreRequest;
   state.xboxStore = { ...(state.xboxStore || {}), status: 'loading' };
-  gStoreRequest = window.launcher.getXboxStore().then(result => { state.xboxStore = result; return result; })
-    .catch(() => { state.xboxStore = { status: 'unavailable' }; return state.xboxStore; })
-    .finally(() => { gStoreRequest = null; if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore(); });
+  const epoch = gStoreEpoch;
+  gStoreRequest = window.launcher.getXboxStore().then(result => { if (epoch === gStoreEpoch) state.xboxStore = result; return result; })
+    .catch(() => { if (epoch === gStoreEpoch) state.xboxStore = { status: 'unavailable' }; return state.xboxStore; })
+    .finally(() => { if (epoch !== gStoreEpoch) return; gStoreRequest = null; if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore(); });
   return gStoreRequest;
 }
 let gStoreRequest = null;
+let gStoreEpoch = 0;
 renderNativeStore = function (grid) {
   document.querySelector('#store-rail')?.remove();
   const view = document.querySelector('#store-view');
@@ -1297,7 +1299,7 @@ renderDetailInputMethods = function (game, details = {}) {
 
 // Trailers first, as in the Xbox app; they play in the Xbox app's own player.
 function renderGarrisonTrailers(game, details) {
-  const videos = details.videos || game.videos || [];
+  const videos = launcherMedia.uniqueVideos(details.videos || game.videos || [], { playableOnly: true }).slice(0, 6);
   const gallery = document.querySelector('#detail-gallery');
   gallery.querySelectorAll('.g-trailer').forEach(node => node.remove());
   const productId = details.xboxProductId || game.xboxProductId;
@@ -1359,15 +1361,15 @@ function playGarrisonTrailer(index, opener) {
 }
 
 function renderGarrisonRating(game, details) {
-  const rating = details.rating || game.rating || (details.ageRating ? { system: 'PEGI', value: String(details.ageRating).replace('+', ''), label: String(details.ageRating).replace('+', ''), descriptors: '' } : null);
+  const rating = details.rating || game.rating || (details.ageRating ? { system: 'AGE', value: String(details.ageRating).replace('+', ''), label: details.ageRating, descriptors: '' } : null);
   const descriptors = rating?.descriptors || details.contentNotes || '';
   const tone = !rating ? '' : rating.system === 'PEGI' ? (Number(rating.value) >= 18 ? 'red' : Number(rating.value) >= 12 ? 'orange' : 'green') : String(rating.system).toLowerCase();
   const badge = rating?.image ? `<img class="g-rating-image" src="${escapeHtml(rating.image)}" alt="${escapeHtml(rating.system)} ${escapeHtml(rating.label)}" />`
-    : `<span class="g-age-badge g-age-${tone}" aria-hidden="true"><b>${escapeHtml(rating?.value || rating?.label || '')}</b><small>${escapeHtml(rating?.system || '')}</small></span>`;
-  const label = rating ? (rating.system === 'PEGI' ? `PEGI ${rating.value || rating.label}` : String(rating.label).replace(/_/g, ' ').replace(/^./, letter => letter.toUpperCase())) : '';
+    : `<span class="g-age-badge g-age-${tone}" aria-hidden="true"><b>${escapeHtml(['COB-AU','OFLC-NZ','ESRB','CERO'].includes(rating?.system) ? rating.label : rating?.value || rating?.label || '')}</b><small>${escapeHtml(rating?.system === 'COB-AU' ? 'ACB' : rating?.system === 'OFLC-NZ' ? 'NZ' : rating?.system || '')}</small></span>`;
+  const label = rating ? `${rating.system === 'COB-AU' ? 'Australian Classification' : rating.system === 'OFLC-NZ' ? 'New Zealand' : rating.system === 'AGE' ? 'Age requirement' : rating.system} ${rating.label || rating.value}` : '';
   const lines = [descriptors, rating?.interactive, game.discoveryOnly ? '' : game.provider === 'PC' ? '' : `${game.provider} handles purchases and installation for this game.`].filter(Boolean);
   document.querySelector('#g-detail-rating').innerHTML = rating
-    ? `${badge}<div><button class="g-link focusable" type="button" data-action="g-rating-info" data-system="${escapeHtml(rating.system)}">${escapeHtml(label)} ${gIcon('open')}</button>${lines.map(line => `<span class="g-rating-line">${escapeHtml(line)}</span>`).join('')}</div>`
+    ? `${badge}<div>${rating.system === 'AGE' ? `<span>${escapeHtml(label)}</span>` : `<button class="g-link focusable" type="button" data-action="g-rating-info" data-system="${escapeHtml(rating.system)}">${escapeHtml(label)} ${gIcon('open')}</button>`}${lines.map(line => `<span class="g-rating-line">${escapeHtml(line)}</span>`).join('')}</div>`
     : '';
 }
 
@@ -1472,6 +1474,8 @@ const gSettingsPages = [
     ${info('Region format', `${escapeHtml(new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(new Date()))} · ${escapeHtml(region.timeZone)}`)}
     ${info('Time format', escapeHtml(new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date())))}
   </div>`);
+  const playerRegionRow = document.querySelector('#player-region')?.closest('label');
+  if (playerRegionRow) document.querySelector('[data-settings-page="g-language"] .g-setting-list').prepend(playerRegionRow);
 
   page('g-streaming', `<div class="g-setting-list">
     ${gAction('g-set-big-picture', 'Open Steam Big Picture', 'Stream and play with Steam’s TV mode.', gIcon('open', 'g-trailing'))}

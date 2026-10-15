@@ -9,6 +9,10 @@ function buildConsoleSettings() {
   };
   const display=create('display','Display options');
   ['fullscreen-toggle','ui-scale'].forEach(id=>display.append(document.querySelector('#'+id).closest('label')));
+  display.insertAdjacentHTML('beforeend', `<label class="duplicate-game-row"><span><strong>Player region</strong><small>Use local age ratings and Store prices. Other rating boards fill gaps.</small></span><select id="player-region" class="focusable" aria-label="Player region"><option value="auto">Automatic</option>${[['AU','Australia'],['NZ','New Zealand'],['US','United States'],['CA','Canada'],['GB','United Kingdom'],['DE','Germany'],['FR','France'],['ES','Spain'],['IT','Italy'],['NL','Netherlands'],['SE','Sweden'],['JP','Japan'],['KR','South Korea'],['BR','Brazil'],['ZA','South Africa'],['TW','Taiwan'],['ID','Indonesia']].map(([code,name])=>`<option value="${code}">${name}</option>`).join('')}</select></label>`);
+  const regionChoice = display.querySelector('#player-region');
+  regionChoice.addEventListener('pointerdown', event => { event.preventDefault(); openConsoleChoice(regionChoice); });
+  regionChoice.addEventListener('keydown', event => { if (['Enter',' '].includes(event.key)) { event.preventDefault(); event.stopPropagation(); openConsoleChoice(regionChoice); } });
   const audio=create('audio','Interface audio');
   audio.append(document.querySelector('#sound-toggle').closest('label'),document.querySelector('#startup-toggle').closest('label'),document.querySelector('.console-sound-pack'));
   const accessibility=create('accessibility','Make play comfortable');

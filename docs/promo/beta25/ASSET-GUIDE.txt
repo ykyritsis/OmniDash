@@ -1,0 +1,43 @@
+XBOX PREVIEW UI / BETA 25 PROMOTIONAL KIT
+
+READY-TO-POST GRAPHICS
+github-hero.jpg / .png — 1920 × 1080. Main README banner or Discord landscape attachment.
+github-social.jpg / .png — 1280 × 640. Repository social preview / wide link card.
+discord-square.jpg / .png — 1080 × 1080. Primary Discord announcement artwork.
+discord-steam-modes.jpg / .png — 1920 × 1080. Feature spotlight for Steam launch choices.
+Use JPEG for small downloads and posting; PNG is the lossless master.
+
+IDENTITY
+logo-mark.png — original transparent raster symbol, generated with the built-in image tool.
+logo-wordmark.png — transparent light wordmark, intended for dark backgrounds.
+campaign-background.png — original generated dark green glass artwork.
+The promotional mark does not replace the application icon in this change.
+
+SCREENSHOTS
+screenshot-home.png — 1920 × 1080, home and recently added cards.
+screenshot-library.png — 1920 × 1080, full-screen game library.
+screenshot-handheld.png — 1280 × 800, handheld-size home layout.
+screenshot-launch-modes.png — 1920 × 1080, Steam launch option dialog.
+Captured from the unmodified beta 25 renderer, using an isolated profile and curated local artwork. Personal accounts, friends and credentials are not shown. No games were launched for these captures. The Steam dialog uses the verified labels recorded by the Advanced Warfare live integration test; this screenshot is a staged demonstration of the actual dialog.
+
+EDITABLE SOURCE
+artboards.html — exact text, layout, image placements and colours.
+Open with #hero, #square, #social, #modes or #wordmark to select a layout.
+scripts/promo-render.cjs exports all five layouts using Electron.
+scripts/promo-capture.cjs captures the app using cached local demo assets.
+Capture inputs live under .visual-review and are not distributed in this kit.
+PROMPTS.txt records the image-generation prompts and method.
+DISCORD-POST.txt includes long and short copy for manual posting.
+
+GITHUB
+The root README now references this kit through relative paths.
+Use github-social.jpg as the repository's social preview image if desired.
+This kit is prepared locally; it does not publish a release or change repository settings.
+
+ART DIRECTION
+Charcoal #090d0b, fresh green #94eb75, pale text #f5f8f3.
+Segoe UI Variable Display / Segoe UI typography.
+Original generated mark and background; exact typography and real screenshots are placed by an editable HTML layout. The screenshots were not repainted by image generation.
+
+ATTRIBUTION
+Independent, unofficial community project. Game names, artwork and platform marks visible inside the screenshots belong to their respective owners. See the repository README's Legal and attribution section. The original promotional mark and background were generated using OpenAI's built-in image generation tool.

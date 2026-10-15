@@ -1,0 +1,128 @@
+/* Management surfaces use the same typography, charcoal layers and focus as Home. */
+body.garrison {
+  --g-dialog-bg: #232524;
+  --g-dialog-padding: clamp(18px, 2.2vw, 36px);
+  --g-control-size: clamp(46px, 3.6vw, 64px);
+  --g-control-text: clamp(15px, 1.1vw, 21px);
+}
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog) {
+  color: var(--g-text); background: var(--g-dialog-bg);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 16px;
+  box-shadow: 0 30px 100px #0009; font-family: var(--g-font);
+  max-height: 88vh; max-width: 94vw;
+  scrollbar-width: thin; scrollbar-color: #ffffff40 transparent;
+}
+body.garrison :is(#collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog) { padding: var(--g-dialog-padding); }
+body.garrison :is(#steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog) { width: min(720px, 90vw); }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog)::backdrop { background: #060707aa; backdrop-filter: blur(14px); }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog) h2 { color: #fff; font: 600 clamp(22px, 1.8vw, 34px)/1.2 var(--g-display); letter-spacing: -.02em; }
+body.garrison :is(.steam-launch-body, .steam-launch-dialog > p, .collections-help, .options-page-description, .options-group-description, .connection-detail, .settings-section-heading p, .connection-page-heading p) { color: var(--g-text-2); font: 400 clamp(14px, 1vw, 18px)/1.55 var(--g-font); }
+body.garrison :is(.steam-launch-dialog .eyebrow, #steam-game-launch-dialog header small, .options-group-label, .connection-page-heading .eyebrow) { color: var(--g-text-3); font-size: 12px; letter-spacing: .1em; }
+
+/* Choice lists stay vertically navigable, including duplicate-copy selection. */
+body.garrison :is(.console-choice, .steam-launch-choices button, .steam-launch-actions button, .console-file-list button, .collection-toggle) {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: var(--g-control-size); height: auto; padding: 14px 18px;
+  border: 0; border-radius: 10px; background: var(--g-surface);
+  color: #fff; font: 400 var(--g-control-text)/1.35 var(--g-font);
+  text-align: left; white-space: normal; overflow-wrap: anywhere;
+}
+body.garrison :is(.console-choice, .steam-launch-choices button, .steam-launch-actions button, .console-file-list button, .collection-toggle):hover { background: var(--g-surface-2); }
+body.garrison .console-choice.active { background: var(--g-surface-3); font-weight: 600; }
+body.garrison .console-choice i { color: #fff; }
+body.garrison #console-choice-list { max-height: 54vh; gap: 10px; padding: 6px; }
+body.garrison #console-choice-dialog h2 { margin: 0 0 22px; }
+body.garrison #console-choice-dialog footer { margin-top: 22px; color: var(--g-text-2); }
+body.garrison .steam-launch-choices { gap: 10px; padding: 6px; margin: -6px; }
+body.garrison .steam-launch-choice-arrow { color: var(--g-text-3); font-size: 24px; }
+body.garrison .steam-launch-actions { grid-template-columns: 1fr; margin: 24px 0 18px; }
+body.garrison .steam-launch-actions button { align-items: flex-start; flex-direction: column; gap: 6px; }
+body.garrison .steam-launch-actions strong { font: 600 var(--g-control-text)/1.3 var(--g-font); }
+body.garrison .steam-launch-actions small { color: var(--g-text-2); font-size: 14px; }
+body.garrison .steam-launch-cancel { border: 0; border-radius: 10px; background: var(--g-surface); color: #fff; min-height: 46px; padding: 12px 20px; }
+body.garrison .steam-launch-body.license { background: #1c1e1d; border-radius: 10px; font-size: 15px; }
+
+/* Game libraries and duplicate preferences. */
+body.garrison :is(.settings-section, .library-connection-card, .account-library-card, .settings-advanced) { padding: clamp(16px,1.5vw,26px); margin-bottom: 16px; border: 0; border-radius: 12px; background: var(--g-surface); }
+body.garrison .settings-section .library-connection-card { background: #ffffff08; }
+body.garrison :is(.connection-page-heading h3, .settings-section-heading h3, .library-connection-heading h3) { font: 600 clamp(18px,1.3vw,25px)/1.25 var(--g-font); }
+body.garrison .connection-icon { border: 0; border-radius: 12px; background: var(--g-surface-2); color: #fff; }
+body.garrison :is(.connection-state, .account-library-state) { border: 0; border-radius: 999px; padding: 6px 10px; background: var(--g-surface-2); color: var(--g-text-2); }
+body.garrison .connection-back { min-height: 44px; border: 0; border-radius: 999px; padding: 10px 16px; background: var(--g-surface); color: #fff; }
+body.garrison .connection-setup { border: 0; border-radius: 10px; padding: 12px; background: #ffffff06; }
+body.garrison .steam-family-connection { border-color: #ffffff12; }
+body.garrison .duplicate-game-row { gap: 20px; padding: 18px 0; border-color: #ffffff12; }
+body.garrison .duplicate-game-row strong { font: 600 var(--g-control-text)/1.3 var(--g-font); }
+body.garrison .duplicate-game-row small { color: var(--g-text-2); font: 400 clamp(13px,.95vw,17px)/1.5 var(--g-font); }
+body.garrison .duplicate-game-row select { flex: 0 1 320px; min-height: 48px; padding: 12px 34px 12px 16px; margin: 0; border: 1px solid #ffffff1c; border-radius: 10px; background-color: #1c1e1d; color: #fff; font: 400 clamp(14px,1vw,18px)/1.3 var(--g-font); }
+body.garrison .duplicate-empty { border-radius: 12px; padding: 32px 20px; background: var(--g-surface); }
+body.garrison .duplicate-empty h3 { font-size: 22px; }
+body.garrison :is(#settings-dialog, #game-options-dialog, #custom-game-dialog, #artwork-dialog, #collections-dialog) :is(input[type="text"], input[type="password"], input[type="search"]) { min-height: 46px; border: 1px solid #ffffff24; border-radius: 10px; background: #1c1e1d; color: #fff; padding: 12px 14px; font-size: clamp(14px,1vw,18px); }
+body.garrison :is(.settings-data-buttons, .steam-options-editor, .achievement-reference-editor, .collection-create-form, .steam-license-scroll, .install-actions) :is(.primary, .secondary, .text-button) { min-height: 46px; padding: 12px 18px; border: 0; border-radius: 10px; font: 600 clamp(14px,1vw,18px)/1.3 var(--g-font); }
+body.garrison :is(.settings-data-buttons, .steam-options-editor, .achievement-reference-editor, .collection-create-form, .steam-license-scroll, .install-actions) :is(.secondary, .text-button) { background: var(--g-surface-2); color: #fff; }
+body.garrison :is(.settings-data-buttons, .collection-create-form, .install-actions) .primary { background: var(--g-green); color: #fff; }
+
+/* The full management page sits behind the compact game menu. */
+body.garrison #game-options-dialog { width: min(1100px,94vw); padding: 0; overflow: hidden; }
+body.garrison #game-options-form { grid-template-columns: minmax(220px,30%) minmax(0,1fr); height: min(780px,86vh); }
+body.garrison .options-overview { padding: var(--g-dialog-padding); background: #1c1e1d; border: 0; }
+body.garrison .options-artwork-wrap { border-radius: 12px; box-shadow: none; }
+body.garrison .options-provider-pill { color: var(--g-text-2); }
+body.garrison .options-overview-note { display: none; }
+body.garrison .options-workspace { background: var(--g-dialog-bg); }
+body.garrison .options-tabs { gap: 10px; margin: 0; padding: 20px var(--g-dialog-padding) 10px; border: 0; }
+body.garrison .options-tab { padding: 12px 16px; border-radius: 999px; font: 600 clamp(14px,1.05vw,20px)/1.2 var(--g-font); color: var(--g-text-2); }
+body.garrison .options-tab.active { color: #fff; background: var(--g-surface-2); }
+body.garrison .options-tab.active::after { display: none; }
+body.garrison .options-page { padding: 18px var(--g-dialog-padding); }
+body.garrison .options-page-title { font: 600 clamp(20px,1.5vw,28px)/1.25 var(--g-font); }
+body.garrison .options-panel { padding: 16px; margin-bottom: 16px; background: #ffffff05; border: 0; border-radius: 12px; }
+body.garrison .options-group-label { font-weight: 600; }
+body.garrison .option-button { min-height: var(--g-control-size); padding: 12px 16px; border: 0; border-radius: 10px; background: var(--g-surface); color: #fff; font: 400 var(--g-control-text)/1.3 var(--g-font); }
+body.garrison .option-button:hover { background: var(--g-surface-2); }
+body.garrison .options-primary-actions .option-play { min-height: 50px; border-radius: 10px; background: var(--g-green); color: #fff; }
+body.garrison .options-primary-actions .option-play:hover { background: var(--g-green-hover); }
+body.garrison .option-play .option-action-copy strong { color: #fff; font-size: var(--g-control-text); }
+body.garrison .option-uninstall { color: #ffb4b4; }
+body.garrison .options-footer { padding: 14px var(--g-dialog-padding); border-color: #ffffff12; background: var(--g-dialog-bg); }
+body.garrison .options-footer .secondary { border: 0; border-radius: 10px; background: var(--g-surface-2); color: #fff; }
+body.garrison .achievement-links-group { padding: 16px; border: 0; border-radius: 12px; background: #ffffff05; }
+body.garrison .achievement-links-group summary { color: #fff; font-size: var(--g-control-text); }
+body.garrison .g-age-cob-au b, body.garrison .g-age-oflc-nz b { font-size: clamp(16px,1.2vw,24px); }
+body.garrison #g-manage-dialog { width: min(1400px,92vw); height: 86vh; padding: var(--g-dialog-padding); gap: clamp(20px,2.5vw,46px); grid-template-columns: clamp(220px,25%,340px) minmax(0,1fr); background: var(--g-dialog-bg); border: 1px solid #ffffff1a; border-radius: 16px; }
+body.garrison #g-manage-dialog::backdrop { background: #060707aa; backdrop-filter: blur(14px); }
+body.garrison .g-manage-card { padding: clamp(16px,1.5vw,28px); border: 0; border-radius: 12px; background: #1c1e1d; }
+body.garrison .g-manage-card h2 { font: 600 clamp(22px,1.8vw,34px)/1.2 var(--g-display); }
+body.garrison :is(.g-manage-card dl div, .g-manage-eyebrow, .g-manage .g-field-label, .g-manage .g-select, .g-manage .g-link) { font-size: clamp(14px,1.05vw,20px); }
+body.garrison .g-manage .g-nav-item { min-height: 48px; padding: 12px 16px; border-radius: 10px; font-size: var(--g-control-text); }
+body.garrison .g-manage .g-nav-item.active { background: var(--g-surface-2); }
+body.garrison .g-manage-close { min-height: 46px; border: 0; border-radius: 10px; background: var(--g-surface-2); color: #fff; font-size: var(--g-control-text); }
+body.garrison .g-manage-section { border-color: #ffffff12; }
+body.garrison .g-manage-section h3 { font: 600 clamp(19px,1.4vw,27px)/1.3 var(--g-font); }
+body.garrison .g-manage .g-setting-row { min-height: 54px; padding: 14px 16px; margin-bottom: 8px; border-radius: 10px; background: var(--g-surface); }
+body.garrison .g-manage .g-setting-row strong { font-size: var(--g-control-text); }
+body.garrison .g-manage .g-setting-row small { font-size: clamp(13px,1vw,18px); color: var(--g-text-2); }
+body.garrison .g-manage :is(.g-textarea, .g-input, .g-select) { border: 1px solid #ffffff24; border-radius: 10px; background: #1c1e1d; color: #fff; font-size: clamp(14px,1.05vw,20px); }
+body.garrison .g-manage .g-textarea { min-height: 100px; padding: 14px 16px; }
+body.garrison .g-manage .g-select-row { flex-wrap: wrap; }
+body.garrison .g-manage .g-select-static { flex: 1 1 240px; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  body.garrison #g-manage-dialog { grid-template-columns: minmax(170px,28%) minmax(0,1fr); gap: 18px; }
+  body.garrison .g-manage-card { padding: 14px; }
+  body.garrison #game-options-form { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+  body.garrison .options-overview { display: flex; flex-direction: row; gap: 18px; align-items: center; padding-right: 56px; }
+  body.garrison .game-options-header { flex: 1; margin: 0; gap: 12px; }
+  body.garrison .options-artwork-wrap { width: 62px; height: 62px; flex: none; }
+  body.garrison .game-options-header h2 { font-size: 18px; margin: 4px 0; }
+  body.garrison .game-options-header p { margin: 4px 0; }
+  body.garrison .options-primary-actions { flex: 0 0 110px; margin: 0; }
+  body.garrison .options-primary-actions .option-play { padding: 12px; }
+  body.garrison .options-tabs { padding-top: 12px; }
+  body.garrison .duplicate-game-row { flex-wrap: wrap; gap: 12px; }
+  body.garrison .duplicate-game-row select { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+  body.garrison .settings-data-buttons { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.garrison dialog { scroll-behavior: auto; }
+}

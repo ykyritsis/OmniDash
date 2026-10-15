@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 25](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.25/Xbox-Preview-UI-Setup-0.27.0-beta.25.exe)** · [Setup](#getting-started) · [Beta 25 notes](docs/release-0.27.0-beta.25.md)
+**[Download beta 26](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.26/Xbox-Preview-UI-Setup-0.27.0-beta.26.exe)** · [Setup](#getting-started) · [Beta 26 notes](docs/release-0.27.0-beta.26.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,17 +31,18 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 25
+## Beta 26
 
-- Home cards fit their titles without extra grey space.
-- Selected card overlays follow the rounded corners.
-- Text entry uses the native Windows touch keyboard. The old custom keyboard has been removed.
+- Current dashboard styling for library management, duplicate selection and launch options.
+- Galleries remove repeated media; Steam lookup shares requests and reuses regional caches.
+- Regional age ratings, including Australian classifications, with a manual region override.
+- [Fourteen publisher cards and twelve series banners](docs/collection-artwork/README.md) use finished local promotional designs with clean logos.
 
-[Full release notes](docs/release-0.27.0-beta.25.md)
+[Full release notes](docs/release-0.27.0-beta.26.md)
 
 ## Download
 
-Get **[beta 25 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.25)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 26 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.26)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
@@ -146,6 +147,7 @@ Builds are written to `dist/`. The installer does not change Windows' Full Scree
 
 | Preview | Highlights |
 | --- | --- |
+| [Beta 26](docs/release-0.27.0-beta.26.md) | Updated management dialogs, unique gallery media, quicker Steam lookup, regional ratings and finished publisher/series artwork. |
 | [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |
 | [Beta 24](docs/release-0.27.0-beta.24.md) | Steam launch choices, setup status and supported launch prompts. |
 | [Beta 23](docs/release-0.27.0-beta.23.md) | Larger home shelves, verified friend activity and update installer fixes. |

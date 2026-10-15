@@ -1,0 +1,32 @@
+Xbox Preview UI — beta 25 preview 🎮
+
+I've been building a console-style home for PC games, designed around a controller and Windows handhelds.
+
+• Bring Steam, Epic, Xbox PC and other installed games into one library.
+• Jump back into games from a full-screen home dashboard.
+• Choose supported Steam launch modes inside the app, including Advanced Warfare's multiplayer / Exo options.
+• Follow launch and first-run setup status without guessing what's happening.
+• Browse with a controller, mouse or keyboard.
+
+Beta 25 cleans up the home cards and selection corners, and replaces the old custom keyboard with the native Windows touch keyboard throughout the app.
+
+The images show beta 25 with a curated demo library. This is an unofficial community project for Windows.
+
+Project + available builds:
+https://github.com/ykyritsis/xbox-cloud-preview-on-pc
+
+I'd love feedback from other handheld users — especially on navigation, scaling and native keyboard behaviour.
+
+--- SHORT VERSION ---
+
+Been working on Xbox Preview UI: a controller-first, console-style launcher for Windows PCs and handhelds. One library for your installed games, in-app Steam mode selection, and native Windows keyboard support. Here's a look at beta 25 🎮
+
+https://github.com/ykyritsis/xbox-cloud-preview-on-pc
+
+--- POSTING NOTES (DO NOT INCLUDE) ---
+
+Attach discord-square.jpg first, then discord-steam-modes.jpg or screenshot-library.png.
+These drafts say "preview" because preparing this kit does not publish beta 25.
+Once beta 25 is published, you can change the first line to "Xbox Preview UI — beta 25 is out" and add its verified release URL.
+Do not claim every third-party launcher, Steam sign-in, UAC prompt or external game launcher stays inside the app.
+The screenshots use real beta 25 UI with curated demo data; the mode labels come from the earlier successful Advanced Warfare integration test.

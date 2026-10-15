@@ -1429,7 +1429,7 @@ function openGameDetails(gameId) {
     fullDescriptionNode.classList.toggle('clamped', fullDescription.length > 360);
     descriptionMore.hidden = fullDescription.length <= 360;
     document.querySelector('#detail-rating').textContent = details.ageRating ? `Age rating ${details.ageRating}` : '';
-    const images = [...new Set((details.screenshots || []).filter(Boolean))];
+    const images = launcherMedia.uniqueScreenshots(details.screenshots);
     state.galleryImages = images;
     state.homeScreenshotCache.set(game.id, images);
     if (state.useRandomScreenshotBackground && images.length) {
@@ -1959,6 +1959,14 @@ async function openSettings() {
   if (state.steamLocalStatus) renderSteamLocalStatus('#settings-steam-local-status');
   else window.launcher.getSteamLocalStatus().then((status) => { state.steamLocalStatus = status; renderSteamLocalStatus('#settings-steam-local-status'); }).catch(() => {});
   document.querySelector('#fullscreen-toggle').checked = settings.fullscreen;
+  const regionChoice = document.querySelector('#player-region');
+  if (regionChoice) {
+    const region = settings.region || 'auto';
+    if (![...regionChoice.options].some(option => option.value === region)) regionChoice.add(new Option(region, region));
+    regionChoice.value = region;
+    state.region = region;
+    regionChoice.options[0].textContent = `Automatic${settings.country ? ` · ${new Intl.DisplayNames(['en'], { type: 'region' }).of(settings.country)}` : ''}`;
+  }
   document.querySelector('#sound-toggle').checked = state.soundEffects;
   document.querySelector('#startup-toggle').checked = settings.startupAnimation !== false;
   document.querySelector('#ui-scale').value = String(Math.round((settings.uiScale || 1) * 100));
@@ -2500,12 +2508,9 @@ async function performAction(action, source) {
   if (action === 'launch-with-options') {
     const value = document.querySelector('#steam-launch-options').value.trim();
     try {
-      await window.launcher.saveGameLaunchOptions(state.optionsGameId, value);
-      const game = state.games.find((item) => item.id === state.optionsGameId);
-      if (game) game.launchOptions = value;
       state.selectedGameId = state.optionsGameId;
       await launchSelectedGame(value);
-    } catch (error) { showToast(error.message || 'Could not save Steam launch options'); }
+    } catch (error) { showToast(error.message || 'Could not launch with these options'); }
   }
   if (action === 'save-launch-options') {
     try {
@@ -2700,6 +2705,7 @@ async function saveSettingsForm({ close = true } = {}) {
     const refreshArtwork = state.settingsOriginal.steamGridDbKey !== document.querySelector('#sgdb-key').value.trim();
     const libraryChanged = state.settingsOriginal.libraryKey !== librarySettingsKey();
     await window.launcher.saveSettings({
+      region: document.querySelector('#player-region').value,
       steamGridDbKey: document.querySelector('#sgdb-key').value,
       steamApiKey: document.querySelector('#steam-api-key').value,
       steamId64: document.querySelector('#steam-id64').value,
@@ -2724,6 +2730,13 @@ async function saveSettingsForm({ close = true } = {}) {
     });
     state.settingsOriginal = { uiScale: Number(document.querySelector('#ui-scale').value) / 100, tileRadius: Number(document.querySelector('#tile-radius').value), reducedMotion: document.querySelector('#reduced-motion-toggle').checked, textScale: Number(document.querySelector('#text-size').value) / 100, highContrastFocus: document.querySelector('#high-contrast-focus-toggle').checked, steamGridDbKey: document.querySelector('#sgdb-key').value.trim(), libraryKey: librarySettingsKey() };
     state.settingsSaved = true;
+    const region = document.querySelector('#player-region').value;
+    if (state.region !== region) {
+      state.region = region;
+      state.gamePassCatalog = null;
+      state.steamDiscovery = { status: 'empty', mostPlayed: [], topSellers: [], upcoming: [] };
+      resetRegionViews();
+    }
     state.soundEffects = document.querySelector('#sound-toggle').checked;
     state.showUninstalledSteam = document.querySelector('#show-uninstalled-toggle').checked;
     state.showUninstalledEpic = document.querySelector('#show-uninstalled-epic-toggle').checked;

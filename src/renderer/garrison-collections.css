@@ -29,3 +29,13 @@ body.garrison .g-publisher-card img.g-publisher-logo { inset: auto 14% 14% 14%; 
 body.garrison #home-collections > *, body.garrison #g-home-rows { min-width: 0; max-width: 100%; }
 body.garrison .g-publisher-row { min-width: 0; max-width: 100%; }
 body.garrison .g-publisher-row .g-publisher-cards { width: 100%; max-width: 100%; min-width: 0; }
+/* Branding is baked into the artwork; keep the image bright and the count legible. */
+body.garrison .g-publisher-card { aspect-ratio: 2 / 3; background: #252826; }
+body.garrison .g-series-card { background: #252826; }
+body.garrison .g-publisher-card .g-publisher-art { filter: none; object-position: center; }
+body.garrison :is(.g-publisher-card, .g-series-card).has-artwork::after { background: linear-gradient(180deg, transparent 84%, #0008); }
+body.garrison .has-artwork :is(.g-publisher-name, .g-series-name) { display: none; }
+body.garrison :is(.g-publisher-card, .g-series-card):not(.has-artwork)::after { display: none; }
+body.garrison .g-publisher-card:not(.has-artwork) .g-publisher-name,
+body.garrison .g-series-card:not(.has-artwork) .g-series-name { bottom: auto; top: 50%; transform: translateY(-50%); }
+body.garrison :is(.g-publisher-card, .g-series-card) small { text-shadow: 0 1px 6px #000; }

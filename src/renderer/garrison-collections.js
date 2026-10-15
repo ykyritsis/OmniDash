@@ -70,62 +70,26 @@ renderGarrisonSourceChips = function () {
   target.insertAdjacentHTML('afterbegin', `<button class="g-chip focusable active" type="button" role="tab" aria-selected="true" data-action="g-source" data-source="all">${escapeHtml(collection.replace(/^\w+:/, ''))}</button>`);
 };
 
-// Tall publisher cards: a game's key art with the publisher's name set like a wordmark.
-// Key art for a group: the hero image of its most-played game that has one.
-function gGroupArtList(games) {
-  const ranked = [...games].sort((x, y) => (Number(y.steamPlaytimeMinutes) || 0) - (Number(x.steamPlaytimeMinutes) || 0) || (Number(y.installed !== false) - Number(x.installed !== false)));
-  return [...new Set([...ranked.flatMap(game => [game.artwork?.hero, game.artwork?.wide]), ...ranked.map(game => game.artwork?.tile)].filter(Boolean))].slice(0, 8);
-}
-function gGroupArt(games) { return gGroupArtList(games)[0] || ''; }
-// Art that fails to load moves on to the next game's image; a logo that fails shows the name instead.
+// Each collection has one finished local image, including its branding.
+// Names without a commissioned asset use a simple text card.
 document.addEventListener('error', event => {
   const image = event.target;
-  if (!(image instanceof HTMLImageElement)) return;
-  if (image.matches('.g-publisher-art, .g-series-art')) {
-    const rest = (image.dataset.next || '').split(' ').filter(Boolean);
-    if (rest.length) { image.dataset.next = rest.slice(1).join(' '); image.src = rest[0]; }
-    else image.replaceWith(Object.assign(document.createElement('span'), { className: 'g-publisher-fallback' }));
-  } else if (image.matches('.g-publisher-logo, .g-series-logo')) {
-    const card = image.closest('.g-publisher-card, .g-series-card');
-    image.remove();
-    card?.classList.remove('has-logo');
-    if (card?.matches('.g-series-card') && !card.querySelector('.g-series-name')) card.insertAdjacentHTML('beforeend', `<span class="g-series-name">${escapeHtml(card.dataset.collection.replace(/^series:/, ''))}</span>`);
-  }
+  if (!(image instanceof HTMLImageElement) || !image.matches('.g-publisher-art, .g-series-art')) return;
+  image.closest('.g-publisher-card, .g-series-card')?.classList.remove('has-artwork');
+  image.remove();
 }, true);
-// Publisher logos are looked up once each (main caches them), then cards are filled in.
-const gPublisherLogos = new Map();
-function gPublisherLogo(name) {
-  if (gPublisherLogos.has(name)) return gPublisherLogos.get(name);
-  gPublisherLogos.set(name, '');
-  window.launcher.getPublisherLogo(name).then(url => {
-    if (!url) return;
-    gPublisherLogos.set(name, url);
-    const card = document.querySelector(`.g-publisher-card[data-collection="publisher:${CSS.escape(name)}"]`);
-    if (card && !card.querySelector('.g-publisher-logo')) {
-      card.querySelector('.g-publisher-name')?.insertAdjacentHTML('beforebegin', `<img class="g-publisher-logo" src="${escapeHtml(url)}" alt="" decoding="async" />`);
-      card.classList.add('has-logo');
-    }
-  }).catch(() => {});
-  return '';
+function gCollectionCard(kind, name, games) {
+  const art = collectionArtwork[kind]?.[name] || '';
+  const css = kind === 'publisher' ? 'g-publisher' : 'g-series';
+  return `<button class="${css}-card focusable${art ? ' has-artwork' : ''}" type="button" data-action="collection-open" data-collection="${kind}:${escapeHtml(name)}" aria-label="${escapeHtml(name)}, ${games.length} games">
+    ${art ? `<img class="${css}-art" src="${escapeHtml(art)}" alt="" loading="lazy" decoding="async" />` : ''}
+    <span class="${css}-name">${escapeHtml(name)}</span><small>${games.length} games</small></button>`;
 }
-function gPublisherCard(name, games) {
-  const arts = gGroupArtList(games), art = arts[0] || '';
-  const logo = gPublisherLogo(name);
-  return `<button class="g-publisher-card focusable${logo ? ' has-logo' : ''}" type="button" data-action="collection-open" data-collection="publisher:${escapeHtml(name)}" aria-label="${escapeHtml(name)}, ${games.length} games">
-    ${art ? `<img class="g-publisher-art" src="${escapeHtml(art)}" data-next="${escapeHtml(arts.slice(1).join(' '))}" alt="" loading="lazy" decoding="async" />` : `<span class="g-publisher-fallback" style="--hue:${hashHue(name)}"></span>`}
-    ${logo ? `<img class="g-publisher-logo" src="${escapeHtml(logo)}" alt="" decoding="async" />` : ''}<span class="g-publisher-name">${escapeHtml(name)}</span><small>${games.length} games</small></button>`;
-}
-// Series cards: wide key art with the series' own logo where one of its games has it.
-function gSeriesCard(name, games) {
-  const arts = gGroupArtList(games), art = arts[0] || '';
-  const logo = games.map(game => game.artwork?.logo).find(Boolean) || '';
-  return `<button class="g-series-card focusable${logo ? ' has-logo' : ''}" type="button" data-action="collection-open" data-collection="series:${escapeHtml(name)}" aria-label="${escapeHtml(name)}, ${games.length} games">
-    ${art ? `<img class="g-series-art" src="${escapeHtml(art)}" data-next="${escapeHtml(arts.slice(1).join(' '))}" alt="" loading="lazy" decoding="async" />` : `<span class="g-publisher-fallback" style="--hue:${hashHue(name)}"></span>`}
-    ${logo ? `<img class="g-series-logo" src="${escapeHtml(logo)}" alt="" decoding="async" />` : `<span class="g-series-name">${escapeHtml(name)}</span>`}<small>${games.length} games</small></button>`;
-}
+function gPublisherCard(name, games) { return gCollectionCard('publisher', name, games); }
+function gSeriesCard(name, games) { return gCollectionCard('series', name, games); }
 const gCollectionsHome = renderHomeCollections;
 renderHomeCollections = function () {
-  // Rows are rebuilt as artwork arrives; keep where each strip was scrolled and which card had focus.
+  // Rebuilding the rows preserves each strip's scroll position and the focused card.
   const strips = new Map([...gHomeRows.querySelectorAll(".g-collections-generated")].map(node => [node.id, node.querySelector(".g-publisher-cards")?.scrollLeft || 0]));
   const focusedCollection = document.activeElement?.closest?.(".g-collections-generated") ? document.activeElement.dataset.collection : "";
   gCollectionsHome();
