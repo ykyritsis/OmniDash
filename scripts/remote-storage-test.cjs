@@ -13,7 +13,7 @@ async function main(){
   assert.equal(parseAddress('192.168.1.5:48000').httpPort,48000);
   assert.equal(parseAddress('[::1]:48000').hostname,'::1');
   for(const bad of ['','https://host','http://user:pass@host','host/path','host?x=y','host\\x','-bad host'])assert.throws(()=>parseAddress(bad));
-  assert.deepEqual(parseApps('<root><App><ID>1</ID><AppTitle>Game &amp; More</AppTitle><IsHdrSupported>1</IsHdrSupported></App><App><ID>1</ID><AppTitle>Duplicate</AppTitle></App><App><ID>../2</ID><AppTitle>Invalid</AppTitle></App></root>'),[{appId:'1',title:'Game & More',launchTitle:'Game & More',hdr:true}]);
+  assert.deepEqual(parseApps('<root><App><ID>1</ID><AppTitle>Game &amp; More</AppTitle><IsHdrSupported>1</IsHdrSupported></App><App><ID>1</ID><AppTitle>Duplicate</AppTitle></App><App><ID>../2</ID><AppTitle>Invalid</AppTitle></App></root>'),[{appId:'1',title:'Game & More',launchTitle:'Game & More',hdr:true,uuid:'',artVersion:'',installed:null}]);
   assert.equal(parseApps('<App><ID>2</ID><AppTitle>\u200bPadded title</AppTitle></App>')[0].launchTitle,'\u200bPadded title','Keep the host’s exact launch title while displaying a clean label');
   const ini=parseIni('[General]\ncertificate=@ByteArray(PEM\\nCERT)\nkey="@ByteArray(SECRET\\nKEY)"\n[hosts]\n1\\uuid=host-uuid\n1\\srvcert=@ByteArray(PINNED)\n');
   assert.equal(ini.General.certificate,'PEM\nCERT');assert.equal(ini.General.key,'SECRET\nKEY');assert.equal(ini.hosts['1\\uuid'],'host-uuid');
@@ -42,30 +42,44 @@ async function main(){
   await fs.writeFile(path.join(directory,'engine','FoggyBytes','StreamLight.ini'),'[General]\ncertificate=TEST-CERT\nkey=TEST-KEY\nuniqueid=client-id\n[hosts]\n1\\uuid=host-uuid\n1\\srvcert=PINNED\n');
   const host={id:'test-host',name:'Test PC',address:'test-pc',hostname:'test-pc',httpPort:47989,httpsPort:47984,uuid:'host-uuid',paired:true,games:[{id:'remote:test-host:10',appId:'10',title:'Test game',artwork:{}}]};
   await fs.writeFile(path.join(directory,'hosts.json'),JSON.stringify([host]));
-  let current='0',fail=false,workerCount=0,reveals=0;
-  const events=[];
+  let current='0',fail=false,workerCount=0,reveals=0,emitFrame;
+  const events=[];let apps='<root><App><ID>10</ID><AppTitle>Test game</AppTitle></App></root>';
   const spawnProcess=(_executable,args)=>{
     const config=JSON.parse(require('node:fs').readFileSync(args[0],'utf8'));
+    assert.equal(config.args[config.args.indexOf('--video-codec')+1],'HEVC');assert.equal(config.args[config.args.indexOf('--resolution')+1],'1280x800');
     assert(config.args.includes('--no-quit-after'),'Disconnect must not terminate the host’s game');
     workerCount++;const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();
     const emit=value=>child.stdout.write(JSON.stringify(value)+'\n');
     child.stdin=new Writable({write(chunk,enc,done){if(String(chunk).includes('reveal')){reveals++;setImmediate(()=>emit({type:'visible'}));}if(String(chunk).includes('stop'))setImmediate(()=>{emit({type:'exit',code:0});child.emit('exit',0);});done();}});
-    setTimeout(()=>{emit({type:'surface'});emit({type:'stderr',text:'Video stream is 1920x1080x60 (format 0x1)'});},10);return child;
+    emitFrame=()=>emit({type:'stderr',text:'00:00:03 - SDL Info (0): Stream window revealed: 1280x800, fullscreen=0'});
+    setTimeout(()=>{emit({type:'surface'});emit({type:'stderr',text:'Video stream is 1280x800x90 (format 0x1)'});},10);return child;
   };
   const remote=createRemotePlay({directory,runtimeDirectory:runtime,getWindow:()=>null,onStatus:event=>events.push(event),spawnProcess,request:async(host,route,options)=>{
     if(fail)throw new Error('Network interrupted');
     if(route==='serverinfo')return `<root status_code="200"><uniqueid>host-uuid</uniqueid><hostname>Test PC</hostname><HttpsPort>47984</HttpsPort><PairStatus>1</PairStatus><currentgame>${current}</currentgame></root>`;
-    if(route==='applist')return '<root><App><ID>10</ID><AppTitle>Test game</AppTitle></App></root>';
+    if(route==='applist')return apps;
     throw new Error('Unexpected route '+route);
   }});
   try{
     assert.equal(JSON.stringify(await remote.snapshot()).includes('TEST-KEY'),false,'Private identity must never reach the renderer');
     assert.deepEqual(await remote.pair(host.id),{hostId:host.id,paired:true});
     assert.equal((await remote.refresh(host.id)).games.length,1);
+    assert.equal((await remote.checkHosts()).hosts[0].status,'ready');
+    const preferences=await remote.settings(host.id,{width:1280,height:800,fps:90,bitrate:15000,codec:'HEVC',decoder:'hardware'});
+    assert.equal(preferences.height,800);assert.equal(preferences.codec,'HEVC');
+    assert.equal((await remote.snapshot()).hosts[0].preferences.bitrate,15000);
+    await remote.hideGame(host.id,'10');assert.equal((await remote.snapshot()).hosts[0].games.length,0);
+    await remote.hideGame(host.id,null);assert.equal((await remote.snapshot()).hosts[0].games.length,1);
+    const keep=apps;apps='<root><App><ID>11</ID><AppTitle>Removed</AppTitle><IsInstalled>0</IsInstalled></App><App><ID>12</ID><AppTitle>Fresh game</AppTitle><IsInstalled>1</IsInstalled></App></root>';
+    assert.deepEqual((await remote.refresh(host.id)).games.map(game=>game.appId),['12'],'Removed and unpublished games must disappear on refresh');
+    apps=keep;await remote.refresh(host.id);
+    fail=true;assert.equal((await remote.checkHosts()).hosts[0].status,'offline');assert.equal((await remote.snapshot()).hosts[0].games.length,1,'Offline libraries must keep saved games');fail=false;await remote.checkHosts();
+    assert.equal((await remote.add('new-host-address')).hostId,host.id,'A DHCP change must reuse the paired host by UUID');
+    assert.equal((await remote.snapshot()).hosts.length,1);
     assert.deepEqual(await remote.covers(host.id,['../2','999']),[],'Unpublished asset requests are rejected');
     const starting=remote.start(host.id,'10');await assert.rejects(remote.start(host.id,'10'),/already starting/);await starting;
     await pause(40);assert.equal(reveals,0,'The surface must stay hidden before the host reports the app running');
-    current='10';await until(()=>events.some(event=>event.phase==='playing'));assert.equal(reveals,1);assert.equal(remote.active().phase,'playing');
+    current='10';await pause(1700);assert.equal(reveals,0,'Negotiated video format is not evidence of a decoded frame');emitFrame();await until(()=>events.some(event=>event.phase==='playing'));assert.equal(reveals,1);assert.equal(remote.active().phase,'playing');
     fail=true;await pause(1700);assert(remote.active(),'A failed poll must not be mistaken for a game exit');fail=false;
     current='0';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'));
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');

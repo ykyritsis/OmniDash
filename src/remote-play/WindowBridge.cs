@@ -20,6 +20,7 @@ class WindowBridge {
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc callback, IntPtr param);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int length);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder text, int length);
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
     [DllImport("user32.dll")] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
     [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr window);
@@ -70,6 +71,10 @@ class WindowBridge {
         var name = new StringBuilder(256); GetClassName(window, name, name.Capacity);
         ShowWindow(window, 0);
         if(!stream || video != IntPtr.Zero || !name.ToString().StartsWith("SDL", StringComparison.OrdinalIgnoreCase)) return;
+        // SDL also creates short-lived capability-test windows before /launch.
+        // Attaching one of those makes its destruction look like a closed game.
+        var title = new StringBuilder(512); GetWindowText(window, title, title.Capacity);
+        if(!title.ToString().EndsWith(" - StreamLight", StringComparison.Ordinal)) return;
         // Keep mixed-DPI parenting explicit. The native renderer is sized in
         // physical client pixels, independently of Electron's UI zoom.
         SetThreadDpiAwarenessContext(new IntPtr(-4));

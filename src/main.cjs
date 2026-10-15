@@ -1755,6 +1755,16 @@ async function searchArtwork(query, selectedGameId = '') {
 
 function registerIpc() {
   ipcMain.handle('remote-play:snapshot', () => remotePlay.snapshot());
+  ipcMain.handle('remote-play:check-hosts', () => remotePlay.checkHosts());
+  ipcMain.handle('remote-play:scan', () => remotePlay.scan());
+  ipcMain.handle('remote-play:settings', (_event, id, preferences) => remotePlay.settings(id, preferences));
+  ipcMain.handle('remote-play:hide-game', (_event, id, appId, hidden) => remotePlay.hideGame(id, appId, hidden));
+  ipcMain.handle('remote-play:details', async (_event, id, appId) => {
+    const game=await remotePlay.game(id,appId);
+    // Streaming app IDs belong to the host and must never be sent to the Steam
+    // store as if they were Steam app IDs.
+    return fetchGameDetails({...game,appId:game.steamAppId||'',achievementReferenceAppId:game.steamAppId||''});
+  });
   ipcMain.handle('remote-play:add', (_event, address) => remotePlay.add(address));
   ipcMain.handle('remote-play:pair', (_event, id) => remotePlay.pair(id));
   ipcMain.handle('remote-play:cancel-pair', () => remotePlay.cancelPair());

@@ -9,20 +9,26 @@ UI capture with a sample host and test PIN.
 ## Connect a PC
 
 1. Run Sunshine, Apollo or Vibepollo on your gaming PC and publish the games you want to stream in its app list.
-2. On the client, open **Settings → Remote play → Add a PC**. Enter the host's IP address or hostname. A custom HTTP port can be appended, such as `192.168.1.20:48000`. The default is 47989.
-3. Enter the displayed four-digit PIN in the host's pairing page. The client waits for approval and then opens its game browser.
-4. Choose a game from **My games & apps → Remote PCs** or **Settings → Remote play → Browse remote games**.
-5. Choose stream resolution, frame rate and bitrate in Remote play settings before starting your next session. 1080p, 60 fps and 20 Mbps are the defaults.
+2. Open **Library → Remote PCs → Find a PC** (also available in Remote play settings). Nearby PCs are discovered automatically. Select a result, or use **Enter address manually** for a hostname, VPN address or custom HTTP port such as `192.168.1.20:48000`. The default port is 47989.
+3. Enter the displayed four-digit PIN in the host's pairing page. The client waits for approval and saves the PC and its published games.
+4. Return to **Library → Remote PCs** to see saved PCs, their connection status and square game cards. Selecting a game opens its normal game page; choose **Play remotely** to start it.
+5. Open **Stream settings** from the selected PC or a remote game's options. Resolution, frame rate, bitrate, codec and decoder are saved separately for each PC. Defaults are 1080p, 60 fps and 20 Mbps; handheld 16:10 resolutions and 90/120 fps are also available.
 
 Both devices must be able to reach each other. Remote play does not open router ports or configure a VPN. A reachable VPN hostname/address can be entered like any other host address.
 
 ## Starting and ending a session
 
-The existing game launch animation remains visible while the client connects. The native surface is revealed once the host reports that selected app running, the decoder reports a video stream and Windows has attached the video window to the launcher. Controller navigation in the launcher is suspended during play.
+The existing game launch animation remains visible while the client connects. The native surface is revealed once the host reports the selected app running, the engine reports that its first decoded picture is ready to reveal, and Windows has attached the video window to the launcher. Video-format negotiation alone does not dismiss the animation. Controller navigation in the launcher is suspended during play. Connection failures show an error with retry and stream-settings actions.
 
-When the host reports that app has stopped, the client ends its stream and returns to the remote library. Two successful state checks confirm the exit; a failed request is not treated as a closed game. A replacement app on the host also ends this client's stream without stopping the replacement app.
+When the host reports that app has stopped, the client ends its stream and returns to the game page. Back returns to the selected Library tile. Two successful state checks confirm the exit; a failed request is not treated as a closed game. A replacement app on the host also ends this client's stream without stopping the replacement app.
 
 To disconnect manually, use **Ctrl + Alt + Shift + Q** or **LB + RB + A**, StreamLight's default disconnect shortcuts. Disconnecting the client does not send a host-game quit request, so a game can stay open for later resumption. Cancelling the launch animation also disconnects the client. Closing the launcher or its native bridge closes its owned streaming process.
+
+## Keeping the game list accurate
+
+Refreshing replaces the saved list with the host's current published apps, removes apps the host explicitly marks uninstalled, and refreshes artwork when its revision changes. Standard Sunshine/Apollo app lists do not include a complete installed-game inventory: a stale shortcut can still be published after its game is removed.
+
+For Vibepollo's Steam integration, enable **Steam auto-sync → Remove uninstalled games** (`steam_autosync_remove_uninstalled = true`) and reload the host configuration. Its Playnite integration has a separate cleanup setting. For manually published Sunshine/Apollo games, remove obsolete shortcuts on the host. The client also offers **Hide from this library** and **Restore hidden games** without changing the host's configuration.
 
 ## Host behaviour and preview limits
 
@@ -32,7 +38,7 @@ To disconnect manually, use **Ctrl + Alt + Shift + Q** or **LB + RB + A**, Strea
 - StreamLight's CLI selects apps by name. Give apps unique names on the host; ambiguous duplicates are reported before launch. Invisible ordering prefixes are retained for launching while labels are cleaned for display.
 - A host already running a different app is left alone. Close that app before launching another game. Selecting the same running app resumes it.
 - Cached libraries remain browsable while a PC is offline. Starting or refreshing needs a reachable, paired host. Artwork downloads are limited to cards as they become visible.
-- This first preview has automated UI, state, native-window and identity/TLS checks. Live streaming against a paired gaming PC and physical controller/decoder combinations still need device verification. HDR, microphone passthrough, host power controls and mid-stream quality changes are not exposed in this preview.
+- This preview has automated UI, state, discovery, native-window and identity/TLS checks. The bundled engine's hidden-window launch path is tested against a local protocol fixture. Live gameplay against a paired gaming PC and physical controller/decoder combinations still need device verification. HDR, microphone passthrough, host power controls and mid-stream quality changes are not exposed in this preview.
 
 ## Pairing data
 
@@ -45,8 +51,8 @@ Removing a PC removes it from this app's browser. To revoke this client on the h
 - Engine: [FoggyBytes/StreamLight, v7.0.0](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), using Moonlight's streaming core, FFmpeg, SDL and the upstream decoder/runtime dependencies.
 - License: [GPL v3](../src/remote-play/LICENSE.StreamLight), also included next to the bundled runtime.
 - Engine source: the linked release tag and its recorded submodules; the app does not modify StreamLight's binary or source.
-- Integration source: [remote-play.cjs](../src/remote-play.cjs), [WindowBridge.cs](../src/remote-play/WindowBridge.cs), and [remote-storage.js](../src/renderer/remote-storage.js).
+- Integration source: [remote-play.cjs](../src/remote-play.cjs), [remote-discovery.cjs](../src/remote-discovery.cjs), [WindowBridge.cs](../src/remote-play/WindowBridge.cs), and [remote-play-ui.js](../src/renderer/remote-play-ui.js).
 - Build preparation: run `npm run prepare:streaming` on Windows. [prepare-streaming.cjs](../scripts/prepare-streaming.cjs) verifies a pinned official installer, extracts its files without running setup, and compiles the native bridge using Windows' .NET Framework C# compiler. The unpacker is used only during preparation and is not bundled.
 - Each build includes a `runtime-manifest.json` with the pinned engine source/version and hashes of its runtime files. Build staging and private pairing data are ignored by Git.
 
-The native bridge uses a Windows job object to own the decoder process and a child window for its SDL surface. It follows the parent client's physical pixel dimensions and keeps the engine's other windows hidden. This avoids moving decoded frames through JavaScript or Chromium's video pipeline.
+The native bridge uses a Windows job object to own the decoder process and a child window for its SDL surface. It follows the parent client's physical pixel dimensions and keeps the engine's other windows hidden. Temporary SDL decoder-probe windows are ignored. The isolated engine profile disables its Qt entrance animation so hidden UI cannot stall the launch request. This avoids moving decoded frames through JavaScript or Chromium's video pipeline.

@@ -271,7 +271,7 @@ body.garrison #detail-title, body.garrison #detail-title[hidden] {
 }
 body.garrison #detail-byline { margin: 0; color: var(--g-text-2); font: 400 clamp(15px, calc(1.25 * var(--g-vp) / 100), 25px)/1.35 var(--g-font); }
 body.garrison #detail-session-info { display: flex; flex-wrap: wrap; align-items: center; gap: clamp(10px, calc(1 * var(--g-vp) / 100), 20px); margin: 0; color: #fff; font: 600 clamp(14px, calc(1.15 * var(--g-vp) / 100), 23px)/1 var(--g-font); }
-body.garrison #detail-session-info > span:not(.g-own-pill):not(.g-via):not(.detail-play-with) { display: none; }
+body.garrison #detail-session-info > span:not(.g-own-pill):not(.g-via):not(.detail-play-with):not(.remote-status) { display: none; }
 body.garrison .g-own-pill { display: inline-flex; align-items: center; gap: 8px; height: clamp(34px, calc(2.5 * var(--g-vp) / 100), 48px); padding: 0 clamp(12px, calc(1 * var(--g-vp) / 100), 20px); border: 1px solid rgba(132, 200, 120, .45); border-radius: 999px; background: rgba(76, 154, 68, .22); color: #e6f4e2; }
 body.garrison .g-own-pill svg, body.garrison .g-via svg { width: clamp(16px, calc(1.25 * var(--g-vp) / 100), 24px); height: clamp(16px, calc(1.25 * var(--g-vp) / 100), 24px); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 body.garrison .g-via { display: inline-flex; align-items: center; gap: 10px; }

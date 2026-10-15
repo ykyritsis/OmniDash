@@ -93,7 +93,8 @@ function renderGarrisonGameDetails(game, details = {}) {
   const provider = game.provider || (game.xboxProductId ? 'Xbox PC' : '');
   const steam = provider === 'Steam';
   const storeId = details.steamAppId || (steam ? game.appId : '');
-  const installation = steam ? 'Installs with Steam on this PC. Sign in to Steam on any PC to install and play it there too.'
+  const installation = game.remoteHostId ? `Streams from ${game.hostName || 'your remote PC'}. Install and update this game on that PC. No local game download is needed.`
+    : steam ? 'Installs with Steam on this PC. Sign in to Steam on any PC to install and play it there too.'
     : provider === 'Xbox PC' ? (/Restrictive/i.test(xbox.installTerms) ? 'Install on your home Xbox console and a Windows PC plus have access when you’re connected to your Microsoft account' : 'Install on Windows PCs where you’re signed in to your Microsoft account.')
     : `Installs with ${gLaunchers[provider] || provider || 'its launcher'} on this PC.`;
   const online = steam ? { title: 'Steam', text: 'Your playtime, achievements and friends activity sync with Steam while you play.', url: storeId ? `https://store.steampowered.com/app/${storeId}/` : '' }

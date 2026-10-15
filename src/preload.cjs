@@ -15,6 +15,11 @@ const ipcRenderer = {
 contextBridge.exposeInMainWorld('launcher', {
   getStorageOverview: () => ipcRenderer.invoke('storage:overview'),
   remotePlaySnapshot: () => ipcRenderer.invoke('remote-play:snapshot'),
+  remotePlayCheckHosts: () => ipcRenderer.invoke('remote-play:check-hosts'),
+  remotePlayScan: () => ipcRenderer.invoke('remote-play:scan'),
+  remotePlaySettings: (id, preferences) => ipcRenderer.invoke('remote-play:settings', id, preferences),
+  remotePlayHideGame: (id, appId, hidden) => ipcRenderer.invoke('remote-play:hide-game', id, appId, hidden),
+  remotePlayDetails: (id, appId) => ipcRenderer.invoke('remote-play:details', id, appId),
   remotePlayAdd: address => ipcRenderer.invoke('remote-play:add', address),
   remotePlayPair: id => ipcRenderer.invoke('remote-play:pair', id),
   remotePlayCancelPair: () => ipcRenderer.invoke('remote-play:cancel-pair'),

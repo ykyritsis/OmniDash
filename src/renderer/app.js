@@ -1288,7 +1288,7 @@ function openControllerStatus() {
 }
 
 function openGameDetails(gameId) {
-  const game = state.games.find((item) => item.id === gameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find((item) => item.id === gameId) || state.gamePassCatalog?.find(item => item.id === gameId) || Object.values(state.xboxStore || {}).filter(Array.isArray).flat().find(item => item.id === gameId);
+  const game = state.games.find((item) => item.id === gameId) || state.remoteGames?.find(item => item.id === gameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find((item) => item.id === gameId) || state.gamePassCatalog?.find(item => item.id === gameId) || Object.values(state.xboxStore || {}).filter(Array.isArray).flat().find(item => item.id === gameId);
   if (!game) return;
   const discoveryOnly = game.discoveryOnly === true;
   if (state.view !== 'detail') {
@@ -1300,14 +1300,14 @@ function openGameDetails(gameId) {
   searchPopover.hidden = true;
   const requestToken = ++state.detailRequestToken;
   showView('detail');
-  if (discoveryOnly) { state.newsRequestToken++; state.newsPendingGameId = null; newsShelf.hidden = true; newsRow.innerHTML = ''; }
+  if (discoveryOnly || game.remoteHostId) { state.newsRequestToken++; state.newsPendingGameId = null; newsShelf.hidden = true; newsRow.innerHTML = ''; }
   else renderSelectedGameNews(game);
   const mainScroller = document.querySelector('main');
   mainScroller.style.scrollBehavior = 'auto';
   mainScroller.scrollTop = 0;
   gameDetailView.scrollTop = 0;
   requestAnimationFrame(() => mainScroller.style.removeProperty('scroll-behavior'));
-  const image = game.artwork?.hero || game.artwork?.wide || '';
+  const image = game.artwork?.hero || game.artwork?.wide || (game.remoteHostId ? game.artwork?.tile : '') || '';
   const heroArt = document.querySelector('#detail-global-art');
   const alternateHeroArt = document.querySelector('#detail-global-art-next');
   const fallbackBackdrop = image
@@ -1338,7 +1338,7 @@ function openGameDetails(gameId) {
   document.querySelector('#detail-logo-frame').hidden = true;
   detailTitle.hidden = false;
   if (game.artwork?.logo) showDetailLogo(game.artwork.logo);
-  else if (!discoveryOnly) window.launcher.getGameLogo(game.id).then((logo) => {
+  else if (!discoveryOnly && !game.remoteHostId) window.launcher.getGameLogo(game.id).then((logo) => {
     if (requestToken !== state.detailRequestToken || !logo) return;
     game.artwork ||= {};
     game.artwork.logo = logo;
@@ -1383,7 +1383,10 @@ function openGameDetails(gameId) {
   document.querySelector('#achievement-trueachievements').hidden = true;
   document.querySelector('#achievement-progress-label').textContent = '';
   document.querySelector('#achievement-source-label').textContent = '';
-  if (discoveryOnly) {
+  if (game.remoteHostId) {
+    document.querySelector('#detail-achievements-note').textContent = 'Achievements are tracked by the game’s launcher on your host PC.';
+    document.querySelector('#detail-dlc-note').textContent = 'Manage add-ons on your host PC.';
+  } else if (discoveryOnly) {
     document.querySelector('#detail-achievements-note').textContent = `View this game in ${game.xboxProductId ? 'Xbox' : 'Steam'} to see its achievements.`;
     document.querySelector('#detail-dlc-note').textContent = `View this game in ${game.xboxProductId ? 'Xbox' : 'Steam'} to browse add-ons.`;
   } else window.launcher.getGameAchievements(game.id).then((result) => {
@@ -1415,7 +1418,7 @@ function openGameDetails(gameId) {
     document.querySelector('#achievement-trueachievements').hidden = false;
   });
   setTimeout(() => setFocusedElement(playButton, { scroll: false }), 0);
-  (game.xboxProductId && discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId) : discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
+  (game.remoteHostId ? window.launcher.remotePlayDetails(game.remoteHostId,game.appId) : game.xboxProductId && discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId) : discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
     if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
     document.querySelector('#detail-byline').textContent = [details.publisher || details.developer || game.provider, ...(details.genres || []).slice(0, 3)].filter(Boolean).join(' • ');
     document.querySelector('#detail-description').textContent = details.description || `Play ${game.title} from your ${game.provider} library.`;
