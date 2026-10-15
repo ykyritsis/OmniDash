@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 28](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.28/Xbox-Preview-UI-Setup-0.27.0-beta.28.exe)** · [Setup](#getting-started) · [Beta 28 notes](docs/release-0.27.0-beta.28.md)
+**[Download beta 29](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.29/Xbox-Preview-UI-Setup-0.27.0-beta.29.exe)** · [Setup](#getting-started) · [Beta 29 notes](docs/release-0.27.0-beta.29.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,19 +31,20 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 28
+## Beta 29
 
+- Storage, remote play, pairing and Steam drive selection now share the app's current console styling, with larger-text and controller-focus checks.
 - [Remote play preview](docs/remote-play.md): pair a Sunshine, Apollo or Vibepollo PC, browse its shared games and play through StreamLight's native decoder inside the app.
 - The launch animation stays up until the host session and video surface are ready. Host-reported game exit ends the stream.
 - Steam drive selection shows separate download, installed-size and required-space estimates, including shared content depots.
 - Settings → Storage shows drive space, known game sizes and installed games by drive.
 - Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.28.md)
+[Full release notes](docs/release-0.27.0-beta.29.md)
 
 ## Download
 
-Get **[beta 28 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.28)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 29 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.29)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
@@ -150,7 +151,7 @@ Builds are written to `dist/`. The installer does not change Windows' Full Scree
 
 | Preview | Highlights |
 | --- | --- |
-| [Beta 28](docs/release-0.27.0-beta.28.md) | Embedded StreamLight remote-play preview, Steam download/install-size estimates and Settings storage overview. |
+| [Beta 29](docs/release-0.27.0-beta.29.md) | Embedded StreamLight remote-play preview, Steam download/install-size estimates and Settings storage overview. |
 | [Beta 27](docs/release-0.27.0-beta.27.md) | Immediate launch update checks and a centred update prompt for keyboard, mouse and controller. |
 | [Beta 26](docs/release-0.27.0-beta.26.md) | Updated management dialogs, unique gallery media, quicker Steam lookup, regional ratings and finished publisher/series artwork. |
 | [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |

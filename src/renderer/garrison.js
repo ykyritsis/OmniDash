@@ -304,9 +304,10 @@ function gInstallTo(game) {
     let targets, selected = '', finished = false;
     const opener = document.activeElement;
     const dialog = document.createElement('dialog');
-    dialog.className = 'g-flyout g-install-to';
+    dialog.className = 'g-flyout g-install-to g-managed-dialog';
+    dialog.setAttribute('aria-labelledby', 'g-install-title');
     const render = () => {
-      dialog.innerHTML = `<header><h2>Install ${escapeHtml(game.title)}</h2></header>
+      dialog.innerHTML = `<header><h2 id="g-install-title">Install ${escapeHtml(game.title)}</h2></header>
         <div class="g-install-sizes" aria-label="Download and storage estimates">
           <div><small>Download</small><strong>${targets.downloadBytes ? `About ${escapeHtml(formatBytes(targets.downloadBytes))}` : 'Size unavailable'}</strong></div>
           <div><small>Installed game</small><strong>${targets.installBytes ? `About ${escapeHtml(formatBytes(targets.installBytes))}` : 'Size unavailable'}</strong></div>
@@ -317,10 +318,10 @@ function gInstallTo(game) {
           const low = targets.needed && item.free !== null && item.free < targets.needed;
           return `<button class="g-drive focusable${item.root === selected ? ' selected' : ''}${low ? ' low' : ''}" type="button" role="radio" aria-checked="${item.root === selected}" data-root="${escapeHtml(item.root)}">
             ${gIcon('drive', 'g-drive-icon')}<span class="g-drive-copy"><strong>${escapeHtml(item.drive)}</strong><small>${escapeHtml(item.root)}</small>
-            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small>${item.free === null ? 'Free space unavailable' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : targets.needed && item.free !== null ? ` · About ${escapeHtml(formatBytes(item.free - targets.needed))} left after install` : ''}</small></span>
+            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small class="g-drive-space">${item.free === null ? 'Free space unavailable' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : targets.needed && item.free !== null ? ` · About ${escapeHtml(formatBytes(item.free - targets.needed))} left after install` : ''}</small></span>
             <i class="g-drive-check">${gIcon('check')}</i></button>`;
         }).join('')}</div>
-        <div class="g-choice-actions"><button class="g-onboard-primary focusable" type="button" data-install-confirm ${targets.needed && targets.libraries.some(item => item.root === selected && item.free !== null && item.free < targets.needed) ? 'disabled' : ''}>Install</button><button class="g-onboard-secondary focusable" type="button" data-install-cancel>Cancel</button></div>`;
+        <div class="g-choice-actions"><button class="g-control-button primary focusable" type="button" data-install-confirm ${targets.needed && targets.libraries.some(item => item.root === selected && item.free !== null && item.free < targets.needed) ? 'disabled' : ''}>Install</button><button class="g-control-button focusable" type="button" data-install-cancel>Cancel</button></div>`;
       refreshFocusables();
     };
     const done = value => { if (finished) return; finished = true; dialog.close(); dialog.remove(); refreshFocusables(); if (opener?.isConnected) setFocusedElement(opener, { scroll: false }); resolve(value); };
@@ -333,7 +334,7 @@ function gInstallTo(game) {
     dialog.addEventListener('cancel', () => done(null));
     dialog.addEventListener('close', () => done(null));
     document.body.append(dialog);
-    dialog.innerHTML = `<header><h2>Install ${escapeHtml(game.title)}</h2></header><p role="status">Checking download sizes and drive space…</p><div class="g-choice-actions"><button class="g-onboard-secondary focusable" type="button" data-install-cancel>Cancel</button></div>`;
+    dialog.innerHTML = `<header><h2 id="g-install-title">Install ${escapeHtml(game.title)}</h2></header><p role="status">Checking download sizes and drive space…</p><div class="g-choice-actions"><button class="g-control-button focusable" type="button" data-install-cancel>Cancel</button></div>`;
     dialog.showModal();
     refreshFocusables();
     setFocusedElement(dialog.querySelector('[data-install-cancel]'), { scroll: false });

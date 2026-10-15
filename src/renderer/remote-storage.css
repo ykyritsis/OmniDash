@@ -1,7 +1,162 @@
-.g-install-sizes,.storage-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:20px 0}.g-install-sizes>div,.storage-totals>div{display:flex;flex-direction:column;gap:6px}.g-install-sizes small,.storage-totals small{font-size:14px;color:#b9bdc4}.g-install-sizes strong{font-size:19px}.g-install-to{max-height:calc(100vh - 48px);overflow:auto}.g-install-to [disabled]{opacity:.4;cursor:default}.g-install-to .g-drive-copy small{white-space:normal}
-.remote-intro h3,.storage-heading h3,.remote-quality h3{margin:0 0 8px;font-size:24px}.remote-intro p,.storage-heading p,.remote-quality p{color:#b7bbc3;line-height:1.55;margin:0 0 20px}.remote-tools{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}.remote-tools .g-button,.remote-host-card .g-button,.remote-library-dialog .g-button,.storage-heading .g-button{min-height:48px;padding:12px 18px;background:#35373c;border:1px solid #54565c;color:#fff;border-radius:8px;font-size:16px}.remote-tools .primary{background:#f2f2f3;color:#18191d}.remote-host-card{border:1px solid #404249;border-radius:10px;background:#24262b;padding:20px;margin:12px 0;display:flex;justify-content:space-between;gap:20px;align-items:center}.remote-host-card>div{display:flex;align-items:center;gap:14px}.remote-host-card svg{width:34px;height:34px}.remote-host-card span{display:flex;flex-direction:column;gap:7px}.remote-host-card strong{font-size:20px}.remote-host-card small{font-size:14px;color:#b7bbc3;overflow-wrap:anywhere}.remote-host-card .remote-error,.remote-error{color:#f0bd91}.remote-empty{border:1px dashed #484b52;border-radius:10px;padding:28px;color:#b7bbc3}.remote-empty h3{font-size:22px;color:#eee;margin:0 0 8px}.remote-empty p{line-height:1.6;margin:0}.remote-quality{margin-top:32px}.remote-quality-options{display:flex;gap:18px;flex-wrap:wrap}.remote-quality-options label{display:flex;flex:1;flex-direction:column;gap:9px;min-width:150px;color:#c9cbd0}.remote-quality-options select{min-height:48px;padding:10px 12px;background:#303238;color:#fff;border:1px solid #555861;border-radius:7px}.remote-quality .remote-help{margin:22px 0 0;font-size:14px}.remote-message{border:1px solid #96744d;padding:20px;border-radius:8px}
-.remote-pair-dialog,.remote-library-dialog{color:#f4f4f5;background:#202125;border:1px solid #505159;border-radius:14px;padding:30px;box-shadow:0 24px 100px #000b}.remote-pair-dialog::backdrop,.remote-library-dialog::backdrop{background:#06070ad9}.remote-pair-dialog{width:min(600px,calc(100vw - 64px));max-height:calc(100vh - 64px);overflow:auto}.remote-pair-dialog h2{font-size:28px;margin:0 0 16px}.remote-pair-dialog p{color:#c2c4ca;line-height:1.6}.remote-pair-dialog label{display:flex;flex-direction:column;gap:10px;margin:24px 0 12px}.remote-pair-dialog input,.remote-search-label input{font:inherit;color:#fff;background:#303238;border:1px solid #666a74;border-radius:8px;padding:14px;min-height:48px;box-sizing:border-box}.remote-pin{font-size:68px;font-weight:700;letter-spacing:.2em;text-align:center;padding:22px 0;color:#fff}.remote-library-dialog{width:calc(100vw - 64px);height:calc(100vh - 64px);max-width:1800px;max-height:1200px;box-sizing:border-box;overflow:auto}.remote-library-dialog>header{display:flex;align-items:center;gap:12px;margin-bottom:20px}.remote-library-dialog>header>div{flex:1;min-width:0}.remote-library-dialog h2{font-size:30px;margin:0 0 8px}.remote-library-dialog p{font-size:15px;color:#b7bbc3;margin:0;line-height:1.5}.remote-library-dialog footer{font-size:14px;color:#b7bbc3;margin-top:28px}.remote-search-label{display:flex;flex-direction:column;gap:8px;margin:18px 0;color:#bfc2ca}.remote-search-label input{max-width:560px}#remote-host-tabs{display:flex;flex-wrap:wrap;gap:10px}#remote-host-tabs .active{background:#eee;color:#17181c}.remote-game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:24px 18px}.remote-game-card{border:0;background:transparent;text-align:left;color:#f3f3f5;min-width:0;border-radius:8px;padding:0;display:flex;flex-direction:column;gap:8px;font:inherit}.remote-game-art{display:flex;align-items:center;justify-content:center;aspect-ratio:2/3;width:100%;background:linear-gradient(150deg,#384453,#20232b);border-radius:8px;overflow:hidden}.remote-game-art>span{padding:16px;font-size:23px;line-height:1.3;text-align:center;overflow-wrap:anywhere}.remote-game-art img{width:100%;height:100%;object-fit:cover}.remote-game-card strong{font-size:17px;line-height:1.3}.remote-game-card small{font-size:13px;color:#b7bbc3}.remote-game-grid>.remote-empty{grid-column:1/-1}.remote-streaming .topbar{pointer-events:none}
-.storage-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:18px}.storage-drive-tabs{display:flex;gap:12px;flex-wrap:wrap}.storage-drive-tab{display:flex;gap:12px;align-items:center;border:1px solid #4b4e57;border-radius:9px;background:#2c2e34;color:#fff;padding:16px;text-align:left;flex:1;min-width:210px}.storage-drive-tab.active{border-color:#e5e7ec;background:#373b43}.storage-drive-tab svg{width:28px;height:28px;flex-shrink:0}.storage-drive-tab span{display:flex;flex-direction:column;gap:6px;min-width:0}.storage-drive-tab strong{font-size:18px}.storage-drive-tab small{color:#bfc3cc;font-size:14px}.storage-drive-detail{margin-top:28px}.storage-totals strong{font-size:28px}.storage-space-bar{height:16px;background:#464a53;display:flex;border-radius:8px;overflow:hidden;margin:18px 0 10px}.storage-games-used{background:#d9e6f4}.storage-other-used{background:#738096}.storage-legend{display:flex;flex-wrap:wrap;gap:16px;color:#bfc3cc;font-size:13px}.storage-legend span:first-child{color:#d9e6f4}.storage-legend span:nth-child(2){color:#9faec4}.storage-library-paths{color:#b0b5bf;font-size:13px;overflow-wrap:anywhere}.storage-game-list{margin-top:20px}.storage-game-row{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;text-align:left;background:#2b2d33;color:#fff;border:1px solid #444750;border-radius:8px;padding:17px;margin:8px 0;font:inherit}.storage-game-row span{display:flex;flex-direction:column;gap:6px;min-width:0}.storage-game-row small{font-size:13px;color:#bfc3cc;overflow-wrap:anywhere}.storage-game-row b{font-size:17px;white-space:nowrap}
-@media(max-width:1100px){.remote-library-dialog{width:calc(100vw - 32px);height:calc(100vh - 32px);padding:22px}.remote-library-dialog h2{font-size:24px}.remote-library-dialog>header{flex-wrap:wrap}.remote-library-dialog>header>div{flex-basis:100%}.remote-game-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:18px 14px}.remote-host-card{align-items:flex-start;flex-direction:column}.g-install-sizes strong{font-size:16px}.storage-totals strong{font-size:23px}}
-.g-install-to{width:min(620px,calc(100vw - 48px));max-width:620px;box-sizing:border-box}.g-install-to .g-onboard-primary{background:#f2f2f3;color:#191a1d}.g-install-to .g-onboard-secondary{background:#44464b;color:#fff}.g-install-to .g-install-sizes strong{font-size:19px}.g-install-to .g-install-sizes small{font-size:14px}
-@media(prefers-reduced-motion:reduce){.remote-library-dialog,.remote-pair-dialog{scroll-behavior:auto}}
+/* Remote play and storage extend the dashboard's shared management controls. */
+body.garrison :is([data-settings-page="g-streaming"], [data-settings-page="g-storage"], .remote-library-dialog, .remote-pair-dialog, .g-install-to) {
+  --remote-body-size: calc(clamp(14px, 1vw, 18px) * var(--text-scale, 1));
+  --remote-small-size: calc(clamp(13px, .95vw, 17px) * var(--text-scale, 1));
+  font-family: var(--g-font);
+}
+body.garrison :is(.remote-intro p, .remote-quality p, .storage-heading p, .remote-pair-dialog p, .g-install-to > p) {
+  margin: 0 0 18px; color: var(--g-text-2); font: 400 var(--remote-body-size)/1.55 var(--g-font);
+}
+body.garrison :is(.remote-intro, .remote-quality).settings-section-heading { margin-bottom: 20px; }
+body.garrison .remote-tools { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+body.garrison .remote-host-card {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;
+  padding: clamp(16px, 1.5vw, 26px); margin: 12px 0; border: 0; border-radius: 12px; background: var(--g-surface);
+}
+body.garrison .remote-host-info { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1 1 250px; }
+body.garrison .remote-host-icon {
+  display: grid; place-items: center; flex: none; width: 52px; height: 52px;
+  border-radius: 12px; background: var(--g-surface-2);
+}
+body.garrison .remote-host-icon svg { width: 28px; height: 28px; }
+body.garrison .remote-host-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+body.garrison .remote-host-copy strong { font: 600 calc(var(--g-control-text) * var(--text-scale, 1))/1.3 var(--g-font); }
+body.garrison .remote-host-copy small { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.5 var(--g-font); }
+body.garrison .remote-host-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+body.garrison .remote-empty, body.garrison .remote-message {
+  padding: clamp(20px, 2vw, 32px); border: 0; border-radius: 12px;
+  background: var(--g-surface); color: var(--g-text-2); font: 400 var(--remote-body-size)/1.55 var(--g-font);
+}
+body.garrison .remote-empty h3 { margin: 0 0 8px; color: var(--g-text); font: 600 calc(clamp(18px, 1.3vw, 25px) * var(--text-scale, 1))/1.3 var(--g-font); }
+body.garrison .remote-empty p { margin: 0; font: inherit; }
+body.garrison .remote-empty .g-button { margin-top: 18px; }
+body.garrison .remote-error, body.garrison .remote-host-copy .remote-error { color: #f0bd91; }
+body.garrison .remote-quality { margin-top: 28px; }
+body.garrison .remote-quality-options { gap: 4px; }
+body.garrison .remote-quality-options label { cursor: default; }
+body.garrison :is(.remote-quality-options, .storage-game-list) .g-setting-row strong { font-size: calc(1.44 * var(--p) * var(--text-scale, 1)); }
+body.garrison :is(.remote-quality-options, .storage-game-list) .g-setting-row small { font-size: calc(1.3 * var(--p) * var(--text-scale, 1)); }
+body.garrison .remote-quality-options select {
+  flex: 0 1 210px; min-width: 140px; max-width: 45%; min-height: var(--g-control-size); margin: 0;
+  padding: 12px 34px 12px 16px; border: 1px solid #ffffff24; border-radius: 10px;
+  background-color: #1c1e1d; color: var(--g-text); font: 400 var(--remote-body-size)/1.35 var(--g-font);
+}
+body.garrison .remote-quality .remote-help { margin: 22px 0 0; font-size: var(--remote-small-size); }
+
+/* Modal shells, headings, inputs and buttons come from garrison-management. */
+body.garrison .remote-pair-dialog { width: min(600px, 94vw); box-sizing: border-box; overflow: auto; }
+body.garrison :is(.remote-pair-dialog, .remote-library-dialog, .g-install-to) h2 { margin: 0 0 14px; overflow-wrap: anywhere; }
+body.garrison .remote-pair-dialog label { display: flex; flex-direction: column; gap: 10px; margin: 24px 0 16px; color: var(--g-text-2); font-size: var(--remote-body-size); }
+body.garrison :is(.remote-pair-dialog, .remote-search-label) input { width: 100%; box-sizing: border-box; font-family: var(--g-font); }
+body.garrison .remote-pair-dialog .remote-tools { margin-bottom: 0; }
+body.garrison .remote-pin {
+  margin: 22px 0; padding: 24px 16px; border-radius: 12px; background: var(--g-surface);
+  color: var(--g-text); font: 600 clamp(48px, 5vw, 72px)/1.2 var(--g-display);
+  font-variant-numeric: tabular-nums; letter-spacing: .18em; text-indent: .18em; text-align: center;
+}
+body.garrison .remote-library-dialog {
+  width: min(1800px, calc(100vw - 64px)); height: min(1200px, calc(100vh - 64px));
+  max-height: calc(100vh - 64px); box-sizing: border-box; overflow: auto; scroll-padding: 18px;
+}
+body.garrison .remote-library-dialog > header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; }
+body.garrison .remote-library-dialog > header > div:first-child { flex: 1 1 300px; min-width: 0; }
+body.garrison .remote-library-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+body.garrison .remote-library-dialog p { margin: 0; color: var(--g-text-2); font: 400 var(--remote-body-size)/1.5 var(--g-font); overflow-wrap: anywhere; }
+body.garrison #remote-host-tabs { display: flex; flex-wrap: wrap; gap: 10px; }
+body.garrison #remote-host-tabs .active { background: var(--g-surface-3); box-shadow: inset 0 -3px #fff; }
+body.garrison .remote-search-label { display: flex; flex-direction: column; gap: 8px; margin: 22px 0 26px; color: var(--g-text-2); font-size: var(--remote-small-size); }
+body.garrison .remote-search-label input { max-width: 560px; }
+body.garrison .remote-game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 12vw, 230px), 1fr)); gap: 28px var(--g-gap); padding: 6px; margin: -6px; }
+body.garrison .remote-game-card {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 0; border: 0; border-radius: var(--g-radius);
+  background: transparent; color: var(--g-text); text-align: left; cursor: pointer; font-family: var(--g-font);
+}
+body.garrison .remote-game-art {
+  display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 2/3;
+  overflow: hidden; border-radius: var(--g-radius); background: var(--g-surface-2);
+}
+body.garrison .remote-game-art > span { padding: 16px; font: 600 calc(clamp(18px, 1.4vw, 26px) * var(--text-scale, 1))/1.3 var(--g-display); text-align: center; overflow-wrap: anywhere; }
+body.garrison .remote-game-art img { width: 100%; height: 100%; object-fit: cover; }
+body.garrison .remote-game-card strong { padding: 0 4px; font: 600 var(--remote-body-size)/1.35 var(--g-font); overflow-wrap: anywhere; }
+body.garrison .remote-game-card small { padding: 0 4px 4px; color: var(--g-text-2); font: 400 var(--remote-small-size)/1.4 var(--g-font); overflow-wrap: anywhere; }
+body.garrison .remote-game-grid > .remote-empty { grid-column: 1/-1; }
+body.garrison .remote-library-dialog footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-top: 28px; color: var(--g-text-2); font: 400 var(--remote-small-size)/1.5 var(--g-font); }
+.remote-streaming .topbar { pointer-events: none; }
+
+/* Storage follows the same selected cards and settings rows as the app. */
+body.garrison .storage-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 24px; }
+body.garrison .storage-heading p { margin: 0; }
+body.garrison .storage-heading .g-button { flex: none; }
+body.garrison .storage-drive-tabs { display: flex; flex-wrap: wrap; gap: 12px; padding: 5px; margin: -5px; }
+body.garrison .storage-drive-tab {
+  display: flex; flex: 1 1 230px; align-items: center; gap: 14px; min-width: 0; padding: 18px;
+  border: 2px solid transparent; border-radius: 10px; background: var(--g-surface); color: var(--g-text);
+  font-family: var(--g-font); text-align: left; cursor: pointer;
+}
+body.garrison .storage-drive-tab:hover { background: var(--g-surface-2); }
+body.garrison .storage-drive-tab.active { border-color: #ffffffe6; background: var(--g-surface-2); }
+body.garrison .storage-drive-tab svg { width: 28px; height: 28px; flex: none; }
+body.garrison .storage-drive-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+body.garrison .storage-drive-copy strong { font: 600 calc(var(--g-control-text) * var(--text-scale, 1))/1.3 var(--g-font); }
+body.garrison .storage-drive-copy small { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.4 var(--g-font); }
+body.garrison .storage-drive-detail { margin-top: 24px; }
+body.garrison .storage-summary { padding: clamp(18px, 1.6vw, 28px); border-radius: 12px; background: var(--g-surface); }
+body.garrison :is(.g-install-sizes, .storage-totals) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0; }
+body.garrison :is(.g-install-sizes, .storage-totals) > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+body.garrison :is(.g-install-sizes, .storage-totals) small { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.4 var(--g-font); }
+body.garrison .storage-totals strong { font: 600 calc(clamp(23px, 1.8vw, 34px) * var(--text-scale, 1))/1.2 var(--g-display); overflow-wrap: anywhere; }
+body.garrison .storage-space-bar { display: flex; height: 12px; overflow: hidden; margin: 24px 0 14px; border-radius: 999px; background: var(--g-surface-3); }
+body.garrison .storage-games-used { background: var(--g-green); }
+body.garrison .storage-other-used { background: #ffffff80; }
+body.garrison .storage-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; color: var(--g-text-2); font: 400 var(--remote-small-size)/1.5 var(--g-font); }
+body.garrison .storage-legend span { display: inline-flex; align-items: center; gap: 8px; }
+body.garrison .storage-legend i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--g-surface-3); }
+body.garrison .storage-legend .storage-games-used { background: var(--g-green); }
+body.garrison .storage-legend .storage-other-used { background: #ffffff80; }
+body.garrison .settings-page .storage-library-heading { margin: 28px 0 14px; }
+body.garrison .storage-library-heading p { margin: 6px 0 0; }
+body.garrison .storage-library-paths { margin: 0 0 14px; color: var(--g-text-2); font: 400 var(--remote-small-size)/1.5 var(--g-font); overflow-wrap: anywhere; }
+body.garrison .storage-game-list { gap: 6px; }
+body.garrison .storage-game-row { gap: 16px; }
+body.garrison .storage-game-row > span:first-child { flex: 1; overflow-wrap: anywhere; }
+body.garrison .storage-game-row b { font: 600 var(--remote-body-size)/1.35 var(--g-font); text-align: right; }
+body.garrison .storage-game-row > svg { flex: none; }
+
+/* The install picker is a centred management dialog, including its loading state. */
+body.garrison .g-install-to { width: min(720px, 94vw); max-width: 94vw; box-sizing: border-box; }
+body.garrison .g-install-sizes { padding: 20px; margin: 22px 0; border-radius: 12px; background: var(--g-surface); }
+body.garrison .g-install-sizes strong { font: 600 calc(clamp(17px, 1.1vw, 21px) * var(--text-scale, 1))/1.35 var(--g-font); overflow-wrap: anywhere; }
+body.garrison .g-install-to .g-drives { gap: 10px; }
+body.garrison .g-install-to .g-drive { gap: 16px; padding: 16px; border-radius: 10px; background: var(--g-surface); }
+body.garrison .g-install-to .g-drive.selected { background: var(--g-surface-2); }
+body.garrison .g-install-to .g-drive.low { opacity: 1; }
+body.garrison .g-install-to .g-drive-icon { font-size: 30px; }
+body.garrison .g-install-to .g-drive-copy { gap: 7px; }
+body.garrison .g-install-to .g-drive-copy strong { font: 600 calc(var(--g-control-text) * var(--text-scale, 1))/1.3 var(--g-font); }
+body.garrison .g-install-to .g-drive-copy small { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.45 var(--g-font); white-space: normal; overflow-wrap: anywhere; }
+body.garrison .g-install-to .g-drive.low .g-drive-space { color: #f0bd91; }
+body.garrison .g-install-to .g-drive-bar { height: 5px; background: var(--g-surface-3); }
+body.garrison .g-install-to .g-drive-bar i { background: var(--g-green); }
+body.garrison .g-install-to .g-drive.low .g-drive-bar i { background: #f0bd91; }
+body.garrison .g-install-to .g-drive-check { width: 28px; height: 28px; }
+body.garrison .g-install-to .g-drive-check svg { font-size: 16px; }
+body.garrison .g-install-to .g-choice-actions { gap: 12px; margin-top: 24px; }
+body.garrison .g-install-to .g-choice-actions > button { min-height: var(--g-control-size) !important; font-size: calc(var(--g-control-text) * var(--text-scale, 1)) !important; }
+
+@media (max-width: 1100px) {
+  body.garrison .remote-library-dialog { width: calc(100vw - 32px); height: calc(100vh - 32px); max-height: calc(100vh - 32px); }
+  body.garrison .remote-library-dialog > header > div:first-child { flex-basis: 100%; }
+  body.garrison .remote-host-actions { width: 100%; }
+  body.garrison .remote-host-actions > button { flex: 1; }
+}
+@media (max-width: 700px) {
+  body.garrison .storage-drive-tab { flex-basis: 100%; }
+  body.garrison :is(.g-install-sizes, .storage-totals) { gap: 14px; }
+  body.garrison .g-install-sizes { padding: 16px; }
+  body.garrison .remote-quality-options label { flex-wrap: wrap; }
+  body.garrison .remote-quality-options select { flex-basis: 100%; max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.garrison :is(.remote-library-dialog, .remote-pair-dialog, .g-install-to) { scroll-behavior: auto; }
+}
+html.reduce-motion body.garrison :is(.remote-library-dialog, .remote-pair-dialog, .g-install-to) { scroll-behavior: auto; }

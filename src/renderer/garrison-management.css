@@ -5,17 +5,17 @@ body.garrison {
   --g-control-size: clamp(46px, 3.6vw, 64px);
   --g-control-text: clamp(15px, 1.1vw, 21px);
 }
-body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog) {
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog, .g-managed-dialog) {
   color: var(--g-text); background: var(--g-dialog-bg);
   border: 1px solid rgba(255,255,255,.1); border-radius: 16px;
   box-shadow: 0 30px 100px #0009; font-family: var(--g-font);
   max-height: 88vh; max-width: 94vw;
   scrollbar-width: thin; scrollbar-color: #ffffff40 transparent;
 }
-body.garrison :is(#collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog) { padding: var(--g-dialog-padding); }
+body.garrison :is(#collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, .g-managed-dialog) { padding: var(--g-dialog-padding); }
 body.garrison :is(#steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog) { width: min(720px, 90vw); }
-body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog)::backdrop { background: #060707aa; backdrop-filter: blur(14px); }
-body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog) h2 { color: #fff; font: 600 clamp(22px, 1.8vw, 34px)/1.2 var(--g-display); letter-spacing: -.02em; }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, #install-dialog, .g-managed-dialog)::backdrop { background: #060707aa; backdrop-filter: blur(14px); }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #console-choice-dialog, #console-file-dialog, #custom-game-dialog, #artwork-dialog, #reset-confirm-dialog, .g-managed-dialog) h2 { color: #fff; font: 600 clamp(22px, 1.8vw, 34px)/1.2 var(--g-display); letter-spacing: -.02em; }
 body.garrison :is(.steam-launch-body, .steam-launch-dialog > p, .collections-help, .options-page-description, .options-group-description, .connection-detail, .settings-section-heading p, .connection-page-heading p) { color: var(--g-text-2); font: 400 clamp(14px, 1vw, 18px)/1.55 var(--g-font); }
 body.garrison :is(.steam-launch-dialog .eyebrow, #steam-game-launch-dialog header small, .options-group-label, .connection-page-heading .eyebrow) { color: var(--g-text-3); font-size: 12px; letter-spacing: .1em; }
 
@@ -57,7 +57,17 @@ body.garrison .duplicate-game-row small { color: var(--g-text-2); font: 400 clam
 body.garrison .duplicate-game-row select { flex: 0 1 320px; min-height: 48px; padding: 12px 34px 12px 16px; margin: 0; border: 1px solid #ffffff1c; border-radius: 10px; background-color: #1c1e1d; color: #fff; font: 400 clamp(14px,1vw,18px)/1.3 var(--g-font); }
 body.garrison .duplicate-empty { border-radius: 12px; padding: 32px 20px; background: var(--g-surface); }
 body.garrison .duplicate-empty h3 { font-size: 22px; }
-body.garrison :is(#settings-dialog, #game-options-dialog, #custom-game-dialog, #artwork-dialog, #collections-dialog) :is(input[type="text"], input[type="password"], input[type="search"]) { min-height: 46px; border: 1px solid #ffffff24; border-radius: 10px; background: #1c1e1d; color: #fff; padding: 12px 14px; font-size: clamp(14px,1vw,18px); }
+body.garrison :is(#settings-dialog, #game-options-dialog, #custom-game-dialog, #artwork-dialog, #collections-dialog, .g-managed-dialog) :is(input[type="text"], input[type="password"], input[type="search"]) { min-height: 46px; border: 1px solid #ffffff24; border-radius: 10px; background: #1c1e1d; color: #fff; padding: 12px 14px; font-size: calc(clamp(14px,1vw,18px) * var(--text-scale,1)); }
+body.garrison .g-control-button {
+  min-height: var(--g-control-size); height: auto; padding: 14px 18px;
+  border: 0; border-radius: 10px; background: var(--g-surface-2); color: var(--g-text);
+  font: 600 calc(var(--g-control-text) * var(--text-scale,1))/1.35 var(--g-font);
+  white-space: normal; overflow-wrap: anywhere; cursor: pointer;
+}
+body.garrison .g-control-button:hover:enabled { background: var(--g-surface-3); }
+body.garrison .g-control-button.primary { background: var(--g-green); color: #fff; }
+body.garrison .g-control-button.primary:hover:enabled { background: var(--g-green-hover); }
+body.garrison .g-control-button:disabled { opacity: .4; cursor: default; }
 body.garrison :is(.settings-data-buttons, .steam-options-editor, .achievement-reference-editor, .collection-create-form, .steam-license-scroll, .install-actions) :is(.primary, .secondary, .text-button) { min-height: 46px; padding: 12px 18px; border: 0; border-radius: 10px; font: 600 clamp(14px,1vw,18px)/1.3 var(--g-font); }
 body.garrison :is(.settings-data-buttons, .steam-options-editor, .achievement-reference-editor, .collection-create-form, .steam-license-scroll, .install-actions) :is(.secondary, .text-button) { background: var(--g-surface-2); color: #fff; }
 body.garrison :is(.settings-data-buttons, .collection-create-form, .install-actions) .primary { background: var(--g-green); color: #fff; }

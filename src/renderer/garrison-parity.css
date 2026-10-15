@@ -50,7 +50,7 @@ body.garrison .library-grid .g-card-text strong { font-size: calc(1.42 * var(--p
 .g-manage .g-textarea { min-height: calc(8.6 * var(--g-vp) / 100); font-size: calc(1.36 * var(--g-vp) / 100); }
 
 /* Settings: centred panel at the hands-on proportions */
-body.garrison dialog#settings-dialog { width: calc(89.4 * var(--p)); height: 84.3vh; }
+body.garrison dialog#settings-dialog { width: min(calc(89.4 * var(--p)), calc(100vw - 32px)); max-width: calc(100vw - 32px); height: 84.3vh; box-sizing: border-box; }
 body.garrison #settings-form { grid-template-columns: calc(22.4 * var(--p)) minmax(0, 1fr); }
 body.garrison .settings-sidebar { padding: calc(2.6 * var(--p)) calc(1.2 * var(--p)) calc(2 * var(--p)); }
 body.garrison .settings-sidebar-brand { margin: 0 calc(1.2 * var(--p)) calc(2.2 * var(--p)); }

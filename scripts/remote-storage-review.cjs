@@ -15,26 +15,33 @@ app.on('browser-window-created',(_,win)=>win.webContents.once('did-finish-load',
     const art=await run('state.games.find(g=>g.artwork?.tile)?.artwork || {}');
     const games=Array.from({length:45},(_,i)=>({id:`remote:fixture:${i+1}`,appId:String(i+1),title:['Forza Horizon 5','Hades II','Call of Duty: WWII','DOOM Eternal','Baldur’s Gate 3'][i%5]+(i>4?' '+i:''),provider:'Remote PC',remoteHostId:'fixture',hostName:'Gaming PC',installed:true,artwork:art}));
     const host={id:'fixture',name:'Gaming PC',address:'192.168.1.20',paired:true,games};let cancels=0,starts=0,stops=0;
-    mock('remote-play:snapshot',()=>({available:true,hosts:[host],session:null}));
+    let snapshotHosts=[host];
+    mock('remote-play:snapshot',()=>({available:true,hosts:snapshotHosts,session:null}));
     mock('remote-play:refresh',()=>({hostId:host.id,name:host.name,games}));mock('remote-play:covers',()=>[]);
     mock('remote-play:add',()=>({hostId:host.id}));mock('remote-play:pair',()=>({pin:'0123',hostId:host.id,name:host.name}));
     mock('remote-play:cancel-pair',()=>{cancels++;return true;});mock('remote-play:stop',()=>{stops++;return true;});
     mock('remote-play:start',()=>{starts++;return {hostId:host.id,appId:'1',title:games[0].title,phase:'connecting'};});
     const libraryGame=await run('state.games.find(g=>!g.isApp&&g.provider==="Steam")');
     mock('storage:overview',()=>({drives:[{root:'C:\\',label:'Windows',total:1e12,free:182e9,used:818e9,knownGameBytes:300e9,unknownGames:1,libraries:['C:\\Steam'],games:[{id:libraryGame.id,title:libraryGame.title,provider:'Steam',folder:'C:\\Steam\\steamapps\\common\\Game',bytes:120e9},{id:'unknown',title:'A game with its size still being measured',provider:'Epic',folder:'C:\\Games\\Unknown',bytes:null}]},{root:'D:\\',label:'Games',total:2e12,free:1.21e12,used:790e9,knownGameBytes:600e9,unknownGames:0,libraries:['D:\\SteamLibrary'],games:[]}]}));
-    mock('steam:install-targets',()=>({libraries:[{root:'C:\\Steam',drive:'C:',free:20e9,total:1e12},{root:'D:\\SteamLibrary',drive:'D:',free:200e9,total:2e12}],downloadBytes:48.3e9,installBytes:71.8e9,needed:75e9,preferred:'C:\\Steam'}));mock('steam:remember-library',()=>true);
+    const installTargets={libraries:[{root:'C:\\Steam',drive:'C:',free:20e9,total:1e12},{root:'D:\\SteamLibrary',drive:'D:',free:200e9,total:2e12}],downloadBytes:48.3e9,installBytes:71.8e9,needed:75e9,preferred:'C:\\Steam'};
+    mock('steam:install-targets',()=>installTargets);mock('steam:remember-library',()=>true);
     await run('document.querySelectorAll("dialog[open]").forEach(d=>d.close());document.querySelector("#startup-screen").hidden=true;scanLibrary=async()=>{};state.soundEffects=false;document.documentElement.classList.add("reduce-motion");');
     const capture=async name=>{await pause(120);await fs.writeFile(path.join(output,name+'.png'),(await win.webContents.capturePage()).toPNG());};
+    async function waitFor(code){const deadline=Date.now()+2500;while(Date.now()<deadline){if(await run(code))return;await pause(30);}assert.fail('Timed out waiting for '+code);}
     async function check(selector){const value=await run(`(()=>{const d=document.querySelector(${JSON.stringify(selector)}),r=d.getBoundingClientRect();refreshFocusables();return {open:d.open,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,overflow:d.scrollWidth-d.clientWidth,scoped:state.focusables.every(e=>d.contains(e))};})()`);assert(value.open&&value.left>=-1&&value.right<=value.width+1&&value.top>=-1&&value.bottom<=value.height+1&&value.overflow<=1&&value.scoped,JSON.stringify(value));}
     for(const [width,height] of [[1920,1080],[1280,800],[1024,640]]){
       win.setContentSize(width,height);
       await run('await openSettings();showSettingsPage("g-storage");');await pause(150);await check('#settings-dialog');
       assert(await run('document.querySelector("#storage-overview").textContent.includes("Size pending")'));await capture('storage-'+width);
+      assert(await run('document.querySelector(".settings-scroll").scrollWidth<=document.querySelector(".settings-scroll").clientWidth+1'));
+      await run('document.querySelectorAll(".storage-drive-tab")[1].click();');assert(await run('document.querySelector("#storage-overview").textContent.includes("No library games on this drive")'));
+      await run('document.querySelectorAll(".storage-drive-tab")[0].click();');
       await run('showSettingsPage("g-streaming");');await pause(100);assert(await run('document.querySelector("#remote-hosts").textContent.includes("Gaming PC")'));await capture('hosts-'+width);
-      await run('await performAction("remote-open-library",document.querySelector("[data-action=remote-open-library]"));');await pause(100);await check('#remote-library-dialog');await capture('remote-library-'+width);
+      await run('document.querySelector("#remote-game-search").value="";await performAction("remote-open-library",document.querySelector("[data-action=remote-open-library]"));');await pause(100);await check('#remote-library-dialog');await capture('remote-library-'+width);
       await run('document.querySelector("#remote-game-search").value="hades";document.querySelector("#remote-game-search").dispatchEvent(new Event("input",{bubbles:true}));');
       assert.equal(await run('document.querySelectorAll(".remote-game-card").length'),9);
-      await run('document.querySelector("#remote-library-dialog").close();performAction("remote-add",document.querySelector("[data-action=remote-add]"));');await check('#remote-pair-dialog');
+      await run('document.querySelector("#remote-library-dialog").close();performAction("remote-add",document.querySelector("[data-action=remote-add]"));');await check('#remote-pair-dialog');await capture('add-pc-'+width);
+      assert(await run('getComputedStyle(document.querySelector("#remote-pair-dialog")).backgroundColor===getComputedStyle(document.querySelector("#console-choice-dialog")).backgroundColor'),'New dialogs must use the existing management surface');
       await run('document.querySelector("#remote-host-address").value="192.168.1.20";await performAction("remote-connect",document.querySelector("[data-action=remote-connect]"));');
       assert.equal(await run('document.querySelector(".remote-pin").textContent'),'0123');await capture('pairing-'+width);
       await run('navigateBack();');await pause(30);assert.equal(await run('document.querySelector("#remote-pair-dialog").open'),false);
@@ -47,7 +54,7 @@ app.on('browser-window-created',(_,win)=>win.webContents.once('did-finish-load',
     let resolveTargets;mock('steam:install-targets',()=>new Promise(resolve=>{resolveTargets=resolve;}));
     await run(`window.cancelledInstallResult='pending';gInstallTo(state.games.find(g=>g.id===${JSON.stringify(libraryGame.id)})).then(v=>window.cancelledInstallResult=v);true`);await pause(30);
     assert(await run('document.querySelector(".g-install-to").textContent.includes("Checking download sizes")'));
-    await run('navigateBack();');resolveTargets({libraries:[{root:'D:\\SteamLibrary',free:100e9,total:1e12}],preferred:'D:\\SteamLibrary'});await pause(30);
+    await run('navigateBack();');resolveTargets({libraries:[{root:'D:\\SteamLibrary',free:100e9,total:1e12}],preferred:'D:\\SteamLibrary'});await waitFor('window.cancelledInstallResult!=="pending"');
     assert.equal(await run('window.cancelledInstallResult'),null);assert.equal(await run('Boolean(document.querySelector(".g-install-to"))'),false,'Late size lookup must not reopen a cancelled install');
     await run('document.querySelector("#remote-game-search").value="";await performAction("remote-open-library",document.querySelector(".console-library-nav [data-action=remote-open-library]"));');
     await pause(50);await run('setFocusedElement(document.querySelector(".remote-game-card"));await performAction("remote-library-refresh",document.querySelector("[data-action=remote-library-refresh]"));');
@@ -59,9 +66,21 @@ app.on('browser-window-created',(_,win)=>win.webContents.once('did-finish-load',
     win.webContents.send('remote-play:status',{phase:'ended',hostId:host.id,appId:'1',title:games[0].title,reason:'game-closed'});await pause(120);
     assert.equal(await run('document.querySelector("#remote-library-dialog").open&&!remotePlayUI.active'),true);
     await run('await performAction("remote-play-game",document.querySelector(".remote-game-card"));cancelLaunchWait();');assert.equal(stops,1);assert.equal(await run('launchOverlay.hidden&&!remotePlayUI.active'),true);
+    await run('document.querySelectorAll("dialog[open]").forEach(d=>d.close());document.documentElement.style.setProperty("--text-scale","1.3");document.documentElement.classList.add("high-contrast-focus");document.body.style.setProperty("--g-scale","1.125");await openSettings();showSettingsPage("g-storage");');await pause(150);await check('#settings-dialog');await capture('storage-large-text');
+    assert(await run('document.querySelector(".settings-scroll").scrollWidth<=document.querySelector(".settings-scroll").clientWidth+1'),'Storage must reflow with large text');
+    await run('showSettingsPage("g-streaming");setFocusedElement(document.querySelector("#remote-resolution"));openConsoleChoice(document.querySelector("#remote-resolution"));');await check('#console-choice-dialog');assert.equal(await run('document.querySelector("#console-choice-title").textContent'),'Resolution');await capture('quality-choice-large-text');
+    await run('navigateBack();');await waitFor('!document.querySelector("#console-choice-dialog").open');
+    snapshotHosts=[];await run('await performAction("remote-settings-refresh",document.querySelector("[data-action=remote-settings-refresh]"));');await capture('hosts-empty-large-text');
+    assert(await run('document.querySelector("#remote-hosts").textContent.includes("Add your gaming PC")'));
+    snapshotHosts=[host];await run('document.querySelectorAll("dialog[open]").forEach(d=>d.close());await performAction("remote-open-library",document.querySelector(".console-library-nav [data-action=remote-open-library]"));document.querySelector("#remote-game-search").value="no-such-game";document.querySelector("#remote-game-search").dispatchEvent(new Event("input",{bubbles:true}));');await check('#remote-library-dialog');await capture('remote-empty-large-text');
+    assert(await run('document.querySelector("#remote-game-grid").textContent.includes("No matching games")'));
+    mock('steam:install-targets',()=>installTargets);await run(`document.querySelector("#remote-library-dialog").close();window.largeInstallResult='pending';gInstallTo({...state.games.find(g=>g.id===${JSON.stringify(libraryGame.id)}),title:'A game with a much longer title: The Complete Collection'}).then(v=>window.largeInstallResult=v);true`);await pause(100);await check('.g-install-to');await capture('install-large-text');
+    await run('setFocusedElement(document.querySelector("[data-install-cancel]"));');await pause(250);assert(await run('getComputedStyle(document.querySelector("[data-install-cancel]")).boxShadow!=="none"'),'Large-text controls must retain visible controller focus');
+    assert(await run('(()=>{const d=document.querySelector(".g-install-to").getBoundingClientRect(),b=document.querySelector("[data-install-cancel]").getBoundingClientRect();return b.top>=d.top&&b.bottom<=d.bottom;})()'),'Focused install actions must scroll into view with large text');await capture('install-actions-large-text');
+    await run('navigateBack();');await waitFor('window.largeInstallResult!=="pending"');assert.equal(await run('window.largeInstallResult'),null);
     assert(cancels>=3);assert.deepEqual(errors,[]);clearTimeout(watchdog);
     await fs.writeFile(path.join(output,'result.json'),JSON.stringify({ok:true,sizes:[1920,1280,1024],starts,stops,errors},null,2));
-    console.log('PASS remote host browser/search/PIN, storage and install-size dialogs at desktop and handheld sizes; scoped controller focus, low-space prevention, launch curtain, stream completion and cancellation');app.exit(0);
+    console.log('PASS remote host browser/search/PIN, storage and install-size dialogs at desktop and handheld sizes; large text, high-contrast focus, shared management surfaces, empty states, drive switching, low-space prevention, launch curtain, stream completion and cancellation');app.exit(0);
   }catch(error){console.error(error);await fs.writeFile(path.join(output,'failure.png'),(await win.webContents.capturePage()).toPNG());app.exit(1);}
 }));
 require('../src/main.cjs');
