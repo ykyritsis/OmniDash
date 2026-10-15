@@ -309,6 +309,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       const toggles=Object.entries({multiController:'multi-controller',swapFaceButtons:'swap-gamepad-buttons',touchscreenTrackpad:'touchscreen-trackpad',absoluteMouse:'absolute-mouse',vsync:'vsync',framePacing:'frame-pacing',performanceOverlay:'performance-overlay'}).map(([key,name])=>'--'+(options[key]?'':'no-')+name);
       active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-audio-on-host','--no-mute-on-focus-loss','--keep-awake','--background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
         if(session!==active)return;
+        if(event.type==='toggle-controls'&&active.phase==='playing'){emit('toggle-controls');return;}
         if(event.type==='disconnect-requested'){stop('disconnected');return;}
         if(event.type==='surface'){active.surface=true;ready();}
         if(event.type==='visible' && active.phase==='revealing'){active.phase='playing';clearTimeout(active.deadline);emit('playing');}

@@ -81,6 +81,14 @@ app.on('browser-window-created',(_,win)=>win.webContents.once('did-finish-load',
     assert(viewports.at(-1).top>viewports[0].top,'The native inset must follow enlarged stream controls');await capture('stream-controls-large-text');
     await run('document.documentElement.style.setProperty("--text-scale","1");window.dispatchEvent(new KeyboardEvent("keydown",{key:"Tab",bubbles:true}));');
     assert(await run('document.activeElement.dataset.action==="remote-stream-disconnect"'),'Keyboard navigation must reach Disconnect');
+    await run('window.dispatchEvent(new KeyboardEvent("keydown",{key:"Tab",bubbles:true}));');assert(await run('document.activeElement.dataset.action==="remote-stream-hide"'),'Keyboard navigation must reach Hide');
+    await run('document.querySelector("[data-action=remote-stream-hide]").click();');await pause(60);
+    assert(await run('document.querySelector("#remote-stream-bar").hidden&&remotePlayUI.playing'),'Hiding controls must keep the stream running');assert.equal(viewports.at(-1).top,0);assert.equal(stops,0);
+    win.webContents.send('remote-play:status',{phase:'toggle-controls',session:{hostId:host.id,phase:'playing'}});await pause(60);
+    assert(await run('!document.querySelector("#remote-stream-bar").hidden'));assert(viewports.at(-1).top>0,'The native shortcut must restore clickable controls');
+    await run('window.dispatchEvent(new KeyboardEvent("keydown",{key:"h",ctrlKey:true,altKey:true,shiftKey:true,bubbles:true}));');await pause(40);assert(await run('document.querySelector("#remote-stream-bar").hidden'));
+    await run('window.dispatchEvent(new KeyboardEvent("keydown",{key:"h",ctrlKey:true,altKey:true,shiftKey:true,repeat:true,bubbles:true}));');assert(await run('document.querySelector("#remote-stream-bar").hidden'),'A held keyboard shortcut must not flicker the bar');
+    await run('window.dispatchEvent(new KeyboardEvent("keydown",{key:"h",ctrlKey:true,altKey:true,shiftKey:true,bubbles:true}));');await pause(40);assert(await run('!document.querySelector("#remote-stream-bar").hidden'));
     await run('document.querySelector("[data-action=remote-stream-disconnect]").click();');await pause(40);assert.equal(stops,1,'The visible Disconnect button must end the session');
     win.webContents.send('remote-play:status',{phase:'ended',hostId:host.id,appId:'1',title:games[0].title,reason:'game-closed'});await pause(120);
     assert.equal(await run('state.view==="detail"&&!remotePlayUI.active'),true);

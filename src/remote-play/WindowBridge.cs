@@ -114,7 +114,7 @@ class WindowBridge {
     }
     static int Main(string[] args) {
         IntPtr job=IntPtr.Zero, hook=IntPtr.Zero;
-        var exitKey=new StreamHotkey();
+        var exitKey=new StreamHotkey();var controlsKey=new StreamHotkey(2,0x48);
         try {
             var config = Json.Deserialize<Config>(File.ReadAllText(args[0]));
             File.Delete(args[0]);
@@ -146,7 +146,8 @@ class WindowBridge {
             var commands = new Thread(() => { string line; while((line=Console.ReadLine()) != null) { if(line == "reveal") reveal=true; else if(line == "focus") focusRequested=true; else if(line == "inspect") inspect=true; else if(line.StartsWith("viewport ")) { try { viewport=new JavaScriptSerializer().Deserialize<Viewport>(line.Substring(9)); } catch {} } else if(line == "stop") { stopping=true; break; } } stopping=true; });
             commands.IsBackground=true; commands.Start();
             var clock=Stopwatch.StartNew();
-            var escape=new QuitChord(config.quitMask==0x330||config.quitMask==0x2300?config.quitMask:0x1300);
+            var escape=new ControllerChord(config.quitMask==0x330||config.quitMask==0x2300?config.quitMask:0x1300);
+            var controls=new ControllerChord(0x320,true);
             bool shown=false;
             while(!engine.HasExited && !stopping && (!config.stream || IsWindow(parent))) {
                 if(video != IntPtr.Zero && !IsWindow(video)) { video=IntPtr.Zero;lastW=lastH=0;shown=false;missingSurfaceSince=DateTime.UtcNow; }
@@ -154,8 +155,10 @@ class WindowBridge {
                 bool foreground=GetAncestor(GetForegroundWindow(),2)==GetAncestor(parent,2);
                 bool wantHotkey=config.stream&&shown&&foreground;
                 exitKey.Update(wantHotkey);
+                controlsKey.Update(wantHotkey);
                 MSG message; while(PeekMessage(out message, IntPtr.Zero, 0, 0, 1)) {
                     if(exitKey.Matches(message.message,message.wParam.ToUInt64(),wantHotkey)){Emit(new {type="disconnect-requested",source="keyboard"});stopping=true;}
+                    if(controlsKey.Matches(message.message,message.wParam.ToUInt64(),wantHotkey))Emit(new {type="toggle-controls",source="keyboard"});
                     TranslateMessage(ref message); DispatchMessage(ref message);
                 }
                 // A separate escape path for XInput handhelds still works if
@@ -164,6 +167,7 @@ class WindowBridge {
                     XSTATE input; uint result=1;
                     try{result=XInputGetState(index,out input);}catch(DllNotFoundException){xinputUnavailable=true;break;}
                     if(escape.Update((int)index,result==0?input.gamepad.buttons:0,shown&&foreground,clock.ElapsedMilliseconds)) {Emit(new {type="disconnect-requested",source="controller"});stopping=true;}
+                    if(controls.Update((int)index,result==0?input.gamepad.buttons:0,shown&&foreground,clock.ElapsedMilliseconds))Emit(new {type="toggle-controls",source="controller"});
                 }
                 if(video != IntPtr.Zero) {
                     Resize();
@@ -178,7 +182,7 @@ class WindowBridge {
             engine.WaitForExit(); Emit(new { type="exit", code=engine.ExitCode });
             GC.KeepAlive(callback); return 0;
         } catch(Exception error) { Emit(new { type="error", message=error.Message }); return 1; }
-        finally { exitKey.Update(false);if(hook != IntPtr.Zero) UnhookWinEvent(hook); if(job != IntPtr.Zero) CloseHandle(job); }
+        finally { exitKey.Update(false);controlsKey.Update(false);if(hook != IntPtr.Zero) UnhookWinEvent(hook); if(job != IntPtr.Zero) CloseHandle(job); }
     }
 }
 
@@ -187,21 +191,24 @@ public class StreamHotkey {
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr window,int id);
     public bool Registered {get;private set;}
     public int Error {get;private set;}
+    readonly int id;readonly uint key;
+    public StreamHotkey(int id=1,uint key=0x51){this.id=id;this.key=key;}
     public void Update(bool active){
-        if(active&&!Registered){Registered=RegisterHotKey(IntPtr.Zero,1,0x4007,0x51);Error=Registered?0:Marshal.GetLastWin32Error();}
-        if(!active&&Registered){UnregisterHotKey(IntPtr.Zero,1);Registered=false;}
+        if(active&&!Registered){Registered=RegisterHotKey(IntPtr.Zero,id,0x4007,key);Error=Registered?0:Marshal.GetLastWin32Error();}
+        if(!active&&Registered){UnregisterHotKey(IntPtr.Zero,id);Registered=false;}
     }
-    public bool Matches(uint message,ulong id,bool active){return Registered&&active&&message==0x0312&&id==1;}
+    public bool Matches(uint message,ulong messageId,bool active){return Registered&&active&&message==0x0312&&messageId==(ulong)id;}
 }
 
 // Deliberately independent of device IO so hold timing, focus loss, reconnects
 // and multiple-controller isolation can be tested without a physical pad.
-public class QuitChord {
-    readonly int mask; readonly long[] since={-1,-1,-1,-1};
-    public QuitChord(int value){mask=value;}
+public class ControllerChord {
+    readonly int mask;readonly bool oneShot;readonly bool[] fired=new bool[4];readonly long[] since={-1,-1,-1,-1};
+    public ControllerChord(int value,bool oneShot=false){mask=value;this.oneShot=oneShot;}
     public bool Update(int index,int buttons,bool active,long milliseconds){
-        if(!active||buttons!=mask){since[index]=-1;return false;}
+        if(!active||buttons!=mask){since[index]=-1;fired[index]=false;return false;}
         if(since[index]<0)since[index]=milliseconds;
-        return milliseconds-since[index]>=500;
+        if(milliseconds-since[index]<500||oneShot&&fired[index])return false;
+        fired[index]=true;return true;
     }
 }

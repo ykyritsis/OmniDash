@@ -13,12 +13,14 @@
   const hostLabel=host=>({ready:'Ready to play',busy:'Game running',offline:'Offline','pair-required':'Pairing required',unknown:'Checking connection…'}[host?.status]||'Checking connection…');
   const status=host=>`<span class="remote-status" data-status="${escape(host?.status||'unknown')}"><i aria-hidden="true"></i>${escape(hostLabel(host))}</span>`;
   const streamBar=document.createElement('aside');streamBar.id='remote-stream-bar';streamBar.hidden=true;streamBar.setAttribute('aria-label','Remote play controls');
-  streamBar.innerHTML=`<div><strong id="remote-stream-title"></strong><span id="remote-stream-shortcut"></span><small>Release mouse: Ctrl + Alt + Shift + Z</small></div>${button('remote-stream-disconnect','Disconnect','title="End this stream and return to the app. The game stays open on your PC."')}`;
+  streamBar.innerHTML=`<div><strong id="remote-stream-title"></strong><span id="remote-stream-shortcut"></span><small>Show / hide controls: LB + RB + View · Ctrl + Alt + Shift + H</small><small>Release mouse: Ctrl + Alt + Shift + Z</small></div><nav aria-label="Stream actions">${button('remote-stream-disconnect','Disconnect','title="End this stream and return to the app. The game stays open on your PC."')}${button('remote-stream-hide','Hide','title="Hide these controls and use the full screen for your game."')}</nav>`;
   document.body.append(streamBar);
-  function updateViewport(){if(!streamBar.hidden)window.launcher.remotePlayViewport({top:Math.ceil(streamBar.getBoundingClientRect().bottom),height:innerHeight}).catch(()=>{});}
+  function updateViewport(){if(window.remotePlayUI?.playing)window.launcher.remotePlayViewport({top:streamBar.hidden?0:Math.ceil(streamBar.getBoundingClientRect().bottom),height:innerHeight}).catch(()=>{});}
+  function hideStreamBar(){streamBar.hidden=true;updateViewport();window.launcher.remotePlayFocus().catch(()=>{});}
+  function toggleStreamBar(){if(!window.remotePlayUI?.playing)return;if(streamBar.hidden)showStreamBar(state.remotePlaySession);else hideStreamBar();}
   new ResizeObserver(updateViewport).observe(streamBar);window.addEventListener('resize',updateViewport);
   function showStreamBar(session){const host=hostById(session.hostId),p=host?.preferences||{};document.querySelector('#remote-stream-title').textContent=session.title||'Remote play';document.querySelector('#remote-stream-shortcut').textContent=`Disconnect: ${p.quitCombo==='moonlight'?'View + Menu + LB + RB':`LB + RB + ${p.swapFaceButtons?'B':'A'}`} · Ctrl + Alt + Shift + Q`;streamBar.hidden=false;updateViewport();}
-  window.addEventListener('keydown',event=>{if(!window.remotePlayUI?.playing)return;if(event.ctrlKey&&event.altKey&&event.shiftKey&&event.key.toLowerCase()==='q'){window.launcher.remotePlayStop().catch(error=>showToast(error.message));}else if(['Enter',' '].includes(event.key)&&streamBar.contains(document.activeElement)){document.activeElement.click();}else if(event.key==='Tab'){streamBar.querySelector('button').focus();}else if(event.key==='Escape'){window.launcher.remotePlayFocus().catch(()=>{});}event.preventDefault();event.stopImmediatePropagation();},true);
+  window.addEventListener('keydown',event=>{if(!window.remotePlayUI?.playing)return;if(event.ctrlKey&&event.altKey&&event.shiftKey&&event.key.toLowerCase()==='q'){window.launcher.remotePlayStop().catch(error=>showToast(error.message));}else if(event.ctrlKey&&event.altKey&&event.shiftKey&&event.key.toLowerCase()==='h'){if(!event.repeat)toggleStreamBar();}else if(['Enter',' '].includes(event.key)&&streamBar.contains(document.activeElement)){document.activeElement.click();}else if(event.key==='Tab'&&!streamBar.hidden){const items=[...streamBar.querySelectorAll('button')],index=items.indexOf(document.activeElement);items[index<0?(event.shiftKey?items.length-1:0):(index+(event.shiftKey?-1:1)+items.length)%items.length].focus();}else if(event.key==='Escape'){hideStreamBar();}event.preventDefault();event.stopImmediatePropagation();},true);
   function syncGames(){state.remoteGames=remote.hosts.flatMap(host=>(host.games||[]).map(game=>({...game,hostName:host.name})));}
   function acceptSnapshot(value){remote=value;syncGames();renderHosts();if(state.libraryRemote)renderLibrary();paintDetail();}
   const streaming=document.querySelector('[data-settings-page="g-streaming"]');
@@ -146,6 +148,7 @@
   window.remotePlayUI={get playing(){return state.remotePlaySession?.phase==='playing';},get active(){return Boolean(state.remotePlaySession);},suppressHeldButtons(gamepads){if(!waitForControllerRelease)return false;if(gamepads.some(pad=>pad.buttons.some(button=>button.pressed||button.value>.55)))return true;waitForControllerRelease=false;state.previousButtons=[];return false;}};
   const cancel=cancelLaunchWait;cancelLaunchWait=function(){if(launchOverlay.dataset.remote){window.launcher.remotePlayStop().catch(error=>showToast(error.message));finishRemoteLaunch();state.remotePlaySession=null;return;}return cancel();};
   window.launcher.onRemotePlayStatus(async event=>{
+    if(event.phase==='toggle-controls'){toggleStreamBar();return;}
     if(event.phase==='artwork'){applyArtwork(event.hostId,event);return;}
     if(event.phase==='discovered'){if(pairDialog.querySelector('#remote-discovered')&&!discoveries.some(host=>host.uuid===event.host.uuid)){discoveries.push(event.host);renderDiscoveries();}return;}
     if(event.phase==='paired'){await paired(event.hostId);return;}
@@ -189,6 +192,7 @@
   setInterval(()=>{if(!state.remotePlaySession&&(state.view==='library'&&state.libraryRemote||state.view==='detail'&&state.detailGameId?.startsWith('remote:')||settingsDialog.open&&document.querySelector('[data-settings-page="g-streaming"]')?.hidden===false))refreshHosts(true).catch(()=>{});},20000);
   const perform=performAction;performAction=async function(action,source){
     try{
+      if(action==='remote-stream-hide'){hideStreamBar();return;}
       if(action==='remote-stream-disconnect'){source.disabled=true;try{await window.launcher.remotePlayStop();}finally{source.disabled=false;}return;}
       if(action==='console-library-section'){if(source.dataset.section==='remote'){await openLibrary();return;}state.libraryRemote=false;library.hidden=true;libraryView.classList.remove('remote-active');}
       if(action==='remote-open-library'||action==='remote-browse-host'){await openLibrary(source.dataset.hostId);return;}

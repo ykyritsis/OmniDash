@@ -40,6 +40,8 @@ app.whenReady().then(async()=>{
     assert(Math.abs(value.width-width*scale)<3&&Math.abs(value.height-height*scale*.9)<3,JSON.stringify({value,width,height,scale}));
   }
   bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Text scaling must update the native toolbar inset');
+  bridge.stdin.write('viewport '+JSON.stringify({top:0,height:600})+'\n');await pause(60);value=await geometry();assert.equal(value.top,0);assert.equal(value.height,value.parentHeight,'Hiding controls must return all space to the video');
+  bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Reopening controls must restore their clickable space');
   await until(()=>events.some(event=>event.type==='surface-closed'));await until(()=>exited);assert(events.some(event=>event.type==='exit'));
   // Exercise the actual, unmodified StreamLight executable and read its
   // isolated portable identity. No real host pairing or game is required.

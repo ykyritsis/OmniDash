@@ -91,6 +91,7 @@ async function main(){
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');
     await pause(40);current='10';const cancelled=remote.start(host.id,'10');await remote.stop();await cancelled;assert.equal(remote.active(),null,'Cancelling during connection must prevent a late stream');
     await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
+    remote.viewport({top:0,height:800});emitNative({type:'toggle-controls',source:'controller'});await until(()=>events.some(event=>event.phase==='toggle-controls'));assert.equal(remote.active()?.phase,'playing','Toggling controls must not end the stream');
     emitNative({type:'disconnect-requested',source:'controller'});await until(()=>!remote.active());
     assert(events.some(event=>event.phase==='ended'&&event.reason==='disconnected'),'Native escape must return control to the launcher');
   }finally{remote.dispose();}
