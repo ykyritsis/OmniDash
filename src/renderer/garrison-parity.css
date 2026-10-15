@@ -136,7 +136,6 @@ body.garrison dialog.g-onboarding::backdrop { background: #0f1110; }
 .g-onboard-dots i { width: calc(.8 * var(--p)); height: calc(.8 * var(--p)); border-radius: 50%; background: rgba(255, 255, 255, .25); }
 .g-onboard-dots i.active { width: calc(2.4 * var(--p)); border-radius: 999px; background: #fff; }
 .g-onboard-dots i.done { background: rgba(255, 255, 255, .6); }
-.g-onboarding .focusable.focused { box-shadow: 0 0 0 3px #fff, 0 0 22px 5px rgba(255, 255, 255, .35) !important; }
 .g-name-flyout { inset: 0; margin: auto; width: min(460px, 90vw); height: max-content; }
 .g-name-flyout .g-input { width: 100%; margin: 6px 0 4px; }
 

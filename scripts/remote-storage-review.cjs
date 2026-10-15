@@ -156,7 +156,10 @@ app.on('browser-window-created',(_,win)=>win.webContents.once('did-finish-load',
     for(const label of ['G','PG','M','MA15+','R18+']){
       await run('renderGarrisonRating({provider:"Steam"},{rating:{system:"COB-AU",label:'+JSON.stringify(label)+',value:"",descriptors:"Strong Violence"}});');
       assert.equal(await run('document.querySelector("#g-detail-rating button").textContent.trim()'),label);
-      assert(await run('(()=>{const badge=document.querySelector(".g-age-cob-au"),text=badge.querySelector("b").getBoundingClientRect(),box=badge.getBoundingClientRect();return text.left>=box.left&&text.right<=box.right;})()'),'The entire classification code must fit its badge');
+      if(label==='MA15+') {
+        await run('await document.querySelector(".g-rating-au-ma15").decode();');
+        assert(await run('(()=>{const badge=document.querySelector(".g-rating-au-ma15");return badge.naturalWidth>0&&badge.alt.includes("MA15+")&&Math.abs(badge.width/badge.height-badge.naturalWidth/badge.naturalHeight)<.03;})()'),'The official MA15+ marking must load without distortion');
+      } else assert(await run('(()=>{const badge=document.querySelector(".g-age-cob-au"),text=badge.querySelector("b").getBoundingClientRect(),box=badge.getBoundingClientRect();return text.left>=box.left&&text.right<=box.right;})()'),'The entire classification code must fit its badge');
       assert(!await run('document.querySelector("#g-detail-rating").textContent.includes("Australian Classification")'));
     }
     await capture('classification-short-label');

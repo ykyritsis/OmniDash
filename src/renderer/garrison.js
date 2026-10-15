@@ -1379,7 +1379,9 @@ function renderGarrisonRating(game, details) {
   const rating = (Object.hasOwn(details,'rating') ? details.rating : game.rating) || (details.ageRating ? { system: 'AGE', value: String(details.ageRating).replace('+', ''), label: details.ageRating, descriptors: '' } : null);
   const descriptors = rating?.descriptors || '';
   const tone = !rating ? '' : rating.system === 'PEGI' ? (Number(rating.value) >= 18 ? 'red' : Number(rating.value) >= 12 ? 'orange' : 'green') : String(rating.system).toLowerCase();
-  const badge = rating?.image ? `<img class="g-rating-image" src="${escapeHtml(rating.image)}" alt="${escapeHtml(rating.system)} ${escapeHtml(rating.label)}" />`
+  const badge = rating?.system === 'COB-AU' && rating.label === 'MA15+'
+    ? '<img class="g-rating-image g-rating-au-ma15" src="assets/ratings/acb-ma15.png" alt="MA15+ — Restricted" />'
+    : rating?.image ? `<img class="g-rating-image" src="${escapeHtml(rating.image)}" alt="${escapeHtml(rating.system)} ${escapeHtml(rating.label)}" />`
     : `<span class="g-age-badge g-age-${tone}" data-rating="${escapeHtml(rating?.label||'')}" aria-hidden="true"><b>${escapeHtml(['COB-AU','OFLC-NZ','ESRB','CERO'].includes(rating?.system) ? rating.label : rating?.value || rating?.label || '')}</b><small>${escapeHtml(rating?.system === 'COB-AU' ? 'ACB' : rating?.system === 'OFLC-NZ' ? 'NZ' : rating?.system || '')}</small></span>`;
   const label = rating ? `${['COB-AU','OFLC-NZ','AGE'].includes(rating.system)?'':rating.system+' '}${rating.label || rating.value}` : '';
   const lines = [descriptors, rating?.interactive, game.discoveryOnly ? '' : game.provider === 'PC' ? '' : `${game.provider} handles purchases and installation for this game.`].filter(Boolean);

@@ -6,7 +6,6 @@
 .g-add-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: calc(4.2 * var(--p, 19.2px)); }
 .g-add-left { display: flex; flex-direction: column; min-height: 0; }
 .g-add-search { display: flex; align-items: center; gap: calc(.9 * var(--p, 19.2px)); height: calc(4.5 * var(--p, 19.2px)); padding: 0 calc(1.8 * var(--p, 19.2px)); border-radius: 999px; background: #1f2022; border: 2px solid rgba(255, 255, 255, .1); }
-.g-add-search:focus-within { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .15), 0 0 calc(1 * var(--p, 19.2px)) rgba(255, 255, 255, .25); }
 .g-add-search svg.g-glyph { width: calc(1.6 * var(--p, 19.2px)); height: calc(1.6 * var(--p, 19.2px)); font-size: calc(1.6 * var(--p, 19.2px)); color: rgba(255, 255, 255, .85); }
 .g-add-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #fff; font: 400 calc(1.55 * var(--p, 19.2px)) / 1 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
 .g-add-search input::placeholder { color: rgba(255, 255, 255, .7); }

@@ -100,6 +100,7 @@ body.garrison .achievement-links-group { padding: 16px; border: 0; border-radius
 body.garrison .achievement-links-group summary { color: #fff; font-size: var(--g-control-text); }
 body.garrison :is(.g-age-cob-au,.g-age-oflc-nz) { flex: none; width: calc(clamp(58px,calc(80 * var(--u)),80px) * var(--text-scale,1)); height: calc(clamp(58px,calc(80 * var(--u)),80px) * var(--text-scale,1)); }
 body.garrison :is(.g-age-cob-au,.g-age-oflc-nz) b { font-size: calc(clamp(16px,calc(24 * var(--u)),24px) * var(--text-scale,1)); white-space: nowrap; }
+body.garrison .g-rating-image.g-rating-au-ma15 { width: calc(clamp(58px,calc(80 * var(--u)),80px) * var(--text-scale,1)); height: auto; max-height: none; }
 body.garrison .g-age-cob-au[data-rating="G"] { background: #168442; }
 body.garrison .g-age-cob-au[data-rating="PG"] { background: #f5cb36; color: #111; }
 body.garrison .g-age-cob-au[data-rating="M"] { background: #167cb7; }

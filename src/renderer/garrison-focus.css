@@ -1,0 +1,70 @@
+/* One white selection treatment for controller and keyboard navigation.
+   Only the focused control paints a glow; artwork stays sharp and stationary. */
+body.garrison :where(button, input, select, textarea, summary, a[href]):focus-visible {
+  outline: none !important;
+  box-shadow: var(--g-ring) !important;
+}
+
+/* Search inputs share their surrounding pill. Do not draw a second ring inside it,
+   or highlight the whole field when its separate Clear button has focus. */
+body.garrison :is(.g-add-search, .g-store-search):has(input:is(.focused, :focus-visible)) {
+  box-shadow: var(--g-ring);
+}
+body.garrison :is(.g-add-search, .g-store-search) input:is(.focused, :focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* A horizontal scroller clips both axes. Reserve room for the halo and offset
+   that space so the tiles, headings and subsequent rows keep their positions. */
+body.garrison #recent-row,
+body.garrison #recent-row.row-focused {
+  padding-block: var(--g-focus-space);
+  margin-block: calc(6px - var(--g-focus-space)) calc(10px - var(--g-focus-space));
+}
+body.garrison .collection-band .game-row.collection-covers {
+  padding-block: var(--g-focus-space);
+  margin-block: calc(6px - var(--g-focus-space)) calc(14px - var(--g-focus-space));
+}
+body.garrison :is(.detail-gallery, #detail-dlc-grid) {
+  padding: var(--g-focus-space);
+  margin: calc(-1 * var(--g-focus-space));
+}
+body.garrison .g-source-chips {
+  padding-block: var(--g-focus-space);
+  margin-top: calc(10px - var(--g-focus-space));
+  margin-bottom: calc(2 * var(--p) + 10px - var(--g-focus-space));
+}
+body.garrison :is(.g-add-list, .g-filter-groups, .g-onboard-services) {
+  padding: var(--g-focus-space);
+  margin: calc(-1 * var(--g-focus-space));
+  scroll-padding-block: var(--g-focus-space);
+}
+body.garrison .focusable { scroll-margin-block: var(--g-focus-space); }
+body.garrison .g-flyout { padding: 20px; }
+body.garrison .g-detail-rating .g-link { justify-self: start; border-radius: 4px; }
+
+/* Keep the accessibility option distinct, including controls with their own
+   legacy focus selectors. System high contrast needs an actual outline. */
+html.high-contrast-focus body.garrison {
+  --g-ring: 0 0 0 3px #111, 0 0 0 7px #fff, 0 0 0 10px #111;
+}
+html.high-contrast-focus body.garrison .focusable:is(.focused, :focus-visible) {
+  outline: none !important;
+  box-shadow: var(--g-ring) !important;
+}
+html.high-contrast-focus body.garrison :is(.g-add-search, .g-store-search) input:is(.focused, :focus-visible) {
+  box-shadow: none !important;
+}
+@media (forced-colors: active) {
+  html:is(:root, .high-contrast-focus) body.garrison { --g-ring: none; }
+  html:is(:root, .high-contrast-focus) body.garrison .focusable:is(.focused, :focus-visible),
+  html:is(:root, .high-contrast-focus) body.garrison :where(button, input, select, textarea, summary, a[href]):focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.garrison .focusable { transition: none !important; }
+}
+html.reduce-motion body.garrison .focusable { transition: none !important; }

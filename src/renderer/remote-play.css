@@ -43,7 +43,6 @@ body.garrison .remote-discovered-pc small { grid-column: 2; color: var(--g-text-
 body.garrison .remote-discovered-pc > span:last-child { display: flex; align-items: center; gap: 6px; }
 body.garrison .remote-discovered-pc > span:last-child > svg { width: 20px; height: 20px; }
 body.garrison .remote-game-card:focus-visible { outline: none; }
-body.garrison .remote-game-card:is(:focus-visible,.focused) .remote-game-art { box-shadow: var(--g-ring); }
 body.garrison #detail-play:disabled { opacity: .55; cursor: default; }
 body.garrison .remote-game-art { position: relative; }
 body.garrison .remote-game-art > .art-fallback { padding: 0; width: 100%; height: 100%; }

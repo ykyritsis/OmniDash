@@ -30,7 +30,7 @@ body.garrison .g-hidden-done:hover, body.garrison .g-hidden-done.focused { backg
 /* Store search, like the Xbox app's: a rounded field above the lists; results replace the grid. */
 body.garrison .g-store-toolbar { display: flex; align-items: center; gap: calc(1.6 * var(--p)); }
 body.garrison .g-store-search { position: relative; display: flex; align-items: center; width: min(calc(36 * var(--p)), 60%); height: calc(3.8 * var(--p)); padding: 0 calc(1.2 * var(--p)); border-radius: 999px; background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .72); }
-body.garrison .g-store-search:focus-within { background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-store-search:focus-within { background: rgba(255, 255, 255, .14); }
 body.garrison .g-store-search > .g-glyph { flex: none; width: calc(1.7 * var(--p)); height: calc(1.7 * var(--p)); }
 body.garrison .g-store-search input { flex: 1; min-width: 0; height: 100%; margin-left: calc(.8 * var(--p)); border: 0; outline: 0; background: none; color: #fff; font: 400 calc(1.35 * var(--p)) / 1 var(--g-font); }
 body.garrison .g-store-search input::placeholder { color: rgba(255, 255, 255, .6); }
@@ -52,6 +52,5 @@ body.garrison .g-sort-button .g-sort-label { white-space: nowrap; }
 body.garrison .g-sort-flyout { width: calc(20 * var(--p)); padding: calc(.6 * var(--p)); }
 body.garrison .g-sort-flyout header h2 { margin: calc(.4 * var(--p)) calc(.6 * var(--p)) calc(.6 * var(--p)); font: 600 calc(1.35 * var(--p)) / 1.2 var(--g-font); }
 body.garrison .g-sort-button .g-sort-label { display: inline-flex; align-items: center; height: 100%; padding: 0 clamp(46px, calc(3.6 * var(--g-vp) / 100), 70px) 0 clamp(44px, calc(3.4 * var(--g-vp) / 100), 68px); color: #fff; font: 400 calc(1.45 * var(--p)) / 1 var(--g-font); }
-body.garrison .g-sort-button.focused .g-sort-pill, body.garrison .g-sort-button:focus-visible .g-sort-pill { box-shadow: 0 0 0 3px #fff; }
 body.garrison .g-sort-button:hover .g-sort-pill { background: rgba(255, 255, 255, .16); }
 body.garrison #g-sort-button select { display: none !important; }
