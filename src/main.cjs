@@ -20,6 +20,9 @@ const { scanLocalPublishers, mergePublisherGames } = require('./launcher-librari
 const { readGogOwned, readAmazonOwned } = require('./local-owned-libraries.cjs');
 const { normalizeTitle, titleMatchScore, titleNeedsRecheck } = require('./title-match.cjs');
 const { libraryKey, installLibrariesByDrive } = require('./steam-install-libraries.cjs');
+const { createInstallSizeLookup } = require('./steam-install-size.cjs');
+const { storageOverview } = require('./storage-overview.cjs');
+const { createRemotePlay } = require('./remote-play.cjs');
 const { readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, clientDownloadItems, parseVdf: parseSteamVdf } = require('./steam-local.cjs');
 const { createUpdater } = require('./updater.cjs');
 const { createSteamFamilyLibrary } = require('./steam-family.cjs');
@@ -143,6 +146,13 @@ let playerRegion = 'auto';
 let windowsHomeCountry = '';
 const consoleServices = createConsoleServices(path.join(path.dirname(settingsPath()), 'catalog-cache'), fetch, { getCountry: steamCountry });
 const steamLookup = createSteamStoreLookup({ getCountry: steamCountry });
+const installSizeLookup = createInstallSizeLookup();
+const remotePlay = createRemotePlay({
+  directory: path.join(path.dirname(settingsPath()), 'remote-play'),
+  runtimeDirectory: app.isPackaged ? path.join(process.resourcesPath, 'streamlight') : path.join(__dirname, '..', '.packaging-staging', 'streamlight'),
+  getWindow: () => mainWindow,
+  onStatus: data => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('remote-play:status', data); }
+});
 const soundPack = createSoundPack(path.join(path.dirname(settingsPath()), 'personalization'));
 const playerProfile = createPlayerProfile(path.join(path.dirname(settingsPath()), 'profile-cache'));
 function connectionProgress(data) {
@@ -1744,6 +1754,35 @@ async function searchArtwork(query, selectedGameId = '') {
 }
 
 function registerIpc() {
+  ipcMain.handle('remote-play:snapshot', () => remotePlay.snapshot());
+  ipcMain.handle('remote-play:add', (_event, address) => remotePlay.add(address));
+  ipcMain.handle('remote-play:pair', (_event, id) => remotePlay.pair(id));
+  ipcMain.handle('remote-play:cancel-pair', () => remotePlay.cancelPair());
+  ipcMain.handle('remote-play:refresh', (_event, id) => remotePlay.refresh(id));
+  ipcMain.handle('remote-play:covers', (_event, id, ids) => remotePlay.covers(id, ids));
+  ipcMain.handle('remote-play:start', (_event, id, appId, preferences) => {
+    if (activeGameSession) throw new Error('Close your local game before starting remote play.');
+    return remotePlay.start(id, appId, preferences);
+  });
+  ipcMain.handle('remote-play:stop', () => remotePlay.stop());
+  ipcMain.handle('remote-play:remove', (_event, id) => remotePlay.remove(id));
+  ipcMain.handle('remote-play:focus', () => remotePlay.focus());
+  ipcMain.handle('storage:overview', async () => {
+    const libraries = process.env.NEBULA_DEMO === '1' ? ['C:\\Program Files (x86)\\Steam', 'D:\\SteamLibrary'] : await findSteamRoots();
+    let volumes = [];
+    if (process.env.NEBULA_DEMO === '1') volumes = [{ root: 'C:\\', label: 'Windows', total: 1e12, free: 182e9 }, { root: 'D:\\', label: 'Games', total: 2e12, free: 1.21e12 }];
+    else {
+      try {
+        const output = await new Promise((resolve, reject) => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '[System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -in @("Fixed","Removable","Network") } | ForEach-Object { [pscustomobject]@{ root=$_.Name; label=$_.VolumeLabel; total=$_.TotalSize; free=$_.AvailableFreeSpace } } | ConvertTo-Json -Compress'], { windowsHide: true, timeout: 8000 }, (error, stdout) => error ? reject(error) : resolve(stdout)));
+        const data = JSON.parse(output || '[]'); volumes = Array.isArray(data) ? data : [data];
+      } catch {
+        const roots = [...new Set(libraries.map(folder => path.parse(folder).root))];
+        for (const root of roots) try { const stat = await fs.statfs(root); volumes.push({ root, label: '', total: stat.blocks * stat.bsize, free: stat.bavail * stat.bsize }); } catch { /* Disconnected volumes stay out. */ }
+      }
+    }
+    await applyCachedInstallSizes(currentLibrary);
+    return storageOverview(currentLibrary, volumes, libraries);
+  });
   ipcMain.handle('keyboard:show', event => {
     const owner = BrowserWindow.fromWebContents(event.sender);
     if (!owner || owner.isDestroyed()) throw new Error('The text-entry window is unavailable.');
@@ -2169,6 +2208,7 @@ function registerIpc() {
   });
   ipcMain.handle('game:launch-respond', (_event, gameId, requestId, value) => steamLaunch.respond(gameId, requestId, value));
   ipcMain.handle('game:launch', async (_event, gameId, launchOptions, launchIndex) => {
+    if (remotePlay.active()) throw new Error('Disconnect remote play before launching a local game.');
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
     lastLaunch = { gameId, title: game.title, provider: game.provider, at: Date.now(), result: '' };
@@ -2308,6 +2348,8 @@ function registerIpc() {
   });
   ipcMain.handle('game:wait-cancel', async (_event, gameId) => { launchWaitCancel.add(String(gameId)); await steamLaunch.cancel(gameId); return true; });
   ipcMain.handle('game:active-session', async () => {
+    const remote = remotePlay.active();
+    if (remote) return { gameId: `remote:${remote.hostId}:${remote.appId}`, verified: remote.phase === 'playing', remote: true };
     if (!activeGameSession) return null;
     const session = activeGameSession;
     const age = Date.now() - session.launchedAt;
@@ -2516,7 +2558,7 @@ function registerIpc() {
     if (!game) throw new Error('This Steam game is not in your library.');
     if (game.installed !== false) return { status: 'installed' };
     if (process.env.NEBULA_DEMO === '1') { installRequests.set(game.id, Date.now()); return { status: 'started', library: 'D:\\SteamLibrary', demo: true }; }
-    if (activeGameSession) throw new Error('Close your game before installing. Steam needs to restart to start the download.');
+    if (activeGameSession || remotePlay.active()) throw new Error('Close your game before installing. Steam needs to restart to start the download.');
     const roots = await findSteamRoots();
     const steamExe = roots.map((root) => path.join(root, 'steam.exe')).find((file) => require('fs').existsSync(file));
     if (!steamExe) throw new Error('Steam was not found on this PC.');
@@ -2538,6 +2580,9 @@ function registerIpc() {
     }
     libraries.sort((a, b) => b.free - a.free);
     const target = roots.includes(chosenLibrary) ? chosenLibrary : libraries[0]?.root || roots[0];
+    const size = await installSizeLookup(game.appId);
+    const free = libraries.find(item => item.root === target)?.free;
+    if (size.requiredBytes && free !== undefined && free < size.requiredBytes) throw new Error('There is not enough free space on this drive. Choose another location or free some space first.');
     const settings = await readSettings();
     const owner = String(settings.steamId64 || await detectSteamId64() || '');
     const name = String(info?.common?.name || game.title).replace(/["\\\r\n]/g, '');
@@ -2566,19 +2611,12 @@ function registerIpc() {
       if (process.env.NEBULA_DEMO === '1') { free = root.startsWith('C') ? 182e9 : 1.21e12; total = root.startsWith('C') ? 1e12 : 2e12; }
       libraries.push({ root, drive: path.parse(root).root.replace(/\\$/, ''), free, total });
     }
-    let needed = null;
-    try {
-      const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${game.appId}&filters=pc_requirements`, { signal: AbortSignal.timeout(6000) });
-      const requirements = (await response.json())?.[game.appId]?.data?.pc_requirements;
-      const text = `${requirements?.recommended || ''} ${requirements?.minimum || ''}`.replace(/<[^>]+>/g, ' ');
-      const match = text.match(/(\d+(?:[.,]\d+)?)\s*(TB|GB|MB)\s*(?:of\s*)?(?:available|free|hard|disk|storage|space)/i) || text.match(/(?:Storage|Hard Drive|Disk Space)[^0-9]{0,20}(\d+(?:[.,]\d+)?)\s*(TB|GB|MB)/i);
-      if (match) needed = Number(match[1].replace(',', '.')) * { TB: 1e12, GB: 1e9, MB: 1e6 }[match[2].toUpperCase()];
-    } catch { /* Size is optional. */ }
+    const size = process.env.NEBULA_DEMO === '1' ? { downloadBytes: 48.3e9, installBytes: 71.8e9, requiredBytes: 75e9, estimated: true, source: 'public-depots' } : await installSizeLookup(game.appId);
     const settings = await readSettings();
     const destinations = installLibrariesByDrive(libraries, settings.steamInstallLibrary);
     const preferred = destinations.find(item => libraryKey(item.root) === libraryKey(settings.steamInstallLibrary || ''))?.root
       || [...destinations].sort((a, b) => (b.free || 0) - (a.free || 0))[0]?.root || '';
-    return { libraries: destinations, needed, preferred };
+    return { libraries: destinations, needed: size.requiredBytes, ...size, preferred };
   });
   ipcMain.handle('steam:remember-library', async (_event, root) => {
     if (typeof root === 'string' && (await findSteamRoots()).includes(root)) await writeSettings({ steamInstallLibrary: root });
@@ -3404,10 +3442,11 @@ async function createWindow() {
 const updater = createUpdater({
   app,
   getWindow: () => mainWindow,
-  isGameRunning: () => Boolean(activeGameSession),
+  isGameRunning: () => Boolean(activeGameSession || remotePlay.active()),
   log: message => console.log(message)
 });
 app.on('before-quit', event => updater.applyOnQuit(event));
+app.on('before-quit', event => { if (!event.defaultPrevented) remotePlay.dispose(); });
 
 app.whenReady().then(async () => {
   windowsHomeCountry = await detectWindowsHomeCountry();

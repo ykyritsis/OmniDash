@@ -300,39 +300,53 @@ function gMenu(anchor, items) {
 }
 // "Install to": pick a Steam library drive before the download starts.
 function gInstallTo(game) {
-  return new Promise(async resolve => {
-    let targets;
-    try { targets = await window.launcher.getSteamInstallTargets(game.id); } catch { resolve(''); return; }
-    if (!targets.libraries.length) { resolve(''); return; }
-    let selected = targets.preferred || targets.libraries[0].root;
+  return new Promise(resolve => {
+    let targets, selected = '', finished = false;
+    const opener = document.activeElement;
     const dialog = document.createElement('dialog');
     dialog.className = 'g-flyout g-install-to';
     const render = () => {
       dialog.innerHTML = `<header><h2>Install ${escapeHtml(game.title)}</h2></header>
-        <p>${targets.needed ? `Needs about ${escapeHtml(formatBytes(targets.needed))}. ` : ''}Choose where to install it.</p>
+        <div class="g-install-sizes" aria-label="Download and storage estimates">
+          <div><small>Download</small><strong>${targets.downloadBytes ? `About ${escapeHtml(formatBytes(targets.downloadBytes))}` : 'Size unavailable'}</strong></div>
+          <div><small>Installed game</small><strong>${targets.installBytes ? `About ${escapeHtml(formatBytes(targets.installBytes))}` : 'Size unavailable'}</strong></div>
+          <div><small>Space needed</small><strong>${targets.needed ? `About ${escapeHtml(formatBytes(targets.needed))}` : 'Steam will confirm'}</strong></div>
+        </div><p>Choose where to install it. Sizes can change with language packs, DLC and updates.</p>
         <div class="g-drives" role="radiogroup" aria-label="Install location">${targets.libraries.map(item => {
           const used = item.total ? Math.round((1 - item.free / item.total) * 100) : 0;
           const low = targets.needed && item.free !== null && item.free < targets.needed;
           return `<button class="g-drive focusable${item.root === selected ? ' selected' : ''}${low ? ' low' : ''}" type="button" role="radio" aria-checked="${item.root === selected}" data-root="${escapeHtml(item.root)}">
             ${gIcon('drive', 'g-drive-icon')}<span class="g-drive-copy"><strong>${escapeHtml(item.drive)}</strong><small>${escapeHtml(item.root)}</small>
-            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small>${item.free === null ? '' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : ''}</small></span>
+            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small>${item.free === null ? 'Free space unavailable' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : targets.needed && item.free !== null ? ` · About ${escapeHtml(formatBytes(item.free - targets.needed))} left after install` : ''}</small></span>
             <i class="g-drive-check">${gIcon('check')}</i></button>`;
         }).join('')}</div>
-        <div class="g-choice-actions"><button class="g-onboard-primary focusable" type="button" data-install-confirm>Install</button><button class="g-onboard-secondary focusable" type="button" data-install-cancel>Cancel</button></div>`;
+        <div class="g-choice-actions"><button class="g-onboard-primary focusable" type="button" data-install-confirm ${targets.needed && targets.libraries.some(item => item.root === selected && item.free !== null && item.free < targets.needed) ? 'disabled' : ''}>Install</button><button class="g-onboard-secondary focusable" type="button" data-install-cancel>Cancel</button></div>`;
       refreshFocusables();
     };
-    const done = value => { dialog.close(); dialog.remove(); refreshFocusables(); resolve(value); };
+    const done = value => { if (finished) return; finished = true; dialog.close(); dialog.remove(); refreshFocusables(); if (opener?.isConnected) setFocusedElement(opener, { scroll: false }); resolve(value); };
     dialog.addEventListener('click', event => {
       const drive = event.target.closest('[data-root]');
       if (drive) { selected = drive.dataset.root; render(); setFocusedElement(dialog.querySelector(`[data-root="${CSS.escape(selected)}"]`), { scroll: false }); return; }
-      if (event.target.closest('[data-install-confirm]')) { window.launcher.rememberSteamLibrary(selected).catch(() => {}); done(selected); }
+      if (event.target.closest('[data-install-confirm]:not(:disabled)')) { window.launcher.rememberSteamLibrary(selected).catch(() => {}); done(selected); }
       if (event.target.closest('[data-install-cancel]')) done(null);
     });
     dialog.addEventListener('cancel', () => done(null));
+    dialog.addEventListener('close', () => done(null));
     document.body.append(dialog);
-    render();
+    dialog.innerHTML = `<header><h2>Install ${escapeHtml(game.title)}</h2></header><p role="status">Checking download sizes and drive space…</p><div class="g-choice-actions"><button class="g-onboard-secondary focusable" type="button" data-install-cancel>Cancel</button></div>`;
     dialog.showModal();
-    setFocusedElement(dialog.querySelector('[data-install-confirm]'), { scroll: false });
+    refreshFocusables();
+    setFocusedElement(dialog.querySelector('[data-install-cancel]'), { scroll: false });
+    (async () => {
+      try {
+        targets = await window.launcher.getSteamInstallTargets(game.id);
+        if (finished) return;
+        if (!targets.libraries.length) throw new Error('No available Steam library drives were found. Connect a drive and try again.');
+        selected = targets.preferred || targets.libraries[0].root;
+        render();
+        setFocusedElement(dialog.querySelector('[data-install-confirm]:not(:disabled)') || dialog.querySelector('.g-drive.selected'), { scroll: false });
+      } catch (error) { if (!finished) { showToast(error.message || 'Could not check install locations. Try again.'); done(null); } }
+    })();
   });
 }
 
@@ -1428,7 +1442,7 @@ document.querySelector('#pc-score-calculator-open').onclick = event => { event.s
 const gSettingsPages = [
   ['g-account', 'Account', 'contact'], ['g-privacy', 'Safety & privacy', 'shield'], ['g-notifications', 'Notifications', 'bell'],
   ['g-language', 'Language & region', 'language'], ['audio', 'Audio & Video', 'volume'], ['accessibility', 'Accessibility', 'ease'],
-  ['personalization', 'Appearance', 'color'], ['g-streaming', 'Streaming', 'stream'], ['services', 'Manage games', 'library'], ['g-input', 'Input', 'game']
+  ['personalization', 'Appearance', 'color'], ['g-streaming', 'Remote play', 'stream'], ['g-storage', 'Storage', 'drive'], ['services', 'Manage games', 'library'], ['g-input', 'Input', 'game']
 ];
 (function buildSettings() {
   const scroll = document.querySelector('.settings-scroll');

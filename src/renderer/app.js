@@ -2899,7 +2899,9 @@ function scheduleGamepadPoll() {
 function pollGamepad() {
   try {
   if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
+  if (window.remotePlayUI?.playing) { state.previousButtons = []; return; }
   const connected = getConnectedControllers();
+  if (window.remotePlayUI?.suppressHeldButtons(connected)) return;
   // Prefer whichever controller was just used. Keeping a stale first device
   // selected meant a headset/remote could silently steal all navigation.
   const gamepad = connected.find(hasRecentControllerInput)

@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const asar = require('../node_modules/.pnpm/@electron+asar@3.4.1/node_modules/@electron/asar');
 const root = path.resolve(__dirname, '..');
 const archive = path.resolve(root, process.argv[2] || 'dist/dashboard-027b4/win-unpacked/resources/app.asar');
@@ -23,4 +24,16 @@ for (const [name, version] of Object.entries(expected.dependencies || {})) {
   assert.ok(asar.extractFile(archive, path.join('node_modules', name, dependency.main)).length, `Dependency entry point missing: ${name}`);
 }
 assert.ok(!entries.some(file => /interface-sounds\.json|local-settings\.json|\.visual-review|DashX|\.(wav|mp3)$/i.test(file)), 'A private settings/reference/sound file was packaged');
+if (expected.build.extraResources?.some(item => item.to === 'streamlight')) {
+  const component = path.join(path.dirname(archive), 'streamlight');
+  const manifest = JSON.parse(fs.readFileSync(path.join(component, 'runtime-manifest.json'), 'utf8'));
+  const staged = JSON.parse(fs.readFileSync(path.join(root, '.packaging-staging', 'streamlight', 'runtime-manifest.json'), 'utf8'));
+  assert.deepEqual(manifest, staged, 'Packaged streaming component is stale');
+  assert.equal(manifest.version, '7.0.0');
+  for (const [name, hash] of Object.entries(manifest.files)) {
+    assert(!/StreamLight\.ini|hosts\.json|portable\.dat|engine-profile/i.test(name), 'A private streaming profile was bundled');
+    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(component, name))).digest('hex'), hash, `Streaming runtime mismatch: ${name}`);
+  }
+  console.log(`PASS: ${Object.keys(manifest.files).length} streaming runtime files match the prepared hashes; no private pairing profile bundled.`);
+}
 console.log(`PASS: ${sources.length} packaged source files exactly match the workspace; no private settings or sound recordings bundled.`);

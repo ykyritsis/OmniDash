@@ -3,10 +3,12 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 (async () => {
+  const runtime = await require('./prepare-streaming.cjs').prepareStreaming();
   const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
   const stage = path.join(root, '.beta-build-stage', `release-${pkg.version}`);
   await fs.mkdir(stage, { recursive: true });
   for (const folder of ['src', 'build']) await fs.cp(path.join(root, folder), path.join(stage, folder), { recursive: true });
+  await fs.cp(runtime, path.join(stage, '.packaging-staging', 'streamlight'), { recursive: true });
   for (const name of Object.keys(pkg.dependencies || {})) {
     const source = await fs.realpath(path.join(root, 'node_modules', name));
     const destination = path.join(stage, 'node_modules', name);

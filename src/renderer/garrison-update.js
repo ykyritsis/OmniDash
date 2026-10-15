@@ -27,7 +27,7 @@
     if (dialog.open || !available() || (!requested && dismissed.has(version())) || document.hidden) return;
     const open = [...document.querySelectorAll('dialog[open]')];
     if (open.some(item => !requested || item !== settingsDialog)) return;
-    if (!document.querySelector('#startup-screen')?.hidden || !launchOverlay.hidden || !steamShopSurface.hidden || state.activeGameSession) return;
+    if (!document.querySelector('#startup-screen')?.hidden || !launchOverlay.hidden || !steamShopSurface.hidden || state.activeGameSession || window.remotePlayUI?.active) return;
     opener = document.activeElement;
     requested = false;
     dialog.showModal();

@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 27](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.27/Xbox-Preview-UI-Setup-0.27.0-beta.27.exe)** · [Setup](#getting-started) · [Beta 27 notes](docs/release-0.27.0-beta.27.md)
+**[Download beta 28](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.28/Xbox-Preview-UI-Setup-0.27.0-beta.28.exe)** · [Setup](#getting-started) · [Beta 28 notes](docs/release-0.27.0-beta.28.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,18 +31,19 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 27
+## Beta 28
 
-- Automatic update checks as soon as the app opens.
-- A [centred update prompt](docs/update-prompt.png) with progress, Restart to update and Later.
-- Large buttons and focused navigation for keyboard, mouse and controller users.
-- Includes the beta 26 improvements and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
+- [Remote play preview](docs/remote-play.md): pair a Sunshine, Apollo or Vibepollo PC, browse its shared games and play through StreamLight's native decoder inside the app.
+- The launch animation stays up until the host session and video surface are ready. Host-reported game exit ends the stream.
+- Steam drive selection shows separate download, installed-size and required-space estimates, including shared content depots.
+- Settings → Storage shows drive space, known game sizes and installed games by drive.
+- Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.27.md)
+[Full release notes](docs/release-0.27.0-beta.28.md)
 
 ## Download
 
-Get **[beta 27 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.27)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 28 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.28)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
@@ -121,6 +122,7 @@ Install Node.js 20 or newer, then:
 
 ```powershell
 npm install
+npm run prepare:streaming
 npm start
 ```
 
@@ -142,11 +144,13 @@ Builds are written to `dist/`. The installer does not change Windows' Full Scree
 - Native keyboard placement is managed by Windows. Beta 25 was checked at handheld resolution and against Windows InputPane, but not on the physical handheld.
 - Epic uninstalled-game support needs a signed-in Legendary helper. See [library connections](docs/library-connections.md).
 - SteamDB is not scraped; Game Options lets you enter a Steam App ID manually.
+- Remote play is a first preview. Standard hosts expose their published apps and session state; they do not guarantee that a game window is visible. Desktop or detached-launcher entries need host-side game tracking for automatic stream termination. See [remote-play setup and limits](docs/remote-play.md).
 
 ## Recent changes
 
 | Preview | Highlights |
 | --- | --- |
+| [Beta 28](docs/release-0.27.0-beta.28.md) | Embedded StreamLight remote-play preview, Steam download/install-size estimates and Settings storage overview. |
 | [Beta 27](docs/release-0.27.0-beta.27.md) | Immediate launch update checks and a centred update prompt for keyboard, mouse and controller. |
 | [Beta 26](docs/release-0.27.0-beta.26.md) | Updated management dialogs, unique gallery media, quicker Steam lookup, regional ratings and finished publisher/series artwork. |
 | [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |
@@ -160,6 +164,8 @@ Older notes are in [docs/](docs).
 The [downloadable beta 25 promo kit](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.25/Xbox-Preview-UI-Beta25-Promo-Kit-v2.zip) ([browse files](docs/promo/beta25-v2)) includes GitHub banners, Discord graphics, transparent logos, screenshots, editable layouts and [ready-to-paste Discord copy](docs/promo/beta25-v2/DISCORD-POST.txt). Use the [asset guide](docs/promo/beta25-v2/ASSET-GUIDE.txt) for dimensions and posting notes. The kit uses the app's existing blue icon. Device mockups were generated with the built-in image tool using the included screenshots as references.
 
 ## Legal and attribution
+
+Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), based on Moonlight, under [GPL v3](src/remote-play/LICENSE.StreamLight). The native bridge source and reproducible preparation script are included in this repository. See [streaming component details](docs/remote-play.md#streaming-component-and-source).
 
 This is a purely fan-made, unofficial launcher. Xbox, Xbox Game Pass, Microsoft, PlayStation, Steam, SteamGridDB, ASUS, game names, logos, and artwork belong to their respective owners. Nothing here implies their sponsorship, approval, or affiliation. The app does not bundle games, grant licenses, bypass DRM, or provide content you do not own. Artwork, news, screenshots, achievements, and metadata remain subject to their source services' rights and terms.
 

@@ -13,6 +13,18 @@ const ipcRenderer = {
 };
 
 contextBridge.exposeInMainWorld('launcher', {
+  getStorageOverview: () => ipcRenderer.invoke('storage:overview'),
+  remotePlaySnapshot: () => ipcRenderer.invoke('remote-play:snapshot'),
+  remotePlayAdd: address => ipcRenderer.invoke('remote-play:add', address),
+  remotePlayPair: id => ipcRenderer.invoke('remote-play:pair', id),
+  remotePlayCancelPair: () => ipcRenderer.invoke('remote-play:cancel-pair'),
+  remotePlayRefresh: id => ipcRenderer.invoke('remote-play:refresh', id),
+  remotePlayCovers: (id, ids) => ipcRenderer.invoke('remote-play:covers', id, ids),
+  remotePlayStart: (id, appId, preferences) => ipcRenderer.invoke('remote-play:start', id, appId, preferences),
+  remotePlayStop: () => ipcRenderer.invoke('remote-play:stop'),
+  remotePlayRemove: id => ipcRenderer.invoke('remote-play:remove', id),
+  remotePlayFocus: () => ipcRenderer.invoke('remote-play:focus'),
+  onRemotePlayStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('remote-play:status', listener); return () => ipcRenderer.removeListener('remote-play:status', listener); },
   showNativeKeyboard: () => ipcRenderer.invoke('keyboard:show'),
   cancelLibraryConnect: () => ipcRenderer.invoke('accounts:cancel-connect'),
   cancelSteamFamilyConnect: () => ipcRenderer.invoke('steam:family-cancel-connect'),
