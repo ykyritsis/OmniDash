@@ -63,6 +63,12 @@ class WindowBridge {
     static int lastW, lastH, lastTop;
     static bool xinputUnavailable;
     static DateTime missingSurfaceSince = DateTime.MinValue;
+    static void CheckSurface() {
+        if(video != IntPtr.Zero && !IsWindow(video)) {
+            video=IntPtr.Zero;lastW=lastH=0;reveal=false;missingSurfaceSince=DateTime.UtcNow;
+            Emit(new {type="surface-lost"});
+        }
+    }
     static readonly object OutputLock = new object();
     static void Emit(object value) { lock(OutputLock) { Console.WriteLine(Json.Serialize(value)); Console.Out.Flush(); } }
     // CommandLineToArgvW escaping, including a trailing backslash.
@@ -82,6 +88,7 @@ class WindowBridge {
     static void Inspect(IntPtr window, bool stream) {
         uint pid; GetWindowThreadProcessId(window, out pid);
         if(engine == null || pid != engine.Id) return;
+        CheckSurface();
         if(window == video) return;
         var name = new StringBuilder(256); GetClassName(window, name, name.Capacity);
         ShowWindow(window, 0);
@@ -149,9 +156,12 @@ class WindowBridge {
             var escape=new ControllerChord(config.quitMask==0x330||config.quitMask==0x2300?config.quitMask:0x1300);
             var controls=new ControllerChord(0x320,true);
             bool shown=false;
+            long nextWindowScan=0;
             while(!engine.HasExited && !stopping && (!config.stream || IsWindow(parent))) {
-                if(video != IntPtr.Zero && !IsWindow(video)) { video=IntPtr.Zero;lastW=lastH=0;shown=false;missingSurfaceSince=DateTime.UtcNow; }
-                EnumWindows((window,param) => { Inspect(window, config.stream); return true; }, IntPtr.Zero);
+                CheckSurface();if(!reveal)shown=false;
+                // WinEvent hooks catch new engine windows immediately. The
+                // periodic scan is a fallback, not a per-frame desktop walk.
+                if(clock.ElapsedMilliseconds>=nextWindowScan){EnumWindows((window,param) => { Inspect(window, config.stream); return true; }, IntPtr.Zero);nextWindowScan=clock.ElapsedMilliseconds+(video==IntPtr.Zero?100:1000);}
                 bool foreground=GetAncestor(GetForegroundWindow(),2)==GetAncestor(parent,2);
                 bool wantHotkey=config.stream&&shown&&foreground;
                 exitKey.Update(wantHotkey);
@@ -175,7 +185,10 @@ class WindowBridge {
                     if(focusRequested&&shown){focusRequested=false;FocusVideo();}
                     if(inspect) { inspect=false; RECT rect,owner,screen; GetClientRect(video,out rect); GetClientRect(parent,out owner); GetWindowRect(video,out screen);var point=new POINT{x=screen.left,y=screen.top};ScreenToClient(parent,ref point);Emit(new { type="geometry", parent=GetParent(video).ToInt64().ToString(), top=point.y, width=rect.right-rect.left, height=rect.bottom-rect.top, parentWidth=owner.right-owner.left, parentHeight=owner.bottom-owner.top, visible=IsWindowVisible(video), parentVisible=IsWindowVisible(parent), foreground, keyboardShortcut=exitKey.Registered, hotkeyError=exitKey.Error, style=GetWindowLong(video,-16), child=(GetWindowLong(video,-16)&0x40000000)!=0 }); }
                 }
-                if(missingSurfaceSince != DateTime.MinValue && (DateTime.UtcNow-missingSurfaceSince).TotalMilliseconds>750) { Emit(new { type="surface-closed" }); stopping=true; }
+                // StreamLight rebuilds SDL during live quality changes. Give
+                // its resume handshake time; a real process exit still ends
+                // immediately. The replacement waits for a new decoded frame.
+                if(missingSurfaceSince != DateTime.MinValue && (DateTime.UtcNow-missingSurfaceSince).TotalSeconds>30) { Emit(new { type="error", message="The stream did not return after reconnecting. Reopen the game to resume." }); stopping=true; }
                 Thread.Sleep(15);
             }
             if(!engine.HasExited) engine.Kill();

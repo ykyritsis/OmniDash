@@ -50,9 +50,12 @@ async function main(){
     assert(config.args.includes('--no-quit-after'),'Disconnect must not terminate the host’s game');
     assert(config.args.includes('--background-gamepad'),'An embedded player must receive background SDL gamepad events');
     assert(config.args.includes('--no-multi-controller'));assert(config.args.includes('--swap-gamepad-buttons'));assert(config.args.includes('--touchscreen-trackpad'));
+    for(const flag of ['--hdr','--yuv444','--audio-on-host','--mouse-buttons-swap','--reverse-scroll-direction','--no-vrr'])assert(config.args.includes(flag),flag);
+    assert.equal(config.args[config.args.indexOf('--capture-system-keys')+1],'always');
     assert.equal(config.args[config.args.indexOf('--audio-config')+1],'5.1-surround');assert.equal(config.quitMask,0x330);
     const profile=parseIni(require('node:fs').readFileSync(path.join(directory,'engine','FoggyBytes','StreamLight.ini'),'utf8'));
     assert.equal(profile.General.gamepadmouse,'false');assert.equal(profile.General.key,'TEST-KEY');assert.equal(profile.shortcuts.pad0_mask,'816');
+    assert.equal(profile.General.fractionalvsync,'true');assert.equal(profile.General.overlayitems,'55295');assert.equal(profile.General.overlayposition,'1');assert.equal(profile.General.overlayfontsize,'2');
     workerCount++;const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();
     const emit=value=>child.stdout.write(JSON.stringify(value)+'\n');
     emitNative=emit;
@@ -71,9 +74,15 @@ async function main(){
     assert.deepEqual(await remote.pair(host.id),{hostId:host.id,paired:true});
     assert.equal((await remote.refresh(host.id)).games.length,1);
     assert.equal((await remote.checkHosts()).hosts[0].status,'ready');
-    const preferences=await remote.settings(host.id,{width:1280,height:800,fps:90,bitrate:15000,codec:'HEVC',decoder:'hardware',multiController:false,swapFaceButtons:true,gamepadMouse:false,touchscreenTrackpad:true,audioConfig:'5.1',quitCombo:'moonlight'});
+    const preferences=await remote.settings(host.id,{width:1280,height:800,fps:90,bitrate:15000,codec:'HEVC',decoder:'hardware',multiController:false,swapFaceButtons:true,gamepadMouse:false,touchscreenTrackpad:true,audioConfig:'5.1',quitCombo:'moonlight',hdr:true,yuv444:true,audioOnHost:true,swapMouseButtons:true,reverseScroll:true,captureSystemKeys:'always',framePacing:true,fractionalVsync:true,overlayDetail:'full',overlayPosition:'right',overlaySize:'large'});
     assert.equal(preferences.height,800);assert.equal(preferences.codec,'HEVC');
     assert.equal((await remote.snapshot()).hosts[0].preferences.bitrate,15000);
+    await remote.settings(host.id,{...preferences,fps:165},{appId:'10'});
+    let savedHost=(await remote.snapshot()).hosts[0];assert.equal(savedHost.preferences.fps,90);assert.deepEqual(savedHost.games[0].streamOverrides,{fps:165},'Per-game overrides must keep only differences from the PC profile');
+    await remote.settings(host.id,{...preferences,bitrate:33333},{profileId:'2',name:'Handheld'});
+    savedHost=(await remote.snapshot()).hosts[0];assert.equal(savedHost.activeProfile,'2');assert.equal(savedHost.profiles[0].preferences.bitrate,15000);assert.equal(savedHost.profiles[1].name,'Handheld');
+    assert.equal((await remote.settings(host.id,null,{appId:'10'})).bitrate,33333,'Reset games to the currently selected profile');
+    await remote.settings(host.id,preferences,{profileId:'1'});
     await remote.hideGame(host.id,'10');assert.equal((await remote.snapshot()).hosts[0].games.length,0);
     await remote.hideGame(host.id,null);assert.equal((await remote.snapshot()).hosts[0].games.length,1);
     const keep=apps;apps='<root><App><ID>11</ID><AppTitle>Removed</AppTitle><IsInstalled>0</IsInstalled></App><App><ID>12</ID><AppTitle>Fresh game</AppTitle><IsInstalled>1</IsInstalled></App></root>';
@@ -84,8 +93,11 @@ async function main(){
     assert.equal((await remote.snapshot()).hosts.length,1);
     assert.deepEqual(await remote.covers(host.id,['../2','999']),[],'Unpublished asset requests are rejected');
     const starting=remote.start(host.id,'10');await assert.rejects(remote.start(host.id,'10'),/already starting/);await starting;
+    assert.equal((await remote.snapshot()).hosts[0].games[0].lastPlayed,0,'Connecting must not add failed launches to recent games');
     await pause(40);assert.equal(reveals,0,'The surface must stay hidden before the host reports the app running');
     current='10';await pause(1700);assert.equal(reveals,0,'Negotiated video format is not evidence of a decoded frame');emitFrame();await until(()=>events.some(event=>event.phase==='playing'));assert.equal(reveals,1);assert.equal(remote.active().phase,'playing');
+    const played=(await remote.snapshot()).hosts[0].games[0].lastPlayed;assert(played>0);assert.equal((await remote.refresh(host.id)).games[0].lastPlayed,played,'Refreshing must preserve play history');
+    emitNative({type:'surface-lost'});await pause(900);assert.equal(remote.active().phase,'reconnecting');emitNative({type:'surface'});await pause(30);assert.equal(reveals,1,'A replacement surface must wait for its own decoded frame');emitFrame();await until(()=>remote.active().phase==='playing');assert.equal(reveals,2);assert.equal((await remote.snapshot()).hosts[0].games[0].lastPlayed,played,'Live quality reconnects are the same play session');
     fail=true;await pause(1700);assert(remote.active(),'A failed poll must not be mistaken for a game exit');fail=false;
     current='0';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'));
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');
@@ -94,6 +106,8 @@ async function main(){
     remote.viewport({top:0,height:800});emitNative({type:'toggle-controls',source:'controller'});await until(()=>events.some(event=>event.phase==='toggle-controls'));assert.equal(remote.active()?.phase,'playing','Toggling controls must not end the stream');
     emitNative({type:'disconnect-requested',source:'controller'});await until(()=>!remote.active());
     assert(events.some(event=>event.phase==='ended'&&event.reason==='disconnected'),'Native escape must return control to the launcher');
+    apps='<root><App><ID>88</ID><AppTitle>Test game</AppTitle></App></root>';assert((await remote.refresh(host.id)).games[0].lastPlayed>0,'History must survive rebuilt host app IDs');
+    const reloaded=createRemotePlay({directory,runtimeDirectory:runtime,getWindow:()=>null});assert((await reloaded.snapshot()).hosts[0].games[0].lastPlayed>0,'History must persist across app restarts');reloaded.dispose();
   }finally{remote.dispose();}
   const cachedDirectory=await fs.mkdtemp(path.resolve(__dirname,'../.visual-review/remote-cover-'));
   await fs.writeFile(path.join(cachedDirectory,'hosts.json'),JSON.stringify([{...host,online:false}]));

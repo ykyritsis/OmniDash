@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 32](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.32/Xbox-Preview-UI-Setup-0.27.0-beta.32.exe)** · [Setup](#getting-started) · [Beta 32 notes](docs/release-0.27.0-beta.32.md)
+**[Download beta 33](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.33/Xbox-Preview-UI-Setup-0.27.0-beta.33.exe)** · [Setup](#getting-started) · [Beta 33 notes](docs/release-0.27.0-beta.33.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,7 +31,12 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 32
+## Beta 33
+
+- Stream controls auto-hide after five seconds; the existing keyboard and controller shortcuts bring them back.
+- Recently played remote games join Home → Jump back in with a cloud icon and saved history.
+- Added three stream profiles per PC, game overrides, custom quality values, display matching, HDR, 4:4:4 and more input/statistics settings.
+- Fixed live-settings window recreation, reduced native window scans, and documented the remaining [StreamLight parity gaps](docs/streamlight-parity.md).
 
 - Remote game cards now use the normal artwork lookup and renderer, reusing cached covers, logos and manual artwork selections before requesting new art.
 - Fixed embedded streaming losing controller input when Electron owns the foreground window. The bundled engine handles buttons, sticks, triggers and controller hotplug.
@@ -47,11 +52,11 @@ Device images are illustrative mockups based on app captures, not photographs of
 - Settings → Storage shows drive space, known game sizes and installed games by drive.
 - Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.32.md)
+[Full release notes](docs/release-0.27.0-beta.33.md)
 
 ## Download
 
-Get **[beta 32 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.32)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 33 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.33)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

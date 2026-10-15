@@ -22,7 +22,7 @@ app.whenReady().then(async()=>{
   win=new BrowserWindow({width:1280,height:800,frame:false,show:false,webPreferences:{sandbox:true,contextIsolation:true}});
   await win.loadURL('data:text/html,<body style="background:%23171920;color:white;font:24px sans-serif">Native stream surface review</body>');win.show();await pause(40);win.hide();win.show();win.focus();
   const handle=win.getNativeWindowHandle(),parent=handle.readBigUInt64LE().toString();
-  const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:['--close-after','3200'],parent,stream:true,viewport:{top:80,height:800}}));
+  const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:['--recreate-after','3200'],parent,stream:true,viewport:{top:80,height:800}}));
   bridge=spawn(path.join(root,'.packaging-staging','streamlight','WindowBridge.exe'),[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
   let buffer='';bridge.stdout.on('data',chunk=>{buffer+=chunk;const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines)try{events.push(JSON.parse(line));}catch{}});
   let exited=false;bridge.on('exit',()=>{exited=true;});
@@ -42,7 +42,10 @@ app.whenReady().then(async()=>{
   bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Text scaling must update the native toolbar inset');
   bridge.stdin.write('viewport '+JSON.stringify({top:0,height:600})+'\n');await pause(60);value=await geometry();assert.equal(value.top,0);assert.equal(value.height,value.parentHeight,'Hiding controls must return all space to the video');
   bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Reopening controls must restore their clickable space');
-  await until(()=>events.some(event=>event.type==='surface-closed'));await until(()=>exited);assert(events.some(event=>event.type==='exit'));
+  await until(()=>events.some(event=>event.type==='surface-lost'));assert(!exited);
+  await until(()=>events.filter(event=>event.type==='surface').length===2);value=await geometry();assert.equal(value.visible,false,'A replacement surface must wait for decoded video');
+  bridge.stdin.write('reveal\n');await until(()=>events.filter(event=>event.type==='visible').length===2);value=await geometry();assert.equal(value.parent,parent);assert.equal(value.visible,true);assert.equal(value.child,true,'Live settings must keep the replacement video embedded');
+  bridge.stdin.write('stop\n');await until(()=>exited);assert(events.some(event=>event.type==='exit'));
   // Exercise the actual, unmodified StreamLight executable and read its
   // isolated portable identity. No real host pairing or game is required.
   const profile=path.join(output,'engine-profile');await fs.mkdir(profile,{recursive:true});await fs.writeFile(path.join(profile,'portable.dat'),'');

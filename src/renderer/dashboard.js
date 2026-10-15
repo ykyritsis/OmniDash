@@ -13,7 +13,8 @@ const consoleIcons = {
   paint: '<path d="m14 3 7 7-11 11H3v-7zM11 6l7 7M3 17l4 4"/>',
   power: '<path d="M12 2v9M6 5a9 9 0 1 0 12 0"/>',
   trophy: '<path d="M7 3h10v6a5 5 0 0 1-10 0zM7 5H3v3a4 4 0 0 0 4 4M17 5h4v3a4 4 0 0 1-4 4M12 14v6M7 22h10"/>',
-  search: '<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/>'
+  search: '<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/>',
+  cloud: '<path d="M7 19a5 5 0 0 1-.8-9.94A6 6 0 0 1 17.8 8 5.5 5.5 0 0 1 17.5 19Z"/>'
 };
 // Use the Microsoft glyph set already installed with Windows, not redrawn approximations.
 const consoleGlyphs = { home:0xE80F, library:0xE8F1, store:0xE719, controller:0xE7FC, apps:0xE71D, groups:0xE8F4, bell:0xEA8F, person:0xE77B, settings:0xE713, folder:0xE8B7, paint:0xE771, power:0xE7E8, search:0xE721, filter:0xE71C, add:0xE710 };

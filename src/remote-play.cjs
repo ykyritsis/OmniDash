@@ -81,10 +81,12 @@ function wireRequest(host, route, { credentials, pinnedCert, binary = false, tim
 function normalizePreferences(value = {}) {
   const number = (key, fallback, min, max) => Number.isFinite(Number(value[key])) ? Math.max(min, Math.min(max, Math.round(Number(value[key])))) : fallback;
   const bool = (key, fallback) => value[key] === undefined ? fallback : value[key] === true || value[key] === 'true';
-  return {width:number('width',1920,640,3840),height:number('height',1080,480,2160),fps:[30,60,90,120].includes(Number(value.fps))?Number(value.fps):60,
-    bitrate:number('bitrate',20000,3000,150000),codec:['auto','H.264','HEVC','AV1'].includes(value.codec)?value.codec:'auto',decoder:['auto','hardware','software'].includes(value.decoder)?value.decoder:'auto',
+  return {width:number('width',1920,256,7680),height:number('height',1080,256,7680),fps:number('fps',60,10,480),
+    bitrate:number('bitrate',20000,500,500000),codec:['auto','H.264','HEVC','AV1'].includes(value.codec)?value.codec:'auto',decoder:['auto','hardware','software'].includes(value.decoder)?value.decoder:'auto',
     multiController:bool('multiController',true),swapFaceButtons:bool('swapFaceButtons',false),gamepadMouse:bool('gamepadMouse',true),touchscreenTrackpad:bool('touchscreenTrackpad',false),absoluteMouse:bool('absoluteMouse',false),
-    vsync:bool('vsync',true),framePacing:bool('framePacing',false),performanceOverlay:bool('performanceOverlay',false),audioConfig:['stereo','5.1','7.1'].includes(value.audioConfig)?value.audioConfig:'stereo',quitCombo:value.quitCombo==='moonlight'?'moonlight':'streamlight'};
+    hdr:bool('hdr',false),yuv444:bool('yuv444',false),audioOnHost:bool('audioOnHost',false),swapMouseButtons:bool('swapMouseButtons',false),reverseScroll:bool('reverseScroll',false),captureSystemKeys:value.captureSystemKeys==='always'?'always':'never',
+    vsync:bool('vsync',true),framePacing:bool('framePacing',false),fractionalVsync:bool('vsync',true)&&bool('framePacing',false)&&bool('fractionalVsync',false),performanceOverlay:bool('performanceOverlay',false),overlayDetail:value.overlayDetail==='full'?'full':'standard',overlayPosition:value.overlayPosition==='right'?'right':'left',overlaySize:['small','large'].includes(value.overlaySize)?value.overlaySize:'medium',
+    audioConfig:['stereo','5.1','7.1'].includes(value.audioConfig)?value.audioConfig:'stereo',quitCombo:value.quitCombo==='moonlight'?'moonlight':'streamlight'};
 }
 function setIniValues(text, group, values) {
   const lines = String(text || '').split(/\r?\n/), header = `[${group}]`;
@@ -102,6 +104,12 @@ function engineMessage(text) {
     || line.match(/(?:Host returned error:|Starting (?:RTSP|Control|Video|Audio|Input)[^\n]*failed:)[^\n]*/i)?.[0];
   return error ? error.replace(/Please open StreamLight to pair before streaming\./i,'Pair the PC again in Remote PCs.').slice(0,700) : '';
 }
+// Host app IDs can change after a shortcut is rebuilt. Keep history with the
+// host's app UUID when available, otherwise its exact launch name.
+function historyKey(game) { return game.uuid || String(game.launchTitle || game.title).normalize('NFKC').toLocaleLowerCase(); }
+function streamProfiles(host) { return ['1','2','3'].map(id=>({id,name:String(host.profiles?.[id]?.name || `Profile ${id}`).slice(0,40),preferences:normalizePreferences(host.profiles?.[id]?.preferences || host.preferences)})); }
+function hostPreferences(host) { return streamProfiles(host).find(profile=>profile.id===(host.activeProfile || '1')).preferences; }
+function gamePreferences(host,game) { return normalizePreferences({...hostPreferences(host),...host.gameOverrides?.[historyKey(game)]}); }
 function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = () => {}, request = wireRequest, spawnProcess = spawn, now = Date.now, discover = discoverHosts, resolveArtwork = async () => null }) {
   let hosts=null, saving=Promise.resolve(), pairing=null, session=null, disposed=false, acquiring=false, launchGeneration=0;
   const workers=new Set(), refreshing=new Map(), coverRequests=new Map();
@@ -111,7 +119,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   async function load() { if(!hosts) { try { hosts=JSON.parse(await fs.readFile(path.join(directory,'hosts.json'),'utf8')); if(!Array.isArray(hosts)) hosts=[]; } catch { hosts=[]; } } return hosts; }
   async function save() { const text=JSON.stringify(hosts); saving=saving.catch(()=>{}).then(async()=>{ await fs.mkdir(directory,{recursive:true}); await fs.writeFile(path.join(directory,'hosts.json.tmp'),text); await fs.rename(path.join(directory,'hosts.json.tmp'),path.join(directory,'hosts.json')); }); return saving; }
   function emit(phase, extra={}) { onStatus({ phase, session:publicSession(), ...extra }); }
-  function publicSession() { return session ? { hostId:session.host.id, appId:session.game.appId, title:session.game.title, phase:session.phase, startedAt:session.startedAt } : null; }
+  function publicSession() { return session ? { hostId:session.host.id, appId:session.game.appId, gameId:session.game.id, title:session.game.title, phase:session.phase, startedAt:session.startedAt, lastPlayed:session.game.lastPlayed || 0, preferences:session.preferences } : null; }
   async function runtime() {
     const executable=path.join(runtimeDirectory,'runtime','StreamLight.exe'), bridge=path.join(runtimeDirectory,'WindowBridge.exe');
     await Promise.all([fs.access(executable),fs.access(bridge)]).catch(()=>{ throw new Error('The streaming component is missing. Install the full app build, or run the streaming preparation script when developing.'); });
@@ -129,7 +137,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     let updatedIni=setIniValues(ini,'theme',{reduceanimations:'true',startupanimation:'false'});
     const quitMask=preferences.quitCombo==='moonlight'?0x330:preferences.swapFaceButtons?0x2300:0x1300;
     if(stream){
-      updatedIni=setIniValues(updatedIni,'General',{gamepadmouse:String(preferences.gamepadMouse!==false),backgroundgamepad:'true'});
+      updatedIni=setIniValues(updatedIni,'General',{gamepadmouse:String(preferences.gamepadMouse!==false),backgroundgamepad:'true',fractionalvsync:String(Boolean(preferences.fractionalVsync)),enablevrr:'false',overlayposition:preferences.overlayPosition==='right'?'1':'0',overlayfontsize:String({small:0,medium:1,large:2}[preferences.overlaySize]??1),overlayitems:preferences.overlayDetail==='full'?'55295':'483'});
       // The native SDL handler tests logical (post-swap) buttons. The bridge's
       // XInput escape fallback uses the corresponding physical button instead.
       updatedIni=setIniValues(updatedIni,'shortcuts',{pad0_mask:String(preferences.quitCombo==='moonlight'?0x330:0x1300),kb0_enabled:'true',kb0_mods:'7',kb0_key:'113',kb0_scan:'20'});
@@ -174,7 +182,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   function publicHost(host) {
     const fresh=host.checkedAt && now()-host.checkedAt < 45000;
     const status=!fresh?'unknown':!host.online?'offline':!host.paired?'pair-required':host.currentGame && host.currentGame!=='0'?'busy':'ready';
-    return {id:host.id,name:host.name,address:host.address,paired:Boolean(host.paired),games:(host.games||[]).filter(game=>!(host.hiddenApps||[]).includes(game.appId)),hiddenCount:(host.hiddenApps||[]).length,lastSeen:host.lastSeen,error:host.error||'',status,currentGame:host.currentGame||'0',preferences:normalizePreferences(host.preferences)};
+    return {id:host.id,name:host.name,address:host.address,paired:Boolean(host.paired),games:(host.games||[]).filter(game=>!(host.hiddenApps||[]).includes(game.appId)).map(game=>({...game,lastPlayed:host.playHistory?.[historyKey(game)] || game.lastPlayed || 0,streamOverrides:host.gameOverrides?.[historyKey(game)] || null})),hiddenCount:(host.hiddenApps||[]).length,lastSeen:host.lastSeen,error:host.error||'',status,currentGame:host.currentGame||'0',preferences:hostPreferences(host),profiles:streamProfiles(host),activeProfile:host.activeProfile || '1'};
   }
   async function snapshot() { await load(); let available=true;try{await runtime();}catch{available=false;} return {available,hosts:hosts.map(publicHost),session:publicSession(),pairing:pairing ? {hostId:pairing.host.id,pin:pairing.pin}:null}; }
   async function probe(host, timeout=3500) {
@@ -237,6 +245,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
         const previous=new Map((host.games||[]).map(game=>[game.appId,game]));
         await Promise.all(apps.map(async game=>{const file=coverFile(host,game);
           game.id=`remote:${id}:${game.appId}`;game.remoteHostId=id;game.hostName=host.name;game.provider='Remote PC';
+          game.lastPlayed=host.playHistory?.[historyKey(game)] || previous.get(game.appId)?.lastPlayed || 0;
           const art=previous.get(game.appId)?.artwork;
           game.artwork=art?.remoteArtworkVersion===1?art:await fs.access(file).then(()=>({tile:pathToFileURL(file).href,imageSource:'remote-host'}),()=>({}));
         }));
@@ -292,8 +301,8 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     if(generation!==launchGeneration || disposed)return null;
     const running=xmlValue(info,'currentgame');
     if(running && running!=='0' && running!==game.appId)throw new Error('Another app is running on that host. Close it before starting this game.');
-    const options=normalizePreferences(preferences || host.preferences),{width,height,fps,bitrate,codec,decoder}=options;
-    const active={host,game,phase:'connecting',startedAt:now(),seenRunning:running===game.appId,empty:0,failed:0,video:false,surface:false};session=active;
+    const options=normalizePreferences(preferences || gamePreferences(host,game)),{width,height,fps,bitrate,codec,decoder}=options;
+    const active={host,game,preferences:options,phase:'connecting',startedAt:now(),seenRunning:running===game.appId,empty:0,failed:0,video:false,surface:false};session=active;
     emit('connecting');
     function ready() {if(session===active && active.worker && active.surface && active.video && active.seenRunning && !['playing','revealing'].includes(active.phase)){active.phase='revealing';active.worker.send('viewport '+JSON.stringify(viewportState));active.worker.send('reveal');}}
     async function poll() {
@@ -306,13 +315,24 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       if(session===active)active.timer=setTimeout(poll,1500);
     }
     try {
-      const toggles=Object.entries({multiController:'multi-controller',swapFaceButtons:'swap-gamepad-buttons',touchscreenTrackpad:'touchscreen-trackpad',absoluteMouse:'absolute-mouse',vsync:'vsync',framePacing:'frame-pacing',performanceOverlay:'performance-overlay'}).map(([key,name])=>'--'+(options[key]?'':'no-')+name);
-      active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-audio-on-host','--no-mute-on-focus-loss','--keep-awake','--background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
+      const toggles=Object.entries({multiController:'multi-controller',swapFaceButtons:'swap-gamepad-buttons',touchscreenTrackpad:'touchscreen-trackpad',absoluteMouse:'absolute-mouse',vsync:'vsync',framePacing:'frame-pacing',performanceOverlay:'performance-overlay',hdr:'hdr',yuv444:'yuv444',audioOnHost:'audio-on-host',swapMouseButtons:'mouse-buttons-swap',reverseScroll:'reverse-scroll-direction'}).map(([key,name])=>'--'+(options[key]?'':'no-')+name);
+      active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-vrr','--no-mute-on-focus-loss','--keep-awake','--background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--capture-system-keys',options.captureSystemKeys,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
         if(session!==active)return;
         if(event.type==='toggle-controls'&&active.phase==='playing'){emit('toggle-controls');return;}
         if(event.type==='disconnect-requested'){stop('disconnected');return;}
+        if(event.type==='surface-lost'){
+          active.surface=false;active.video=false;active.phase='reconnecting';
+          clearTimeout(active.deadline);active.deadline=setTimeout(()=>{if(session===active){emit('error',{error:'The stream did not return after reconnecting. Reopen the game to resume.'});stop('reconnect-timeout');}},60000);
+          emit('reconnecting');
+        }
         if(event.type==='surface'){active.surface=true;ready();}
-        if(event.type==='visible' && active.phase==='revealing'){active.phase='playing';clearTimeout(active.deadline);emit('playing');}
+        if(event.type==='visible' && active.phase==='revealing'){
+          active.phase='playing';clearTimeout(active.deadline);
+          if(!active.recorded){active.recorded=true;game.lastPlayed=now();host.playHistory={...host.playHistory,[historyKey(game)]:game.lastPlayed};
+          host.playHistory=Object.fromEntries(Object.entries(host.playHistory).sort((a,b)=>b[1]-a[1]).slice(0,200));
+          save().catch(error=>console.warn('Remote play history could not be saved:',error.message));}
+          emit('playing');
+        }
         if(event.type==='surface-closed'){stop('disconnected');}
         // StreamLight 7 emits this only after notifyFirstFrame() opens its
         // reveal gate. "Video stream is ..." is merely format negotiation.
@@ -336,7 +356,20 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       poll();return publicSession();
     } catch(error) {await stop('error');throw error;}
   }
-  async function settings(id,preferences) {const host=await find(id);host.preferences=normalizePreferences(preferences);await save();return host.preferences;}
+  async function settings(id,preferences,config={}) {
+    const host=await find(id);
+    if(config.appId){
+      const game=host.games?.find(game=>game.appId===String(config.appId));if(!game)throw new Error('Refresh this PC’s game library first.');
+      const key=historyKey(game);host.gameOverrides ||= {};
+      if(preferences===null)delete host.gameOverrides[key];
+      else {const base=hostPreferences(host);host.gameOverrides[key]=Object.fromEntries(Object.entries(normalizePreferences(preferences)).filter(([key,value])=>value!==base[key]));}
+      await save();return gamePreferences(host,game);
+    }
+    const profileId=['1','2','3'].includes(config.profileId)?config.profileId:host.activeProfile || '1';
+    host.profiles=Object.fromEntries(streamProfiles(host).map(profile=>[profile.id,{name:profile.name,preferences:profile.preferences}]));
+    host.profiles[profileId]={name:String(config.name || host.profiles[profileId].name).trim().slice(0,40) || `Profile ${profileId}`,preferences:normalizePreferences(preferences)};
+    host.activeProfile=profileId;host.preferences=host.profiles[profileId].preferences;await save();return host.preferences;
+  }
   async function hideGame(id,appId,hidden=true) {const host=await find(id);if(appId!==null&&!host.games?.some(game=>game.appId===String(appId)))throw new Error('This game is no longer in the host library.');host.hiddenApps=appId===null?[]:[...new Set((host.hiddenApps||[]).filter(value=>value!==String(appId)).concat(hidden?[String(appId)]:[]))];await save();return publicHost(host);}
   async function game(id,appId) {const host=await find(id),game=host.games?.find(item=>item.appId===String(appId));if(!game)throw new Error('This game is no longer in the host library.');return {...game,hostName:host.name};}
   async function remove(id) {if(session?.host.id===id)await stop();if(pairing?.host.id===id)await cancelPair();await load();hosts=hosts.filter(host=>host.id!==id);await save();return true;}

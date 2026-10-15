@@ -24,7 +24,7 @@ When the host reports that app has stopped, the client ends its stream and retur
 
 To disconnect manually, use the **Disconnect** button above the video, **Ctrl + Alt + Shift + Q**, or **LB + RB + A**, StreamLight's default controller shortcut. Hold the controller shortcut for half a second to also trigger the independent XInput escape path. Stream settings can change it to Moonlight's **View + Menu + LB + RB** combination. Swapping A/B changes the first shortcut's physical A button to B; the bar shows the active combination.
 
-Choose **Hide** to dismiss the bar completely and return its space to the video. Hold **LB + RB + View** for half a second, or press **Ctrl + Alt + Shift + H**, to show or hide it again. The bar starts visible for each new stream. Disconnect shortcuts remain active when it is hidden; holding the show/hide shortcut toggles only once until released.
+The bar hides automatically after five seconds, returning its space to the video. Choose **Hide** to dismiss it sooner. Hold **LB + RB + View** for half a second, or press **Ctrl + Alt + Shift + H**, to show or hide it again. Reopened controls stay visible until dismissed; interacting with the initial bar cancels auto-hide. Disconnect shortcuts remain active when it is hidden; holding the show/hide shortcut toggles only once until released.
 
 When visible, the control bar remains outside the native video surface and resizes with text scaling. **Ctrl + Alt + Shift + Z** releases a captured mouse so it can reach Disconnect or Hide; touch can use either button directly. The mouse-release and disconnect keyboard controls follow the [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide). The native bridge registers its keyboard shortcuts while this stream has foreground focus, independently of the renderer and streaming engine's input handler. The controller show/hide shortcut uses XInput on Windows handhelds and Xbox-compatible pads.
 
@@ -34,9 +34,21 @@ The bundled engine receives background gamepad events because its native video w
 
 ## Artwork
 
+Successful remote sessions also appear in **Home → Jump back in**, ordered with local games and marked by a cloud icon. Selecting one opens its normal game page with the PC's status. Failed launches do not enter history. History is saved per PC and game UUID/name; hidden or removed games do not appear in Home.
+
 Remote cards use the same square tiles, cover fallbacks and optional logo overlays as local games. The client first reuses manual selections and artwork from its saved local library, cached Xbox catalog and available Steam discovery results. A known Steam identity takes priority; otherwise matching uses a conservative normalized title and never treats the host's opaque app ID as a Steam ID.
 
 Missing artwork uses the app's normal Xbox, IGN, PlayStation, SteamGridDB and Steam lookup and image cache. Only when that produces no cover does the client use the host's published image. Full artwork metadata, including heroes and logos, is retained for game pages and the launch animation. Shared requests are coalesced across PCs, successful lookups are reused, and local artwork remains available when a host is offline.
+
+## Stream settings
+
+Each PC has three named profiles. **Use this display** fills in the current display's physical resolution and refresh rate. Resolution, FPS and bitrate pickers also accept custom values. Video options include HDR, 4:4:4 colour, decoder and codec selection, V-Sync, frame pacing and fractional V-Sync. Fractional pacing needs V-Sync, frame pacing and a display refresh rate that is an exact multiple of the stream FPS. HDR and colour support depend on both devices.
+
+Game-page settings save only values that differ from the current PC profile. **Use PC profile** removes the game's overrides. Settings include audio layout, host speaker playback, controller/mouse/touch behaviour and system-key capture. Native statistics offer Standard/Full detail, corner and text size.
+
+During play, **LB + RB + B** or **Ctrl + Alt + Shift + O** opens the native live video settings. Applying changes briefly reconnects to the same game; the launch curtain covers the transition until fresh video arrives. Live changes last for that session. **LB + RB + X** or **Ctrl + Alt + Shift + S** toggles statistics. Swapped face buttons use A and Y respectively. The native live overlay keeps StreamLight's appearance inside the video; saved settings use the app's own styling.
+
+See the [parity audit](streamlight-parity.md) for verified integration behavior, remaining features and performance validation requirements.
 
 ## Keeping the game list accurate
 
@@ -52,7 +64,7 @@ For Vibepollo's Steam integration, enable **Steam auto-sync → Remove uninstall
 - StreamLight's CLI selects apps by name. Give apps unique names on the host; ambiguous duplicates are reported before launch. Invisible ordering prefixes are retained for launching while labels are cleaned for display.
 - A host already running a different app is left alone. Close that app before launching another game. Selecting the same running app resumes it.
 - Cached libraries remain browsable while a PC is offline. Starting or refreshing needs a reachable, paired host. Artwork downloads are limited to cards as they become visible.
-- This preview has automated UI, state, discovery, native-window and identity/TLS checks. The bundled engine's hidden-window launch path is tested against a local protocol fixture. Its actual SDL library is tested with virtual controllers for background buttons, sticks, triggers and hotplug. Native shortcut registration, dispatch, focus guards and controller hold timing are checked separately. Live gameplay against a paired gaming PC and physical controller/decoder combinations still need device verification. HDR, microphone passthrough, host power controls and mid-stream quality changes are not exposed in this preview.
+- This preview has automated UI, state, discovery, native-window recreation and identity/TLS checks. The bundled engine's hidden-window launch path is tested against a local protocol fixture. Its actual SDL library is tested with virtual controllers for background buttons, sticks, triggers and hotplug. Native shortcut registration, dispatch, focus guards and controller hold timing are checked separately. Live gameplay, physical HDR output and controller/decoder combinations still need device verification. VRR, PyroWave and host power controls remain unexposed; see the parity audit for the complete gap list.
 
 ## Pairing data
 

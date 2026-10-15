@@ -1767,9 +1767,10 @@ async function searchArtwork(query, selectedGameId = '') {
 
 function registerIpc() {
   ipcMain.handle('remote-play:snapshot', () => remotePlay.snapshot());
+  ipcMain.handle('remote-play:display', () => {const screen=require('electron').screen,display=mainWindow&&!mainWindow.isDestroyed()?screen.getDisplayMatching(mainWindow.getBounds()):screen.getPrimaryDisplay();return {width:Math.round(display.bounds.width*display.scaleFactor),height:Math.round(display.bounds.height*display.scaleFactor),fps:Math.max(10,Math.min(480,Math.round(display.displayFrequency||60)))};});
   ipcMain.handle('remote-play:check-hosts', () => remotePlay.checkHosts());
   ipcMain.handle('remote-play:scan', () => remotePlay.scan());
-  ipcMain.handle('remote-play:settings', (_event, id, preferences) => remotePlay.settings(id, preferences));
+  ipcMain.handle('remote-play:settings', (_event, id, preferences, config) => remotePlay.settings(id, preferences, config));
   ipcMain.handle('remote-play:hide-game', (_event, id, appId, hidden) => remotePlay.hideGame(id, appId, hidden));
   ipcMain.handle('remote-play:details', async (_event, id, appId) => {
     const game=await remotePlay.game(id,appId);

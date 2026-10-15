@@ -656,6 +656,7 @@ function card(game, index = 0) {
   const installClass = game.installed === false ? ' not-installed' : '';
   return `<button class="game-card focusable${installClass}" style="--tile-index:${Math.min(index, 8)}" role="listitem" data-game-id="${escapeHtml(game.id)}" data-action="select-game" aria-label="${escapeHtml(game.title)}, ${escapeHtml(game.provider)}${game.installed === false ? ', not installed' : ''}" title="${escapeHtml(game.title)}${game.installed === false ? ' · Not installed' : ''} · Right click or press Menu for options">
     ${gameArt(game)}
+    ${game.remoteHostId ? `<span class="remote-cloud-badge" role="img" aria-label="${escapeHtml('Remote play on '+game.hostName)}" title="${escapeHtml('Remote play · '+game.hostName)}">${consoleIcon('cloud')}</span>` : ''}
     ${providerBadge(game.provider)}
     ${controlBadge(game)}
     ${game.steamFamilyShared ? `<span class="family-shared-mark">${consoleIcon('groups')}<span>Family</span></span>` : ''}
@@ -901,12 +902,18 @@ function renderHomeCollections() {
   restoreCollectionPosition(savedPosition);
 }
 
+function homeRecentGames() {
+  const local = displayedLibraryGames().filter(game => !game.isApp && (game.installed !== false || state.searchQuery));
+  const remote = (state.remoteGames || []).filter(game => !game.isApp && game.installed !== false && lastPlayedAt(game) > 0);
+  return [...local, ...remote].filter(game => !state.searchQuery || game.title.toLowerCase().includes(state.searchQuery))
+    .sort((a, b) => lastPlayedAt(b) - lastPlayedAt(a));
+}
 function renderLibrary() {
   renderCollectionOptions();
-  const homeGames = displayedLibraryGames().filter((game) => !game.isApp && (game.installed !== false || state.searchQuery) && (!state.searchQuery || game.title.toLowerCase().includes(state.searchQuery)));
+  const homeGames = homeRecentGames();
   const hasGames = homeGames.length > 0;
   const hasApps = state.games.some((game) => game.isApp);
-  const hasItems = state.games.length > 0;
+  const hasItems = state.games.length > 0 || hasGames;
   if (!hasGames && hasApps && state.view === 'home' && !state.searchQuery) state.libraryCategory = 'apps';
   document.querySelector('main').hidden = !hasItems && state.view === 'home';
   emptyState.hidden = hasGames || state.view !== 'home';
@@ -1050,12 +1057,12 @@ function renderSelectedGameNews(game) {
 }
 
 function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = true) {
-  const game = state.games.find((item) => item.id === id);
+  const game = state.games.find((item) => item.id === id) || state.remoteGames?.find(item => item.id === id);
   if (!game) return;
   const changed = state.selectedGameId !== id;
   state.selectedGameId = id;
   heroTitle.textContent = game.title;
-  heroSubtitle.textContent = game.installed === false ? `Not installed · ${game.provider}` : `Installed with ${game.provider}`;
+  heroSubtitle.textContent = game.remoteHostId ? `Remote play · ${game.hostName}` : game.installed === false ? `Not installed · ${game.provider}` : `Installed with ${game.provider}`;
   heroProvider.textContent = game.provider.toUpperCase();
   heroPlay.hidden = false;
   if (game.artwork?.logo) {
@@ -1064,7 +1071,7 @@ function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = 
   } else {
     jumpLogo.innerHTML = '';
     jumpLogo.hidden = true;
-    if (!logoRequested.has(id) && game.artwork?.tile) {
+    if (!game.remoteHostId && !logoRequested.has(id) && game.artwork?.tile) {
       logoRequested.add(id);
       window.launcher.getGameLogo(id).then((logo) => {
         if (!logo) return;
@@ -2891,7 +2898,7 @@ function gamepadMove(direction) {
 let gamepadPollTimer = null;
 
 function scheduleGamepadPoll() {
-  if (gamepadPollTimer !== null || document.visibilityState !== 'visible' || !document.hasFocus()) return;
+  if (gamepadPollTimer !== null || window.remotePlayUI?.playing || document.visibilityState !== 'visible' || !document.hasFocus()) return;
   // Every frame, so a press lands on the next frame like a console.
   gamepadPollTimer = requestAnimationFrame(() => {
     gamepadPollTimer = null;
