@@ -3416,12 +3416,12 @@ app.whenReady().then(async () => {
   startupGuard = support.createStartupGuard(path.join(app.getPath('userData'), 'startup-state.json'));
   safeMode = await startupGuard.begin();
   if (safeMode) console.warn('Starting in safe mode after repeated start-up problems: background refresh, prefetch and update checks are off.');
-  if (!safeMode) updater.start();
   if (process.env.NEBULA_SGDB_KEY) {
     const saved = await readSettings();
     if (!saved.steamGridDbKey) await writeSettings({ steamGridDbKey: process.env.NEBULA_SGDB_KEY });
   }
   await createWindow();
+  if (!safeMode) updater.start();
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());
 });
 

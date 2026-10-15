@@ -14,7 +14,6 @@ const { spawn } = require('node:child_process');
 
 const REPO = 'ykyritsis/xbox-cloud-preview-on-pc';
 const CHECK_EVERY = 6 * 60 * 60 * 1000;
-const FIRST_CHECK = 20 * 1000;
 
 // "0.27.0-beta.17" → core numbers and pre-release identifiers. A release without a pre-release tag is newer
 // than any pre-release of the same version, and "beta.10" is newer than "beta.9".
@@ -138,6 +137,7 @@ function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentV
   let ready = null;      // { version, file, sumsVerified } once a verified build is waiting to be applied
   let busy = false;
   let timer = null;
+  let started = false;
   let swapPromise = null;
   let quitting = false;
   let skipOnQuit = false;
@@ -261,8 +261,9 @@ function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentV
   }
 
   function start() {
-    if (!app.isPackaged) return;
-    setTimeout(() => check().catch(() => {}), FIRST_CHECK);
+    if (!app.isPackaged || started) return;
+    started = true;
+    check().catch(() => {});
     timer = setInterval(() => check().catch(() => {}), CHECK_EVERY);
     timer.unref?.();
   }

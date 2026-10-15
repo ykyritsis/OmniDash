@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 26](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.26/Xbox-Preview-UI-Setup-0.27.0-beta.26.exe)** · [Setup](#getting-started) · [Beta 26 notes](docs/release-0.27.0-beta.26.md)
+**[Download beta 27](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.27/Xbox-Preview-UI-Setup-0.27.0-beta.27.exe)** · [Setup](#getting-started) · [Beta 27 notes](docs/release-0.27.0-beta.27.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,18 +31,18 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 26
+## Beta 27
 
-- Current dashboard styling for library management, duplicate selection and launch options.
-- Galleries remove repeated media; Steam lookup shares requests and reuses regional caches.
-- Regional age ratings, including Australian classifications, with a manual region override.
-- [Fourteen publisher cards and twelve series banners](docs/collection-artwork/README.md) use finished local promotional designs with clean logos.
+- Automatic update checks as soon as the app opens.
+- A [centred update prompt](docs/update-prompt.png) with progress, Restart to update and Later.
+- Large buttons and focused navigation for keyboard, mouse and controller users.
+- Includes the beta 26 improvements and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.26.md)
+[Full release notes](docs/release-0.27.0-beta.27.md)
 
 ## Download
 
-Get **[beta 26 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.26)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 27 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.27)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
@@ -147,6 +147,7 @@ Builds are written to `dist/`. The installer does not change Windows' Full Scree
 
 | Preview | Highlights |
 | --- | --- |
+| [Beta 27](docs/release-0.27.0-beta.27.md) | Immediate launch update checks and a centred update prompt for keyboard, mouse and controller. |
 | [Beta 26](docs/release-0.27.0-beta.26.md) | Updated management dialogs, unique gallery media, quicker Steam lookup, regional ratings and finished publisher/series artwork. |
 | [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |
 | [Beta 24](docs/release-0.27.0-beta.24.md) | Steam launch choices, setup status and supported launch prompts. |

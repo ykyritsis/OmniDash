@@ -49,6 +49,29 @@ function runScript(source, name = 'apply.js') {
   catch (error) { if (error.status !== 1) throw error; return error.status; }
 }
 function read(file) { return fs.readFileSync(file, 'utf16le').replace(/^\ufeff/, ''); }
+async function startupCheckTests() {
+  const vm = require('node:vm');
+  let requests = 0, intervals = 0;
+  const states = [];
+  const sandbox = {
+    module: { exports: {} }, __dirname: path.resolve(__dirname, '../src'), process, console, require,
+    setTimeout: () => { throw Error('Startup update check must not wait for a timer'); },
+    setInterval: (_fn, ms) => { assert.equal(ms, 6 * 60 * 60 * 1000); intervals++; return { unref() {} }; }
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/updater.cjs'), 'utf8'), sandbox);
+  const options = { app: { isPackaged: true, getVersion: () => '1.0.0' },
+    getWindow: () => ({ isDestroyed: () => false, webContents: { send: (_name, status) => states.push(status.state) } }),
+    requestText: async () => { requests++; return '[]'; }
+  };
+  const updater = sandbox.module.exports.createUpdater(options);
+  updater.start(); updater.start();
+  assert.equal(requests, 1, 'A packaged launch immediately checks once');
+  assert.equal(intervals, 1, 'Starting twice does not duplicate periodic checks');
+  await new Promise(setImmediate);
+  assert.deepEqual(states, ['checking', 'current']);
+  sandbox.module.exports.createUpdater({ ...options, app: { isPackaged: false, getVersion: () => '1.0.0' } }).start();
+  assert.equal(requests, 1, 'Development runs do not download updates');
+}
 async function lifecycleTests() {
   const vm = require('node:vm');
   const { EventEmitter } = require('node:events');
@@ -128,8 +151,9 @@ async function lifecycleTests() {
 
     assert.equal(runScript(installerScript({ pid: 999999, setup: incoming, errorFile, timeoutMs: 300, pollMs: 50 }), 'install.js'), 0);
     assert.equal(read(logged), incoming + '\n/S --force-run');
+    await startupCheckTests();
     await lifecycleTests();
-    console.log('PASS: real windowless helper, process wait/timeout, portable replacement, rollback, installer handoff, helper failure, running-game guard and single shutdown.');
+    console.log('PASS: immediate startup check, one periodic schedule, real windowless helper, process wait/timeout, portable replacement, rollback, installer handoff, helper failure, running-game guard and single shutdown.');
   } finally {
     const tempRoot = path.resolve(os.tmpdir()) + path.sep;
     assert.ok(path.resolve(dir).startsWith(tempRoot) && path.basename(dir).startsWith('xpui-update-test-'));
