@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 class StreamGamepad {
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern bool SetDllDirectory(string directory);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string cls,string title);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("SDL2.dll",CallingConvention=CallingConvention.Cdecl)] static extern int SDL_Init(uint flags);
     [DllImport("SDL2.dll",CallingConvention=CallingConvention.Cdecl)] static extern IntPtr SDL_CreateWindow(string title,int x,int y,int width,int height,uint flags);
     [DllImport("SDL2.dll",CallingConvention=CallingConvention.Cdecl)] static extern uint SDL_GetWindowFlags(IntPtr window);
@@ -27,13 +29,13 @@ class StreamGamepad {
         [FieldOffset(12)] public byte control;
         [FieldOffset(16)] public short axisValue;
     }
-    static int phase,buttons,axes,added,removed,baseline;
+    static int phase,buttons,axes,added,removed,baseline,focused;
     static void Check(bool value,string reason){if(!value)throw new Exception(reason);}
     static void Pump(int id){EVENT e;while(SDL_PollEvent(out e)!=0){
         if(e.type==0x653&&phase>=2)added++;
         if(e.type==0x654&&phase>=2)removed++;
         if(e.which!=id)continue;
-        if(e.type==0x651){if(phase==1)baseline++;else if(phase>=2)buttons++;}
+        if(e.type==0x651){if(phase==0)focused++;else if(phase==1)baseline++;else if(phase>=2)buttons++;}
         if(e.type==0x650&&phase>=2)axes++;
     }}
     static int Main(string[] args){
@@ -45,10 +47,21 @@ class StreamGamepad {
             int index=SDL_JoystickAttachVirtual(1,6,15,0);Check(index>=0,"Virtual gamepad attach");
             controller=SDL_GameControllerOpen(index);Check(controller!=IntPtr.Zero,"Virtual gamepad mapping");
             var joystick=SDL_GameControllerGetJoystick(controller);int id=SDL_JoystickInstanceID(joystick);
-            var clock=Stopwatch.StartNew();bool sent=false,enabled=false,hotplug=false;
+            var clock=Stopwatch.StartNew();bool sent=false,enabled=false,hotplug=false,focusSent=false,focusChecked=false;bool focusAvailable=false;
             Console.WriteLine("INPUT_READY");Console.Out.Flush();
             while(clock.ElapsedMilliseconds<5000){
                 Pump(id);
+                if(clock.ElapsedMilliseconds>800&&!focusSent){
+                    focusAvailable=GetForegroundWindow()!=IntPtr.Zero;
+                    if(focusAvailable){Check((SDL_GetWindowFlags(window)&0x200)!=0,"Owned SDL must hold keyboard focus while playing");SDL_JoystickSetVirtualButton(joystick,0,1);}
+                    else {Console.WriteLine("INPUT_FOCUS_UNAVAILABLE no interactive Windows foreground on this test desktop");Console.Out.Flush();}
+                    focusSent=true;
+                }
+                if(clock.ElapsedMilliseconds>1200&&!focusChecked){
+                    if(focusAvailable)Check(focused>0,"Focused owned controller input must arrive with background input off");
+                    SDL_JoystickSetVirtualButton(joystick,0,0);Pump(id);
+                    Console.WriteLine(focusAvailable?"INPUT_FOCUSED_PASS":"INPUT_BACKGROUND_START");Console.Out.Flush();focusChecked=true;
+                }
                 if(clock.ElapsedMilliseconds>1800&&!sent){
                     Check((SDL_GetWindowFlags(window)&0x200)==0,"Test must move keyboard focus away from SDL");
                     phase=1;SDL_JoystickSetVirtualButton(joystick,0,1);sent=true;

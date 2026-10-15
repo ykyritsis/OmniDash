@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict');
+const settings=require('../src/renderer/stream-settings.js');
+const {normalizePreferences}=require('../src/remote-play.cjs');
+const base={width:1920,height:1080,fps:60};
+assert.equal(settings.presetValues('balanced',base).bitrate,20000);
+assert.equal(settings.presetValues('latency',base).bitrate,15000);
+assert.equal(settings.presetValues('visuals',base).bitrate,32000);
+assert.equal(settings.presetValues('balanced',{...base,width:1280,height:720}).bitrate,10000);
+assert.equal(settings.presetValues('balanced',{...base,fps:120}).bitrate,28000);
+assert.equal(settings.presetValues('balanced',{...base,hdr:true}).bitrate,23000);
+assert(settings.presetValues('balanced',{...base,width:1280,height:800}).bitrate>10000);
+for(const preset of Object.keys(settings.presets)){
+  const p=normalizePreferences({...base,preset,bitrate:500000,decoder:'software',codec:'H.264',yuv444:true});
+  assert.equal(p.bitrate,settings.presetValues(preset,base).bitrate);assert.equal(p.decoder,'auto');assert.equal(p.codec,'auto');assert.equal(p.yuv444,false);
+}
+assert.equal(normalizePreferences({...base,bitrate:33333}).preset,'custom','Migrate manual settings without overwriting them');
+assert.equal(normalizePreferences({...base,preset:'custom',bitrate:33333,decoder:'software'}).decoder,'software');
+assert.equal(normalizePreferences({width:1280,height:720}).bitrate,10000);
+const bindings=settings.defaultShortcuts();
+assert.equal(settings.shortcutError(bindings,'disconnect','gamepad',0x8300),'');
+assert.match(settings.shortcutError(bindings,'disconnect','gamepad',0x300),/at least three/);
+assert.match(settings.shortcutError(bindings,'disconnect','gamepad',0x2300),/live settings/);
+assert.match(settings.shortcutError(bindings,'disconnect','gamepad',0x320),/different shortcuts/);
+assert.match(settings.shortcutError(bindings,'disconnect','keyboard',{code:'KeyH',modifiers:7}),/different shortcuts/);
+assert.match(settings.shortcutError(bindings,'disconnect','keyboard',{code:'KeyO',modifiers:7}),/streaming player/);
+assert.match(settings.shortcutError(bindings,'disconnect','keyboard',{code:'KeyK',modifiers:1}),/at least two/);
+assert.equal(settings.shortcutError(bindings,'disconnect','keyboard',{code:'KeyK',modifiers:5}),'');
+assert.deepEqual(settings.nativeKeyboard({code:'KeyK',modifiers:5}),{label:'K',vk:75,key:107,scan:14,mods:5,modifiers:6});
+assert.deepEqual(settings.nativeKeyboard({code:'F24',modifiers:3}),{label:'F24',vk:135,key:1073741939,scan:115,mods:3,modifiers:3});
+assert.deepEqual(settings.normalizeShortcuts({disconnect:{keyboard:{code:'KeyH',modifiers:7},gamepad:0x320}}),bindings,'Invalid collisions restore two distinct working defaults');
+assert.equal(settings.normalizeShortcuts(null,'moonlight').disconnect.gamepad,0x330);
+for(const mask of [0x1300,0x8300,0x330,0xf330])assert.equal(settings.logicalPadMask(settings.logicalPadMask(mask,true),true),mask,'Swap is reversible');
+assert.equal(settings.logicalPadMask(0x1300,true),0x2300);
+console.log('PASS automatic quality and screen-aware bitrate; manual migration; shortcut safety, conflicts, native key codes and physical button mapping');

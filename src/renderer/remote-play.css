@@ -20,10 +20,20 @@ body.garrison .remote-search-label input { padding: 13px 16px; border: 1px solid
 body.garrison #remote-library .remote-library-help { margin-top: 32px; }
 body.garrison .remote-inline-button { border: 0; border-radius: 5px; background: none; color: var(--g-text); font: inherit; text-decoration: underline; cursor: pointer; padding: 8px; }
 body.garrison .remote-quality-dialog { width: min(900px,94vw); box-sizing: border-box; overflow: auto; }
-body.garrison .remote-quality-dialog > p { color: var(--g-text-2); font: 400 var(--remote-body-size)/1.5 var(--g-font); margin: 12px 0 22px; }
+body.garrison .remote-quality-dialog > h2 { margin: 0 0 8px; }
+body.garrison .remote-quality-dialog > p { color: var(--g-text-2); font: 400 var(--remote-body-size)/1.5 var(--g-font); margin: 8px 0 12px; }
+body.garrison .remote-quality-dialog .g-setting-row { box-sizing: border-box; margin: 0; padding: 6px 12px; min-height: 58px; }
+body.garrison .remote-quality-dialog .g-setting-row small { margin: 0; }
+body.garrison .remote-quality-dialog .remote-tools { margin: 12px 0 0; }
 body.garrison .remote-quality-dialog > h3 { color: var(--g-text); font: 600 var(--remote-body-size)/1.4 var(--g-font); margin: 24px 0 10px; }
 body.garrison .remote-quality-dialog input { max-width: 45%; min-width: 100px; padding: 10px 14px; border: 1px solid #ffffff24; border-radius: var(--g-radius); background: var(--g-surface); color: var(--g-text); font: inherit; }
 body.garrison .remote-quality-dialog .remote-help { margin-top: 22px; }
+body.garrison #remote-advanced[hidden] { display: none; }
+body.garrison #remote-advanced h3 { color: var(--g-text); font: 600 var(--remote-body-size)/1.4 var(--g-font); margin: 24px 0 10px; }
+body.garrison .remote-quality-footer { position: sticky; bottom: -2px; z-index: 1; padding: 12px 0 4px; background: var(--g-dialog-bg); border-top: 1px solid #ffffff16; }
+body.garrison #detail-disconnect { padding: 0 24px; min-height: 56px; width: auto; font: 600 var(--remote-body-size)/1.2 var(--g-font); }
+body.garrison #detail-disconnect[hidden] { display: none; }
+body.garrison #detail-session-info > small { flex-basis: 100%; font: 400 var(--remote-small-size)/1.4 var(--g-font); color: var(--g-text-2); }
 body.garrison #remote-discovered { display: flex; flex-direction: column; gap: 10px; margin: 24px 0; }
 body.garrison .remote-discovered-pc { width: 100%; border: 0; border-radius: 10px; padding: 18px; background: var(--g-surface); color: var(--g-text); cursor: pointer; text-align: left; }
 body.garrison .remote-discovered-pc > span:first-child { display: grid; grid-template-columns: 32px 1fr; gap: 6px 12px; min-width: 0; }
@@ -46,6 +56,25 @@ body.garrison #remote-stream-bar > div { display: flex; flex-direction: column; 
 body.garrison #remote-stream-bar > nav { display: flex; align-items: center; align-self: center; gap: 10px; flex: none; height: auto; }
 body.garrison #remote-stream-bar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 body.garrison #remote-stream-bar small { color: var(--g-text-2); font: inherit; }
+body.garrison .remote-chord { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; white-space: nowrap; }
+body.garrison .remote-chord-plus { font-size: .8em; opacity: .55; }
+body.garrison .remote-pad-key, body.garrison .remote-key { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; flex: none; min-width: 28px; height: 28px; padding: 0 5px; border: 1px solid #ffffff60; background: #ffffff0b; color: var(--g-text); font: 600 13px/1 var(--g-font); box-shadow: 0 1px 0 #0007; }
+body.garrison .remote-pad-face { border-radius: 50%; width: 28px; }
+body.garrison .remote-pad-system, body.garrison .remote-key { border-radius: 5px; }
+body.garrison .remote-pad-key svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+body.garrison .remote-pad-a { color: #a2d57d; }
+body.garrison .remote-pad-b { color: #f2a1a1; }
+body.garrison .remote-pad-x { color: #9bc8f3; }
+body.garrison .remote-pad-y { color: #ead492; }
+body.garrison .remote-shortcut-section { margin: 22px 0; }
+body.garrison .remote-shortcut-section h3 { font: 600 var(--remote-body-size)/1.3 var(--g-font); margin: 0 0 5px; }
+body.garrison .remote-shortcut-section p { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.4 var(--g-font); margin: 0 0 12px; }
+body.garrison .remote-shortcut-bindings { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+body.garrison .remote-shortcut-bindings button { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 15px; text-align: left; white-space: normal; }
+body.garrison .remote-shortcut-bindings button small { color: var(--g-text-2); font: 400 var(--remote-small-size)/1.3 var(--g-font); }
+body.garrison #remote-shortcut-preview { min-height: 64px; display: flex; align-items: center; justify-content: center; padding: 12px; background: var(--g-surface); border-radius: var(--g-radius); }
+body.garrison #remote-shortcut-message { min-height: 3em; color: var(--g-text-2); }
+@media (max-width: 700px) { body.garrison .remote-shortcut-bindings { grid-template-columns: 1fr; } }
 body.garrison #remote-stream-bar button { flex: none; min-height: 48px; padding: 10px 22px; }
 body.garrison.remote-streaming main, body.garrison.remote-streaming .topbar, body.garrison.remote-streaming #controller-prompts { visibility: hidden; }
 @media (max-width: 1100px) {

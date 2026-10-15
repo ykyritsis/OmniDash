@@ -19,7 +19,7 @@ async function main(){
   const game=parseApps('<App><ID>100</ID><AppTitle> Hades </AppTitle><UUID>53544541-4d00-5000-8000-000000117fca</UUID><ArtVersion>updated</ArtVersion><IsInstalled>false</IsInstalled></App>')[0];
   assert.equal(game.title,'Hades');assert.equal(game.launchTitle,' Hades ');assert.equal(game.installed,false);assert.equal(game.steamAppId,'1146826');assert.equal(game.artVersion,'updated');
   assert.equal(parseApps('<App><ID>10</ID><AppTitle>Shared shortcut</AppTitle></App>')[0].installed,null,'A shared shortcut is not evidence of installation');
-  const preferences=normalizePreferences({width:Infinity,height:99999,fps:999,bitrate:-200,codec:'bad',decoder:'bad'});assert.deepEqual(preferences,{...normalizePreferences(),width:1920,height:7680,fps:480,bitrate:500,codec:'auto',decoder:'auto'});
+  const preferences=normalizePreferences({width:Infinity,height:99999,fps:999,bitrate:-200,codec:'bad',decoder:'bad'});assert.deepEqual(preferences,{...normalizePreferences(),preset:'custom',width:1920,height:7680,fps:480,bitrate:500,codec:'auto',decoder:'auto'});
   assert.equal(normalizePreferences({fps:165,bitrate:33333}).fps,165);
   assert.equal(normalizePreferences({vsync:false,fractionalVsync:true}).fractionalVsync,false);
   assert.equal(normalizePreferences({hdr:'false',yuv444:'true',captureSystemKeys:'always'}).yuv444,true);

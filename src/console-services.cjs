@@ -63,7 +63,7 @@ function mapProduct(product, country = 'US') {
 function createConsoleServices(directory, request = fetch, { getCountry = () => resolveCountry(Intl.DateTimeFormat().resolvedOptions()) } = {}) {
   const catalogs = new Map();
   async function readCatalog(country) {
-    try { const saved = JSON.parse(await fs.readFile(path.join(directory,`gamepass-catalog-${country}.json`),'utf8')); if(saved.version===4 && saved.country===country && Array.isArray(saved.games)) return saved; } catch {}
+    try { const saved = JSON.parse(await fs.readFile(path.join(directory,`gamepass-catalog-${country}.json`),'utf8')); if(saved.version===5 && saved.country===country && Array.isArray(saved.games)) return saved; } catch {}
     return null;
   }
   async function fetchCatalog(country) {
@@ -88,7 +88,7 @@ function createConsoleServices(directory, request = fetch, { getCountry = () => 
     games.sort((a,b)=>ranks.get(a.xboxProductId)-ranks.get(b.xboxProductId));
     await fs.mkdir(directory,{recursive:true});
     const target=path.join(directory,`gamepass-catalog-${country}.json`);
-    await fs.writeFile(target+'.tmp',JSON.stringify({version:4,country,savedAt:Date.now(),games}));
+    await fs.writeFile(target+'.tmp',JSON.stringify({version:5,country,savedAt:Date.now(),games}));
     await fs.rename(target+'.tmp',target);
     catalogs.get(country).games=games;
     return games;

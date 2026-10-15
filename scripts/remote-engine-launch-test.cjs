@@ -32,7 +32,7 @@ app.whenReady().then(async()=>{
   await fs.writeFile(path.join(directory,'engine','FoggyBytes','StreamLight.ini'),`[General]\ncertificate=${certificate(identity.certificate)}\nkey=${certificate(identity.key)}\nuniqueid=${identity.uniqueid}\n[hosts]\nsize=1\n1\\hostname=Engine fixture\n1\\uuid=${host.uuid}\n1\\localaddress=127.0.0.1\n1\\localport=${port}\n1\\manualaddress=127.0.0.1\n1\\manualport=${port}\n1\\srvcert=${certificate(identity.certificate)}\n1\\nvidiasw=false\n1\\streamtweakenabled=false\n`);
   win=new BrowserWindow({width:960,height:600,show:false,webPreferences:{sandbox:true}});await win.loadURL('data:text/html,<body style="background:%23171920;color:white">Remote launch regression</body>');
   remote=createRemotePlay({directory,runtimeDirectory:path.join(root,'.packaging-staging','streamlight'),getWindow:()=>win,onStatus:event=>events.push(event)});
-  await remote.start(host.id,'42',{width:1280,height:720,fps:60,bitrate:10000,codec:'H.264'});
+  await remote.settings(host.id,{width:1280,height:720,fps:60,bitrate:10000,codec:'H.264'}).then(()=>remote.start(host.id,'42'));
   const deadline=Date.now()+25000;while(Date.now()<deadline&&!events.some(event=>event.phase==='ended'))await pause(100);
   assert(launched,'The real hidden StreamLight engine never sent /launch');
   assert(events.some(event=>event.phase==='error'&&/Regression fixture reached launch/i.test(event.error)),'The host launch error must reach the app instead of staying in a hidden Qt dialog');

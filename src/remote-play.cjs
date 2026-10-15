@@ -79,14 +79,19 @@ function wireRequest(host, route, { credentials, pinnedCert, binary = false, tim
 }
 
 function normalizePreferences(value = {}) {
+  const settings=require('./renderer/stream-settings.js');
+  const preset=['latency','balanced','visuals','custom'].includes(value.preset)?value.preset:settings.tuningKeys.some(key=>Object.hasOwn(value,key))?'custom':'balanced';
+  value={...settings.presets.balanced.values,...value};
   const number = (key, fallback, min, max) => Number.isFinite(Number(value[key])) ? Math.max(min, Math.min(max, Math.round(Number(value[key])))) : fallback;
   const bool = (key, fallback) => value[key] === undefined ? fallback : value[key] === true || value[key] === 'true';
-  return {width:number('width',1920,256,7680),height:number('height',1080,256,7680),fps:number('fps',60,10,480),
+  const result={preset,width:number('width',1920,256,7680),height:number('height',1080,256,7680),fps:number('fps',60,10,480),
     bitrate:number('bitrate',20000,500,500000),codec:['auto','H.264','HEVC','AV1'].includes(value.codec)?value.codec:'auto',decoder:['auto','hardware','software'].includes(value.decoder)?value.decoder:'auto',
     multiController:bool('multiController',true),swapFaceButtons:bool('swapFaceButtons',false),gamepadMouse:bool('gamepadMouse',true),touchscreenTrackpad:bool('touchscreenTrackpad',false),absoluteMouse:bool('absoluteMouse',false),
     hdr:bool('hdr',false),yuv444:bool('yuv444',false),audioOnHost:bool('audioOnHost',false),swapMouseButtons:bool('swapMouseButtons',false),reverseScroll:bool('reverseScroll',false),captureSystemKeys:value.captureSystemKeys==='always'?'always':'never',
     vsync:bool('vsync',true),framePacing:bool('framePacing',false),fractionalVsync:bool('vsync',true)&&bool('framePacing',false)&&bool('fractionalVsync',false),performanceOverlay:bool('performanceOverlay',false),overlayDetail:value.overlayDetail==='full'?'full':'standard',overlayPosition:value.overlayPosition==='right'?'right':'left',overlaySize:['small','large'].includes(value.overlaySize)?value.overlaySize:'medium',
-    audioConfig:['stereo','5.1','7.1'].includes(value.audioConfig)?value.audioConfig:'stereo',quitCombo:value.quitCombo==='moonlight'?'moonlight':'streamlight'};
+    audioConfig:['stereo','5.1','7.1'].includes(value.audioConfig)?value.audioConfig:'stereo',shortcuts:settings.normalizeShortcuts(value.shortcuts,value.quitCombo)};
+  if(preset!=='custom')Object.assign(result,settings.presetValues(preset,result));
+  return result;
 }
 function setIniValues(text, group, values) {
   const lines = String(text || '').split(/\r?\n/), header = `[${group}]`;
@@ -107,19 +112,28 @@ function engineMessage(text) {
 // Host app IDs can change after a shortcut is rebuilt. Keep history with the
 // host's app UUID when available, otherwise its exact launch name.
 function historyKey(game) { return game.uuid || String(game.launchTitle || game.title).normalize('NFKC').toLocaleLowerCase(); }
-function streamProfiles(host) { return ['1','2','3'].map(id=>({id,name:String(host.profiles?.[id]?.name || `Profile ${id}`).slice(0,40),preferences:normalizePreferences(host.profiles?.[id]?.preferences || host.preferences)})); }
-function hostPreferences(host) { return streamProfiles(host).find(profile=>profile.id===(host.activeProfile || '1')).preferences; }
-function gamePreferences(host,game) { return normalizePreferences({...hostPreferences(host),...host.gameOverrides?.[historyKey(game)]}); }
 function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = () => {}, request = wireRequest, spawnProcess = spawn, now = Date.now, discover = discoverHosts, resolveArtwork = async () => null }) {
-  let hosts=null, saving=Promise.resolve(), pairing=null, session=null, disposed=false, acquiring=false, launchGeneration=0;
+  let hosts=null, preferences=null, loading=null, saving=Promise.resolve(), pairing=null, session=null, disposed=false, acquiring=false, launchGeneration=0;
   const workers=new Set(), refreshing=new Map(), coverRequests=new Map();
   let scanning=null, checking=null;
   let viewportState={top:72,height:720};
   const profile=path.join(directory,'engine'), iniFile=path.join(profile,'FoggyBytes','StreamLight.ini');
-  async function load() { if(!hosts) { try { hosts=JSON.parse(await fs.readFile(path.join(directory,'hosts.json'),'utf8')); if(!Array.isArray(hosts)) hosts=[]; } catch { hosts=[]; } } return hosts; }
-  async function save() { const text=JSON.stringify(hosts); saving=saving.catch(()=>{}).then(async()=>{ await fs.mkdir(directory,{recursive:true}); await fs.writeFile(path.join(directory,'hosts.json.tmp'),text); await fs.rename(path.join(directory,'hosts.json.tmp'),path.join(directory,'hosts.json')); }); return saving; }
+  async function load() {
+    if(!loading)loading=(async()=>{
+      try {hosts=JSON.parse(await fs.readFile(path.join(directory,'hosts.json'),'utf8'));if(!Array.isArray(hosts))hosts=[];}catch{hosts=[];}
+      try {preferences=normalizePreferences(JSON.parse(await fs.readFile(path.join(directory,'preferences.json'),'utf8')));}catch{
+        const recent=[...hosts].sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0))[0];
+        preferences=normalizePreferences(recent?.profiles?.[recent.activeProfile||'1']?.preferences || recent?.preferences);
+      }
+      // Migrate the most recently used PC once. Old game overrides must never
+      // silently change a launch after the user has saved shared settings.
+      let migrated=false;for(const host of hosts)for(const key of ['profiles','activeProfile','gameOverrides','preferences'])if(key in host){delete host[key];migrated=true;}
+      if(migrated)await save();return hosts;
+    })();return loading;
+  }
+  async function save() {const files={'hosts.json':JSON.stringify(hosts),'preferences.json':JSON.stringify(preferences)};saving=saving.catch(()=>{}).then(async()=>{await fs.mkdir(directory,{recursive:true});for(const [name,text] of Object.entries(files)){const file=path.join(directory,name);await fs.writeFile(file+'.tmp',text);await fs.rename(file+'.tmp',file);}});return saving;}
   function emit(phase, extra={}) { onStatus({ phase, session:publicSession(), ...extra }); }
-  function publicSession() { return session ? { hostId:session.host.id, appId:session.game.appId, gameId:session.game.id, title:session.game.title, phase:session.phase, startedAt:session.startedAt, lastPlayed:session.game.lastPlayed || 0, preferences:session.preferences } : null; }
+  function publicSession() { return session ? { hostId:session.host.id, appId:session.game.appId, gameId:session.game.id, title:session.game.title, phase:session.phase, view:session.view||'stream', startedAt:session.startedAt, lastPlayed:session.game.lastPlayed || 0, preferences:session.preferences } : null; }
   async function runtime() {
     const executable=path.join(runtimeDirectory,'runtime','StreamLight.exe'), bridge=path.join(runtimeDirectory,'WindowBridge.exe');
     await Promise.all([fs.access(executable),fs.access(bridge)]).catch(()=>{ throw new Error('The streaming component is missing. Install the full app build, or run the streaming preparation script when developing.'); });
@@ -135,25 +149,31 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     await fs.mkdir(path.dirname(iniFile),{recursive:true});
     const ini=await fs.readFile(iniFile,'utf8').catch(()=>'');
     let updatedIni=setIniValues(ini,'theme',{reduceanimations:'true',startupanimation:'false'});
-    const quitMask=preferences.quitCombo==='moonlight'?0x330:preferences.swapFaceButtons?0x2300:0x1300;
+    const shortcuts=require('./renderer/stream-settings.js'),bindings=shortcuts.normalizeShortcuts(preferences.shortcuts,preferences.quitCombo);
+    const quitMask=bindings.disconnect.gamepad,controlsMask=bindings.page.gamepad,quitKey=shortcuts.nativeKeyboard(bindings.disconnect.keyboard),controlsKey=shortcuts.nativeKeyboard(bindings.page.keyboard);
     if(stream){
-      updatedIni=setIniValues(updatedIni,'General',{gamepadmouse:String(preferences.gamepadMouse!==false),backgroundgamepad:'true',fractionalvsync:String(Boolean(preferences.fractionalVsync)),enablevrr:'false',overlayposition:preferences.overlayPosition==='right'?'1':'0',overlayfontsize:String({small:0,medium:1,large:2}[preferences.overlaySize]??1),overlayitems:preferences.overlayDetail==='full'?'55295':'483'});
+      updatedIni=setIniValues(updatedIni,'General',{gamepadmouse:String(preferences.gamepadMouse!==false),backgroundgamepad:'false',fractionalvsync:String(Boolean(preferences.fractionalVsync)),enablevrr:'false',overlayposition:preferences.overlayPosition==='right'?'1':'0',overlayfontsize:String({small:0,medium:1,large:2}[preferences.overlaySize]??1),overlayitems:preferences.overlayDetail==='full'?'55295':'483'});
       // The native SDL handler tests logical (post-swap) buttons. The bridge's
       // XInput escape fallback uses the corresponding physical button instead.
-      updatedIni=setIniValues(updatedIni,'shortcuts',{pad0_mask:String(preferences.quitCombo==='moonlight'?0x330:0x1300),kb0_enabled:'true',kb0_mods:'7',kb0_key:'113',kb0_scan:'20'});
+      updatedIni=setIniValues(updatedIni,'shortcuts',{pad0_mask:String(shortcuts.logicalPadMask(quitMask,preferences.swapFaceButtons)),pad1_mask:String(shortcuts.logicalPadMask(0x4300,preferences.swapFaceButtons)),pad2_mask:String(shortcuts.logicalPadMask(0x2300,preferences.swapFaceButtons)),kb0_enabled:'true',kb0_mods:String(quitKey.mods),kb0_key:String(quitKey.key),kb0_scan:String(quitKey.scan)});
     }
     await fs.writeFile(iniFile,updatedIni);
     const handle=getWindow()?.getNativeWindowHandle();
     const parent=handle ? (handle.length >= 8 ? handle.readBigUInt64LE().toString() : String(handle.readUInt32LE())) : '0';
-    await fs.writeFile(config,JSON.stringify({ executable:files.executable,cwd:profile,args,parent,stream,viewport:stream?viewportState:null,quitMask }));
+    await fs.writeFile(config,JSON.stringify({ executable:files.executable,cwd:profile,args,parent,stream,viewport:stream?viewportState:null,quitMask,controlsMask,quitKey,controlsKey }));
     const child=spawnProcess(files.bridge,[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
     let buffer='',out='',err='',settled=false,diagnostic='';
     const log=line=>{ diagnostic=(diagnostic+String(line).replace(/([?&](?:rikey|rikeyid|clientcert|salt|pin|secret|authorization)=)[^&\s]+/gi,'$1[redacted]')+'\n').slice(-256*1024); };
-    const worker={ child, stop(){ if(!child.killed && !child.stdin.destroyed) child.stdin.write('stop\n'); }, send(value){ if(!child.stdin.destroyed) child.stdin.write(value+'\n'); } };
+    let killTimer=null,exited=false;
+    const worker={ child, stop(){
+      if(!exited&&!killTimer){if(!child.killed&&!child.stdin.destroyed)child.stdin.write('stop\n');killTimer=setTimeout(()=>{if(!exited)child.kill();},1500);}
+      return worker.exited;
+    }, send(value){ if(!exited&&!child.stdin.destroyed) child.stdin.write(value+'\n'); } };
     workers.add(worker);
+    worker.exited=new Promise(resolve=>{const finish=()=>{exited=true;clearTimeout(killTimer);workers.delete(worker);resolve();};child.once('exit',finish);child.once('error',finish);});
     worker.done=new Promise((resolve,reject)=>{
       const timer=timeout ? setTimeout(()=>{ worker.stop(); reject(new Error('The streaming host took too long to respond.')); },timeout) : null;
-      const finish=(error,code)=>{ if(settled)return;settled=true;clearTimeout(timer);workers.delete(worker);fs.unlink(config).catch(()=>{});fs.writeFile(path.join(directory,stream?'last-stream.log':'last-pair.log'),diagnostic).catch(()=>{});error ? reject(error) : resolve({code,out,err}); };
+      const finish=(error,code)=>{ if(settled)return;settled=true;clearTimeout(timer);fs.unlink(config).catch(()=>{});fs.writeFile(path.join(directory,stream?'last-stream.log':'last-pair.log'),diagnostic).catch(()=>{});error ? reject(error) : resolve({code,out,err}); };
       child.stdout.on('data',chunk=>{ buffer+=chunk; const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines) { let event;try{event=JSON.parse(line);}catch{continue;}
         if(event.type==='stdout')out=(out+event.text+'\n').slice(-2*1024*1024);
         if(event.type==='stderr')err=(err+event.text+'\n').slice(-12000);
@@ -182,9 +202,9 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   function publicHost(host) {
     const fresh=host.checkedAt && now()-host.checkedAt < 45000;
     const status=!fresh?'unknown':!host.online?'offline':!host.paired?'pair-required':host.currentGame && host.currentGame!=='0'?'busy':'ready';
-    return {id:host.id,name:host.name,address:host.address,paired:Boolean(host.paired),games:(host.games||[]).filter(game=>!(host.hiddenApps||[]).includes(game.appId)).map(game=>({...game,lastPlayed:host.playHistory?.[historyKey(game)] || game.lastPlayed || 0,streamOverrides:host.gameOverrides?.[historyKey(game)] || null})),hiddenCount:(host.hiddenApps||[]).length,lastSeen:host.lastSeen,error:host.error||'',status,currentGame:host.currentGame||'0',preferences:hostPreferences(host),profiles:streamProfiles(host),activeProfile:host.activeProfile || '1'};
+    return {id:host.id,name:host.name,address:host.address,paired:Boolean(host.paired),games:(host.games||[]).filter(game=>!(host.hiddenApps||[]).includes(game.appId)).map(game=>({...game,lastPlayed:host.playHistory?.[historyKey(game)] || game.lastPlayed || 0})),hiddenCount:(host.hiddenApps||[]).length,lastSeen:host.lastSeen,error:host.error||'',status,currentGame:host.currentGame||'0',preferences};
   }
-  async function snapshot() { await load(); let available=true;try{await runtime();}catch{available=false;} return {available,hosts:hosts.map(publicHost),session:publicSession(),pairing:pairing ? {hostId:pairing.host.id,pin:pairing.pin}:null}; }
+  async function snapshot() { await load(); let available=true;try{await runtime();}catch{available=false;} return {available,preferences,hosts:hosts.map(publicHost),session:publicSession(),pairing:pairing ? {hostId:pairing.host.id,pin:pairing.pin}:null}; }
   async function probe(host, timeout=3500) {
     const xml=await request(host,'serverinfo',{timeout});
     const uuid=xmlValue(xml,'uniqueid'); if(!uuid) throw new Error('That PC is not running a compatible Sunshine, Apollo or Vibepollo host.');
@@ -283,12 +303,16 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   }
   async function stop(reason='disconnected') {
     launchGeneration++;
-    const active=session;if(!active)return true;session=null;clearTimeout(active.timer);clearTimeout(active.deadline);active.worker?.stop();
-    emit('ended',{reason,hostId:active.host.id,appId:active.game.appId,title:active.game.title});
-    const restore=()=>{const win=getWindow();if(win&&!win.isDestroyed()){win.show();win.focus();win.webContents?.focus();}};
-    restore();active.worker?.done.then(restore,restore);return true;
+    const active=session;if(!active)return true;if(active.stopping)return active.stopping;
+    active.phase='stopping';clearTimeout(active.timer);clearTimeout(active.deadline);emit('stopping');
+    active.stopping=(async()=>{
+      const worker=active.worker||await active.workerReady?.catch(()=>null);if(worker)await worker.stop();
+      if(session===active){session=null;emit('ended',{reason,hostId:active.host.id,appId:active.game.appId,title:active.game.title});}
+      restoreWindow();return true;
+    })();return active.stopping;
   }
-  async function start(id,appId,preferences) {
+  function restoreWindow(){const win=getWindow();if(win&&!win.isDestroyed()){win.show();win.focus();win.webContents?.focus();}}
+  async function start(id,appId) {
     const generation=++launchGeneration;
     if(session || pairing || workers.size)throw new Error('End the current remote-play connection first.');
     const host=await find(id);if(!host.paired)throw new Error('Pair this PC before playing.');
@@ -301,24 +325,26 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     if(generation!==launchGeneration || disposed)return null;
     const running=xmlValue(info,'currentgame');
     if(running && running!=='0' && running!==game.appId)throw new Error('Another app is running on that host. Close it before starting this game.');
-    const options=normalizePreferences(preferences || gamePreferences(host,game)),{width,height,fps,bitrate,codec,decoder}=options;
+    const options=normalizePreferences(preferences),{width,height,fps,bitrate,codec,decoder}=options;
     const active={host,game,preferences:options,phase:'connecting',startedAt:now(),seenRunning:running===game.appId,empty:0,failed:0,video:false,surface:false};session=active;
     emit('connecting');
-    function ready() {if(session===active && active.worker && active.surface && active.video && active.seenRunning && !['playing','revealing'].includes(active.phase)){active.phase='revealing';active.worker.send('viewport '+JSON.stringify(viewportState));active.worker.send('reveal');}}
+    function ready() {if(session===active && active.worker && active.surface && active.video && active.seenRunning && !['playing','revealing','stopping'].includes(active.phase)){active.phase=active.view==='page'?'playing':'revealing';active.worker.send('viewport '+JSON.stringify(viewportState));active.worker.send('reveal');if(active.view==='page'){clearTimeout(active.deadline);emit('page');}}}
     async function poll() {
-      if(session!==active)return;
+      if(session!==active||active.phase==='stopping')return;
       try {
         const xml=await request(host,'serverinfo',auth), current=xmlValue(xml,'currentgame');active.failed=0;
         if(current===game.appId){active.seenRunning=true;active.empty=0;ready();}
         else if(active.seenRunning && current && ++active.empty>=2){await stop('game-closed');return;}
       } catch(error) {if(++active.failed===3)emit('connection-warning',{error:'Connection interrupted. Waiting for the host…'});if(active.failed>=10){await stop('connection-lost');return;}}
-      if(session===active)active.timer=setTimeout(poll,1500);
+      if(session===active&&active.phase!=='stopping')active.timer=setTimeout(poll,1500);
     }
     try {
       const toggles=Object.entries({multiController:'multi-controller',swapFaceButtons:'swap-gamepad-buttons',touchscreenTrackpad:'touchscreen-trackpad',absoluteMouse:'absolute-mouse',vsync:'vsync',framePacing:'frame-pacing',performanceOverlay:'performance-overlay',hdr:'hdr',yuv444:'yuv444',audioOnHost:'audio-on-host',swapMouseButtons:'mouse-buttons-swap',reverseScroll:'reverse-scroll-direction'}).map(([key,name])=>'--'+(options[key]?'':'no-')+name);
-      active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-vrr','--no-mute-on-focus-loss','--keep-awake','--background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--capture-system-keys',options.captureSystemKeys,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
-        if(session!==active)return;
-        if(event.type==='toggle-controls'&&active.phase==='playing'){emit('toggle-controls');return;}
+      active.workerReady=run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-vrr','--no-mute-on-focus-loss','--keep-awake','--no-background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--capture-system-keys',options.captureSystemKeys,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
+        if(session!==active||active.phase==='stopping')return;
+        if(event.type==='toggle-controls'&&active.phase==='playing'){if(active.view==='page')focus();else page();return;}
+        if(event.type==='page-visible'){active.view='page';restoreWindow();emit('page');return;}
+        if(event.type==='stream-visible'){active.view='stream';emit('stream');return;}
         if(event.type==='disconnect-requested'){stop('disconnected');return;}
         if(event.type==='surface-lost'){
           active.surface=false;active.video=false;active.phase='reconnecting';
@@ -347,37 +373,28 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
         }
         if(event.type==='error'){emit('error',{error:event.message});stop('error');}
       }});
-      if (session !== active) { active.worker.stop(); return null; }
+      active.worker=await active.workerReady;
+      if (session !== active || active.phase==='stopping') { await active.worker.stop(); return null; }
       // Native stdout can arrive before run() resolves; repeat the readiness
       // decision now that the command pipe is owned by the active session.
       ready();
-      active.worker.done.then(result=>{if(session!==active)return;const playing=active.phase==='playing';if(!playing)emit('error',{error:engineMessage(result.err+'\n'+result.out)||'The streaming engine stopped before video arrived. Check the host, or try H.264 in Stream settings.'});stop(playing?'stream-ended':'error');},error=>{if(session===active){emit('error',{error:error.message});stop('error');}});
+      active.worker.done.then(result=>{if(session!==active||active.phase==='stopping')return;const playing=active.phase==='playing';if(!playing)emit('error',{error:engineMessage(result.err+'\n'+result.out)||'The streaming engine stopped before video arrived. Check the host, or try H.264 in Stream settings.'});stop(playing?'stream-ended':'error');},error=>{if(session===active&&active.phase!=='stopping'){emit('error',{error:error.message});stop('error');}});
       active.deadline=setTimeout(()=>{if(session===active&&active.phase!=='playing'){emit('error',{error:'The stream did not become ready. Check the host for a setup or permission prompt.'});stop('launch-timeout');}},120000);
       poll();return publicSession();
     } catch(error) {await stop('error');throw error;}
   }
-  async function settings(id,preferences,config={}) {
-    const host=await find(id);
-    if(config.appId){
-      const game=host.games?.find(game=>game.appId===String(config.appId));if(!game)throw new Error('Refresh this PC’s game library first.');
-      const key=historyKey(game);host.gameOverrides ||= {};
-      if(preferences===null)delete host.gameOverrides[key];
-      else {const base=hostPreferences(host);host.gameOverrides[key]=Object.fromEntries(Object.entries(normalizePreferences(preferences)).filter(([key,value])=>value!==base[key]));}
-      await save();return gamePreferences(host,game);
-    }
-    const profileId=['1','2','3'].includes(config.profileId)?config.profileId:host.activeProfile || '1';
-    host.profiles=Object.fromEntries(streamProfiles(host).map(profile=>[profile.id,{name:profile.name,preferences:profile.preferences}]));
-    host.profiles[profileId]={name:String(config.name || host.profiles[profileId].name).trim().slice(0,40) || `Profile ${profileId}`,preferences:normalizePreferences(preferences)};
-    host.activeProfile=profileId;host.preferences=host.profiles[profileId].preferences;await save();return host.preferences;
+  async function settings(id,value) {
+    await load();if(id)await find(id);preferences=normalizePreferences(value||{});await save();return preferences;
   }
   async function hideGame(id,appId,hidden=true) {const host=await find(id);if(appId!==null&&!host.games?.some(game=>game.appId===String(appId)))throw new Error('This game is no longer in the host library.');host.hiddenApps=appId===null?[]:[...new Set((host.hiddenApps||[]).filter(value=>value!==String(appId)).concat(hidden?[String(appId)]:[]))];await save();return publicHost(host);}
   async function game(id,appId) {const host=await find(id),game=host.games?.find(item=>item.appId===String(appId));if(!game)throw new Error('This game is no longer in the host library.');return {...game,hostName:host.name};}
   async function remove(id) {if(session?.host.id===id)await stop();if(pairing?.host.id===id)await cancelPair();await load();hosts=hosts.filter(host=>host.id!==id);await save();return true;}
-  function focus() {session?.worker?.send('focus');return Boolean(session);}
+  function focus() {if(session?.phase!=='playing')return false;session.worker?.send('focus');return true;}
+  function page() {if(session?.phase!=='playing')return false;session.worker?.send('page');return true;}
   function viewport(value) {const top=Number(value?.top),height=Number(value?.height);if(!Number.isFinite(top)||!Number.isFinite(height)||height<200||top<0||top>height*.4)throw new Error('Invalid stream viewport.');viewportState={top,height};session?.worker?.send('viewport '+JSON.stringify(viewportState));return true;}
   function active() {return publicSession();}
   function dispose() {disposed=true;if(pairing)pairing.cancelled=true;clearTimeout(session?.timer);clearTimeout(session?.deadline);session=null;for(const worker of workers)worker.stop();}
   const exclusive = operation => async (...args) => { if(acquiring)throw new Error('A remote-play connection is already starting.');acquiring=true;try{return await operation(...args);}finally{acquiring=false;} };
-  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),stop,remove,focus,viewport,active,dispose};
+  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),stop,remove,focus,page,viewport,active,dispose};
 }
 module.exports={createRemotePlay,parseAddress,parseApps,parseIni,qtValue,xmlValue,wireRequest,normalizePreferences,setIniValues,engineMessage};

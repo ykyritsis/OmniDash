@@ -11,12 +11,19 @@ async function run() {
   assert.equal(ratings.resolveCountry({ locale: 'en-AU' }), 'AU');
   assert.equal(ratings.resolveCountry({ region: 'NZ', country: 'AU' }), 'NZ');
   assert.equal(ratings.resolveCountry({ locale: 'en', timeZone: 'Australia/Sydney' }), 'AU');
+  assert.equal(ratings.resolveCountry({locale:'en-US',timeZone:'Australia/Sydney'}),'AU','Display language must not override the player location');
   for (const [country, system, label] of [['AU','COB-AU','R18+'],['NZ','OFLC-NZ','R16'],['US','ESRB','M'],['GB','PEGI','18']]) {
     const rating = ratings.steamAgeRating({ ratings: fixtures }, country);
     assert.equal(rating.system, system); assert.equal(rating.label, label); assert.equal(rating.regionalFallback, false);
   }
   for (const label of ['g', 'pg', 'm', 'ma15', 'r18']) assert(ratings.steamAgeRating({ ratings: { oflc: { rating: label } } }, 'AU'));
   assert.equal(ratings.normalizeRating({label:'Mature',system:'COB-AU'}).label,'M');
+  for(const [raw,label] of [['Australian Classification G','G'],['General0','G'],['Mature15','M'],['MatureAccompanied15','MA15+'],['Restricted15','MA15+'],['Restricted18','R18+'],['RefusedClassification','RC'],['RatingPending','CTC']])assert.equal(ratings.normalizeRating({label:raw,system:'COB-AU'}).label,label);
+  assert.equal(ratings.normalizeRating({label:'Unknown label',system:'COB-AU'}),null);
+  assert.equal(ratings.steamAgeRating({ratings:{dejus:{rating:'6',descriptors:'Violência fantasiosa'},steam_germany:{rating:'12',descriptors:'Fantasy-Gewalt'},igrs:{rating:'13',descriptors:'Kekerasan'}}},'AU'),null,'An unrelated board must not become an Australian fallback');
+  assert.equal(ratings.steamAgeRating({required_age:2147483647},'AU'),null,'Do not display vendor sentinel ages');
+  assert.equal(ratings.normalizeRating({system:'COB-AU',label:'MA15+',descriptors:['COB-AU:StrongViolence','Online Interactivity','Violência','Kekerasan']}).descriptors,'Strong Violence, Online Interactivity');
+  assert.equal(ratings.normalizeRating({system:'COB-AU',label:'R18+',rating:'r18',required_age:'15'}).value,'18','The classification code wins over inconsistent store age-gate metadata');
   assert.equal(ratings.steamAgeRating({ ratings: { pegi: fixtures.pegi } }, 'AU').regionalFallback, true);
   assert.equal(ratings.steamAgeRating({ required_age: 18 }, 'AU').system, 'AGE');
   const local = ratings.steamAgeRating({ ratings: fixtures }, 'AU');

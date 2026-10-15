@@ -1,6 +1,6 @@
 # Remote play preview
 
-The app uses StreamLight's native streaming runtime with Sunshine, Apollo and Vibepollo hosts. StreamTweak is not required. Pairing, host libraries, search, launch progress and return navigation use the app's own interface. Only the native video surface is embedded in the launcher window; StreamLight's separate launcher interface stays hidden.
+The app uses StreamLight's native streaming runtime with Sunshine, Apollo and Vibepollo hosts. StreamTweak is not required. Pairing, host libraries, search, launch progress and return navigation use the app's own interface. The native video surface is owned by and covers the launcher’s client area; StreamLight's separate launcher interface stays hidden.
 
 ![Remote PC pairing screen](remote-play-pairing.png)
 
@@ -12,7 +12,7 @@ UI capture with a sample host and test PIN.
 2. Open **Library → Remote PCs → Find a PC** (also available in Remote play settings). Nearby PCs are discovered automatically. Select a result, or use **Enter address manually** for a hostname, VPN address or custom HTTP port such as `192.168.1.20:48000`. The default port is 47989.
 3. Enter the displayed four-digit PIN in the host's pairing page. The client waits for approval and saves the PC and its published games.
 4. Return to **Library → Remote PCs** to see saved PCs, their connection status and square game cards. Selecting a game opens its normal game page; choose **Play remotely** to start it.
-5. Open **Stream settings** from the selected PC or a remote game's options. Resolution, frame rate, bitrate, codec and decoder are saved separately for each PC. Defaults are 1080p, 60 fps and 20 Mbps; handheld 16:10 resolutions and 90/120 fps are also available. Audio layout, V-Sync, frame pacing, performance statistics, multiple controllers, face-button swaps, controller mouse mode, touch mode, mouse mode and the controller disconnect shortcut are also configurable. Changes apply to the next stream.
+5. Open **Stream settings** from Remote play settings, Library or a remote game’s options. These settings apply to every remote game and PC on this device. Choose Lowest Latency, Balanced or Max Visuals, then resolution, frame rate and HDR. The preset sets bitrate, codec, decoder and frame delivery automatically. **Shortcuts** lets you record your own controller and keyboard combinations. **Advanced settings** contains manual video, audio and input controls. Changes apply to the next stream.
 
 Both devices must be able to reach each other. Remote play does not open router ports or configure a VPN. A reachable VPN hostname/address can be entered like any other host address.
 
@@ -22,15 +22,25 @@ The existing game launch animation remains visible while the client connects. Th
 
 When the host reports that app has stopped, the client ends its stream and returns to the game page. Back returns to the selected Library tile. Two successful state checks confirm the exit; a failed request is not treated as a closed game. A replacement app on the host also ends this client's stream without stopping the replacement app.
 
-To disconnect manually, use the **Disconnect** button above the video, **Ctrl + Alt + Shift + Q**, or **LB + RB + A**, StreamLight's default controller shortcut. Hold the controller shortcut for half a second to also trigger the independent XInput escape path. Stream settings can change it to Moonlight's **View + Menu + LB + RB** combination. Swapping A/B changes the first shortcut's physical A button to B; the bar shows the active combination.
+The active remote game page has **Disconnect** and **Return to stream**. Return uses the existing connection. The initial video bar also has Disconnect, Game page and Hide, and hides automatically after five seconds unless you interact with it.
 
-The bar hides automatically after five seconds, returning its space to the video. Choose **Hide** to dismiss it sooner. Hold **LB + RB + View** for half a second, or press **Ctrl + Alt + Shift + H**, to show or hide it again. Reopened controls stay visible until dismissed; interacting with the initial bar cancels auto-hide. Disconnect shortcuts remain active when it is hidden; holding the show/hide shortcut toggles only once until released.
+Default shortcuts:
 
-When visible, the control bar remains outside the native video surface and resizes with text scaling. **Ctrl + Alt + Shift + Z** releases a captured mouse so it can reach Disconnect or Hide; touch can use either button directly. The mouse-release and disconnect keyboard controls follow the [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide). The native bridge registers its keyboard shortcuts while this stream has foreground focus, independently of the renderer and streaming engine's input handler. The controller show/hide shortcut uses XInput on Windows handhelds and Xbox-compatible pads.
+| Action | Controller | Keyboard |
+| --- | --- | --- |
+| Disconnect | LB + RB + A | Ctrl + Alt + Shift + Q |
+| Game page / return to stream | LB + RB + View | Ctrl + Alt + Shift + H |
+| Live video settings | LB + RB + B | Ctrl + Alt + Shift + O |
+| Statistics | LB + RB + X | Ctrl + Alt + Shift + S |
+| Release captured mouse | Hold Menu / Start for controller mouse mode | Ctrl + Alt + Shift + Z |
 
-Disconnecting the client does not send a host-game quit request, so a game can stay open for later resumption. Cancelling the launch animation also disconnects the client. Closing the launcher or its native bridge closes its owned streaming process.
+Hold a controller escape combination for half a second. **Stream settings → Shortcuts** lets you record the Disconnect and Game page combinations, see button glyphs and restore defaults. Controller bindings require at least three buttons, including a shoulder/View/Menu button; keyboard bindings require at least two of Ctrl/Alt/Shift plus a letter, number or F key. Conflicting bindings are rejected. Button swapping only changes gameplay input; shortcut glyphs continue to describe physical buttons. Existing Moonlight four-button disconnect settings migrate automatically.
 
-The bundled engine receives background gamepad events because its native video window is embedded under Electron. This avoids SDL dropping controller input when the launcher owns the foreground window. StreamLight retains responsibility for device mapping, hotplug and input forwarding. Multiple controllers are enabled by default. Controller mouse mode can be toggled by holding Menu / Start, or disabled in Stream settings.
+The native bridge registers keyboard shortcuts for the stream’s lifetime and observes controller combinations using the bundled SDL mappings, independently of decoder focus. XInput is a fallback if that observer cannot initialize. SDL’s native quit binding also remains available. Holding the Game page combination toggles once until released. The mouse-release and other native keyboard controls follow the [Moonlight setup guide](https://github.com/moonlight-stream/moonlight-docs/wiki/Setup-Guide).
+
+When visible, the initial bar is outside the video and resizes with text scaling. Touch can use its buttons directly. Game page hides the native surface and restores the app’s normal navigation. Disconnect waits for the player to exit; an unresponsive bridge is terminated through its process lifetime guard after 1.5 seconds. It does not send a host-game quit request, so the game can stay open for resuming. Cancelling launch or closing the launcher also closes its streaming process.
+
+The native video is a borderless owned window, so SDL can receive foreground input. Background gameplay forwarding is disabled: navigating the app does not keep sending controller input to the game. StreamLight handles gameplay mapping, hotplug, rumble and forwarding. Multiple controllers are enabled by default.
 
 ## Artwork
 
@@ -42,11 +52,13 @@ Missing artwork uses the app's normal Xbox, IGN, PlayStation, SteamGridDB and St
 
 ## Stream settings
 
-Each PC has three named profiles. **Use this display** fills in the current display's physical resolution and refresh rate. Resolution, FPS and bitrate pickers also accept custom values. Video options include HDR, 4:4:4 colour, decoder and codec selection, V-Sync, frame pacing and fractional V-Sync. Fractional pacing needs V-Sync, frame pacing and a display refresh rate that is an exact multiple of the stream FPS. HDR and colour support depend on both devices.
+A single saved configuration applies to every remote game and PC on this device. Older PC profiles migrate once from the most recently seen PC; per-game overrides are removed. **Use this display** fills in the current display’s physical resolution and refresh rate. Resolution, FPS and bitrate pickers also accept custom values.
 
-Game-page settings save only values that differ from the current PC profile. **Use PC profile** removes the game's overrides. Settings include audio layout, host speaker playback, controller/mouse/touch behaviour and system-key capture. Native statistics offer Standard/Full detail, corner and text size.
+Presets control bitrate, automatic codec selection, hardware-preferred automatic decoding, V-Sync and frame pacing. Balanced uses StreamLight/Moonlight’s screen-size and frame-rate bitrate curve; Lowest Latency uses 75% of that rate with V-Sync/pacing off; Max Visuals uses 160% with V-Sync/pacing on. HDR adds 15% to the recommendation. These are starting settings, not a network speed test. Changing resolution, FPS or HDR recalculates the rate. Manual bitrate/video overrides select Custom; selecting a preset restores automatic tuning.
 
-During play, **LB + RB + B** or **Ctrl + Alt + Shift + O** opens the native live video settings. Applying changes briefly reconnects to the same game; the launch curtain covers the transition until fresh video arrives. Live changes last for that session. **LB + RB + X** or **Ctrl + Alt + Shift + S** toggles statistics. Swapped face buttons use A and Y respectively. The native live overlay keeps StreamLight's appearance inside the video; saved settings use the app's own styling.
+Advanced settings include H.264/HEVC/AV1, hardware/software decoding, 4:4:4 colour, fractional V-Sync, audio layout, host speakers, controller/mouse/touch behaviour, system-key capture and statistics. Fractional pacing requires V-Sync, frame pacing and a display refresh that is an exact multiple of stream FPS. Host, GPU and display capabilities determine HDR and colour support.
+
+During play, native live video settings use the shortcut above. Applying changes briefly reconnects to the same game; the launch curtain waits for fresh video. These changes last for that session; the shared saved settings apply on the next launch. The live overlay retains StreamLight’s appearance; saved settings use the app’s current UI.
 
 See the [parity audit](streamlight-parity.md) for verified integration behavior, remaining features and performance validation requirements.
 
@@ -64,7 +76,7 @@ For Vibepollo's Steam integration, enable **Steam auto-sync → Remove uninstall
 - StreamLight's CLI selects apps by name. Give apps unique names on the host; ambiguous duplicates are reported before launch. Invisible ordering prefixes are retained for launching while labels are cleaned for display.
 - A host already running a different app is left alone. Close that app before launching another game. Selecting the same running app resumes it.
 - Cached libraries remain browsable while a PC is offline. Starting or refreshing needs a reachable, paired host. Artwork downloads are limited to cards as they become visible.
-- This preview has automated UI, state, discovery, native-window recreation and identity/TLS checks. The bundled engine's hidden-window launch path is tested against a local protocol fixture. Its actual SDL library is tested with virtual controllers for background buttons, sticks, triggers and hotplug. Native shortcut registration, dispatch, focus guards and controller hold timing are checked separately. Live gameplay, physical HDR output and controller/decoder combinations still need device verification. VRR, PyroWave and host power controls remain unexposed; see the parity audit for the complete gap list.
+- This preview has automated UI, state, discovery, native-window recreation and identity/TLS checks. The bundled engine's hidden-window launch path is tested against a local protocol fixture. Its actual SDL library is tested with virtual controllers for background buttons, sticks, triggers and hotplug. Native custom/default shortcut registration, dispatch, hold timing and mapped SDL controller hotplug are checked separately. The test desktop has no interactive Windows foreground, so focused physical gameplay input still needs handheld verification. Live gameplay, physical HDR output and controller/decoder combinations still need device verification. VRR, PyroWave and host power controls remain unexposed; see the parity audit for the complete gap list.
 
 ## Pairing data
 
@@ -81,4 +93,4 @@ Removing a PC removes it from this app's browser. To revoke this client on the h
 - Build preparation: run `npm run prepare:streaming` on Windows. [prepare-streaming.cjs](../scripts/prepare-streaming.cjs) verifies a pinned official installer, extracts its files without running setup, and compiles the native bridge using Windows' .NET Framework C# compiler. The unpacker is used only during preparation and is not bundled.
 - Each build includes a `runtime-manifest.json` with the pinned engine source/version and hashes of its runtime files. Build staging and private pairing data are ignored by Git.
 
-The native bridge uses a Windows job object to own the decoder process and a child window for its SDL surface. It follows the parent client's physical pixel dimensions and keeps the engine's other windows hidden. Temporary SDL decoder-probe windows are ignored. The isolated engine profile disables its Qt entrance animation so hidden UI cannot stall the launch request. This avoids moving decoded frames through JavaScript or Chromium's video pipeline.
+The native bridge uses a Windows job object to own the decoder process and a borderless owned popup for its SDL surface. It follows the parent client's physical pixel dimensions and keeps the engine's other windows hidden. Temporary SDL decoder-probe windows are ignored. The isolated engine profile disables its Qt entrance animation so hidden UI cannot stall the launch request. This avoids moving decoded frames through JavaScript or Chromium's video pipeline.

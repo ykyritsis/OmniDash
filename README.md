@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 33](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.33/Xbox-Preview-UI-Setup-0.27.0-beta.33.exe)** · [Setup](#getting-started) · [Beta 33 notes](docs/release-0.27.0-beta.33.md)
+**[Download beta 34](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.34/Xbox-Preview-UI-Setup-0.27.0-beta.34.exe)** · [Setup](#getting-started) · [Beta 34 notes](docs/release-0.27.0-beta.34.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,32 +31,23 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 33
+## Beta 34
 
-- Stream controls auto-hide after five seconds; the existing keyboard and controller shortcuts bring them back.
-- Recently played remote games join Home → Jump back in with a cloud icon and saved history.
-- Added three stream profiles per PC, game overrides, custom quality values, display matching, HDR, 4:4:4 and more input/statistics settings.
-- Fixed live-settings window recreation, reduced native window scans, and documented the remaining [StreamLight parity gaps](docs/streamlight-parity.md).
-
-- Remote game cards now use the normal artwork lookup and renderer, reusing cached covers, logos and manual artwork selections before requesting new art.
-- Fixed embedded streaming losing controller input when Electron owns the foreground window. The bundled engine handles buttons, sticks, triggers and controller hotplug.
-- The stream banner has **Disconnect** and **Hide** buttons. Hide returns its space to the video; **LB + RB + View** or **Ctrl + Alt + Shift + H** brings it back. **LB + RB + A** and **Ctrl + Alt + Shift + Q** disconnect; an alternative Moonlight controller shortcut is available in Stream settings.
-- Added controller, mouse, touch, audio, V-Sync, frame pacing and statistics options, saved separately for each PC.
-- Remote PCs now live in Library, with automatic network discovery, status lights, square game tiles and normal game pages.
-- Each PC has saved resolution, FPS, bitrate, codec and decoder settings; StreamLight is bundled with no separate install.
-- Fixed hidden engine transitions and temporary decoder windows blocking launches; host errors now appear in the app.
-- Storage, remote play, pairing and Steam drive selection share the app's current console styling, with larger-text and controller-focus checks.
-- [Remote play preview](docs/remote-play.md): pair a Sunshine, Apollo or Vibepollo PC, browse its shared games and play through StreamLight's native decoder inside the app.
-- The launch animation stays up until the host session and video surface are ready. Host-reported game exit ends the stream.
-- Steam drive selection shows separate download, installed-size and required-space estimates, including shared content depots.
-- Settings → Storage shows drive space, known game sizes and installed games by drive.
+- **Disconnect** and **Return to stream** are now on the active remote game page. Keyboard/controller shortcuts remain available during play and reconnects.
+- **Lowest Latency**, **Balanced** and **Max Visuals** automatically choose bitrate, codec, decoder and frame delivery. Bitrate follows resolution, FPS and HDR. Manual tuning is still available.
+- One set of stream settings applies to every game and PC on this device. Named profiles and game overrides have been removed.
+- Record your own Disconnect and Game page shortcuts with controller button glyphs, conflict checking and Restore defaults.
+- Fixed native video focus and sizing so the player can receive input and the game page can take it back. Disconnect waits for the native player to finish closing.
+- Australian ratings use compact **G / PG / M / MA15+ / R18+** badges. Fixed foreign-language advice, wrong-board fallbacks and stale classification caches.
+- Includes automatic host discovery, square cached artwork, remote games in Home → Jump back in with cloud icons, and the five-second launch hint.
+- Steam drive selection shows download and installed-space estimates. Settings → Storage shows drive space and known game sizes.
 - Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.33.md)
+[Full release notes](docs/release-0.27.0-beta.34.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[beta 33 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.33)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 34 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.34)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

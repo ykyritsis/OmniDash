@@ -17,7 +17,7 @@ app.whenReady().then(async()=>{
   const fixture=path.join(output,'StreamSurface.exe');
   const controls=path.join(output,'StreamControlsTest.exe');
   await promisify(execFile)(path.join(process.env.WINDIR,'Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe','/main:StreamControlsTest','/r:System.Web.Extensions.dll',`/out:${controls}`,path.join(__dirname,'fixtures','StreamControlsTest.cs'),path.join(root,'src','remote-play','WindowBridge.cs')],{windowsHide:true});
-  console.log((await promisify(execFile)(controls,[],{windowsHide:true})).stdout.trim());
+  console.log((await promisify(execFile)(controls,[path.join(root,'.packaging-staging','streamlight','runtime')],{windowsHide:true})).stdout.trim());
   await promisify(execFile)(path.join(process.env.WINDIR,'Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe',`/out:${fixture}`,path.join(__dirname,'fixtures','StreamSurface.cs')],{windowsHide:true});
   win=new BrowserWindow({width:1280,height:800,frame:false,show:false,webPreferences:{sandbox:true,contextIsolation:true}});
   await win.loadURL('data:text/html,<body style="background:%23171920;color:white;font:24px sans-serif">Native stream surface review</body>');win.show();await pause(40);win.hide();win.show();win.focus();
@@ -29,8 +29,8 @@ app.whenReady().then(async()=>{
   await until(()=>events.some(event=>event.type==='surface')||events.some(event=>event.type==='error'));
   assert(!events.some(event=>event.type==='error'),JSON.stringify(events));
   const geometry=async()=>{const count=events.filter(e=>e.type==='geometry').length;bridge.stdin.write('inspect\n');await until(()=>events.filter(e=>e.type==='geometry').length>count);return events.filter(e=>e.type==='geometry').at(-1);};
-  let value=await geometry();assert.equal(value.parent,parent);assert.equal(value.child,true);assert.equal(value.visible,false,'Surface must stay hidden behind our launch animation');
-  assert(events.some(event=>event.text==='BACKGROUND_GAMEPAD 1'),'The actual engine process must inherit SDL background controller capture');
+  let value=await geometry();assert.equal(value.parent,parent);assert.equal(value.child,false,'SDL must be able to become the foreground window');assert.equal(value.visible,false,'Surface must stay hidden behind our launch animation');
+  assert(events.some(event=>event.text==='BACKGROUND_GAMEPAD 0'),'The actual engine process must pause controller forwarding when it loses focus');
   bridge.stdin.write('reveal\n');await until(()=>events.some(event=>event.type==='visible'));value=await geometry();assert.equal(value.visible,true);
   await until(()=>events.some(event=>event.text?.includes('SURFACE_FOCUSED')));
   for(const [width,height] of [[1280,800],[960,600]]){
@@ -42,9 +42,11 @@ app.whenReady().then(async()=>{
   bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Text scaling must update the native toolbar inset');
   bridge.stdin.write('viewport '+JSON.stringify({top:0,height:600})+'\n');await pause(60);value=await geometry();assert.equal(value.top,0);assert.equal(value.height,value.parentHeight,'Hiding controls must return all space to the video');
   bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Reopening controls must restore their clickable space');
+  bridge.stdin.write('page\n');await until(()=>events.some(event=>event.type==='page-visible'));value=await geometry();assert.equal(value.visible,false,'Game-page controls must not be covered by video');assert(!exited);
+  bridge.stdin.write('focus\n');await until(()=>events.some(event=>event.type==='stream-visible'));value=await geometry();assert.equal(value.visible,true,'Returning must reuse the existing stream');
   await until(()=>events.some(event=>event.type==='surface-lost'));assert(!exited);
   await until(()=>events.filter(event=>event.type==='surface').length===2);value=await geometry();assert.equal(value.visible,false,'A replacement surface must wait for decoded video');
-  bridge.stdin.write('reveal\n');await until(()=>events.filter(event=>event.type==='visible').length===2);value=await geometry();assert.equal(value.parent,parent);assert.equal(value.visible,true);assert.equal(value.child,true,'Live settings must keep the replacement video embedded');
+  bridge.stdin.write('reveal\n');await until(()=>events.filter(event=>event.type==='visible').length===2);value=await geometry();assert.equal(value.parent,parent);assert.equal(value.visible,true);assert.equal(value.child,false,'Live settings must keep the replacement video owned by our app');
   bridge.stdin.write('stop\n');await until(()=>exited);assert(events.some(event=>event.type==='exit'));
   // Exercise the actual, unmodified StreamLight executable and read its
   // isolated portable identity. No real host pairing or game is required.
@@ -67,6 +69,6 @@ app.whenReady().then(async()=>{
     await assert.rejects(wireRequest(host,'serverinfo',{...auth,pinnedCert:require('node:tls').rootCertificates[0]}),/identity changed/);
   }finally{await new Promise(resolve=>server.close(resolve));}
   await fs.writeFile(path.join(output,'result.json'),JSON.stringify({ok:true,events},null,2));
-  console.log('PASS native child parenting, hidden launch surface, reveal, keyboard focus, physical-pixel resizing and decoder shutdown; actual StreamLight portable identity, mutual TLS and host pin validation');win.destroy();app.exit(0);
+  console.log('PASS native window ownership, hidden launch surface, reveal, app/stream switching, focus requests, physical-pixel resizing and decoder shutdown; actual StreamLight portable identity, mutual TLS and host pin validation');win.destroy();app.exit(0);
 }).catch(async error=>{console.error(error,JSON.stringify(events));await fs.writeFile(path.join(output,'failure.json'),JSON.stringify(events,null,2));bridge?.kill();win?.destroy();app.exit(1);});
 setTimeout(()=>{bridge?.kill();app.exit(1);},25000).unref();

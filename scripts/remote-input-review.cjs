@@ -11,12 +11,13 @@ app.whenReady().then(async()=>{
   await win.loadURL('data:text/html,<body style="background:%23212320;color:white"><button>Disconnect fixture</button></body>');win.show();await pause(40);win.hide();win.show();win.focus();
   const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:[path.join(root,'.packaging-staging','streamlight','runtime')],parent:win.getNativeWindowHandle().readBigUInt64LE().toString(),stream:true,viewport:{top:70,height:600}}));
   bridge=spawn(path.join(root,'.packaging-staging','streamlight','WindowBridge.exe'),[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
-  let buffer='';bridge.stdout.on('data',chunk=>{buffer+=chunk;const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines)try{const event=JSON.parse(line);events.push(event);if(event.type==='surface')bridge.stdin.write('reveal\n');if(event.type==='visible')setTimeout(()=>{win.focus();win.webContents.focus();},100);}catch{}});bridge.stderr.resume();
+  let buffer='';bridge.stdout.on('data',chunk=>{buffer+=chunk;const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines)try{const event=JSON.parse(line);events.push(event);if(event.type==='surface')bridge.stdin.write('reveal\n');if(['INPUT_FOCUSED_PASS','INPUT_BACKGROUND_START'].includes(event.text)){bridge.stdin.write('page\n');win.focus();win.webContents.focus();}}catch{}});bridge.stderr.resume();
   setTimeout(()=>{if(!bridge.killed)bridge.stdin.write('inspect\n');},1000);
   await new Promise((resolve,reject)=>{bridge.once('exit',resolve);bridge.once('error',reject);});
   assert(events.some(e=>e.text?.startsWith('INPUT_PASS ')),JSON.stringify(events));assert(!events.some(e=>e.type==='error'));assert(events.some(e=>e.type==='visible'),JSON.stringify(events));
   await fs.writeFile(path.join(output,'result.json'),JSON.stringify({ok:true,events},null,2));
-  console.log('PASS actual bundled SDL: reproduced dropped background input, then received buttons/sticks/triggers and controller hotplug/removal in the embedded player.');
+  console.log('PASS actual bundled SDL: background input is blocked with capture off; buttons/sticks/triggers and hotplug/removal work with capture on.');
+  for(const event of events)if(event.text?.startsWith('INPUT_FOCUS'))console.log(event.text);
   win.destroy();app.exit(0);
 }).catch(error=>{console.error(error);bridge?.kill();win?.destroy();app.exit(1);});
 setTimeout(()=>{bridge?.kill();win?.destroy();app.exit(1);},20000).unref();

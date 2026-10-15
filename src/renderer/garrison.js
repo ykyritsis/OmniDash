@@ -1376,15 +1376,15 @@ function playGarrisonTrailer(index, opener) {
 }
 
 function renderGarrisonRating(game, details) {
-  const rating = details.rating || game.rating || (details.ageRating ? { system: 'AGE', value: String(details.ageRating).replace('+', ''), label: details.ageRating, descriptors: '' } : null);
-  const descriptors = rating?.descriptors || details.contentNotes || '';
+  const rating = (Object.hasOwn(details,'rating') ? details.rating : game.rating) || (details.ageRating ? { system: 'AGE', value: String(details.ageRating).replace('+', ''), label: details.ageRating, descriptors: '' } : null);
+  const descriptors = rating?.descriptors || '';
   const tone = !rating ? '' : rating.system === 'PEGI' ? (Number(rating.value) >= 18 ? 'red' : Number(rating.value) >= 12 ? 'orange' : 'green') : String(rating.system).toLowerCase();
   const badge = rating?.image ? `<img class="g-rating-image" src="${escapeHtml(rating.image)}" alt="${escapeHtml(rating.system)} ${escapeHtml(rating.label)}" />`
-    : `<span class="g-age-badge g-age-${tone}" aria-hidden="true"><b>${escapeHtml(['COB-AU','OFLC-NZ','ESRB','CERO'].includes(rating?.system) ? rating.label : rating?.value || rating?.label || '')}</b><small>${escapeHtml(rating?.system === 'COB-AU' ? 'ACB' : rating?.system === 'OFLC-NZ' ? 'NZ' : rating?.system || '')}</small></span>`;
-  const label = rating ? `${rating.system === 'COB-AU' ? 'Australian Classification' : rating.system === 'OFLC-NZ' ? 'New Zealand' : rating.system === 'AGE' ? 'Age requirement' : rating.system} ${rating.label || rating.value}` : '';
+    : `<span class="g-age-badge g-age-${tone}" data-rating="${escapeHtml(rating?.label||'')}" aria-hidden="true"><b>${escapeHtml(['COB-AU','OFLC-NZ','ESRB','CERO'].includes(rating?.system) ? rating.label : rating?.value || rating?.label || '')}</b><small>${escapeHtml(rating?.system === 'COB-AU' ? 'ACB' : rating?.system === 'OFLC-NZ' ? 'NZ' : rating?.system || '')}</small></span>`;
+  const label = rating ? `${['COB-AU','OFLC-NZ','AGE'].includes(rating.system)?'':rating.system+' '}${rating.label || rating.value}` : '';
   const lines = [descriptors, rating?.interactive, game.discoveryOnly ? '' : game.provider === 'PC' ? '' : `${game.provider} handles purchases and installation for this game.`].filter(Boolean);
   document.querySelector('#g-detail-rating').innerHTML = rating
-    ? `${badge}<div>${rating.system === 'AGE' ? `<span>${escapeHtml(label)}</span>` : `<button class="g-link focusable" type="button" data-action="g-rating-info" data-system="${escapeHtml(rating.system)}">${escapeHtml(label)} ${gIcon('open')}</button>`}${lines.map(line => `<span class="g-rating-line">${escapeHtml(line)}</span>`).join('')}</div>`
+    ? `${badge}<div>${rating.system === 'AGE' ? `<span>${escapeHtml(label)} · Age requirement</span>` : `<button class="g-link focusable" type="button" data-action="g-rating-info" data-system="${escapeHtml(rating.system)}" aria-label="${escapeHtml(label)} — rating details">${escapeHtml(label)} ${gIcon('open')}</button>`}${rating.regionalFallback&&rating.system!=='AGE'?'<span class="g-rating-line">Regional rating unavailable · fallback rating</span>':''}${lines.map(line => `<span class="g-rating-line">${escapeHtml(line)}</span>`).join('')}</div>`
     : '';
 }
 

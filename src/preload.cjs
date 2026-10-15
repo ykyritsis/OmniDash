@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('launcher', {
   remotePlayStop: () => ipcRenderer.invoke('remote-play:stop'),
   remotePlayRemove: id => ipcRenderer.invoke('remote-play:remove', id),
   remotePlayFocus: () => ipcRenderer.invoke('remote-play:focus'),
+  remotePlayPage: () => ipcRenderer.invoke('remote-play:page'),
   onRemotePlayStatus: callback => { const listener = (_event, data) => callback(data); ipcRenderer.on('remote-play:status', listener); return () => ipcRenderer.removeListener('remote-play:status', listener); },
   showNativeKeyboard: () => ipcRenderer.invoke('keyboard:show'),
   cancelLibraryConnect: () => ipcRenderer.invoke('accounts:cancel-connect'),

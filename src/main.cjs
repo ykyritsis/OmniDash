@@ -285,7 +285,7 @@ function decodeSteamText(value) {
 
 function steamCountry() {
   const { locale, timeZone } = Intl.DateTimeFormat().resolvedOptions();
-  return ratings.resolveCountry({ region: playerRegion, country: windowsHomeCountry || (app.isReady() ? app.getLocaleCountryCode?.().toUpperCase() : ''), locale, timeZone });
+  return ratings.resolveCountry({ region: playerRegion, country: windowsHomeCountry, locale, timeZone });
 }
 async function detectWindowsHomeCountry() {
   if (process.platform !== 'win32' || process.env.NEBULA_DEMO === '1') return '';
@@ -842,7 +842,7 @@ function scheduleScreenshotCache(game, details) {
 }
 
 const xboxAgeRating = product => ratings.xboxAgeRating(product, steamCountry());
-const detailCacheKey = (id, country = steamCountry()) => `v2:${country}:${id}`;
+const detailCacheKey = (id, country = steamCountry()) => `v3:${country}:${id}`;
 function invalidateGameDetails(id) {
   for (const key of gameDetailCache.keys()) if (key === id || key.endsWith(`:${id}`)) gameDetailCache.delete(key);
   if (detailDisk) for (const key of Object.keys(detailDisk)) if (key === id || key.endsWith(`:${id}`)) delete detailDisk[key];
@@ -896,7 +896,7 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
   const applyXboxSummary = async (details) => {
     const summary = await xboxSummaryRequest;
     if (!summary) return details;
-    details.rating = ratings.chooseRating(country, details.rating, summary.rating);
+    details.rating = ratings.chooseRating(country, summary.rating, details.rating);
     details.videos = uniqueVideos([...(summary.videos || []), ...(details.videos || [])], { playableOnly: true });
     details.xboxProductId ||= summary.xboxProductId;
     details.publisher ||= summary.publisher;
@@ -969,7 +969,7 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
       if (xbox.genres?.length) details.genres = [...new Set([...xbox.genres, ...details.genres])].slice(0, 5);
       if (!details.screenshots.length) details.screenshots = xbox.screenshots || [];
       if (!details.categories.length) details.categories = xbox.categories || [];
-      details.rating = ratings.chooseRating(country, details.rating, xbox.rating);
+      details.rating = ratings.chooseRating(country, xbox.rating, details.rating);
       details.xboxInfo = xbox.xboxInfo;
       details.metadataSource = 'Xbox Store · Steam';
     }
@@ -986,7 +986,7 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     // Small copies for the gallery strip; the full size opens in the viewer.
     details.screenshots = uniqueScreenshots(details.screenshots.length ? details.screenshots : fallback.screenshots);
     details.screenshotThumbs = details.screenshots.map(url => String(url).replace(/\.1920x1080\.jpg/, '.600x338.jpg'));
-    if (details.rating && !details.ageRating) details.ageRating = `${details.rating.value}+`;
+    if (details.rating) details.ageRating = details.rating.label;
     if (!details.screenshots.length) details.screenshots = fallback.screenshots;
     gameDetailCache.set(key, { at: Date.now(), data: details });
     scheduleScreenshotCache(game, details);
@@ -1790,6 +1790,7 @@ function registerIpc() {
   ipcMain.handle('remote-play:stop', () => remotePlay.stop());
   ipcMain.handle('remote-play:remove', (_event, id) => remotePlay.remove(id));
   ipcMain.handle('remote-play:focus', () => remotePlay.focus());
+  ipcMain.handle('remote-play:page', () => remotePlay.page());
   ipcMain.handle('remote-play:viewport', (_event, value) => remotePlay.viewport(value));
   ipcMain.handle('storage:overview', async () => {
     const libraries = process.env.NEBULA_DEMO === '1' ? ['C:\\Program Files (x86)\\Steam', 'D:\\SteamLibrary'] : await findSteamRoots();
@@ -2396,6 +2397,7 @@ function registerIpc() {
     return { gameId: session.gameId, verified: false };
   });
   ipcMain.handle('game:return', (_event, gameId) => {
+    if(remotePlay.active()?.gameId===gameId)return remotePlay.focus();
     if (!activeGameSession || activeGameSession.gameId !== gameId) throw new Error('This is not the last launched game.');
     if (activeGameSession.pid) {
       try { process.kill(activeGameSession.pid, 0); }

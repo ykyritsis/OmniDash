@@ -13,19 +13,54 @@
   const hostLabel=host=>({ready:'Ready to play',busy:'Game running',offline:'Offline','pair-required':'Pairing required',unknown:'Checking connection…'}[host?.status]||'Checking connection…');
   const status=host=>`<span class="remote-status" data-status="${escape(host?.status||'unknown')}"><i aria-hidden="true"></i>${escape(hostLabel(host))}</span>`;
   const streamBar=document.createElement('aside');streamBar.id='remote-stream-bar';streamBar.hidden=true;streamBar.setAttribute('aria-label','Remote play controls');
-  streamBar.innerHTML=`<div><strong id="remote-stream-title"></strong><span id="remote-stream-shortcut"></span><small>Show / hide controls: LB + RB + View · Ctrl + Alt + Shift + H</small><small id="remote-stream-live"></small><small>Release mouse: Ctrl + Alt + Shift + Z</small></div><nav aria-label="Stream actions">${button('remote-stream-disconnect','Disconnect','title="End this stream and return to the app. The game stays open on your PC."')}${button('remote-stream-hide','Hide','title="Hide these controls and use the full screen for your game."')}</nav>`;
+  streamBar.innerHTML=`<div><strong id="remote-stream-title"></strong><span id="remote-stream-shortcut"></span><small id="remote-stream-page-shortcut"></small><small id="remote-stream-live"></small><small>Release mouse: Ctrl + Alt + Shift + Z</small></div><nav aria-label="Stream actions">${button('remote-stream-disconnect','Disconnect','title="End this stream and return to the app. The game stays open on your PC."')}${button('remote-stream-page','Game page')}${button('remote-stream-hide','Hide','title="Hide these controls and use the full screen for your game."')}</nav>`;
   document.body.append(streamBar);
-  let streamBarTimer=0,homeSignature='';
+  let streamBarTimer=0,homeSignature='',shortcutDraft=StreamSettings.defaultShortcuts(),shortcutCapture=null;
   const homeCoverRequests=new Set();
   const cancelAutoHide=()=>{clearTimeout(streamBarTimer);streamBarTimer=0;};
   // The welcome hint disappears once. Reopened controls stay until dismissed.
   streamBar.addEventListener('pointerdown',cancelAutoHide);streamBar.addEventListener('focusin',cancelAutoHide);
   function updateViewport(){if(window.remotePlayUI?.playing)window.launcher.remotePlayViewport({top:streamBar.hidden?0:Math.ceil(streamBar.getBoundingClientRect().bottom),height:innerHeight}).catch(()=>{});}
   function hideStreamBar(focusVideo=true){cancelAutoHide();if(streamBar.contains(document.activeElement))document.activeElement.blur();streamBar.hidden=true;updateViewport();if(focusVideo)window.launcher.remotePlayFocus().catch(()=>{});}
-  function toggleStreamBar(){if(!window.remotePlayUI?.playing)return;if(streamBar.hidden)showStreamBar(state.remotePlaySession);else hideStreamBar();}
+  function toggleStreamPage(){if(!window.remotePlayUI?.playing)return;return state.remotePlaySession.view==='page'?window.launcher.remotePlayFocus():window.launcher.remotePlayPage();}
   new ResizeObserver(updateViewport).observe(streamBar);window.addEventListener('resize',updateViewport);
-  function showStreamBar(session,autoHide=false){cancelAutoHide();const host=hostById(session.hostId),p=session.preferences||host?.preferences||{};document.querySelector('#remote-stream-title').textContent=session.title||'Remote play';document.querySelector('#remote-stream-shortcut').textContent=`Disconnect: ${p.quitCombo==='moonlight'?'View + Menu + LB + RB':`LB + RB + ${p.swapFaceButtons?'B':'A'}`} · Ctrl + Alt + Shift + Q`;document.querySelector('#remote-stream-live').textContent=`Live video settings: LB + RB + ${p.swapFaceButtons?'A':'B'} · Ctrl + Alt + Shift + O`;streamBar.hidden=false;updateViewport();if(autoHide)streamBarTimer=setTimeout(()=>{if(window.remotePlayUI?.playing)hideStreamBar(false);},5000);}
-  window.addEventListener('keydown',event=>{if(!window.remotePlayUI?.playing)return;if(event.ctrlKey&&event.altKey&&event.shiftKey&&event.key.toLowerCase()==='q'){window.launcher.remotePlayStop().catch(error=>showToast(error.message));}else if(event.ctrlKey&&event.altKey&&event.shiftKey&&event.key.toLowerCase()==='h'){if(!event.repeat)toggleStreamBar();}else if(['Enter',' '].includes(event.key)&&streamBar.contains(document.activeElement)){document.activeElement.click();}else if(event.key==='Tab'&&!streamBar.hidden){const items=[...streamBar.querySelectorAll('button')],index=items.indexOf(document.activeElement);items[index<0?(event.shiftKey?items.length-1:0):(index+(event.shiftKey?-1:1)+items.length)%items.length].focus();}else if(event.key==='Escape'){hideStreamBar();}event.preventDefault();event.stopImmediatePropagation();},true);
+  const padFamily=()=>getConnectedControllers().some(pad=>/dualsense|dualshock|playstation|sony|054c/i.test(pad.id))?'ps':'xbox';
+  function padGlyphs(mask){
+    const ps=padFamily()==='ps',names=StreamSettings.padButtons.filter(b=>mask&b.mask);
+    return '<span class="remote-chord" role="img" aria-label="'+escape(names.map(b=>ps?b.ps:b.name).join(' + '))+'">'+names.map(b=>{
+      const label=ps?b.ps:b.name,face=['A','B','X','Y'].includes(b.name),shape=ps?{A:'×',B:'○',X:'□',Y:'△'}[b.name]:b.name;
+      const svg=b.name==='View'?'<svg viewBox="0 0 24 24"><path d="M8 8h12v12H8zM4 16V4h12"/></svg>':b.name==='Menu'?'<svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/></svg>':null;
+      return '<kbd aria-hidden="true" title="'+label+'" class="remote-pad-key '+(face?'remote-pad-face remote-pad-'+b.name.toLowerCase():'remote-pad-system')+'">'+(face?shape:svg||label)+'</kbd>';
+    }).join('<span aria-hidden="true" class="remote-chord-plus">+</span>')+'</span>';
+  }
+  function keyboardGlyphs(binding){const keys=[...(binding.modifiers&1?['Ctrl']:[]),...(binding.modifiers&2?['Alt']:[]),...(binding.modifiers&4?['Shift']:[]),StreamSettings.keyInfo(binding.code)?.label||'?'];return '<span class="remote-chord" role="img" aria-label="'+keys.join(' + ')+'">'+keys.map(key=>'<kbd aria-hidden="true" class="remote-key">'+escape(key)+'</kbd>').join('<span aria-hidden="true" class="remote-chord-plus">+</span>')+'</span>';}
+  function showStreamBar(session,autoHide=false){
+    cancelAutoHide();const host=hostById(session.hostId),p=session.preferences||host?.preferences||{},bindings=StreamSettings.normalizeShortcuts(p.shortcuts,p.quitCombo);
+    document.querySelector('#remote-stream-title').textContent=session.title||'Remote play';
+    document.querySelector('#remote-stream-shortcut').innerHTML='Disconnect: '+padGlyphs(bindings.disconnect.gamepad)+' · '+keyboardGlyphs(bindings.disconnect.keyboard);
+    document.querySelector('#remote-stream-page-shortcut').innerHTML='Game page / return: '+padGlyphs(bindings.page.gamepad)+' · '+keyboardGlyphs(bindings.page.keyboard);
+    document.querySelector('#remote-stream-live').innerHTML='Live settings: '+padGlyphs(0x2300)+' · Ctrl + Alt + Shift + O';
+    streamBar.hidden=false;updateViewport();if(autoHide)streamBarTimer=setTimeout(()=>{if(window.remotePlayUI?.playing)hideStreamBar(false);},5000);
+  }
+  window.addEventListener('keydown',event=>{
+    if(shortcutCapture&&!shortcutCapture.ready){captureShortcutKey(event);return;}
+    if(!window.remotePlayUI?.active)return;
+    const bindings=StreamSettings.normalizeShortcuts(state.remotePlaySession.preferences?.shortcuts),pressed=StreamSettings.keyboardEvent(event);
+    if(StreamSettings.sameKey(pressed,bindings.disconnect.keyboard)){if(!event.repeat)window.launcher.remotePlayStop().catch(error=>showToast(error.message));}
+    else if(StreamSettings.sameKey(pressed,bindings.page.keyboard)){if(!event.repeat)toggleStreamPage()?.catch(error=>showToast(error.message));}
+    else if(!window.remotePlayUI.capturesInput)return;
+    else if(['Enter',' '].includes(event.key)&&streamBar.contains(document.activeElement)){document.activeElement.click();}
+    else if(event.key==='Tab'&&!streamBar.hidden){const items=[...streamBar.querySelectorAll('button')],index=items.indexOf(document.activeElement);items[index<0?(event.shiftKey?items.length-1:0):(index+(event.shiftKey?-1:1)+items.length)%items.length].focus();}
+    else if(event.key==='Escape'){window.launcher.remotePlayPage().catch(error=>showToast(error.message));}
+    event.preventDefault();event.stopImmediatePropagation();
+  },true);
+  const disconnectButton=document.createElement('button');disconnectButton.id='detail-disconnect';disconnectButton.className='detail-secondary focusable';disconnectButton.dataset.action='remote-stream-disconnect';disconnectButton.type='button';disconnectButton.hidden=true;disconnectButton.textContent='Disconnect';document.querySelector('#detail-play').after(disconnectButton);
+  async function showSessionPage(session){
+    cancelAutoHide();streamBar.hidden=true;state.remotePlaySession=session;document.body.classList.remove('remote-streaming');finishRemoteLaunch();
+    waitForControllerRelease=true;scheduleGamepadPoll();
+    if(state.detailGameId!==session.gameId||state.view!=='detail')await openGameDetails(session.gameId);
+    paintDetail();restore('#detail-disconnect');
+  }
   function syncGames(){state.remoteGames=remote.hosts.flatMap(host=>(host.games||[]).map(game=>({...game,hostName:host.name,hostStatus:host.status})));}
   function refreshHome(){
     if(state.view!=='home')return;
@@ -33,9 +68,9 @@
     if(signature!==homeSignature){homeSignature=signature;const active=document.activeElement,id=active?.dataset.gameId,scroll=document.querySelector('main').scrollTop;window.renderLibrary();if(id&&!active.isConnected){const next=recentRow.querySelector(`[data-game-id="${CSS.escape(id)}"]`);if(next)setFocusedElement(next,{scroll:false});}document.querySelector('main').scrollTop=scroll;}
     for(const game of recent.filter(game=>game.remoteHostId&&!homeCoverRequests.has(game.id))){homeCoverRequests.add(game.id);window.launcher.remotePlayCovers(game.remoteHostId,[game.appId]).then(items=>items.forEach(item=>applyArtwork(game.remoteHostId,item))).catch(()=>{});}
   }
-  function acceptSnapshot(value){remote=value;syncGames();renderHosts();if(state.libraryRemote)renderLibrary();paintDetail();refreshHome();}
+  function acceptSnapshot(value){remote=value;syncGames();renderHosts();if(state.libraryRemote)renderLibrary();if(value.session&&!state.remotePlaySession){state.remotePlaySession=value.session;if(value.session.view==='page')showSessionPage(value.session).catch(()=>{});else if(value.session.phase==='playing'){document.body.classList.add('remote-streaming');showStreamBar(value.session,true);}}paintDetail();refreshHome();}
   const streaming=document.querySelector('[data-settings-page="g-streaming"]');
-  streaming.innerHTML=`<div class="remote-intro settings-section-heading"><h3>Gaming PCs</h3><p>Find a Sunshine, Apollo or Vibepollo PC on your network, pair once, then play from Library → Remote PCs.</p></div><div class="remote-tools">${button('remote-add','Find a PC','',true)}${button('remote-open-library','Open remote library')}${button('remote-settings-refresh','Refresh status')}</div><div id="remote-hosts" aria-live="polite"></div><p class="remote-help">Streaming is built into this app. Approve the pairing PIN on the host PC to connect.</p>`;
+  streaming.innerHTML=`<div class="remote-intro settings-section-heading"><h3>Gaming PCs</h3><p>Find a Sunshine, Apollo or Vibepollo PC on your network, pair once, then play from Library → Remote PCs.</p></div><div class="remote-tools">${button('remote-add','Find a PC','',true)}${button('remote-quality','Stream settings')}${button('remote-open-library','Open remote library')}${button('remote-settings-refresh','Refresh status')}</div><div id="remote-hosts" aria-live="polite"></div><p class="remote-help">Streaming is built into this app. Approve the pairing PIN on the host PC to connect.</p>`;
   document.querySelector('.console-library-nav').insertAdjacentHTML('beforeend','<button class="focusable" type="button" data-action="console-library-section" data-section="remote">Remote PCs</button>');
   const library=document.createElement('section');library.id='remote-library';library.hidden=true;library.setAttribute('aria-labelledby','remote-library-title');
   library.innerHTML=`<div id="remote-host-tabs" role="tablist" aria-label="Remote PCs"></div><header><div><h2 id="remote-library-title">Remote PCs</h2><p id="remote-library-status" role="status"></p></div><div class="remote-library-actions">${button('remote-add','Find a PC')}${button('remote-quality','Stream settings')}${button('remote-library-refresh','Refresh games')}</div></header><label class="remote-search-label">Search this PC<input id="remote-game-search" class="focusable" type="search" placeholder="Search games" autocomplete="off" /></label><div id="remote-game-grid" class="remote-game-grid"></div><p class="remote-library-help">Games are supplied by your host’s shared library. <button class="remote-inline-button focusable" data-action="remote-library-help">Missing or uninstalled games?</button></p>`;
@@ -43,14 +78,17 @@
   function dialog(id,cls){const node=document.createElement('dialog');node.id=id;node.className=`${cls} g-managed-dialog`;document.body.append(node);return node;}
   const pairDialog=dialog('remote-pair-dialog','remote-pair-dialog');pairDialog.setAttribute('aria-labelledby','remote-pair-title');
   const qualityDialog=dialog('remote-quality-dialog','remote-quality-dialog');qualityDialog.setAttribute('aria-labelledby','remote-quality-title');
+  const shortcutsDialog=dialog('remote-shortcuts-dialog','remote-quality-dialog');shortcutsDialog.setAttribute('aria-labelledby','remote-shortcuts-title');
+  const recordDialog=dialog('remote-shortcut-record-dialog','remote-pair-dialog');recordDialog.setAttribute('aria-labelledby','remote-shortcut-record-title');
+  recordDialog.addEventListener('close',()=>{shortcutCapture=null;waitForControllerRelease=true;scheduleGamepadPoll();});
   const customDialog=dialog('remote-custom-dialog','remote-pair-dialog');customDialog.setAttribute('aria-labelledby','remote-custom-title');
   const errorDialog=dialog('remote-error-dialog','remote-pair-dialog');errorDialog.setAttribute('aria-labelledby','remote-error-title');
   const helpDialog=dialog('remote-help-dialog','remote-pair-dialog');helpDialog.setAttribute('aria-labelledby','remote-help-title');
   pairDialog.addEventListener('close',()=>{scanGeneration++;window.launcher.remotePlayCancelPair().catch(()=>{});if(pairOpener?.isConnected)setFocusedElement(pairOpener,{scroll:false});});
-  for(const node of [qualityDialog,customDialog,errorDialog,helpDialog])node.addEventListener('close',()=>{refreshFocusables();if(node.opener?.isConnected&&node.opener.offsetParent!==null)setFocusedElement(node.opener,{scroll:false});});
+  for(const node of [qualityDialog,customDialog,errorDialog,helpDialog,shortcutsDialog,recordDialog])node.addEventListener('close',()=>{refreshFocusables();if(node.opener?.isConnected&&node.opener.offsetParent!==null)setFocusedElement(node.opener,{scroll:false});});
   function showDialog(node,first){node.opener=document.activeElement;if(!node.open)node.showModal();refreshFocusables();setFocusedElement(node.querySelector(first||'.focusable'),{scroll:false});}
   function renderHosts(){
-    document.querySelector('#remote-hosts').innerHTML=!remote.available?'<div class="remote-empty"><h3>Streaming component unavailable</h3><p>Install the full app build to restore the bundled streaming component.</p></div>':!remote.hosts.length?'<div class="remote-empty"><h3>Your gaming PCs, in one place</h3><p>Find a PC on this network to get started. You can also enter an address manually.</p></div>':remote.hosts.map(host=>`<article class="remote-host-card"><div class="remote-host-info"><span class="remote-host-icon">${gIcon('stream')}</span><span class="remote-host-copy"><strong>${escape(host.name)}</strong>${status(host)}<small>${escape(host.address)}${host.paired?` · ${host.games.length} shared games`:''}</small></span></div><div class="remote-host-actions">${button(host.paired?'remote-browse-host':'remote-pair-host',host.paired?'Browse games':'Pair PC',`data-host-id="${escape(host.id)}"`)}${host.paired?button('remote-quality','Stream settings',`data-host-id="${escape(host.id)}"`):''}${button('remote-remove','Remove',`data-host-id="${escape(host.id)}"`)}</div></article>`).join('');refreshFocusables();
+    document.querySelector('#remote-hosts').innerHTML=!remote.available?'<div class="remote-empty"><h3>Streaming component unavailable</h3><p>Install the full app build to restore the bundled streaming component.</p></div>':!remote.hosts.length?'<div class="remote-empty"><h3>Your gaming PCs, in one place</h3><p>Find a PC on this network to get started. You can also enter an address manually.</p></div>':remote.hosts.map(host=>`<article class="remote-host-card"><div class="remote-host-info"><span class="remote-host-icon">${gIcon('stream')}</span><span class="remote-host-copy"><strong>${escape(host.name)}</strong>${status(host)}<small>${escape(host.address)}${host.paired?` · ${host.games.length} shared games`:''}</small></span></div><div class="remote-host-actions">${button(host.paired?'remote-browse-host':'remote-pair-host',host.paired?'Browse games':'Pair PC',`data-host-id="${escape(host.id)}"`)}${button('remote-remove','Remove',`data-host-id="${escape(host.id)}"`)}</div></article>`).join('');refreshFocusables();
   }
   async function refreshHosts(check=false){acceptSnapshot(await (check?window.launcher.remotePlayCheckHosts():window.launcher.remotePlaySnapshot()));return remote;}
   function renderLibrary(){
@@ -63,7 +101,7 @@
     document.querySelector('#remote-host-tabs').innerHTML=remote.hosts.map(item=>`<button class="remote-pc-tab focusable${item.id===host?.id?' active':''}" role="tab" aria-selected="${item.id===host?.id}" data-action="remote-host-tab" data-host-id="${escape(item.id)}">${gIcon('stream')}<span><strong>${escape(item.name)}</strong>${status(item)}</span></button>`).join('');
     document.querySelector('#remote-library-title').textContent=host?`Games on ${host.name}`:'Your remote library';
     document.querySelector('#remote-library-status').textContent=busy?'Refreshing the host’s library…':host?.status==='offline'?'PC offline · Saved games are available to browse.':host?`${host.games?.length||0} shared games · ${host.address}`:'Find a PC on your network to browse and stream its games.';
-    library.querySelector('[data-action="remote-quality"]').disabled=!host?.paired;
+    library.querySelector('[data-action="remote-quality"]').disabled=!remote.available;
     library.querySelector('[data-action="remote-library-refresh"]').disabled=!host?.paired||busy;
     const term=document.querySelector('#remote-game-search').value.trim().toLocaleLowerCase();
     const games=(host?.games||[]).filter(game=>!term||game.title.toLocaleLowerCase().includes(term)).sort((a,b)=>a.title.localeCompare(b.title));
@@ -132,11 +170,11 @@
   const resolutions=[['1280x720','720p'],['1280x800','1280 × 800'],['1600x900','1600 × 900'],['1920x1080','1080p'],['1920x1200','1920 × 1200'],['2560x1440','1440p'],['2560x1600','2560 × 1600'],['3840x2160','4K']];
   const qualityFields=[['resolution','Resolution','Video size for this device.',resolutions],['fps','Frame rate','Match the handheld or display refresh rate.',[30,60,90,120].map(n=>[String(n),`${n} fps`])],['bitrate','Bitrate','Lower values help on a busy Wi-Fi network.',[3,5,10,15,20,30,40,60,80,100,150].map(n=>[String(n*1000),`${n} Mbps`])],['codec','Video codec','Automatic chooses a codec supported by both PCs.',[['auto','Automatic'],['H.264','H.264 · Compatibility'],['HEVC','HEVC'],['AV1','AV1']]],['decoder','Video decoding','Automatic uses hardware when available.',[['auto','Automatic'],['hardware','Hardware'],['software','Software']]]];
   const onOff=[['true','On'],['false','Off']];
-  qualityFields.push(['audioConfig','Audio','Speaker layout on this device.',[['stereo','Stereo'],['5.1','5.1 surround'],['7.1','7.1 surround']]],['vsync','V-Sync','Reduce screen tearing.',onOff],['framePacing','Frame pacing','Smooth frame delivery when V-Sync is on.',onOff],['performanceOverlay','Performance statistics','Show the streaming engine’s performance overlay.',onOff],['multiController','Multiple controllers','Send each connected controller as a separate player.',onOff],['swapFaceButtons','Swap A/B and X/Y','Use Nintendo-style face-button positions.',onOff],['gamepadMouse','Controller mouse mode','Hold Menu / Start to toggle mouse control, as in Moonlight.',onOff],['touchscreenTrackpad','Touchscreen mode','Choose direct touch or trackpad-style movement.',[['false','Direct touch'],['true','Trackpad']]],['absoluteMouse','Mouse mode','Use game capture or an absolute desktop pointer.',[['false','Game capture'],['true','Desktop pointer']]],['quitCombo','Controller disconnect shortcut','Hold for half a second. Swapping face buttons changes A to B.',[['streamlight','LB + RB + A'],['moonlight','View + Menu + LB + RB']]]);
+  qualityFields.push(['audioConfig','Audio','Speaker layout on this device.',[['stereo','Stereo'],['5.1','5.1 surround'],['7.1','7.1 surround']]],['vsync','V-Sync','Reduce screen tearing.',onOff],['framePacing','Frame pacing','Smooth frame delivery when V-Sync is on.',onOff],['performanceOverlay','Performance statistics','Show the streaming engine’s performance overlay.',onOff],['multiController','Multiple controllers','Send each connected controller as a separate player.',onOff],['swapFaceButtons','Swap A/B and X/Y','Use Nintendo-style face-button positions.',onOff],['gamepadMouse','Controller mouse mode','Hold Menu / Start to toggle mouse control, as in Moonlight.',onOff],['touchscreenTrackpad','Touchscreen mode','Choose direct touch or trackpad-style movement.',[['false','Direct touch'],['true','Trackpad']]],['absoluteMouse','Mouse mode','Use game capture or an absolute desktop pointer.',[['false','Game capture'],['true','Desktop pointer']]]);
   qualityFields.find(field=>field[0]==='fps')[3]=[30,40,60,90,120,144,165,240,360,480].map(n=>[String(n),`${n} fps`]);
   qualityFields.find(field=>field[0]==='bitrate')[3]=[.5,1,3,5,10,15,20,30,40,60,80,100,150,200,300,500].map(n=>[String(n*1000),`${n} Mbps`]);
   qualityFields.push(['hdr','HDR','Requires HDR on both the host and this display, with a supported codec.',onOff],['yuv444','4:4:4 colour','Sharper text when the host and decoder support it. Uses more bandwidth.',onOff],['fractionalVsync','Fractional V-Sync','Pace evenly when display refresh is an exact multiple of stream FPS. Requires V-Sync and frame pacing.',onOff],['audioOnHost','Play audio on host','Also keep the host PC’s speakers playing.',onOff],['captureSystemKeys','Windows shortcuts','Choose where shortcuts such as Alt + Tab are sent.',[['never','This device'],['always','Remote PC']]],['swapMouseButtons','Swap mouse buttons','Swap the left and right mouse buttons.',onOff],['reverseScroll','Reverse scrolling','Invert the mouse wheel direction.',onOff],['overlayDetail','Statistics detail','Full includes frame rates, network drops, latency, decoding and presentation timing.',[['standard','Standard'],['full','Full']]],['overlayPosition','Statistics position','Keep statistics in your preferred corner.',[['left','Top left'],['right','Top right']]],['overlaySize','Statistics text size','Adjust readability on smaller screens.',[['small','Small'],['medium','Medium'],['large','Large']]]);
-  const qualityGroups=[['Video',['resolution','fps','bitrate','codec','decoder','hdr','yuv444']],['Frame delivery',['vsync','framePacing','fractionalVsync']],['Audio',['audioConfig','audioOnHost']],['Input',['multiController','swapFaceButtons','gamepadMouse','touchscreenTrackpad','absoluteMouse','captureSystemKeys','swapMouseButtons','reverseScroll','quitCombo']],['Performance statistics',['performanceOverlay','overlayDetail','overlayPosition','overlaySize']]];
+  const qualityGroups=[['Video',['resolution','fps','bitrate','codec','decoder','hdr','yuv444']],['Frame delivery',['vsync','framePacing','fractionalVsync']],['Audio',['audioConfig','audioOnHost']],['Input',['multiController','swapFaceButtons','gamepadMouse','touchscreenTrackpad','absoluteMouse','captureSystemKeys','swapMouseButtons','reverseScroll']],['Performance statistics',['performanceOverlay','overlayDetail','overlayPosition','overlaySize']]];
   function qualityRow(id,values){
     const [,label,help,choices]=qualityFields.find(field=>field[0]===id),options=[...choices],value=String(values[id]??choices[0][0]);
     if(!options.some(option=>option[0]===value))options.push([value,id==='bitrate'?`${Number(value)/1000} Mbps`:id==='fps'?`${value} fps`:value.replace('x',' × ')]);
@@ -148,24 +186,89 @@
     const fields=id==='resolution'?[['Width',value.split('x')[0],256,7680],['Height',value.split('x')[1],256,7680]]:id==='fps'?[['Frames per second',value,10,480]]:[['Bitrate in Mbps',Number(value)/1000,.5,500]];
     customDialog.innerHTML=`<h2 id="remote-custom-title">Custom ${id==='fps'?'frame rate':id}</h2><p>Choose a value supported by your gaming PC and this device.</p>${fields.map(([label,current,min,max])=>`<label>${label}<input class="focusable" type="number" inputmode="decimal" value="${current}" min="${min}" max="${max}" step="${id==='bitrate'?'.001':'1'}" aria-label="${label}" required /></label>`).join('')}<p id="remote-custom-status" role="status"></p><div class="remote-tools">${button('remote-custom-save','Use value','',true)}${button('remote-custom-close','Cancel')}</div>`;showDialog(customDialog,'input');customDialog.opener=select;
   }
-  function openQuality(id,game,profileId){
-    const host=hostById(id)||currentHost();if(!host)return;qualityHost=host.id;qualityGame=game||null;
-    const profiles=host.profiles||['1','2','3'].map(id=>({id,name:`Profile ${id}`,preferences:host.preferences})),chosen=profiles.find(profile=>profile.id===(profileId||host.activeProfile||'1'))||profiles[0],opener=qualityDialog.open?qualityDialog.opener:document.activeElement;
-    const p={width:1920,height:1080,fps:60,bitrate:20000,codec:'auto',decoder:'auto',audioConfig:'stereo',vsync:true,framePacing:false,performanceOverlay:false,multiController:true,swapFaceButtons:false,gamepadMouse:true,touchscreenTrackpad:false,absoluteMouse:false,quitCombo:'streamlight',hdr:false,yuv444:false,fractionalVsync:false,audioOnHost:false,captureSystemKeys:'never',swapMouseButtons:false,reverseScroll:false,overlayDetail:'standard',overlayPosition:'left',overlaySize:'medium',...host.preferences},values={...p,resolution:`${p.width}x${p.height}`};
-    Object.assign(p,chosen.preferences,game?.streamOverrides||{});Object.assign(values,p,{resolution:`${p.width}x${p.height}`});
-    qualityDialog.innerHTML=`<h2 id="remote-quality-title">Stream settings</h2><p>${escape(host.name)}${game?` · ${escape(game.title)}. Only changed values override the PC profile.`:' · Choose and save a profile for this PC.'} Changes apply to the next stream.</p>${game?`<p>PC profile: ${escape(chosen.name)}</p>`:`<div class="remote-quality-options g-setting-list"><label class="g-setting-row"><span><strong>Profile</strong><small>Three independent presets for this PC.</small></span><select id="remote-profile" class="focusable" aria-label="Profile">${profiles.map(profile=>`<option value="${profile.id}"${profile.id===chosen.id?' selected':''}>${escape(profile.name)}</option>`).join('')}</select></label><label class="g-setting-row"><span><strong>Profile name</strong></span><input id="remote-profile-name" class="focusable" type="text" value="${escape(chosen.name)}" maxlength="40" aria-label="Profile name" /></label></div>`}<div class="remote-tools">${button('remote-quality-display','Use this display')}</div>${qualityGroups.map(([label,fields])=>`<h3>${label}</h3><div class="remote-quality-options g-setting-list">${fields.map(id=>qualityRow(id,values)).join('')}</div>`).join('')}<p class="remote-help">While playing: LB + RB + ${p.swapFaceButtons?'A':'B'} or Ctrl + Alt + Shift + O opens live video settings. Applying changes briefly reconnects to the same game. LB + RB + ${p.swapFaceButtons?'Y':'X'} or Ctrl + Alt + Shift + S toggles statistics.</p><div class="remote-tools">${button('remote-quality-save',game?'Save for this game':'Save profile','',true)}${button('remote-quality-close','Cancel')}${game?.streamOverrides?button('remote-quality-reset','Use PC profile'):''}${game?button('remote-hide-game','Hide this game'):''}${host.hiddenCount?button('remote-restore-games',`Restore ${host.hiddenCount} hidden game${host.hiddenCount===1?'':'s'}`):''}</div><p id="remote-quality-status" role="status"></p>`;
-    for(const select of qualityDialog.querySelectorAll('select')){select.addEventListener('pointerdown',event=>{event.preventDefault();openConsoleChoice(select);});select.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();openConsoleChoice(select);}});select.addEventListener('change',()=>{if(select.id==='remote-profile'){openQuality(host.id,null,select.value);return;}if(select.value==='custom')customQuality(select);else select.dataset.savedValue=select.value;if(select.id==='remote-vsync')document.querySelector('#remote-fractionalVsync').disabled=select.value!=='true';});}
-    const fractional=()=>{document.querySelector('#remote-fractionalVsync').disabled=document.querySelector('#remote-vsync').value!=='true'||document.querySelector('#remote-framePacing').value!=='true';};qualityDialog.querySelector('#remote-vsync').addEventListener('change',fractional);qualityDialog.querySelector('#remote-framePacing').addEventListener('change',fractional);fractional();
-    showDialog(qualityDialog);qualityDialog.opener=opener;
+  function applyQualityPreset(){
+    const name=document.querySelector('#remote-preset').value,preset=StreamSettings.presets[name],bitrate=document.querySelector('#remote-bitrate');
+    // Remove old automatic labels when switching to a manual value.
+    for(const option of bitrate.options)if(option.value!=='custom')option.textContent=`${Number(option.value)/1000} Mbps`;
+    if(preset){
+      const [width,height]=document.querySelector('#remote-resolution').value.split('x').map(Number),fps=Number(document.querySelector('#remote-fps').value),hdr=document.querySelector('#remote-hdr').value;
+      for(const [key,value] of Object.entries(StreamSettings.presetValues(name,{width,height,fps,hdr}))){
+        const field=document.querySelector('#remote-'+key),text=String(value);
+        if(![...field.options].some(option=>option.value===text))field.add(new Option(`${Number(value)/1000} Mbps`,text),field.options.length-1);
+        field.value=text;field.dataset.savedValue=text;
+      }
+      bitrate.selectedOptions[0].textContent+= ' · Auto';
+    }
+    document.querySelector('#remote-preset-help').textContent=preset?.description||'Your manual bitrate and video settings. Choose a preset to restore automatic tuning.';
+    bitrate.closest('label').querySelector('small').textContent=preset?'Chosen for your resolution and frame rate. Change it to customise.':'Manual limit. Lower it if Wi-Fi struggles.';
+  }
+  function renderShortcuts(){
+    shortcutsDialog.innerHTML=`<h2 id="remote-shortcuts-title">Stream shortcuts</h2><p>Hold a controller combination for half a second. These use the physical buttons, even when face buttons are swapped in games.</p>${[['disconnect','Disconnect','End the stream. The game stays open on your PC.'],['page','Game page / return','Leave the video to use the app, then return to your stream.']].map(([action,title,help])=>`<section class="remote-shortcut-section"><h3>${title}</h3><p>${help}</p><div class="remote-shortcut-bindings">${['gamepad','keyboard'].map(type=>button('remote-shortcut-record',`<span>${type==='gamepad'?'Controller':'Keyboard'}</span>${type==='gamepad'?padGlyphs(shortcutDraft[action][type]):keyboardGlyphs(shortcutDraft[action][type])}<small>Change</small>`,`data-shortcut="${action}" data-kind="${type}" aria-label="Change ${title} ${type==='gamepad'?'controller':'keyboard'} shortcut"`)).join('')}</div></section>`).join('')}<p class="remote-help">Save stream settings to apply your shortcuts to the next stream.</p><div class="remote-tools remote-quality-footer">${button('remote-shortcuts-close','Done','',true)}${button('remote-shortcuts-reset','Restore defaults')}</div>`;
+    refreshFocusables();
+  }
+  function beginShortcut(action,type){
+    shortcutCapture={action,type,armed:false,pad:null,mask:0,since:0,ready:false};
+    recordDialog.innerHTML=`<h2 id="remote-shortcut-record-title">${action==='disconnect'?'Disconnect':'Game page'} shortcut</h2><p>${type==='gamepad'?'Release all buttons, then hold at least three together. Include a shoulder, View or Menu button.':'Hold at least two of Ctrl, Alt and Shift, then press a letter, number or F key.'}</p><div id="remote-shortcut-preview" aria-live="polite">Waiting for ${type==='gamepad'?'controller buttons':'keys'}…</div><p id="remote-shortcut-message" role="status">${type==='gamepad'?'Hold the combination for half a second. Press B alone to cancel.':'Press Escape to cancel.'}</p><div class="remote-tools">${button('remote-shortcut-use','Use shortcut','disabled',true)}${button('remote-shortcut-cancel','Cancel')}</div>`;
+    showDialog(recordDialog,'[data-action="remote-shortcut-cancel"]');scheduleGamepadPoll();
+  }
+  function acceptShortcutCandidate(value){
+    if(!shortcutCapture)return;const {action,type}=shortcutCapture,error=StreamSettings.shortcutError(shortcutDraft,action,type,value);
+    document.querySelector('#remote-shortcut-preview').innerHTML=type==='gamepad'?padGlyphs(value):keyboardGlyphs(value);
+    document.querySelector('#remote-shortcut-message').textContent=error||'Ready. Use this shortcut or cancel to keep your current one.';
+    if(error)return;
+    shortcutCapture.ready=true;shortcutCapture.value=value;waitForControllerRelease=true;
+    recordDialog.querySelector('[data-action="remote-shortcut-use"]').disabled=false;restore('#remote-shortcut-record-dialog [data-action="remote-shortcut-use"]');
+  }
+  function captureShortcutKey(event){
+    if(event.key==='Tab')return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(event.key==='Escape'){recordDialog.close();return;}
+    if(shortcutCapture.type==='keyboard'&&!event.repeat&&!['Control','Alt','Shift','Meta'].includes(event.key))acceptShortcutCandidate(StreamSettings.keyboardEvent(event));
+    if(event.key==='Enter'&&document.activeElement?.dataset.action==='remote-shortcut-cancel')recordDialog.close();
+  }
+  function captureControllerShortcut(pads){
+    const capture=shortcutCapture;if(!capture||capture.ready)return false;
+    const down=pad=>pad.buttons.some(b=>b.pressed||b.value>.55);
+    if(!capture.armed){if(!pads.some(down)){capture.armed=true;state.previousButtons=[];}return true;}
+    if(capture.type!=='gamepad')return false;
+    const pad=capture.pad===null?pads.find(down):pads.find(pad=>pad.index===capture.pad);
+    if(!pad){capture.pad=null;capture.mask=0;capture.since=0;return true;}
+    capture.pad=pad.index;
+    const mask=StreamSettings.padButtons.reduce((mask,b)=>mask|((pad.buttons[b.index]?.pressed||pad.buttons[b.index]?.value>.55)?b.mask:0),0);
+    if(!mask){if(capture.mask===0x2000){recordDialog.close();return true;}capture.pad=null;capture.mask=0;capture.since=0;return true;}
+    if(mask!==capture.mask){capture.mask=mask;capture.since=performance.now();document.querySelector('#remote-shortcut-preview').innerHTML=padGlyphs(mask);}
+    if(performance.now()-capture.since>=500)acceptShortcutCandidate(mask);
+    return true;
+  }
+  function openQuality(id,game){
+    const host=hostById(id)||currentHost();qualityHost=host?.id||'';qualityGame=game||null;
+    const p={width:1920,height:1080,fps:60,bitrate:20000,preset:'balanced',...host?.preferences,...remote.preferences},values={...p,resolution:`${p.width}x${p.height}`};
+    const presets={...StreamSettings.presets,custom:{name:'Custom',description:'Your manual bitrate and video settings.'}},chosen=presets[p.preset]?p.preset:'balanced';
+    shortcutDraft=StreamSettings.normalizeShortcuts(p.shortcuts,p.quitCombo);
+    qualityDialog.innerHTML=`<h2 id="remote-quality-title">Stream settings</h2><p>Used for every game and every remote PC on this device. Changes apply to the next stream.</p><div class="remote-quality-options g-setting-list"><label class="g-setting-row"><span><strong>Streaming quality</strong><small id="remote-preset-help">${presets[chosen].description}</small></span><select id="remote-preset" class="focusable" aria-label="Streaming quality">${Object.entries(presets).map(([key,preset])=>`<option value="${key}"${chosen===key?' selected':''}>${preset.name}</option>`).join('')}</select></label>${['resolution','fps','hdr','bitrate'].map(id=>qualityRow(id,values)).join('')}</div><div class="remote-tools">${button('remote-quality-display','Use this display')}${button('remote-shortcuts','Shortcuts')}${button('remote-quality-advanced','Advanced settings','aria-expanded="false" aria-controls="remote-advanced"')}</div><section id="remote-advanced" hidden>${qualityGroups.map(([label,fields])=>[label,fields.filter(id=>!['resolution','fps','hdr','bitrate'].includes(id))]).filter(([,fields])=>fields.length).map(([label,fields])=>`<h3>${label}</h3><div class="remote-quality-options g-setting-list">${fields.map(id=>qualityRow(id,values)).join('')}</div>`).join('')}<p class="remote-help">Live video settings: ${padGlyphs(0x2300)} or Ctrl + Alt + Shift + O. Changes made there last for that stream; your saved settings here apply to every new stream.</p></section><div class="remote-tools remote-quality-footer">${button('remote-quality-save','Save settings','',true)}${button('remote-quality-close','Cancel')}${game?button('remote-hide-game','Hide this game'):''}${host?.hiddenCount?button('remote-restore-games',`Restore ${host.hiddenCount} hidden game${host.hiddenCount===1?'':'s'}`):''}</div><p id="remote-quality-status" role="status"></p>`;
+    const fractional=()=>{document.querySelector('#remote-fractionalVsync').disabled=document.querySelector('#remote-vsync').value!=='true'||document.querySelector('#remote-framePacing').value!=='true';};
+    for(const select of qualityDialog.querySelectorAll('select')){
+      select.addEventListener('pointerdown',event=>{event.preventDefault();openConsoleChoice(select);});
+      select.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();openConsoleChoice(select);}});
+      select.addEventListener('change',()=>{
+        if(select.value==='custom'&&select.id!=='remote-preset'){customQuality(select);return;}
+        select.dataset.savedValue=select.value;
+        if(select.id==='remote-preset'||['remote-resolution','remote-fps','remote-hdr'].includes(select.id))applyQualityPreset();
+        else if(StreamSettings.tuningKeys.includes(select.id.replace('remote-',''))){document.querySelector('#remote-preset').value='custom';applyQualityPreset();}
+        fractional();
+      });
+    }
+    applyQualityPreset();fractional();showDialog(qualityDialog);
   }
   function paintDetail(){
-    if(state.view!=='detail')return;const game=state.remoteGames?.find(game=>game.id===state.detailGameId);if(!game){const play=document.querySelector('#detail-play');if(play.dataset.remoteAction){play.disabled=false;delete play.dataset.remoteAction;document.querySelector('#detail-options-button').setAttribute('aria-label','Manage game');}return;}
+    if(state.view!=='detail'){disconnectButton.hidden=true;return;}const game=state.remoteGames?.find(game=>game.id===state.detailGameId);if(!game){disconnectButton.hidden=true;const play=document.querySelector('#detail-play');if(play.dataset.remoteAction){play.disabled=false;delete play.dataset.remoteAction;document.querySelector('#detail-options-button').setAttribute('aria-label','Manage game');}return;}
     const host=hostById(game.remoteHostId);if(!host)return;
-    const play=document.querySelector('#detail-play'),offline=host.status==='offline',other=host.status==='busy'&&host.currentGame!==game.appId;
-    play.disabled=offline||other||!host.paired;play.dataset.remoteAction='1';delete play.dataset.returnGame;
-    play.innerHTML=`<span class="detail-action-icon" aria-hidden="true">▶</span><strong>${offline?'PC offline':other?'PC busy':!host.paired?'Pair PC first':host.currentGame===game.appId?'Resume stream':'Play remotely'}</strong>`;
+    const play=document.querySelector('#detail-play'),offline=host.status==='offline',other=host.status==='busy'&&host.currentGame!==game.appId,session=state.remotePlaySession,active=session?.gameId===game.id;
+    disconnectButton.hidden=!active;disconnectButton.disabled=session?.phase==='stopping';disconnectButton.textContent=session?.phase==='stopping'?'Disconnecting…':'Disconnect';
+    play.disabled=active?session.phase!=='playing':Boolean(session)||offline||other||!host.paired;play.dataset.remoteAction='1';delete play.dataset.returnGame;
+    play.innerHTML=`<span class="detail-action-icon" aria-hidden="true">${active?'↩':'▶'}</span><strong>${active?'Return to stream':offline?'PC offline':other?'PC busy':!host.paired?'Pair PC first':host.currentGame===game.appId?'Resume stream':'Play remotely'}</strong>`;
     const options=document.querySelector('#detail-options-button');options.hidden=false;options.setAttribute('aria-label','Stream settings and game options');
-    document.querySelector('#detail-session-info').innerHTML=`${status(host)}<span class="g-via">${gIcon('stream')}${escape(host.name)}</span>`;
+    document.querySelector('#detail-session-info').innerHTML=`${active?'<span class="remote-status" data-status="ready"><i aria-hidden="true"></i>Stream connected</span>':status(host)}<span class="g-via">${gIcon('stream')}${escape(host.name)}</span>${active?'<small>Disconnect ends the stream. The game stays open on your PC.</small>':''}`;
   }
   function finishRemoteLaunch(){launchPending=false;delete launchOverlay.dataset.remote;delete launchOverlay.dataset.gameId;launchOverlay.classList.remove('active');launchOverlay.hidden=true;}
   function launchError(message){finishRemoteLaunch();failedGame=state.remoteGames?.find(game=>game.id===state.detailGameId)||failedGame;errorDialog.innerHTML=`<h2 id="remote-error-title">Couldn’t start remote play</h2><p>${escape(message)}</p><div class="remote-tools">${failedGame?button('remote-retry','Try again','',true)+button('remote-error-quality','Stream settings'):''}${button('remote-error-close','Close')}</div>`;showDialog(errorDialog);}
@@ -176,10 +279,12 @@
     document.querySelector('#launch-status').textContent='Connecting to your PC';document.querySelector('#launch-via').textContent=`Streaming from ${host.name}`;launchOverlay.hidden=false;requestAnimationFrame(()=>launchOverlay.classList.add('active'));playUiSound('launch');
     try{await window.launcher.remotePlayStart(host.id,game.appId);}catch(error){state.remotePlaySession=null;launchError(error.message);}
   }
-  window.remotePlayUI={get playing(){return state.remotePlaySession?.phase==='playing';},get active(){return Boolean(state.remotePlaySession);},suppressHeldButtons(gamepads){if(!waitForControllerRelease)return false;if(gamepads.some(pad=>pad.buttons.some(button=>button.pressed||button.value>.55)))return true;waitForControllerRelease=false;state.previousButtons=[];return false;}};
-  const cancel=cancelLaunchWait;cancelLaunchWait=function(){if(launchOverlay.dataset.remote){window.launcher.remotePlayStop().catch(error=>showToast(error.message));finishRemoteLaunch();state.remotePlaySession=null;return;}return cancel();};
+  window.remotePlayUI={get playing(){return state.remotePlaySession?.phase==='playing';},get capturesInput(){return state.remotePlaySession?.phase==='playing'&&state.remotePlaySession.view!=='page';},get active(){return Boolean(state.remotePlaySession);},captureControllerShortcut,suppressHeldButtons(gamepads){if(!waitForControllerRelease)return false;if(gamepads.some(pad=>pad.buttons.some(button=>button.pressed||button.value>.55)))return true;waitForControllerRelease=false;state.previousButtons=[];return false;}};
+  const cancel=cancelLaunchWait;cancelLaunchWait=function(){if(launchOverlay.dataset.remote){window.launcher.remotePlayStop().catch(error=>showToast(error.message));finishRemoteLaunch();return;}return cancel();};
   window.launcher.onRemotePlayStatus(async event=>{
-    if(event.phase==='toggle-controls'){toggleStreamBar();return;}
+    if(event.phase==='page'){await showSessionPage(event.session);return;}
+    if(event.phase==='stream'){state.remotePlaySession=event.session;document.body.classList.add('remote-streaming');hideStreamBar(false);paintDetail();return;}
+    if(event.phase==='stopping'){state.remotePlaySession=event.session;paintDetail();streamBar.querySelectorAll('button').forEach(button=>button.disabled=true);return;}
     if(event.phase==='artwork'){applyArtwork(event.hostId,event);return;}
     if(event.phase==='discovered'){if(pairDialog.querySelector('#remote-discovered')&&!discoveries.some(host=>host.uuid===event.host.uuid)){discoveries.push(event.host);renderDiscoveries();}return;}
     if(event.phase==='paired'){await paired(event.hostId);return;}
@@ -189,7 +294,7 @@
     if(event.phase==='playing'){state.remotePlaySession=event.session;const game=hostById(event.session.hostId)?.games.find(game=>game.appId===event.session.appId);if(game){game.lastPlayed=event.session.lastPlayed||Date.now();rememberLaunch(game.id);syncGames();}finishRemoteLaunch();document.body.classList.add('remote-streaming');showStreamBar(event.session,true);refreshActiveGameSession().catch(()=>{});}
     if(event.phase==='error')launchError(event.error);
     if(event.phase==='connection-warning')showToast(event.error);
-    if(event.phase==='ended'){cancelAutoHide();state.remotePlaySession=null;waitForControllerRelease=true;scheduleGamepadPoll();streamBar.hidden=true;document.body.classList.remove('remote-streaming');finishRemoteLaunch();refreshActiveGameSession().catch(()=>{});if(event.reason==='game-closed')showToast(`${event.title} closed. Stream ended.`);else if(event.reason==='connection-lost')launchError('Connection lost. The game may still be running on your host.');refreshHosts(true).catch(()=>{});}
+    if(event.phase==='ended'){cancelAutoHide();state.remotePlaySession=null;waitForControllerRelease=true;scheduleGamepadPoll();streamBar.hidden=true;streamBar.querySelectorAll('button').forEach(button=>button.disabled=false);document.body.classList.remove('remote-streaming');finishRemoteLaunch();paintDetail();restore('#detail-play');refreshActiveGameSession().catch(()=>{});if(event.reason==='game-closed')showToast(`${event.title} closed. Stream ended.`);else if(event.reason==='connection-lost')launchError('Connection lost. The game may still be running on your host.');refreshHosts(true).catch(()=>{});}
   });
   const render=renderLibraryView;renderLibraryView=function(...args){if(state.libraryRemote){renderLibrary();return;}libraryView.classList.remove('remote-active');library.hidden=true;return render(...args);};
   const show=showSettingsPage;showSettingsPage=function(page){const result=show(page);if(page==='g-streaming')refreshHosts(true).catch(error=>showToast(error.message));return result;};
@@ -225,6 +330,7 @@
   const perform=performAction;performAction=async function(action,source){
     try{
       if(action==='remote-stream-hide'){hideStreamBar();return;}
+      if(action==='remote-stream-page'){await window.launcher.remotePlayPage();return;}
       if(action==='remote-stream-disconnect'){source.disabled=true;try{await window.launcher.remotePlayStop();}finally{source.disabled=false;}return;}
       if(action==='console-library-section'){if(source.dataset.section==='remote'){await openLibrary();return;}state.libraryRemote=false;library.hidden=true;libraryView.classList.remove('remote-active');}
       if(action==='remote-open-library'||action==='remote-browse-host'){await openLibrary(source.dataset.hostId);return;}
@@ -240,24 +346,30 @@
       if(action==='remote-remove'){await window.launcher.remotePlayRemove(source.dataset.hostId);await refreshHosts();restore('[data-action="remote-add"]');return;}
       if(action==='remote-game-details'){await openGameDetails(source.dataset.gameId);return;}
       const detail=state.remoteGames?.find(game=>game.id===state.detailGameId);
-      if(action==='detail-play'&&detail){await play(detail,hostById(detail.remoteHostId));return;}
+      if(action==='detail-play'&&detail){if(state.remotePlaySession?.gameId===detail.id)await window.launcher.remotePlayFocus();else await play(detail,hostById(detail.remoteHostId));return;}
       if(action==='detail-options'&&detail){openQuality(detail.remoteHostId,detail);return;}
       if(action==='remote-quality'){openQuality(source.dataset.hostId);return;}
+      if(action==='remote-shortcuts'){renderShortcuts();showDialog(shortcutsDialog);return;}
+      if(action==='remote-shortcuts-close'){shortcutsDialog.close();return;}
+      if(action==='remote-shortcuts-reset'){shortcutDraft=StreamSettings.defaultShortcuts();renderShortcuts();restore('#remote-shortcuts-dialog [data-action="remote-shortcuts-reset"]');return;}
+      if(action==='remote-shortcut-record'){beginShortcut(source.dataset.shortcut,source.dataset.kind);return;}
+      if(action==='remote-shortcut-cancel'){recordDialog.close();return;}
+      if(action==='remote-shortcut-use'){if(shortcutCapture?.ready){const {action:target,type,value}=shortcutCapture;shortcutDraft[target][type]=value;recordDialog.close();renderShortcuts();restore('#remote-shortcuts-dialog [data-shortcut="'+target+'"][data-kind="'+type+'"]');}return;}
       if(action==='remote-quality-close'){qualityDialog.close();return;}
       if(action==='remote-quality-display'){
-        const display=await window.launcher.remotePlayDisplay();for(const [id,value,label] of [['resolution',`${display.width}x${display.height}`,`${display.width} × ${display.height}`],['fps',String(display.fps),`${display.fps} fps`]]){const select=document.querySelector('#remote-'+id);if(![...select.options].some(option=>option.value===value))select.add(new Option(label,value),select.options.length-1);select.value=value;select.dataset.savedValue=value;}showToast('Resolution and frame rate matched to this display.');return;
+        const display=await window.launcher.remotePlayDisplay();for(const [id,value,label] of [['resolution',`${display.width}x${display.height}`,`${display.width} × ${display.height}`],['fps',String(display.fps),`${display.fps} fps`]]){const select=document.querySelector('#remote-'+id);if(![...select.options].some(option=>option.value===value))select.add(new Option(label,value),select.options.length-1);select.value=value;select.dataset.savedValue=value;}applyQualityPreset();showToast('Resolution and frame rate matched to this display.');return;
       }
-      if(action==='remote-quality-reset'){await window.launcher.remotePlaySettings(qualityHost,null,{appId:qualityGame.appId});await refreshHosts();qualityDialog.close();showToast('Game now uses the PC profile.');return;}
+      if(action==='remote-quality-advanced'){const section=document.querySelector('#remote-advanced');section.hidden=!section.hidden;source.setAttribute('aria-expanded',String(!section.hidden));source.textContent=section.hidden?'Advanced settings':'Hide advanced settings';refreshFocusables();return;}
       if(action==='remote-custom-close'){customDialog.close();return;}
       if(action==='remote-custom-save'){
         const inputs=[...customDialog.querySelectorAll('input')];if(inputs.some(input=>!input.checkValidity())){document.querySelector('#remote-custom-status').textContent='Enter a value within the displayed limits.';inputs.find(input=>!input.checkValidity()).focus();return;}
         const id=customDialog.dataset.field,select=document.querySelector('#remote-'+id),value=id==='resolution'?inputs.map(input=>input.value).join('x'):String(Number(inputs[0].value)*(id==='bitrate'?1000:1)),label=id==='resolution'?value.replace('x',' × '):id==='fps'?`${value} fps`:`${Number(value)/1000} Mbps`;
-        if(![...select.options].some(option=>option.value===value))select.add(new Option(label,value),select.options.length-1);select.value=value;select.dataset.savedValue=value;customDialog.close();return;
+        if(![...select.options].some(option=>option.value===value))select.add(new Option(label,value),select.options.length-1);select.value=value;select.dataset.savedValue=value;select.dispatchEvent(new Event('change'));customDialog.close();return;
       }
       if(action==='remote-quality-save'){
         const [width,height]=document.querySelector('#remote-resolution').value.split('x').map(Number),preferences={width,height};for(const [id] of qualityFields)if(id!=='resolution')preferences[id]=document.querySelector('#remote-'+id).value;
-        const config=qualityGame?{appId:qualityGame.appId}:{profileId:document.querySelector('#remote-profile').value,name:document.querySelector('#remote-profile-name').value};
-        source.disabled=true;try{await window.launcher.remotePlaySettings(qualityHost,preferences,config);await refreshHosts();qualityDialog.close();showToast('Stream settings saved.');}finally{source.disabled=false;}return;
+        preferences.preset=document.querySelector('#remote-preset').value;preferences.shortcuts=shortcutDraft;
+        source.disabled=true;try{await window.launcher.remotePlaySettings(qualityHost,preferences);await refreshHosts();qualityDialog.close();showToast('Stream settings saved for all games.');}finally{source.disabled=false;}return;
       }
       if(action==='remote-hide-game'||action==='remote-restore-games'){
         const host=hostById(qualityHost),result=await window.launcher.remotePlayHideGame(qualityHost,action==='remote-restore-games'?null:qualityGame.appId,true);if(host)Object.assign(host,result);syncGames();qualityDialog.close();await openLibrary(qualityHost);return;

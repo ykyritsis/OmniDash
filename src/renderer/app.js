@@ -1424,7 +1424,11 @@ function openGameDetails(gameId) {
     document.querySelector('#detail-achievements-note').textContent = 'Achievements could not be loaded.';
     document.querySelector('#achievement-trueachievements').hidden = false;
   });
-  setTimeout(() => setFocusedElement(playButton, { scroll: false }), 0);
+  setTimeout(() => {
+    if(requestToken!==state.detailRequestToken||state.view!=='detail')return;
+    const remote=state.remotePlaySession;
+    setFocusedElement(remote?.gameId===game.id&&remote.view==='page'?document.querySelector('#detail-disconnect'):playButton,{scroll:false});
+  }, 0);
   (game.remoteHostId ? window.launcher.remotePlayDetails(game.remoteHostId,game.appId) : game.xboxProductId && discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId) : discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
     if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
     document.querySelector('#detail-byline').textContent = [details.publisher || details.developer || game.provider, ...(details.genres || []).slice(0, 3)].filter(Boolean).join(' • ');
@@ -2898,7 +2902,7 @@ function gamepadMove(direction) {
 let gamepadPollTimer = null;
 
 function scheduleGamepadPoll() {
-  if (gamepadPollTimer !== null || window.remotePlayUI?.playing || document.visibilityState !== 'visible' || !document.hasFocus()) return;
+  if (gamepadPollTimer !== null || window.remotePlayUI?.capturesInput || document.visibilityState !== 'visible' || !document.hasFocus()) return;
   // Every frame, so a press lands on the next frame like a console.
   gamepadPollTimer = requestAnimationFrame(() => {
     gamepadPollTimer = null;
@@ -2909,8 +2913,9 @@ function scheduleGamepadPoll() {
 function pollGamepad() {
   try {
   if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
-  if (window.remotePlayUI?.playing) { state.previousButtons = []; return; }
+  if (window.remotePlayUI?.capturesInput) { state.previousButtons = []; return; }
   const connected = getConnectedControllers();
+  if (window.remotePlayUI?.captureControllerShortcut(connected)) { state.previousButtons = []; return; }
   if (window.remotePlayUI?.suppressHeldButtons(connected)) return;
   // Prefer whichever controller was just used. Keeping a stale first device
   // selected meant a headset/remote could silently steal all navigation.
