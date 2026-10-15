@@ -15,11 +15,14 @@ async function until(test){for(let i=0;i<200;i++){if(test())return;await pause(2
 app.whenReady().then(async()=>{
   await fs.mkdir(output,{recursive:true});
   const fixture=path.join(output,'StreamSurface.exe');
+  const controls=path.join(output,'StreamControlsTest.exe');
+  await promisify(execFile)(path.join(process.env.WINDIR,'Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe','/main:StreamControlsTest','/r:System.Web.Extensions.dll',`/out:${controls}`,path.join(__dirname,'fixtures','StreamControlsTest.cs'),path.join(root,'src','remote-play','WindowBridge.cs')],{windowsHide:true});
+  console.log((await promisify(execFile)(controls,[],{windowsHide:true})).stdout.trim());
   await promisify(execFile)(path.join(process.env.WINDIR,'Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe',`/out:${fixture}`,path.join(__dirname,'fixtures','StreamSurface.cs')],{windowsHide:true});
   win=new BrowserWindow({width:1280,height:800,frame:false,show:false,webPreferences:{sandbox:true,contextIsolation:true}});
   await win.loadURL('data:text/html,<body style="background:%23171920;color:white;font:24px sans-serif">Native stream surface review</body>');win.show();await pause(40);win.hide();win.show();win.focus();
   const handle=win.getNativeWindowHandle(),parent=handle.readBigUInt64LE().toString();
-  const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:['--close-after','2200'],parent,stream:true}));
+  const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:['--close-after','3200'],parent,stream:true,viewport:{top:80,height:800}}));
   bridge=spawn(path.join(root,'.packaging-staging','streamlight','WindowBridge.exe'),[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
   let buffer='';bridge.stdout.on('data',chunk=>{buffer+=chunk;const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines)try{events.push(JSON.parse(line));}catch{}});
   let exited=false;bridge.on('exit',()=>{exited=true;});
@@ -27,13 +30,16 @@ app.whenReady().then(async()=>{
   assert(!events.some(event=>event.type==='error'),JSON.stringify(events));
   const geometry=async()=>{const count=events.filter(e=>e.type==='geometry').length;bridge.stdin.write('inspect\n');await until(()=>events.filter(e=>e.type==='geometry').length>count);return events.filter(e=>e.type==='geometry').at(-1);};
   let value=await geometry();assert.equal(value.parent,parent);assert.equal(value.child,true);assert.equal(value.visible,false,'Surface must stay hidden behind our launch animation');
+  assert(events.some(event=>event.text==='BACKGROUND_GAMEPAD 1'),'The actual engine process must inherit SDL background controller capture');
   bridge.stdin.write('reveal\n');await until(()=>events.some(event=>event.type==='visible'));value=await geometry();assert.equal(value.visible,true);
   await until(()=>events.some(event=>event.text?.includes('SURFACE_FOCUSED')));
   for(const [width,height] of [[1280,800],[960,600]]){
     win.setContentSize(width,height);await pause(120);value=await geometry();const scale=screen.getDisplayMatching(win.getBounds()).scaleFactor;
-    assert.equal(value.width,value.parentWidth);assert.equal(value.height,value.parentHeight);
-    assert(Math.abs(value.width-width*scale)<3&&Math.abs(value.height-height*scale)<3,JSON.stringify({value,width,height,scale}));
+    assert.equal(value.width,value.parentWidth);assert.equal(value.height+value.top,value.parentHeight);
+    assert(Math.abs(value.top-value.parentHeight*.1)<2,'Native video must leave the control bar clickable');
+    assert(Math.abs(value.width-width*scale)<3&&Math.abs(value.height-height*scale*.9)<3,JSON.stringify({value,width,height,scale}));
   }
+  bridge.stdin.write('viewport '+JSON.stringify({top:120,height:600})+'\n');await pause(60);value=await geometry();assert(Math.abs(value.top-value.parentHeight*.2)<2,'Text scaling must update the native toolbar inset');
   await until(()=>events.some(event=>event.type==='surface-closed'));await until(()=>exited);assert(events.some(event=>event.type==='exit'));
   // Exercise the actual, unmodified StreamLight executable and read its
   // isolated portable identity. No real host pairing or game is required.

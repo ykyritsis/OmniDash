@@ -42,14 +42,20 @@ async function main(){
   await fs.writeFile(path.join(directory,'engine','FoggyBytes','StreamLight.ini'),'[General]\ncertificate=TEST-CERT\nkey=TEST-KEY\nuniqueid=client-id\n[hosts]\n1\\uuid=host-uuid\n1\\srvcert=PINNED\n');
   const host={id:'test-host',name:'Test PC',address:'test-pc',hostname:'test-pc',httpPort:47989,httpsPort:47984,uuid:'host-uuid',paired:true,games:[{id:'remote:test-host:10',appId:'10',title:'Test game',artwork:{}}]};
   await fs.writeFile(path.join(directory,'hosts.json'),JSON.stringify([host]));
-  let current='0',fail=false,workerCount=0,reveals=0,emitFrame;
+  let current='0',fail=false,workerCount=0,reveals=0,emitFrame,emitNative;
   const events=[];let apps='<root><App><ID>10</ID><AppTitle>Test game</AppTitle></App></root>';
   const spawnProcess=(_executable,args)=>{
     const config=JSON.parse(require('node:fs').readFileSync(args[0],'utf8'));
     assert.equal(config.args[config.args.indexOf('--video-codec')+1],'HEVC');assert.equal(config.args[config.args.indexOf('--resolution')+1],'1280x800');
     assert(config.args.includes('--no-quit-after'),'Disconnect must not terminate the host’s game');
+    assert(config.args.includes('--background-gamepad'),'An embedded player must receive background SDL gamepad events');
+    assert(config.args.includes('--no-multi-controller'));assert(config.args.includes('--swap-gamepad-buttons'));assert(config.args.includes('--touchscreen-trackpad'));
+    assert.equal(config.args[config.args.indexOf('--audio-config')+1],'5.1-surround');assert.equal(config.quitMask,0x330);
+    const profile=parseIni(require('node:fs').readFileSync(path.join(directory,'engine','FoggyBytes','StreamLight.ini'),'utf8'));
+    assert.equal(profile.General.gamepadmouse,'false');assert.equal(profile.General.key,'TEST-KEY');assert.equal(profile.shortcuts.pad0_mask,'816');
     workerCount++;const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();
     const emit=value=>child.stdout.write(JSON.stringify(value)+'\n');
+    emitNative=emit;
     child.stdin=new Writable({write(chunk,enc,done){if(String(chunk).includes('reveal')){reveals++;setImmediate(()=>emit({type:'visible'}));}if(String(chunk).includes('stop'))setImmediate(()=>{emit({type:'exit',code:0});child.emit('exit',0);});done();}});
     emitFrame=()=>emit({type:'stderr',text:'00:00:03 - SDL Info (0): Stream window revealed: 1280x800, fullscreen=0'});
     setTimeout(()=>{emit({type:'surface'});emit({type:'stderr',text:'Video stream is 1280x800x90 (format 0x1)'});},10);return child;
@@ -65,7 +71,7 @@ async function main(){
     assert.deepEqual(await remote.pair(host.id),{hostId:host.id,paired:true});
     assert.equal((await remote.refresh(host.id)).games.length,1);
     assert.equal((await remote.checkHosts()).hosts[0].status,'ready');
-    const preferences=await remote.settings(host.id,{width:1280,height:800,fps:90,bitrate:15000,codec:'HEVC',decoder:'hardware'});
+    const preferences=await remote.settings(host.id,{width:1280,height:800,fps:90,bitrate:15000,codec:'HEVC',decoder:'hardware',multiController:false,swapFaceButtons:true,gamepadMouse:false,touchscreenTrackpad:true,audioConfig:'5.1',quitCombo:'moonlight'});
     assert.equal(preferences.height,800);assert.equal(preferences.codec,'HEVC');
     assert.equal((await remote.snapshot()).hosts[0].preferences.bitrate,15000);
     await remote.hideGame(host.id,'10');assert.equal((await remote.snapshot()).hosts[0].games.length,0);
@@ -84,7 +90,19 @@ async function main(){
     current='0';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'));
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');
     await pause(40);current='10';const cancelled=remote.start(host.id,'10');await remote.stop();await cancelled;assert.equal(remote.active(),null,'Cancelling during connection must prevent a late stream');
+    await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
+    emitNative({type:'disconnect-requested',source:'controller'});await until(()=>!remote.active());
+    assert(events.some(event=>event.phase==='ended'&&event.reason==='disconnected'),'Native escape must return control to the launcher');
   }finally{remote.dispose();}
+  const cachedDirectory=await fs.mkdtemp(path.resolve(__dirname,'../.visual-review/remote-cover-'));
+  await fs.writeFile(path.join(cachedDirectory,'hosts.json'),JSON.stringify([{...host,online:false}]));
+  const cachedArt={tile:'file:///cached-square.jpg',hero:'file:///cached-hero.jpg',logo:'file:///cached-logo.png',overlayLogo:true,remoteArtworkVersion:1};
+  let resolved=0;const artworkEvents=[];
+  const cachedRemote=createRemotePlay({directory:cachedDirectory,runtimeDirectory:runtime,getWindow:()=>null,onStatus:event=>artworkEvents.push(event),resolveArtwork:async(game,options)=>{resolved++;assert.equal(game.title,'Test game');assert.equal(options.network,false);return cachedArt;},request:async()=>{throw Error('Cached art must not request host assets');}});
+  try{
+    assert.deepEqual((await cachedRemote.covers(host.id,['10']))[0].artwork,cachedArt,'Full shared artwork must reach the UI without host identity or connectivity');
+    assert.equal(resolved,1);assert(artworkEvents.some(event=>event.phase==='artwork'&&event.artwork.logo===cachedArt.logo));
+  }finally{cachedRemote.dispose();}
   console.log('PASS address and XML/Qt parsing; shared depot download sizes, offline fallback and coalescing; storage deduplication; private identity isolation; stream readiness, launch races, connection loss and game-exit lifecycle');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

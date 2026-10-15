@@ -13,6 +13,9 @@ class WindowBridge {
     delegate bool EnumProc(IntPtr window, IntPtr param);
     delegate void WinEventProc(IntPtr hook, uint ev, IntPtr window, int obj, int child, uint thread, uint time);
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int left, top, right, bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct POINT { public int x,y; }
+    [StructLayout(LayoutKind.Sequential)] struct GAMEPAD { public ushort buttons; public byte leftTrigger,rightTrigger; public short lx,ly,rx,ry; }
+    [StructLayout(LayoutKind.Sequential)] struct XSTATE { public uint packet; public GAMEPAD gamepad; }
     [StructLayout(LayoutKind.Sequential)] struct IO_COUNTERS { public ulong a,b,c,d,e,f; }
     [StructLayout(LayoutKind.Sequential)] struct BASIC_LIMIT { public long a,b; public uint flags; public UIntPtr min,max; public uint processes; public UIntPtr affinity; public uint priority,scheduling; }
     [StructLayout(LayoutKind.Sequential)] struct JOB_LIMIT { public BASIC_LIMIT basic; public IO_COUNTERS io; public UIntPtr a,b,c,d; }
@@ -31,6 +34,12 @@ class WindowBridge {
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr window);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] static extern IntPtr SetFocus(IntPtr window);
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr window, uint flags);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out RECT rect);
+    [DllImport("user32.dll")] static extern bool ScreenToClient(IntPtr window, ref POINT point);
+    [DllImport("xinput1_4.dll")] static extern uint XInputGetState(uint index, out XSTATE state);
     [DllImport("kernel32.dll", EntryPoint="GetCurrentThreadId")] static extern uint CurrentThread();
     [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
     [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint pid, uint thread, uint flags);
@@ -44,12 +53,15 @@ class WindowBridge {
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
     [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
 
-    public class Config { public string executable; public string cwd; public string[] args; public string parent; public bool stream; }
+    public class Viewport { public double top; public double height; }
+    public class Config { public string executable; public string cwd; public string[] args; public string parent; public bool stream; public Viewport viewport; public int quitMask; }
     static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
     static Process engine;
     static IntPtr video = IntPtr.Zero, parent = IntPtr.Zero;
-    static volatile bool reveal, stopping, inspect;
-    static int lastW, lastH;
+    static volatile bool reveal, stopping, inspect, focusRequested;
+    static volatile Viewport viewport;
+    static int lastW, lastH, lastTop;
+    static bool xinputUnavailable;
     static DateTime missingSurfaceSince = DateTime.MinValue;
     static readonly object OutputLock = new object();
     static void Emit(object value) { lock(OutputLock) { Console.WriteLine(Json.Serialize(value)); Console.Out.Flush(); } }
@@ -62,7 +74,10 @@ class WindowBridge {
     static void FocusVideo() {
         if(video == IntPtr.Zero) return;
         uint pid; uint target = GetWindowThreadProcessId(video, out pid), own = CurrentThread();
-        AttachThreadInput(own, target, true); SetFocus(video); AttachThreadInput(own, target, false);
+        uint owner = GetWindowThreadProcessId(parent, out pid);
+        AttachThreadInput(own, owner, true); AttachThreadInput(own, target, true);
+        SetForegroundWindow(parent); SetFocus(video);
+        AttachThreadInput(own, target, false); AttachThreadInput(own, owner, false);
     }
     static void Inspect(IntPtr window, bool stream) {
         uint pid; GetWindowThreadProcessId(window, out pid);
@@ -89,17 +104,22 @@ class WindowBridge {
     static void Resize() {
         RECT rect;
         if(video == IntPtr.Zero || !GetClientRect(parent, out rect)) return;
-        int w = rect.right - rect.left, h = rect.bottom - rect.top;
-        if(w == lastW && h == lastH) return;
-        lastW=w; lastH=h;
-        SetWindowPos(video, IntPtr.Zero, 0, 0, w, h, 0x0020 | 0x0010);
+        int w = rect.right - rect.left, fullHeight = rect.bottom - rect.top;
+        var area = viewport;
+        int top = area != null && area.height >= 200 ? (int)Math.Round(fullHeight * Math.Max(0, Math.Min(.4, area.top / area.height))) : 0;
+        int h = Math.Max(1, fullHeight - top);
+        if(w == lastW && h == lastH && top == lastTop) return;
+        lastW=w; lastH=h; lastTop=top;
+        SetWindowPos(video, IntPtr.Zero, 0, top, w, h, 0x0020 | 0x0010);
     }
     static int Main(string[] args) {
         IntPtr job=IntPtr.Zero, hook=IntPtr.Zero;
+        var exitKey=new StreamHotkey();
         try {
             var config = Json.Deserialize<Config>(File.ReadAllText(args[0]));
             File.Delete(args[0]);
             parent = new IntPtr(long.Parse(config.parent));
+            viewport = config.viewport;
             if(config.stream && !IsWindow(parent)) throw new Exception("The launcher window is unavailable.");
             job = CreateJobObject(IntPtr.Zero, null);
             var limits = new JOB_LIMIT(); limits.basic.flags=0x2000;
@@ -107,6 +127,13 @@ class WindowBridge {
             var start = new ProcessStartInfo(config.executable, string.Join(" ", Array.ConvertAll(config.args, Arg)));
             start.WorkingDirectory=config.cwd; start.UseShellExecute=false; start.CreateNoWindow=true;
             start.WindowStyle=ProcessWindowStyle.Hidden; start.RedirectStandardOutput=true; start.RedirectStandardError=true;
+            if(config.stream) {
+                // SDL owns controller mapping, hotplug, rumble and forwarding.
+                // A child HWND has an Electron foreground owner, so SDL must
+                // keep polling pads when its top-level Qt window is hidden.
+                start.EnvironmentVariables["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"]="1";
+                start.EnvironmentVariables["NO_GAMEPAD_QUIT"]="0";
+            }
             engine = new Process(); engine.StartInfo=start;
             engine.OutputDataReceived += (s,e) => { if(e.Data != null) Emit(new { type="stdout", text=e.Data }); };
             engine.ErrorDataReceived += (s,e) => { if(e.Data != null) Emit(new { type="stderr", text=e.Data }); };
@@ -116,17 +143,33 @@ class WindowBridge {
             WinEventProc callback = (h,ev,window,obj,child,thread,time) => { if(obj == 0 && window != video) Inspect(window, config.stream); };
             hook = SetWinEventHook(0x8002, 0x8002, IntPtr.Zero, callback, (uint)engine.Id, 0, 0);
             Emit(new { type="started", pid=engine.Id });
-            var commands = new Thread(() => { string line; while((line=Console.ReadLine()) != null) { if(line == "reveal") reveal=true; else if(line == "focus") FocusVideo(); else if(line == "inspect") inspect=true; else if(line == "stop") { stopping=true; break; } } stopping=true; });
+            var commands = new Thread(() => { string line; while((line=Console.ReadLine()) != null) { if(line == "reveal") reveal=true; else if(line == "focus") focusRequested=true; else if(line == "inspect") inspect=true; else if(line.StartsWith("viewport ")) { try { viewport=new JavaScriptSerializer().Deserialize<Viewport>(line.Substring(9)); } catch {} } else if(line == "stop") { stopping=true; break; } } stopping=true; });
             commands.IsBackground=true; commands.Start();
+            var clock=Stopwatch.StartNew();
+            var escape=new QuitChord(config.quitMask==0x330||config.quitMask==0x2300?config.quitMask:0x1300);
             bool shown=false;
             while(!engine.HasExited && !stopping && (!config.stream || IsWindow(parent))) {
                 if(video != IntPtr.Zero && !IsWindow(video)) { video=IntPtr.Zero;lastW=lastH=0;shown=false;missingSurfaceSince=DateTime.UtcNow; }
                 EnumWindows((window,param) => { Inspect(window, config.stream); return true; }, IntPtr.Zero);
-                MSG message; while(PeekMessage(out message, IntPtr.Zero, 0, 0, 1)) { TranslateMessage(ref message); DispatchMessage(ref message); }
+                bool foreground=GetAncestor(GetForegroundWindow(),2)==GetAncestor(parent,2);
+                bool wantHotkey=config.stream&&shown&&foreground;
+                exitKey.Update(wantHotkey);
+                MSG message; while(PeekMessage(out message, IntPtr.Zero, 0, 0, 1)) {
+                    if(exitKey.Matches(message.message,message.wParam.ToUInt64(),wantHotkey)){Emit(new {type="disconnect-requested",source="keyboard"});stopping=true;}
+                    TranslateMessage(ref message); DispatchMessage(ref message);
+                }
+                // A separate escape path for XInput handhelds still works if
+                // SDL loses input or has no mapping. Never combine two pads.
+                if(config.stream&&!xinputUnavailable)for(uint index=0;index<4;index++) {
+                    XSTATE input; uint result=1;
+                    try{result=XInputGetState(index,out input);}catch(DllNotFoundException){xinputUnavailable=true;break;}
+                    if(escape.Update((int)index,result==0?input.gamepad.buttons:0,shown&&foreground,clock.ElapsedMilliseconds)) {Emit(new {type="disconnect-requested",source="controller"});stopping=true;}
+                }
                 if(video != IntPtr.Zero) {
                     Resize();
                     if(reveal && !shown) { ShowWindow(video, 5); SetWindowPos(video,IntPtr.Zero,0,0,0,0,0x0040|0x0001|0x0002|0x0010); FocusVideo(); shown=IsWindowVisible(video); if(shown)Emit(new { type="visible" }); }
-                    if(inspect) { inspect=false; RECT rect,owner; GetClientRect(video,out rect); GetClientRect(parent,out owner); Emit(new { type="geometry", parent=GetParent(video).ToInt64().ToString(), width=rect.right-rect.left, height=rect.bottom-rect.top, parentWidth=owner.right-owner.left, parentHeight=owner.bottom-owner.top, visible=IsWindowVisible(video), parentVisible=IsWindowVisible(parent), style=GetWindowLong(video,-16), child=(GetWindowLong(video,-16)&0x40000000)!=0 }); }
+                    if(focusRequested&&shown){focusRequested=false;FocusVideo();}
+                    if(inspect) { inspect=false; RECT rect,owner,screen; GetClientRect(video,out rect); GetClientRect(parent,out owner); GetWindowRect(video,out screen);var point=new POINT{x=screen.left,y=screen.top};ScreenToClient(parent,ref point);Emit(new { type="geometry", parent=GetParent(video).ToInt64().ToString(), top=point.y, width=rect.right-rect.left, height=rect.bottom-rect.top, parentWidth=owner.right-owner.left, parentHeight=owner.bottom-owner.top, visible=IsWindowVisible(video), parentVisible=IsWindowVisible(parent), foreground, keyboardShortcut=exitKey.Registered, hotkeyError=exitKey.Error, style=GetWindowLong(video,-16), child=(GetWindowLong(video,-16)&0x40000000)!=0 }); }
                 }
                 if(missingSurfaceSince != DateTime.MinValue && (DateTime.UtcNow-missingSurfaceSince).TotalMilliseconds>750) { Emit(new { type="surface-closed" }); stopping=true; }
                 Thread.Sleep(15);
@@ -135,6 +178,30 @@ class WindowBridge {
             engine.WaitForExit(); Emit(new { type="exit", code=engine.ExitCode });
             GC.KeepAlive(callback); return 0;
         } catch(Exception error) { Emit(new { type="error", message=error.Message }); return 1; }
-        finally { if(hook != IntPtr.Zero) UnhookWinEvent(hook); if(job != IntPtr.Zero) CloseHandle(job); }
+        finally { exitKey.Update(false);if(hook != IntPtr.Zero) UnhookWinEvent(hook); if(job != IntPtr.Zero) CloseHandle(job); }
+    }
+}
+
+public class StreamHotkey {
+    [DllImport("user32.dll",SetLastError=true)] static extern bool RegisterHotKey(IntPtr window,int id,uint modifiers,uint key);
+    [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr window,int id);
+    public bool Registered {get;private set;}
+    public int Error {get;private set;}
+    public void Update(bool active){
+        if(active&&!Registered){Registered=RegisterHotKey(IntPtr.Zero,1,0x4007,0x51);Error=Registered?0:Marshal.GetLastWin32Error();}
+        if(!active&&Registered){UnregisterHotKey(IntPtr.Zero,1);Registered=false;}
+    }
+    public bool Matches(uint message,ulong id,bool active){return Registered&&active&&message==0x0312&&id==1;}
+}
+
+// Deliberately independent of device IO so hold timing, focus loss, reconnects
+// and multiple-controller isolation can be tested without a physical pad.
+public class QuitChord {
+    readonly int mask; readonly long[] since={-1,-1,-1,-1};
+    public QuitChord(int value){mask=value;}
+    public bool Update(int index,int buttons,bool active,long milliseconds){
+        if(!active||buttons!=mask){since[index]=-1;return false;}
+        if(since[index]<0)since[index]=milliseconds;
+        return milliseconds-since[index]>=500;
     }
 }

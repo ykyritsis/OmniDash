@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 30](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.30/Xbox-Preview-UI-Setup-0.27.0-beta.30.exe)** · [Setup](#getting-started) · [Beta 30 notes](docs/release-0.27.0-beta.30.md)
+**[Download beta 31](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.31/Xbox-Preview-UI-Setup-0.27.0-beta.31.exe)** · [Setup](#getting-started) · [Beta 31 notes](docs/release-0.27.0-beta.31.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,8 +31,12 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 30
+## Beta 31
 
+- Remote game cards now use the normal artwork lookup and renderer, reusing cached covers, logos and manual artwork selections before requesting new art.
+- Fixed embedded streaming losing controller input when Electron owns the foreground window. The bundled engine handles buttons, sticks, triggers and controller hotplug.
+- A persistent **Disconnect** button stays above the video. **LB + RB + A** and **Ctrl + Alt + Shift + Q** disconnect; an alternative Moonlight controller shortcut is available in Stream settings.
+- Added controller, mouse, touch, audio, V-Sync, frame pacing and statistics options, saved separately for each PC.
 - Remote PCs now live in Library, with automatic network discovery, status lights, square game tiles and normal game pages.
 - Each PC has saved resolution, FPS, bitrate, codec and decoder settings; StreamLight is bundled with no separate install.
 - Fixed hidden engine transitions and temporary decoder windows blocking launches; host errors now appear in the app.
@@ -43,11 +47,11 @@ Device images are illustrative mockups based on app captures, not photographs of
 - Settings → Storage shows drive space, known game sizes and installed games by drive.
 - Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
 
-[Full release notes](docs/release-0.27.0-beta.30.md)
+[Full release notes](docs/release-0.27.0-beta.31.md)
 
 ## Download
 
-Get **[beta 30 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.30)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 31 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.31)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

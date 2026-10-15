@@ -445,7 +445,7 @@ function scheduleHomeCollections() {
 document.addEventListener('error', (event) => {
   const image = event.target;
   if (!(image instanceof HTMLImageElement) || !image.dataset.artGameId) return;
-  const game = state.games.find((item) => item.id === image.dataset.artGameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find(item => item.id === image.dataset.artGameId);
+  const game = state.games.find((item) => item.id === image.dataset.artGameId) || state.remoteGames?.find(item => item.id === image.dataset.artGameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find(item => item.id === image.dataset.artGameId);
   if (!game) return;
   const candidates = game.artwork?.coverCandidates || [];
   const next = Number(image.dataset.coverIndex || 0) + 1;

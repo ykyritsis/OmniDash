@@ -80,8 +80,11 @@ function wireRequest(host, route, { credentials, pinnedCert, binary = false, tim
 
 function normalizePreferences(value = {}) {
   const number = (key, fallback, min, max) => Number.isFinite(Number(value[key])) ? Math.max(min, Math.min(max, Math.round(Number(value[key])))) : fallback;
+  const bool = (key, fallback) => value[key] === undefined ? fallback : value[key] === true || value[key] === 'true';
   return {width:number('width',1920,640,3840),height:number('height',1080,480,2160),fps:[30,60,90,120].includes(Number(value.fps))?Number(value.fps):60,
-    bitrate:number('bitrate',20000,3000,150000),codec:['auto','H.264','HEVC','AV1'].includes(value.codec)?value.codec:'auto',decoder:['auto','hardware','software'].includes(value.decoder)?value.decoder:'auto'};
+    bitrate:number('bitrate',20000,3000,150000),codec:['auto','H.264','HEVC','AV1'].includes(value.codec)?value.codec:'auto',decoder:['auto','hardware','software'].includes(value.decoder)?value.decoder:'auto',
+    multiController:bool('multiController',true),swapFaceButtons:bool('swapFaceButtons',false),gamepadMouse:bool('gamepadMouse',true),touchscreenTrackpad:bool('touchscreenTrackpad',false),absoluteMouse:bool('absoluteMouse',false),
+    vsync:bool('vsync',true),framePacing:bool('framePacing',false),performanceOverlay:bool('performanceOverlay',false),audioConfig:['stereo','5.1','7.1'].includes(value.audioConfig)?value.audioConfig:'stereo',quitCombo:value.quitCombo==='moonlight'?'moonlight':'streamlight'};
 }
 function setIniValues(text, group, values) {
   const lines = String(text || '').split(/\r?\n/), header = `[${group}]`;
@@ -99,10 +102,11 @@ function engineMessage(text) {
     || line.match(/(?:Host returned error:|Starting (?:RTSP|Control|Video|Audio|Input)[^\n]*failed:)[^\n]*/i)?.[0];
   return error ? error.replace(/Please open StreamLight to pair before streaming\./i,'Pair the PC again in Remote PCs.').slice(0,700) : '';
 }
-function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = () => {}, request = wireRequest, spawnProcess = spawn, now = Date.now, discover = discoverHosts }) {
+function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = () => {}, request = wireRequest, spawnProcess = spawn, now = Date.now, discover = discoverHosts, resolveArtwork = async () => null }) {
   let hosts=null, saving=Promise.resolve(), pairing=null, session=null, disposed=false, acquiring=false, launchGeneration=0;
   const workers=new Set(), refreshing=new Map(), coverRequests=new Map();
   let scanning=null, checking=null;
+  let viewportState={top:72,height:720};
   const profile=path.join(directory,'engine'), iniFile=path.join(profile,'FoggyBytes','StreamLight.ini');
   async function load() { if(!hosts) { try { hosts=JSON.parse(await fs.readFile(path.join(directory,'hosts.json'),'utf8')); if(!Array.isArray(hosts)) hosts=[]; } catch { hosts=[]; } } return hosts; }
   async function save() { const text=JSON.stringify(hosts); saving=saving.catch(()=>{}).then(async()=>{ await fs.mkdir(directory,{recursive:true}); await fs.writeFile(path.join(directory,'hosts.json.tmp'),text); await fs.rename(path.join(directory,'hosts.json.tmp'),path.join(directory,'hosts.json')); }); return saving; }
@@ -114,7 +118,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     await fs.mkdir(profile,{recursive:true}); await fs.writeFile(path.join(profile,'portable.dat'),'');
     return { executable, bridge };
   }
-  async function run(args, {stream=false,onEvent=()=>{},timeout=35000}={}) {
+  async function run(args, {stream=false,onEvent=()=>{},timeout=35000,preferences={}}={}) {
     if(disposed) throw new Error('Remote play is shutting down.');
     const files=await runtime(), config=path.join(directory,`bridge-${crypto.randomUUID()}.json`);
     // StreamLight 7 waits for a Qt entrance animation before calling /launch.
@@ -122,10 +126,18 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     // curtain, so disable the engine's UI animations in its isolated profile.
     await fs.mkdir(path.dirname(iniFile),{recursive:true});
     const ini=await fs.readFile(iniFile,'utf8').catch(()=>'');
-    await fs.writeFile(iniFile,setIniValues(ini,'theme',{reduceanimations:'true',startupanimation:'false'}));
+    let updatedIni=setIniValues(ini,'theme',{reduceanimations:'true',startupanimation:'false'});
+    const quitMask=preferences.quitCombo==='moonlight'?0x330:preferences.swapFaceButtons?0x2300:0x1300;
+    if(stream){
+      updatedIni=setIniValues(updatedIni,'General',{gamepadmouse:String(preferences.gamepadMouse!==false),backgroundgamepad:'true'});
+      // The native SDL handler tests logical (post-swap) buttons. The bridge's
+      // XInput escape fallback uses the corresponding physical button instead.
+      updatedIni=setIniValues(updatedIni,'shortcuts',{pad0_mask:String(preferences.quitCombo==='moonlight'?0x330:0x1300),kb0_enabled:'true',kb0_mods:'7',kb0_key:'113',kb0_scan:'20'});
+    }
+    await fs.writeFile(iniFile,updatedIni);
     const handle=getWindow()?.getNativeWindowHandle();
     const parent=handle ? (handle.length >= 8 ? handle.readBigUInt64LE().toString() : String(handle.readUInt32LE())) : '0';
-    await fs.writeFile(config,JSON.stringify({ executable:files.executable,cwd:profile,args,parent,stream }));
+    await fs.writeFile(config,JSON.stringify({ executable:files.executable,cwd:profile,args,parent,stream,viewport:stream?viewportState:null,quitMask }));
     const child=spawnProcess(files.bridge,[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
     let buffer='',out='',err='',settled=false,diagnostic='';
     const log=line=>{ diagnostic=(diagnostic+String(line).replace(/([?&](?:rikey|rikeyid|clientcert|salt|pin|secret|authorization)=)[^&\s]+/gi,'$1[redacted]')+'\n').slice(-256*1024); };
@@ -222,9 +234,11 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
         await probe(host);const auth=await identity(host);const xml=await request(host,'applist',auth);const apps=parseApps(xml).filter(game=>game.installed!==false);
         if(apps.length===1 && /^permission denied/i.test(apps[0].title))throw new Error('Allow this client to list games in the host’s paired-device settings.');
         const covers=path.join(directory,'covers',id);await fs.mkdir(covers,{recursive:true});
+        const previous=new Map((host.games||[]).map(game=>[game.appId,game]));
         await Promise.all(apps.map(async game=>{const file=coverFile(host,game);
           game.id=`remote:${id}:${game.appId}`;game.remoteHostId=id;game.hostName=host.name;game.provider='Remote PC';
-          game.artwork=await fs.access(file).then(()=>({tile:pathToFileURL(file).href}),()=>({}));
+          const art=previous.get(game.appId)?.artwork;
+          game.artwork=art?.remoteArtworkVersion===1?art:await fs.access(file).then(()=>({tile:pathToFileURL(file).href,imageSource:'remote-host'}),()=>({}));
         }));
         host.games=apps;host.paired=true;host.online=true;host.checkedAt=now();host.lastSeen=now();host.error='';await save();return {hostId:id,...publicHost(host)};
       }catch(error){host.error=error.message;host.online=false;host.checkedAt=now();await save();throw error;}
@@ -235,19 +249,24 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     return path.join(directory,'covers',host.id,`${game.appId}${revision}.png`);
   }
   async function covers(id, appIds) {
-    const host=await find(id), auth=await identity(host), allowed=new Set((host.games || []).map(game=>game.appId));
+    const host=await find(id), allowed=new Set((host.games || []).map(game=>game.appId));
     if(!Array.isArray(appIds))throw new Error('Choose games from this host.');
     const ids=[...new Set(appIds.map(String))].filter(appId=>allowed.has(appId)).slice(0,32), result=[];let next=0;
     await fs.mkdir(path.join(directory,'covers',id),{recursive:true});
     await Promise.all(Array.from({length:Math.min(3,ids.length)},async()=>{while(next<ids.length && !disposed && !session){const appId=ids[next++],key=id+':'+appId;
       if(!coverRequests.has(key))coverRequests.set(key,(async()=>{
         const game=host.games.find(game=>game.appId===appId),file=coverFile(host,game);
-        if(!await fs.access(file).then(()=>true,()=>false)){
-          const image=await request(host,'appasset',{...auth,binary:true,params:{appid:appId,AssetType:'2',AssetIdx:'0'}});
-          if(!image.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) && !(image[0]===255&&image[1]===216))return null;
-          await fs.writeFile(file,image);
+        let artwork=await resolveArtwork(game,{network:host.online!==false}).catch(()=>null);
+        if(!artwork?.tile&&!artwork?.grid){
+          if(!await fs.access(file).then(()=>true,()=>false)){
+            if(host.online===false)return null;
+            const auth=await identity(host),image=await request(host,'appasset',{...auth,binary:true,params:{appid:appId,AssetType:'2',AssetIdx:'0'}});
+            if(!image.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) && !(image[0]===255&&image[1]===216))return null;
+            await fs.writeFile(file,image);
+          }
+          artwork={...artwork,tile:pathToFileURL(file).href,imageSource:'remote-host',remoteArtworkVersion:1};
         }
-        const tile=pathToFileURL(file).href;if(game)game.artwork={tile};return {appId,tile};
+        game.artwork=artwork;const item={appId,tile:artwork.tile||artwork.grid,artwork};emit('artwork',{hostId:id,...item});return item;
       })().catch(()=>null).finally(()=>coverRequests.delete(key)));
       const item=await coverRequests.get(key);if(item)result.push(item);
     }}));
@@ -273,10 +292,10 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     if(generation!==launchGeneration || disposed)return null;
     const running=xmlValue(info,'currentgame');
     if(running && running!=='0' && running!==game.appId)throw new Error('Another app is running on that host. Close it before starting this game.');
-    const {width,height,fps,bitrate,codec,decoder}=normalizePreferences(preferences || host.preferences);
+    const options=normalizePreferences(preferences || host.preferences),{width,height,fps,bitrate,codec,decoder}=options;
     const active={host,game,phase:'connecting',startedAt:now(),seenRunning:running===game.appId,empty:0,failed:0,video:false,surface:false};session=active;
     emit('connecting');
-    function ready() {if(session===active && active.worker && active.surface && active.video && active.seenRunning && !['playing','revealing'].includes(active.phase)){active.phase='revealing';active.worker.send('reveal');}}
+    function ready() {if(session===active && active.worker && active.surface && active.video && active.seenRunning && !['playing','revealing'].includes(active.phase)){active.phase='revealing';active.worker.send('viewport '+JSON.stringify(viewportState));active.worker.send('reveal');}}
     async function poll() {
       if(session!==active)return;
       try {
@@ -287,8 +306,10 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       if(session===active)active.timer=setTimeout(poll,1500);
     }
     try {
-      active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-audio-on-host','--no-mute-on-focus-loss','--keep-awake','--video-decoder',decoder,'--video-codec',codec],{stream:true,timeout:0,onEvent:event=>{
+      const toggles=Object.entries({multiController:'multi-controller',swapFaceButtons:'swap-gamepad-buttons',touchscreenTrackpad:'touchscreen-trackpad',absoluteMouse:'absolute-mouse',vsync:'vsync',framePacing:'frame-pacing',performanceOverlay:'performance-overlay'}).map(([key,name])=>'--'+(options[key]?'':'no-')+name);
+      active.worker=await run(['stream',host.address,launchTitle,'--display-mode','windowed','--resolution',`${width}x${height}`,'--fps',String(fps),'--bitrate',String(bitrate),'--no-quit-after','--no-audio-on-host','--no-mute-on-focus-loss','--keep-awake','--background-gamepad','--video-decoder',decoder,'--video-codec',codec,'--audio-config',options.audioConfig==='stereo'?'stereo':options.audioConfig+'-surround',...toggles],{stream:true,timeout:0,preferences:options,onEvent:event=>{
         if(session!==active)return;
+        if(event.type==='disconnect-requested'){stop('disconnected');return;}
         if(event.type==='surface'){active.surface=true;ready();}
         if(event.type==='visible' && active.phase==='revealing'){active.phase='playing';clearTimeout(active.deadline);emit('playing');}
         if(event.type==='surface-closed'){stop('disconnected');}
@@ -319,9 +340,10 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   async function game(id,appId) {const host=await find(id),game=host.games?.find(item=>item.appId===String(appId));if(!game)throw new Error('This game is no longer in the host library.');return {...game,hostName:host.name};}
   async function remove(id) {if(session?.host.id===id)await stop();if(pairing?.host.id===id)await cancelPair();await load();hosts=hosts.filter(host=>host.id!==id);await save();return true;}
   function focus() {session?.worker?.send('focus');return Boolean(session);}
+  function viewport(value) {const top=Number(value?.top),height=Number(value?.height);if(!Number.isFinite(top)||!Number.isFinite(height)||height<200||top<0||top>height*.4)throw new Error('Invalid stream viewport.');viewportState={top,height};session?.worker?.send('viewport '+JSON.stringify(viewportState));return true;}
   function active() {return publicSession();}
   function dispose() {disposed=true;if(pairing)pairing.cancelled=true;clearTimeout(session?.timer);clearTimeout(session?.deadline);session=null;for(const worker of workers)worker.stop();}
   const exclusive = operation => async (...args) => { if(acquiring)throw new Error('A remote-play connection is already starting.');acquiring=true;try{return await operation(...args);}finally{acquiring=false;} };
-  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),stop,remove,focus,active,dispose};
+  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),stop,remove,focus,viewport,active,dispose};
 }
 module.exports={createRemotePlay,parseAddress,parseApps,parseIni,qtValue,xmlValue,wireRequest,normalizePreferences,setIniValues,engineMessage};

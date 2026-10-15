@@ -1,0 +1,22 @@
+const {app,BrowserWindow}=require('electron');
+const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
+const {spawn,execFile}=require('node:child_process'),{promisify}=require('node:util');
+const root=path.resolve(__dirname,'..'),output=path.join(root,'.visual-review','remote-input');
+app.setPath('userData',path.join(output,'profile'));
+let win,bridge;const events=[];const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+app.whenReady().then(async()=>{
+  await fs.mkdir(output,{recursive:true});const fixture=path.join(output,'StreamGamepad.exe');
+  await promisify(execFile)(path.join(process.env.WINDIR,'Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe','/platform:x64',`/out:${fixture}`,path.join(__dirname,'fixtures','StreamGamepad.cs')],{windowsHide:true});
+  win=new BrowserWindow({width:960,height:600,frame:false,show:false,webPreferences:{sandbox:true}});
+  await win.loadURL('data:text/html,<body style="background:%23212320;color:white"><button>Disconnect fixture</button></body>');win.show();await pause(40);win.hide();win.show();win.focus();
+  const config=path.join(output,'bridge.json');await fs.writeFile(config,JSON.stringify({executable:fixture,cwd:output,args:[path.join(root,'.packaging-staging','streamlight','runtime')],parent:win.getNativeWindowHandle().readBigUInt64LE().toString(),stream:true,viewport:{top:70,height:600}}));
+  bridge=spawn(path.join(root,'.packaging-staging','streamlight','WindowBridge.exe'),[config],{stdio:['pipe','pipe','pipe'],windowsHide:true});
+  let buffer='';bridge.stdout.on('data',chunk=>{buffer+=chunk;const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines)try{const event=JSON.parse(line);events.push(event);if(event.type==='surface')bridge.stdin.write('reveal\n');if(event.type==='visible')setTimeout(()=>{win.focus();win.webContents.focus();},100);}catch{}});bridge.stderr.resume();
+  setTimeout(()=>{if(!bridge.killed)bridge.stdin.write('inspect\n');},1000);
+  await new Promise((resolve,reject)=>{bridge.once('exit',resolve);bridge.once('error',reject);});
+  assert(events.some(e=>e.text?.startsWith('INPUT_PASS ')),JSON.stringify(events));assert(!events.some(e=>e.type==='error'));assert(events.some(e=>e.type==='visible'),JSON.stringify(events));
+  await fs.writeFile(path.join(output,'result.json'),JSON.stringify({ok:true,events},null,2));
+  console.log('PASS actual bundled SDL: reproduced dropped background input, then received buttons/sticks/triggers and controller hotplug/removal in the embedded player.');
+  win.destroy();app.exit(0);
+}).catch(error=>{console.error(error);bridge?.kill();win?.destroy();app.exit(1);});
+setTimeout(()=>{bridge?.kill();win?.destroy();app.exit(1);},20000).unref();

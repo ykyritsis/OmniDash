@@ -22,6 +22,7 @@ class StreamSurface {
         return DefWindowProc(h,m,w,l);
     }
     static void Main(string[] args){
+        Console.WriteLine("BACKGROUND_GAMEPAD "+Environment.GetEnvironmentVariable("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"));Console.Out.Flush();
         var proc=new WndProc(WindowProc);var c=new WNDCLASS();c.proc=proc;c.name="SDL_app";c.background=new IntPtr(4);
         RegisterClass(ref c);
         keepAlive=true;var probe=CreateWindowEx(0,c.name,"Decoder capability test",0x10CF0000,0,0,64,64,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero);

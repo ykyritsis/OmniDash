@@ -23,6 +23,7 @@ const { libraryKey, installLibrariesByDrive } = require('./steam-install-librari
 const { createInstallSizeLookup } = require('./steam-install-size.cjs');
 const { storageOverview } = require('./storage-overview.cjs');
 const { createRemotePlay } = require('./remote-play.cjs');
+const { createRemoteArtwork } = require('./remote-artwork.cjs');
 const { readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, clientDownloadItems, parseVdf: parseSteamVdf } = require('./steam-local.cjs');
 const { createUpdater } = require('./updater.cjs');
 const { createSteamFamilyLibrary } = require('./steam-family.cjs');
@@ -147,10 +148,21 @@ let windowsHomeCountry = '';
 const consoleServices = createConsoleServices(path.join(path.dirname(settingsPath()), 'catalog-cache'), fetch, { getCountry: steamCountry });
 const steamLookup = createSteamStoreLookup({ getCountry: steamCountry });
 const installSizeLookup = createInstallSizeLookup();
+const remoteArtwork = createRemoteArtwork({
+  directory: path.join(path.dirname(settingsPath()), 'remote-play'),
+  getContext: async () => {
+    const [settings, snapshot, catalog] = await Promise.all([readSettings(), fs.readFile(librarySnapshotPath(), 'utf8').then(JSON.parse).catch(() => null), fs.readFile(path.join(path.dirname(settingsPath()), 'catalog-cache', `gamepass-catalog-${steamCountry()}.json`), 'utf8').then(JSON.parse).catch(() => null)]);
+    const discovery=[...steamDiscoveryArtworkCache.entries()].map(([appId,value])=>({id:`steam-discovery-${appId}`,appId,title:'',provider:'Steam',artwork:value.artwork}));
+    return {settings, games:[...currentLibrary, ...(Array.isArray(snapshot?.games) ? snapshot.games : []), ...(Array.isArray(catalog?.games) ? catalog.games : []), ...discovery]};
+  },
+  findArtwork,
+  cacheArtwork: value => artworkCache.cacheArtwork(value)
+});
 const remotePlay = createRemotePlay({
   directory: path.join(path.dirname(settingsPath()), 'remote-play'),
   runtimeDirectory: app.isPackaged ? path.join(process.resourcesPath, 'streamlight') : path.join(__dirname, '..', '.packaging-staging', 'streamlight'),
   getWindow: () => mainWindow,
+  resolveArtwork: (game, options) => remoteArtwork.resolve(game, options),
   onStatus: data => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('remote-play:status', data); }
 });
 const soundPack = createSoundPack(path.join(path.dirname(settingsPath()), 'personalization'));
@@ -1777,6 +1789,7 @@ function registerIpc() {
   ipcMain.handle('remote-play:stop', () => remotePlay.stop());
   ipcMain.handle('remote-play:remove', (_event, id) => remotePlay.remove(id));
   ipcMain.handle('remote-play:focus', () => remotePlay.focus());
+  ipcMain.handle('remote-play:viewport', (_event, value) => remotePlay.viewport(value));
   ipcMain.handle('storage:overview', async () => {
     const libraries = process.env.NEBULA_DEMO === '1' ? ['C:\\Program Files (x86)\\Steam', 'D:\\SteamLibrary'] : await findSteamRoots();
     let volumes = [];

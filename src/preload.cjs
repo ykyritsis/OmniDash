@@ -15,6 +15,7 @@ const ipcRenderer = {
 contextBridge.exposeInMainWorld('launcher', {
   getStorageOverview: () => ipcRenderer.invoke('storage:overview'),
   remotePlaySnapshot: () => ipcRenderer.invoke('remote-play:snapshot'),
+  remotePlayViewport: value => ipcRenderer.invoke('remote-play:viewport', value),
   remotePlayCheckHosts: () => ipcRenderer.invoke('remote-play:check-hosts'),
   remotePlayScan: () => ipcRenderer.invoke('remote-play:scan'),
   remotePlaySettings: (id, preferences) => ipcRenderer.invoke('remote-play:settings', id, preferences),
