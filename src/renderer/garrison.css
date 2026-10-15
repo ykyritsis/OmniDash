@@ -359,7 +359,11 @@ body.garrison .dialog-actions .secondary { border-radius: 8px; background: var(-
   background: #262827; color: #fff; box-shadow: 0 22px 60px rgba(0, 0, 0, .6); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 }
 .g-flyout::backdrop { background: transparent; }
-.g-account-flyout { inset: clamp(76px, 8.6vh, 136px) var(--g-gutter, 4vw) auto auto; }
+.g-account-flyout { inset: clamp(76px, 8.6vh, 136px) var(--g-gutter, 4vw) auto auto; width: min(340px, 92vw); padding: 12px; }
+.g-account-flyout .g-menu-item { min-height: 48px; }
+.g-account-score-status { margin: 0 12px 16px; color: rgba(255,255,255,.6); font-size: 12px; line-height: 1.5; }
+.g-account-flyout .g-account-head small::after { content: 'PC Gamerscore'; font-size: 12px; color: rgba(255,255,255,.6); }
+body.garrison #profile-score-status { display: block; margin-top: 8px; color: rgba(255,255,255,.65); }
 .g-notifications-flyout { inset: clamp(76px, 8.6vh, 136px) auto auto var(--g-gutter, 4vw); width: min(420px, 92vw); }
 .g-account-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 14px; }
 .g-account-head strong { display: block; font: 600 17px/1.2 inherit; }

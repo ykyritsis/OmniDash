@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('launcher', {
   remotePlayCovers: (id, ids) => ipcRenderer.invoke('remote-play:covers', id, ids),
   remotePlayStart: (id, appId, preferences) => ipcRenderer.invoke('remote-play:start', id, appId, preferences),
   remotePlayStop: () => ipcRenderer.invoke('remote-play:stop'),
+  remotePlayEndSession: (id, appId) => ipcRenderer.invoke('remote-play:end-session', id, appId),
   remotePlayRemove: id => ipcRenderer.invoke('remote-play:remove', id),
   remotePlayFocus: () => ipcRenderer.invoke('remote-play:focus'),
   remotePlayPage: () => ipcRenderer.invoke('remote-play:page'),

@@ -9,6 +9,13 @@ const { discoverHosts } = require('./remote-discovery.cjs');
 
 const xmlText = value => String(value || '').replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/gi, token => ({ '&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'" }[token] || String.fromCodePoint(Math.min(0x10ffff, token[2]?.toLowerCase() === 'x' ? parseInt(token.slice(3),16) : parseInt(token.slice(2),10)))));
 function xmlValue(xml, key) { return xmlText(String(xml).match(new RegExp(`<${key}\\b[^>]*>([\\s\\S]*?)</${key}>`, 'i'))?.[1] || ''); }
+function hostGame(xml) {
+  const state=xmlValue(xml,'state'), current=xmlValue(xml,'currentgame');
+  // Moonlight checks state first: some hosts retain the last app ID when free.
+  if(state.endsWith('_SERVER_FREE'))return '0';
+  if(state && !state.endsWith('_SERVER_BUSY'))return null;
+  return /^\d{1,10}$/.test(current) ? current : null;
+}
 function parseApps(xml) {
   const seen = new Set();
   return [...String(xml).matchAll(/<App\b[^>]*>([\s\S]*?)<\/App>/gi)].map(match => {
@@ -50,11 +57,16 @@ function parseIni(text) {
   }
   return sections;
 }
-function wireRequest(host, route, { credentials, pinnedCert, binary = false, timeout = 5000, params = {} } = {}) {
+function wireRequest(host, route, { credentials, pinnedCert, binary = false, timeout = 5000, params = {}, signal } = {}) {
   const secure = Boolean(credentials);
   const query = new URLSearchParams({ uniqueid: credentials?.uniqueid || '0123456789ABCDEF', uuid: crypto.randomBytes(16).toString('hex'), ...params });
   return new Promise((resolve, reject) => {
-    const req = (secure ? https : http).request({ hostname: host.hostname, port: secure ? host.httpsPort || 47984 : host.httpPort, path: `/${route}?${query}`, method:'GET', agent:false,
+    let req, settled=false;
+    const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(deadline);error?reject(error):resolve(value);};
+    // request.setTimeout only starts after TCP connects. Bound DNS, connect,
+    // TLS and the response body together so unreachable IPs cannot stall scans.
+    const deadline=setTimeout(()=>req?.destroy(new Error('The PC did not respond. Check its address and make sure the streaming host is running.')),timeout);
+    try { req = (secure ? https : http).request({ hostname: host.hostname, port: secure ? host.httpsPort || 47984 : host.httpPort, path: `/${route}?${query}`, method:'GET', agent:false, signal,
       ...(secure ? { cert: credentials.certificate, key: credentials.key, rejectUnauthorized:false } : {}) }, res => {
       if (secure) {
         const actual = res.socket.getPeerCertificate()?.raw;
@@ -65,16 +77,17 @@ function wireRequest(host, route, { credentials, pinnedCert, binary = false, tim
       const chunks=[]; let size=0;
       res.on('data', data => { size+=data.length; if(size > (binary ? 12 : 4)*1024*1024) req.destroy(new Error('The host returned too much data.')); else chunks.push(data); });
       res.on('end', () => {
-        if (res.statusCode !== 200) { reject(new Error(`The host returned HTTP ${res.statusCode}.`)); return; }
-        const bytes=Buffer.concat(chunks); if (binary) { resolve(bytes); return; }
+        if (res.statusCode !== 200) { finish(new Error(`The host returned HTTP ${res.statusCode}.`)); return; }
+        const bytes=Buffer.concat(chunks); if (binary) { finish(null,bytes); return; }
         const xml=bytes.toString('utf8'), code=xml.match(/<root\b[^>]*status_code="(\d+)"/i)?.[1];
-        if(code && code !== '200') { reject(new Error(xml.match(/status_message="([^"]*)"/)?.[1] || `The host declined the request (${code}).`)); return; }
-        resolve(xml);
+        if(code && code !== '200') { finish(new Error(xml.match(/status_message="([^"]*)"/)?.[1] || `The host declined the request (${code}).`)); return; }
+        finish(null,xml);
       });
-      res.on('error', reject);
+      res.on('error', error=>finish(error));
+      res.on('aborted',()=>finish(new Error('The host closed the response before it finished.')));
     });
-    req.setTimeout(timeout, () => req.destroy(new Error('The PC did not respond. Check its address and make sure the streaming host is running.')));
-    req.on('error', reject); req.end();
+    req.on('error', error=>finish(error)); req.end();
+    } catch(error){finish(error);}
   });
 }
 
@@ -205,21 +218,28 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     return {id:host.id,name:host.name,address:host.address,paired:Boolean(host.paired),games:(host.games||[]).filter(game=>!(host.hiddenApps||[]).includes(game.appId)).map(game=>({...game,lastPlayed:host.playHistory?.[historyKey(game)] || game.lastPlayed || 0})),hiddenCount:(host.hiddenApps||[]).length,lastSeen:host.lastSeen,error:host.error||'',status,currentGame:host.currentGame||'0',preferences};
   }
   async function snapshot() { await load(); let available=true;try{await runtime();}catch{available=false;} return {available,preferences,hosts:hosts.map(publicHost),session:publicSession(),pairing:pairing ? {hostId:pairing.host.id,pin:pairing.pin}:null}; }
-  async function probe(host, timeout=3500) {
-    const xml=await request(host,'serverinfo',{timeout});
+  function updateHostState(host,xml) {
+    const current=hostGame(xml);if(current!==null)host.currentGame=current;
+    host.online=true;host.checkedAt=now();host.lastSeen=now();host.error='';
+    return current;
+  }
+  async function probe(host, timeout=3500, signal) {
+    const xml=await request(host,'serverinfo',{timeout,signal});
     const uuid=xmlValue(xml,'uniqueid'); if(!uuid) throw new Error('That PC is not running a compatible Sunshine, Apollo or Vibepollo host.');
     if(host.uuid && host.uuid !== uuid) throw new Error('A different PC answered at this address. Remove this entry and pair again.');
     host.uuid=uuid;host.name=xmlValue(xml,'hostname') || host.hostname;host.httpsPort=Number(xmlValue(xml,'HttpsPort')) || host.httpPort-5;
-    host.online=true;host.checkedAt=now();host.lastSeen=now();host.currentGame=xmlValue(xml,'currentgame')||'0';
+    // Public serverinfo may deliberately hide an authenticated session.
+    if(!host.paired)updateHostState(host,xml);
+    host.online=true;host.checkedAt=now();host.lastSeen=now();
     return xml;
   }
   async function checkHosts() {
     if(checking)return checking;
-    checking=(async()=>{await load();await Promise.all(hosts.map(async host=>{try{await probe(host);if(host.paired){const auth=await identity(host),info=await request(host,'serverinfo',{...auth,timeout:3500});host.currentGame=xmlValue(info,'currentgame')||'0';host.paired=xmlValue(info,'PairStatus')==='1';}host.error='';}catch(error){host.online=false;host.checkedAt=now();host.error=error.message;}}));await save();return snapshot();})().finally(()=>{checking=null;});return checking;
+    checking=(async()=>{await load();await Promise.all(hosts.map(async host=>{try{await probe(host);if(host.paired){const auth=await identity(host),info=await request(host,'serverinfo',{...auth,timeout:3500});updateHostState(host,info);host.paired=xmlValue(info,'PairStatus')==='1';}host.error='';}catch(error){host.online=false;host.checkedAt=now();host.error=error.message;}}));await save();return snapshot();})().finally(()=>{checking=null;});return checking;
   }
   async function scan() {
     if(scanning)return scanning;
-    scanning=(async()=>{await load();return discover({probe:async(address,timeout)=>{const host={...address,address:address.hostname+(address.httpPort===47989?'':`:${address.httpPort}`)};await probe(host,timeout);return host;},onFound:host=>emit('discovered',{host:{name:host.name,address:host.address,uuid:host.uuid,hostId:hosts.find(item=>item.uuid?.toLowerCase()===host.uuid.toLowerCase())?.id||null}})});})().then(found=>found.map(host=>({name:host.name,address:host.address,uuid:host.uuid,hostId:hosts.find(item=>item.uuid?.toLowerCase()===host.uuid.toLowerCase())?.id||null}))).finally(()=>{scanning=null;});return scanning;
+    scanning=(async()=>{await load();return discover({saved:hosts,probe:async(address,timeout,signal)=>{const host={...address,address:address.hostname+(address.httpPort===47989?'':`:${address.httpPort}`)};await probe(host,timeout,signal);return host;},onFound:host=>emit('discovered',{host:{name:host.name,address:host.address,uuid:host.uuid,hostId:hosts.find(item=>item.uuid?.toLowerCase()===host.uuid.toLowerCase())?.id||null}})});})().then(found=>found.map(host=>({name:host.name,address:host.address,uuid:host.uuid,hostId:hosts.find(item=>item.uuid?.toLowerCase()===host.uuid.toLowerCase())?.id||null}))).finally(()=>{scanning=null;});return scanning;
   }
   async function add(address) {
     const parsed=parseAddress(address); await load();
@@ -259,7 +279,7 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       const host=await find(id);
       if(pairing?.host.id===id)throw new Error('Finish pairing this PC first.');
       try {
-        await probe(host);const auth=await identity(host);const xml=await request(host,'applist',auth);const apps=parseApps(xml).filter(game=>game.installed!==false);
+        await probe(host);const auth=await identity(host);updateHostState(host,await request(host,'serverinfo',auth));const xml=await request(host,'applist',auth);const apps=parseApps(xml).filter(game=>game.installed!==false);
         if(apps.length===1 && /^permission denied/i.test(apps[0].title))throw new Error('Allow this client to list games in the host’s paired-device settings.');
         const covers=path.join(directory,'covers',id);await fs.mkdir(covers,{recursive:true});
         const previous=new Map((host.games||[]).map(game=>[game.appId,game]));
@@ -307,11 +327,37 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     active.phase='stopping';clearTimeout(active.timer);clearTimeout(active.deadline);emit('stopping');
     active.stopping=(async()=>{
       const worker=active.worker||await active.workerReady?.catch(()=>null);if(worker)await worker.stop();
-      if(session===active){session=null;emit('ended',{reason,hostId:active.host.id,appId:active.game.appId,title:active.game.title});}
+      if(session===active){session=null;emit('ended',{reason,hostId:active.host.id,appId:active.game.appId,gameId:active.game.id,title:active.game.title,host:publicHost(active.host)});}
       restoreWindow();return true;
     })();return active.stopping;
   }
   function restoreWindow(){const win=getWindow();if(win&&!win.isDestroyed()){win.show();win.focus();win.webContents?.focus();}}
+  async function endHostSession(id,appId) {
+    const host=await find(id), expected=String(appId);
+    if(!host.paired || !/^\d{1,10}$/.test(expected) || expected==='0')throw new Error('Choose a game on a paired PC.');
+    if(pairing || (session && (session.host.id!==id || session.game.appId!==expected)))throw new Error('Finish the current remote-play connection first.');
+    const auth=await identity(host);
+    try {
+    const current=updateHostState(host,await request(host,'serverinfo',auth));
+    if(current===null)throw new Error('The PC did not report its session. Refresh its status and try again.');
+    if(current!=='0' && current!==expected)throw new Error('A different game is now running on this PC. Its session was left open.');
+    if(current!=='0'){
+      // Standard Moonlight quit: authenticated, pinned /cancel followed by a
+      // fresh status check. A disconnect alone intentionally leaves the app up.
+      await request(host,'cancel',auth);
+      let free=false;
+      for(let attempt=0;attempt<8;attempt++){
+        const running=updateHostState(host,await request(host,'serverinfo',{...auth,timeout:2000}));
+        if(running==='0'){free=true;break;}
+        if(running!==null && running!==expected)throw new Error('Another game started on the PC. Refresh its status.');
+        if(attempt<7)await new Promise(resolve=>setTimeout(resolve,350));
+      }
+      if(!free)throw new Error('The host has not ended this session. It may belong to another client. Try again or close it on the PC.');
+    }
+    if(session?.host.id===id && session.game.appId===expected)await stop('session-ended');
+    return publicHost(host);
+    } finally { await save();emit('host-updated',{host:publicHost(host)}); }
+  }
   async function start(id,appId) {
     const generation=++launchGeneration;
     if(session || pairing || workers.size)throw new Error('End the current remote-play connection first.');
@@ -323,7 +369,8 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     const launchTitle=latest.launchTitle || latest.title;
     if(apps.some(other=>other.appId!==game.appId && (other.launchTitle||other.title).toLowerCase()===launchTitle.toLowerCase()))throw new Error('This host has two apps with the same name. Give each app a unique title in the host’s settings, then refresh.');
     if(generation!==launchGeneration || disposed)return null;
-    const running=xmlValue(info,'currentgame');
+    const running=updateHostState(host,info);
+    if(running===null)throw new Error('The PC did not report a valid session state. Refresh its status and try again.');
     if(running && running!=='0' && running!==game.appId)throw new Error('Another app is running on that host. Close it before starting this game.');
     const options=normalizePreferences(preferences),{width,height,fps,bitrate,codec,decoder}=options;
     const active={host,game,preferences:options,phase:'connecting',startedAt:now(),seenRunning:running===game.appId,empty:0,failed:0,video:false,surface:false};session=active;
@@ -332,9 +379,12 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     async function poll() {
       if(session!==active||active.phase==='stopping')return;
       try {
-        const xml=await request(host,'serverinfo',auth), current=xmlValue(xml,'currentgame');active.failed=0;
+        const xml=await request(host,'serverinfo',auth);
+        if(session!==active || active.phase==='stopping')return;
+        const current=updateHostState(host,xml);active.failed=0;
         if(current===game.appId){active.seenRunning=true;active.empty=0;ready();}
-        else if(active.seenRunning && current && ++active.empty>=2){await stop('game-closed');return;}
+        else if(active.seenRunning && current!==null && ++active.empty>=2){await save();await stop('game-closed');return;}
+        else if(current===null)active.empty=0;
       } catch(error) {if(++active.failed===3)emit('connection-warning',{error:'Connection interrupted. Waiting for the host…'});if(active.failed>=10){await stop('connection-lost');return;}}
       if(session===active&&active.phase!=='stopping')active.timer=setTimeout(poll,1500);
     }
@@ -395,6 +445,6 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
   function active() {return publicSession();}
   function dispose() {disposed=true;if(pairing)pairing.cancelled=true;clearTimeout(session?.timer);clearTimeout(session?.deadline);session=null;for(const worker of workers)worker.stop();}
   const exclusive = operation => async (...args) => { if(acquiring)throw new Error('A remote-play connection is already starting.');acquiring=true;try{return await operation(...args);}finally{acquiring=false;} };
-  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),stop,remove,focus,page,viewport,active,dispose};
+  return {snapshot,checkHosts,scan,add,pair:exclusive(pair),cancelPair,refresh,covers,settings,hideGame,game,start:exclusive(start),endHostSession:exclusive(endHostSession),stop,remove,focus,page,viewport,active,dispose};
 }
-module.exports={createRemotePlay,parseAddress,parseApps,parseIni,qtValue,xmlValue,wireRequest,normalizePreferences,setIniValues,engineMessage};
+module.exports={createRemotePlay,parseAddress,parseApps,parseIni,qtValue,xmlValue,hostGame,wireRequest,normalizePreferences,setIniValues,engineMessage};

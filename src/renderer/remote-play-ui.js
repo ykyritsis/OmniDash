@@ -55,6 +55,8 @@
     event.preventDefault();event.stopImmediatePropagation();
   },true);
   const disconnectButton=document.createElement('button');disconnectButton.id='detail-disconnect';disconnectButton.className='detail-secondary focusable';disconnectButton.dataset.action='remote-stream-disconnect';disconnectButton.type='button';disconnectButton.hidden=true;disconnectButton.textContent='Disconnect';document.querySelector('#detail-play').after(disconnectButton);
+  const endButton=document.createElement('button');endButton.id='detail-end-session';endButton.className='detail-secondary focusable';endButton.dataset.action='remote-end-session';endButton.type='button';endButton.hidden=true;endButton.textContent='End session';endButton.title='End the session on this PC. The host may close the game.';disconnectButton.after(endButton);
+  let endingSession=false;
   async function showSessionPage(session){
     cancelAutoHide();streamBar.hidden=true;state.remotePlaySession=session;document.body.classList.remove('remote-streaming');finishRemoteLaunch();
     waitForControllerRelease=true;scheduleGamepadPoll();
@@ -84,8 +86,9 @@
   const customDialog=dialog('remote-custom-dialog','remote-pair-dialog');customDialog.setAttribute('aria-labelledby','remote-custom-title');
   const errorDialog=dialog('remote-error-dialog','remote-pair-dialog');errorDialog.setAttribute('aria-labelledby','remote-error-title');
   const helpDialog=dialog('remote-help-dialog','remote-pair-dialog');helpDialog.setAttribute('aria-labelledby','remote-help-title');
+  const endDialog=dialog('remote-end-dialog','remote-pair-dialog');endDialog.setAttribute('aria-labelledby','remote-end-title');
   pairDialog.addEventListener('close',()=>{scanGeneration++;window.launcher.remotePlayCancelPair().catch(()=>{});if(pairOpener?.isConnected)setFocusedElement(pairOpener,{scroll:false});});
-  for(const node of [qualityDialog,customDialog,errorDialog,helpDialog,shortcutsDialog,recordDialog])node.addEventListener('close',()=>{refreshFocusables();if(node.opener?.isConnected&&node.opener.offsetParent!==null)setFocusedElement(node.opener,{scroll:false});});
+  for(const node of [qualityDialog,customDialog,errorDialog,helpDialog,shortcutsDialog,recordDialog,endDialog])node.addEventListener('close',()=>{refreshFocusables();if(node.opener?.isConnected&&node.opener.offsetParent!==null)setFocusedElement(node.opener,{scroll:false});});
   function showDialog(node,first){node.opener=document.activeElement;if(!node.open)node.showModal();refreshFocusables();setFocusedElement(node.querySelector(first||'.focusable'),{scroll:false});}
   function renderHosts(){
     document.querySelector('#remote-hosts').innerHTML=!remote.available?'<div class="remote-empty"><h3>Streaming component unavailable</h3><p>Install the full app build to restore the bundled streaming component.</p></div>':!remote.hosts.length?'<div class="remote-empty"><h3>Your gaming PCs, in one place</h3><p>Find a PC on this network to get started. You can also enter an address manually.</p></div>':remote.hosts.map(host=>`<article class="remote-host-card"><div class="remote-host-info"><span class="remote-host-icon">${gIcon('stream')}</span><span class="remote-host-copy"><strong>${escape(host.name)}</strong>${status(host)}<small>${escape(host.address)}${host.paired?` · ${host.games.length} shared games`:''}</small></span></div><div class="remote-host-actions">${button(host.paired?'remote-browse-host':'remote-pair-host',host.paired?'Browse games':'Pair PC',`data-host-id="${escape(host.id)}"`)}${button('remote-remove','Remove',`data-host-id="${escape(host.id)}"`)}</div></article>`).join('');refreshFocusables();
@@ -261,14 +264,16 @@
     applyQualityPreset();fractional();showDialog(qualityDialog);
   }
   function paintDetail(){
+    endButton.hidden=true;
     if(state.view!=='detail'){disconnectButton.hidden=true;return;}const game=state.remoteGames?.find(game=>game.id===state.detailGameId);if(!game){disconnectButton.hidden=true;const play=document.querySelector('#detail-play');if(play.dataset.remoteAction){play.disabled=false;delete play.dataset.remoteAction;document.querySelector('#detail-options-button').setAttribute('aria-label','Manage game');}return;}
     const host=hostById(game.remoteHostId);if(!host)return;
     const play=document.querySelector('#detail-play'),offline=host.status==='offline',other=host.status==='busy'&&host.currentGame!==game.appId,session=state.remotePlaySession,active=session?.gameId===game.id;
     disconnectButton.hidden=!active;disconnectButton.disabled=session?.phase==='stopping';disconnectButton.textContent=session?.phase==='stopping'?'Disconnecting…':'Disconnect';
-    play.disabled=active?session.phase!=='playing':Boolean(session)||offline||other||!host.paired;play.dataset.remoteAction='1';delete play.dataset.returnGame;
-    play.innerHTML=`<span class="detail-action-icon" aria-hidden="true">${active?'↩':'▶'}</span><strong>${active?'Return to stream':offline?'PC offline':other?'PC busy':!host.paired?'Pair PC first':host.currentGame===game.appId?'Resume stream':'Play remotely'}</strong>`;
+    endButton.hidden=!(active || host.currentGame===game.appId);endButton.disabled=endingSession||offline||session?.phase==='stopping';endButton.textContent=endingSession?'Ending session…':'End session';
+    play.disabled=endingSession||(active?session.phase!=='playing':Boolean(session)||offline||other||!host.paired);play.dataset.remoteAction='1';delete play.dataset.returnGame;
+    play.innerHTML=`<span class="detail-action-icon" aria-hidden="true">${active?'↩':'▶'}</span><strong>${active?'Return to stream':offline?'PC offline':other?'PC busy':!host.paired?'Pair PC first':host.currentGame===game.appId?'Resume game':'Play remotely'}</strong>`;
     const options=document.querySelector('#detail-options-button');options.hidden=false;options.setAttribute('aria-label','Stream settings and game options');
-    document.querySelector('#detail-session-info').innerHTML=`${active?'<span class="remote-status" data-status="ready"><i aria-hidden="true"></i>Stream connected</span>':status(host)}<span class="g-via">${gIcon('stream')}${escape(host.name)}</span>${active?'<small>Disconnect ends the stream. The game stays open on your PC.</small>':''}`;
+    document.querySelector('#detail-session-info').innerHTML=`${active?'<span class="remote-status" data-status="ready"><i aria-hidden="true"></i>Stream connected</span>':status(host)}<span class="g-via">${gIcon('stream')}${escape(host.name)}</span>${active?'<small>Disconnect to leave the game running, or end the session on your PC.</small>':host.currentGame===game.appId?'<small>Stream disconnected. The host session is still open.</small>':''}`;
   }
   function finishRemoteLaunch(){launchPending=false;delete launchOverlay.dataset.remote;delete launchOverlay.dataset.gameId;launchOverlay.classList.remove('active');launchOverlay.hidden=true;}
   function launchError(message){finishRemoteLaunch();failedGame=state.remoteGames?.find(game=>game.id===state.detailGameId)||failedGame;errorDialog.innerHTML=`<h2 id="remote-error-title">Couldn’t start remote play</h2><p>${escape(message)}</p><div class="remote-tools">${failedGame?button('remote-retry','Try again','',true)+button('remote-error-quality','Stream settings'):''}${button('remote-error-close','Close')}</div>`;showDialog(errorDialog);}
@@ -282,6 +287,8 @@
   window.remotePlayUI={get playing(){return state.remotePlaySession?.phase==='playing';},get capturesInput(){return state.remotePlaySession?.phase==='playing'&&state.remotePlaySession.view!=='page';},get active(){return Boolean(state.remotePlaySession);},captureControllerShortcut,suppressHeldButtons(gamepads){if(!waitForControllerRelease)return false;if(gamepads.some(pad=>pad.buttons.some(button=>button.pressed||button.value>.55)))return true;waitForControllerRelease=false;state.previousButtons=[];return false;}};
   const cancel=cancelLaunchWait;cancelLaunchWait=function(){if(launchOverlay.dataset.remote){window.launcher.remotePlayStop().catch(error=>showToast(error.message));finishRemoteLaunch();return;}return cancel();};
   window.launcher.onRemotePlayStatus(async event=>{
+    if(event.host){const host=hostById(event.host.id);if(host)Object.assign(host,event.host);syncGames();}
+    if(event.phase==='host-updated'){paintDetail();if(state.libraryRemote)renderLibrary();return;}
     if(event.phase==='page'){await showSessionPage(event.session);return;}
     if(event.phase==='stream'){state.remotePlaySession=event.session;document.body.classList.add('remote-streaming');hideStreamBar(false);paintDetail();return;}
     if(event.phase==='stopping'){state.remotePlaySession=event.session;paintDetail();streamBar.querySelectorAll('button').forEach(button=>button.disabled=true);return;}
@@ -294,7 +301,15 @@
     if(event.phase==='playing'){state.remotePlaySession=event.session;const game=hostById(event.session.hostId)?.games.find(game=>game.appId===event.session.appId);if(game){game.lastPlayed=event.session.lastPlayed||Date.now();rememberLaunch(game.id);syncGames();}finishRemoteLaunch();document.body.classList.add('remote-streaming');showStreamBar(event.session,true);refreshActiveGameSession().catch(()=>{});}
     if(event.phase==='error')launchError(event.error);
     if(event.phase==='connection-warning')showToast(event.error);
-    if(event.phase==='ended'){cancelAutoHide();state.remotePlaySession=null;waitForControllerRelease=true;scheduleGamepadPoll();streamBar.hidden=true;streamBar.querySelectorAll('button').forEach(button=>button.disabled=false);document.body.classList.remove('remote-streaming');finishRemoteLaunch();paintDetail();restore('#detail-play');refreshActiveGameSession().catch(()=>{});if(event.reason==='game-closed')showToast(`${event.title} closed. Stream ended.`);else if(event.reason==='connection-lost')launchError('Connection lost. The game may still be running on your host.');refreshHosts(true).catch(()=>{});}
+    if(event.phase==='ended'){
+      const gameId=event.gameId||state.remotePlaySession?.gameId;
+      cancelAutoHide();state.remotePlaySession=null;waitForControllerRelease=true;scheduleGamepadPoll();streamBar.hidden=true;streamBar.querySelectorAll('button').forEach(button=>button.disabled=false);document.body.classList.remove('remote-streaming');finishRemoteLaunch();
+      if(['game-closed','session-ended'].includes(event.reason))for(const node of [...document.querySelectorAll('dialog[open]')].reverse())node.close();
+      if(gameId && (state.view!=='detail'||state.detailGameId!==gameId))await openGameDetails(gameId);
+      paintDetail();restore('#detail-play');refreshActiveGameSession().catch(()=>{});
+      if(event.reason==='game-closed')showToast(`${event.title} closed. Stream ended.`);else if(event.reason==='connection-lost')launchError('Connection lost. The game may still be running on your host.');
+      refreshHosts(true).catch(()=>{});
+    }
   });
   const render=renderLibraryView;renderLibraryView=function(...args){if(state.libraryRemote){renderLibrary();return;}libraryView.classList.remove('remote-active');library.hidden=true;return render(...args);};
   const show=showSettingsPage;showSettingsPage=function(page){const result=show(page);if(page==='g-streaming')refreshHosts(true).catch(error=>showToast(error.message));return result;};
@@ -332,6 +347,19 @@
       if(action==='remote-stream-hide'){hideStreamBar();return;}
       if(action==='remote-stream-page'){await window.launcher.remotePlayPage();return;}
       if(action==='remote-stream-disconnect'){source.disabled=true;try{await window.launcher.remotePlayStop();}finally{source.disabled=false;}return;}
+      if(action==='remote-end-session'){
+        const game=state.remoteGames?.find(game=>game.id===state.detailGameId);if(!game)return;
+        endDialog.dataset.hostId=game.remoteHostId;endDialog.dataset.appId=game.appId;
+        endDialog.innerHTML=`<h2 id="remote-end-title">End this session?</h2><p>End ${escape(game.title)} on ${escape(hostById(game.remoteHostId)?.name||'your PC')}. The host may close the game, so save your progress first.</p><div class="remote-tools">${button('remote-end-confirm','End session','',true)}${button('remote-end-cancel','Keep session')}</div><p id="remote-end-status" role="status"></p>`;
+        showDialog(endDialog,'[data-action="remote-end-cancel"]');return;
+      }
+      if(action==='remote-end-cancel'){endDialog.close();return;}
+      if(action==='remote-end-confirm'){
+        endingSession=true;source.disabled=true;source.textContent='Ending session…';paintDetail();
+        try{const host=await window.launcher.remotePlayEndSession(endDialog.dataset.hostId,endDialog.dataset.appId);Object.assign(hostById(host.id)||{},host);syncGames();endDialog.close();showToast('Remote session ended.');}
+        catch(error){endDialog.querySelector('#remote-end-status').textContent=error.message;}
+        finally{endingSession=false;source.disabled=false;source.textContent='End session';paintDetail();if(!endDialog.open)restore('#detail-play');}return;
+      }
       if(action==='console-library-section'){if(source.dataset.section==='remote'){await openLibrary();return;}state.libraryRemote=false;library.hidden=true;libraryView.classList.remove('remote-active');}
       if(action==='remote-open-library'||action==='remote-browse-host'){await openLibrary(source.dataset.hostId);return;}
       if(action==='remote-host-tab'){selectedHost=source.dataset.hostId;document.querySelector('#remote-game-search').value='';renderLibrary();restore(`#remote-host-tabs [data-host-id="${CSS.escape(selectedHost)}"]`);if(currentHost()?.paired)await refreshGames(selectedHost);return;}

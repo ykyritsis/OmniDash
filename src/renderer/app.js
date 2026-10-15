@@ -3059,6 +3059,7 @@ window.addEventListener('gamepaddisconnected', (event) => {
 
 window.launcher.getSettings().then(async (settings) => {
   applyPersonalization(settings);
+  document.querySelector('#fullscreen-toggle').checked = Boolean(settings.fullscreen);
   state.favoriteGameIds = Array.isArray(settings.favoriteGameIds) ? settings.favoriteGameIds : [];
   state.customCollections = Array.isArray(settings.customCollections) ? settings.customCollections : [];
   refreshActiveGameSession().catch(() => {});
@@ -3071,6 +3072,7 @@ window.launcher.getSettings().then(async (settings) => {
   state.steamBannerDismissed = settings.steamBannerDismissed === true;
   state.displayName = settings.displayName || 'Player';
   refreshPlayerIdentity();
+  scheduleScoreRefresh();
   window.launcher.getSteamLocalStatus().then((status) => {
     state.steamLocalStatus = status;
     renderSteamLocalStatus();

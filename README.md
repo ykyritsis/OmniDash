@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 34](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.34/Xbox-Preview-UI-Setup-0.27.0-beta.34.exe)** · [Setup](#getting-started) · [Beta 34 notes](docs/release-0.27.0-beta.34.md)
+**[Download beta 35](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.35/Xbox-Preview-UI-Setup-0.27.0-beta.35.exe)** · [Setup](#getting-started) · [Beta 35 notes](docs/release-0.27.0-beta.35.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,23 +31,20 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 34
+## Beta 35
 
-- **Disconnect** and **Return to stream** are now on the active remote game page. Keyboard/controller shortcuts remain available during play and reconnects.
-- **Lowest Latency**, **Balanced** and **Max Visuals** automatically choose bitrate, codec, decoder and frame delivery. Bitrate follows resolution, FPS and HDR. Manual tuning is still available.
-- One set of stream settings applies to every game and PC on this device. Named profiles and game overrides have been removed.
-- Record your own Disconnect and Game page shortcuts with controller button glyphs, conflict checking and Restore defaults.
-- Fixed native video focus and sizing so the player can receive input and the game page can take it back. Disconnect waits for the native player to finish closing.
-- Australian ratings use compact **G / PG / M / MA15+ / R18+** badges. Fixed foreign-language advice, wrong-board fallbacks and stale classification caches.
-- Includes automatic host discovery, square cached artwork, remote games in Home → Jump back in with cloud icons, and the five-second launch hint.
-- Steam drive selection shows download and installed-space estimates. Settings → Storage shows drive space and known game sizes.
-- Includes automatic launch update checks, the centred update prompt and [all 26 publisher/series artwork cards](docs/collection-artwork/README.md).
+- Network discovery listens for multicast and unicast replies, prioritizes saved PCs, and uses bounded probes across Wi-Fi/Ethernet and virtual adapters.
+- Remote game pages offer **End session** after disconnecting as well as while connected. **Resume game** clearly means the host session is still open. End session uses a confirmation and verifies the host has stopped.
+- Fixed stale host game IDs being mistaken for live sessions. Host-reported game exit ends the stream and returns to its game page, even from another app page.
+- The profile menu now has four everyday actions. PC Gamerscore loads from its saved calculation and updates automatically in the background, pausing during gameplay.
+- Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
+- Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.27.0-beta.34.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.27.0-beta.35.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[beta 34 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.34)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 35 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.35)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

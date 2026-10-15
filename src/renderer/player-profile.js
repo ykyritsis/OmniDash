@@ -2,6 +2,17 @@ let steamPlayerIdentity = null;
 let scoreSyncing = false;
 let scoreRefreshTimer;
 let identityRequest = 0;
+let scoreBackgroundTimer;
+let playerScore = null;
+function scoreValue() { return playerScore?.checked ? playerScore.points.toLocaleString() : '—'; }
+function scoreStatus() {
+  if(!playerScore)return 'Loading saved Gamerscore…';
+  if(!playerScore.canSync)return playerScore.checked?'Saved Gamerscore · Link Steam to update':'Link Steam to see your Gamerscore';
+  if(scoreSyncing)return playerScore.checked?'Updating achievements…':'Calculating your Gamerscore…';
+  if(!playerScore.checked)return playerScore.status==='unavailable'?'Steam achievements unavailable':'Waiting for Steam achievements';
+  if(playerScore.status==='unavailable')return 'Saved score · Steam is unavailable';
+  return `${playerScore.unlocked||0} achievements · Level ${playerScore.level||1}`;
+}
 async function refreshPlayerIdentity() {
   const request = ++identityRequest;
   try {
@@ -33,40 +44,53 @@ document.querySelector('#profile-steam-name').addEventListener('change', event =
   refreshFocusables();
 });
 function renderPlayerScore(result) {
-  const value = result.checked ? result.points.toLocaleString() : 'Not yet';
+  playerScore=result;
+  const value = scoreValue();
   const header = document.querySelector('#dashboard-player-status');
   header.innerHTML = `<span class="preview-score-mark" aria-hidden="true">G</span> ${value}<span class="preview-score-caption">PC Gamerscore</span>`;
   header.title = `PC Gamerscore · ${result.checked} tracked Steam games verified`;
   document.querySelector('#profile-score-value').textContent = value;
   document.querySelector('#profile-score-coverage').textContent = `${result.unlocked || 0} verified unlocks · ${result.completed || 0} completed games · Level ${result.level || 1}${result.legacyGames ? ` · Update to convert ${result.legacyGames} previous score records` : ''}`;
   const button = document.querySelector('#profile-score-sync');
-  button.disabled = scoreSyncing;
-  button.textContent = scoreSyncing ? 'Updating…' : result.canSync ? 'Update Gamerscore' : 'Link Steam';
+  button.disabled = false;
+  button.hidden = Boolean(result.canSync);
+  button.textContent = 'Link Steam';
   button.dataset.canSync=String(!!result.canSync);
   if(typeof renderPcScoreDetail==='function')renderPcScoreDetail(result);
   if (result.status === 'unavailable') document.querySelector('#profile-score-coverage').textContent += ' · Some stats are private or unavailable. Try again later.';
   if (result.status === 'paused') document.querySelector('#profile-score-coverage').textContent += ' · Sync paused while the launcher is inactive.';
+  document.querySelector('#profile-score-status').textContent=!scoreSyncing && result.checked && result.canSync && result.status!=='unavailable'?'Updates automatically while you browse.':scoreStatus();
+  window.dispatchEvent(new Event('player-score-updated'));
 }
 function scheduleScoreRefresh() {
   clearTimeout(scoreRefreshTimer);
-  scoreRefreshTimer = setTimeout(() => window.launcher.getPlayerScore().then(renderPlayerScore).catch(() => {}), 350);
+  scoreRefreshTimer = setTimeout(() => window.launcher.getPlayerScore().then(result=>{renderPlayerScore(result);scheduleBackgroundScore(2000);}).catch(() => {}), 350);
 }
-async function syncPlayerScore() {
+function scheduleBackgroundScore(delay=30000) {
+  clearTimeout(scoreBackgroundTimer);
+  scoreBackgroundTimer=setTimeout(()=>syncPlayerScore(true),delay);
+}
+function canRefreshScore() { return !document.hidden && document.hasFocus() && !state.activeGameSession && !window.remotePlayUI?.active && navigator.onLine; }
+async function syncPlayerScore(background=false) {
   if (scoreSyncing) return;
-  if(document.querySelector('#profile-score-sync').dataset.canSync==='false'){avatarDialog.close();await openLibraryConnection('steam');return;}
+  if(background && (!playerScore?.canSync || !canRefreshScore())){if(playerScore?.canSync)scheduleBackgroundScore();return;}
+  if(document.querySelector('#profile-score-sync').dataset.canSync==='false'){if(!background){avatarDialog.close();await openLibraryConnection('steam');}return;}
   scoreSyncing = true;
   let result;
   try {
     renderPlayerScore(await window.launcher.getPlayerScore());
-    do {
-      result = await window.launcher.getPlayerScore(true);
-      renderPlayerScore(result);
-      if (!result.remaining || result.status !== 'ready') break;
-    } while (!document.hidden && avatarDialog.open && !state.activeGameSession);
-  } catch { showToast('Steam progress is unavailable. Your saved score is unchanged.'); }
+    result = await window.launcher.getPlayerScore(true);
+    renderPlayerScore(result);
+  } catch { if(!background)showToast('Steam progress is unavailable. Your saved score is unchanged.'); }
   finally {
     scoreSyncing = false;
     if (result) renderPlayerScore(result); else scheduleScoreRefresh();
     refreshFocusables();
+    // Continue bounded batches without requiring the profile menu to stay open.
+    // Pause during play; fresh records are cached and never fetched each time.
+    scheduleBackgroundScore(result?.status==='ready' && result.remaining?1500:result?.status==='paused'?30000:300000);
   }
 }
+window.addEventListener('focus',()=>scheduleBackgroundScore(2000));
+window.addEventListener('online',()=>scheduleScoreRefresh());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleBackgroundScore(2000);});

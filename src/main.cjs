@@ -1788,6 +1788,7 @@ function registerIpc() {
     return remotePlay.start(id, appId, preferences);
   });
   ipcMain.handle('remote-play:stop', () => remotePlay.stop());
+  ipcMain.handle('remote-play:end-session', (_event, id, appId) => remotePlay.endHostSession(id, appId));
   ipcMain.handle('remote-play:remove', (_event, id) => remotePlay.remove(id));
   ipcMain.handle('remote-play:focus', () => remotePlay.focus());
   ipcMain.handle('remote-play:page', () => remotePlay.page());
@@ -1864,9 +1865,11 @@ function registerIpc() {
   ipcMain.handle('profile:score', async (_event, sync = false) => {
     const settings = await readSettings();
     const steamId = settings.steamId64 || await detectSteamId64();
-    const ids = currentLibrary.filter(game => game.provider === 'Steam' && !game.isApp).map(game => String(game.appId)).filter(id => /^\d+$/.test(id));
+    const ids = currentLibrary.filter(game => game.provider === 'Steam' && !game.isApp)
+      .sort((a,b)=>(b.steamLastPlayed||0)-(a.steamLastPlayed||0)||(b.steamPlaytimeMinutes||0)-(a.steamPlaytimeMinutes||0))
+      .map(game => String(game.appId)).filter(id => /^\d+$/.test(id));
     const canSync = Boolean(settings.steamApiKey && steamId && process.env.NEBULA_DEMO !== '1');
-    const summary = sync && canSync ? await playerProfile.sync(steamId, settings.steamApiKey, ids, () => mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused() && !activeGameSession)
+    const summary = sync && canSync ? await playerProfile.sync(steamId, settings.steamApiKey, ids, () => mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused() && !activeGameSession && !remotePlay.active())
       : await playerProfile.score(steamId, ids);
     return { ...summary, canSync };
   });

@@ -851,26 +851,29 @@ function openGFlyout(dialog, opener, html, anchor) {
   setFocusedElement(dialog.querySelector('.focusable'), { scroll: false });
 }
 const gRow = (action, icon, label, extra = '') => `<button class="g-menu-item focusable" type="button" data-action="${action}"${extra}>${gIcon(icon)}<span>${label}</span></button>`;
-function gScoreText() { return document.querySelector('#dashboard-player-status')?.textContent?.match(/[\d,]+/)?.[0] || '—'; }
+function gScoreText() { return scoreValue(); }
 function gPlayerMarkup() {
   return `<span class="g-account-avatar">${document.querySelector('#profile-avatar').innerHTML}</span><span class="g-player-copy"><strong>${escapeHtml(state.displayName || 'Player')}</strong><small><span class="g-score-mark">G</span>${escapeHtml(gScoreText())}</small></span>`;
 }
 
 function gAccountMarkup() {
   return `<div class="g-account-head">${gPlayerMarkup()}</div>
-    <div class="g-presence"><i></i>Online</div>
+    <p class="g-account-score-status" role="status">${escapeHtml(scoreStatus())}</p>
     <div class="g-menu-group">
-      ${gRow('g-account-profile', 'contact', 'View profile')}
-      ${gRow('g-account-calculator', 'calculator', 'Gamerscore calculator')}
+      ${gRow('g-account-profile', 'contact', 'Your profile')}
       ${gRow('g-account-settings', 'settings', 'Settings')}
-      ${gRow('g-account-rescan', 'refresh', 'Scan for games')}
+      ${gRow('g-account-fullscreen', 'fullscreen', document.querySelector('#fullscreen-toggle').checked ? 'Switch to window' : 'Full screen')}
     </div>
     <div class="g-menu-group">
-      ${gRow('g-account-fullscreen', 'fullscreen', 'Exit full screen')}
-      ${gRow('g-account-feedback', 'feedback', 'Give feedback')}
       ${gRow('g-account-power', 'power', 'Power options')}
     </div>`;
 }
+window.addEventListener('player-score-updated',()=>{
+  if(!gAccountMenu.open)return;
+  // Update only the summary; background sync must not replace a focused row.
+  gAccountMenu.querySelector('.g-account-head').innerHTML=gPlayerMarkup();
+  gAccountMenu.querySelector('.g-account-score-status').textContent=scoreStatus();
+});
 
 function gNotificationsMarkup() {
   gNotices.forEach(item => { item.read = true; });

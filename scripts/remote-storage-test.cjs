@@ -43,7 +43,7 @@ async function main(){
   const host={id:'test-host',name:'Test PC',address:'test-pc',hostname:'test-pc',httpPort:47989,httpsPort:47984,uuid:'host-uuid',paired:true,games:[{id:'remote:test-host:10',appId:'10',title:'Test game',artwork:{}}]};
   await fs.writeFile(path.join(directory,'hosts.json'),JSON.stringify([host]));
   await fs.unlink(path.join(directory,'preferences.json')).catch(()=>{});
-  let current='0',fail=false,workerCount=0,reveals=0,emitFrame,emitNative,ignoreStop=false,forcedStops=0;
+  let current='0',serverState='',fail=false,workerCount=0,reveals=0,emitFrame,emitNative,ignoreStop=false,forcedStops=0,cancelCalls=0,cancelDenied=false;
   const events=[];let apps='<root><App><ID>10</ID><AppTitle>Test game</AppTitle></App></root>';
   const spawnProcess=(_executable,args)=>{
     const config=JSON.parse(require('node:fs').readFileSync(args[0],'utf8'));
@@ -69,7 +69,8 @@ async function main(){
   };
   const remote=createRemotePlay({directory,runtimeDirectory:runtime,getWindow:()=>null,onStatus:event=>events.push(event),spawnProcess,request:async(host,route,options)=>{
     if(fail)throw new Error('Network interrupted');
-    if(route==='serverinfo')return `<root status_code="200"><uniqueid>host-uuid</uniqueid><hostname>Test PC</hostname><HttpsPort>47984</HttpsPort><PairStatus>1</PairStatus><currentgame>${current}</currentgame></root>`;
+    if(route==='serverinfo')return `<root status_code="200"><uniqueid>host-uuid</uniqueid><hostname>Test PC</hostname><HttpsPort>47984</HttpsPort><PairStatus>1</PairStatus><currentgame>${options?.credentials?current:'0'}</currentgame><state>${serverState}</state></root>`;
+    if(route==='cancel'){assert(options.credentials&&options.pinnedCert,'End session must authenticate and pin the host');cancelCalls++;if(cancelDenied)throw Error('This session belongs to another client');current='0';serverState='SUNSHINE_SERVER_FREE';return '<root status_code="200"/>';}
     if(route==='applist')return apps;
     throw new Error('Unexpected route '+route);
   }});
@@ -100,7 +101,8 @@ async function main(){
     const played=(await remote.snapshot()).hosts[0].games[0].lastPlayed;assert(played>0);assert.equal((await remote.refresh(host.id)).games[0].lastPlayed,played,'Refreshing must preserve play history');
     emitNative({type:'surface-lost'});await pause(900);assert.equal(remote.active().phase,'reconnecting');emitNative({type:'surface'});await pause(30);assert.equal(reveals,1,'A replacement surface must wait for its own decoded frame');emitFrame();await until(()=>remote.active().phase==='playing');assert.equal(reveals,2);assert.equal((await remote.snapshot()).hosts[0].games[0].lastPlayed,played,'Live quality reconnects are the same play session');
     fail=true;await pause(1700);assert(remote.active(),'A failed poll must not be mistaken for a game exit');fail=false;
-    current='0';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'));
+    serverState='SUNSHINE_SERVER_FREE';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'&&event.gameId==='remote:test-host:10'));
+    assert.equal((await remote.checkHosts()).hosts[0].currentGame,'0','A stale app ID on a FREE host must not offer Resume');serverState='';
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');
     await pause(40);current='10';const cancelled=remote.start(host.id,'10');await remote.stop();await cancelled;assert.equal(remote.active(),null,'Cancelling during connection must prevent a late stream');
     await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
@@ -109,6 +111,14 @@ async function main(){
     remote.focus();await until(()=>remote.active()?.view==='stream');assert(events.some(event=>event.phase==='stream'));
     ignoreStop=true;emitNative({type:'disconnect-requested',source:'controller'});assert.equal(remote.active()?.phase,'stopping','Do not report success before the native process exits');await assert.rejects(remote.start(host.id,'10'),/End the current/);await until(()=>!remote.active());assert.equal(forcedStops,1,'A stuck bridge must be terminated through its lifetime guard');ignoreStop=false;
     assert(events.some(event=>event.phase==='ended'&&event.reason==='disconnected'),'Native escape must return control to the launcher');
+    assert.equal(cancelCalls,0,'Disconnect must not silently cancel the host session');
+    assert.equal((await remote.checkHosts()).hosts[0].currentGame,'10','Use authenticated state, not the redacted public serverinfo');
+    current='99';await assert.rejects(remote.endHostSession(host.id,'10'),/different game/);assert.equal(cancelCalls,0,'Never cancel a different game');
+    current='10';cancelDenied=true;await assert.rejects(remote.endHostSession(host.id,'10'),/another client/);assert.equal((await remote.snapshot()).hosts[0].currentGame,'10','A rejected cancel must retain Resume');
+    cancelDenied=false;assert.equal((await remote.endHostSession(host.id,'10')).currentGame,'0');assert.equal(cancelCalls,2);
+    await remote.endHostSession(host.id,'10');assert.equal(cancelCalls,2,'An already ended session must not send another cancel');
+    current='10';serverState='SUNSHINE_SERVER_BUSY';await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
+    await remote.endHostSession(host.id,'10');assert.equal(remote.active(),null,'End session must also stop the local decoder');assert.equal((await remote.snapshot()).hosts[0].status,'ready');
     apps='<root><App><ID>88</ID><AppTitle>Test game</AppTitle></App></root>';assert((await remote.refresh(host.id)).games[0].lastPlayed>0,'History must survive rebuilt host app IDs');
     const reloaded=createRemotePlay({directory,runtimeDirectory:runtime,getWindow:()=>null});assert((await reloaded.snapshot()).hosts[0].games[0].lastPlayed>0,'History must persist across app restarts');reloaded.dispose();
   }finally{remote.dispose();}

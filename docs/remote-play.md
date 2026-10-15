@@ -14,6 +14,8 @@ UI capture with a sample host and test PIN.
 4. Return to **Library → Remote PCs** to see saved PCs, their connection status and square game cards. Selecting a game opens its normal game page; choose **Play remotely** to start it.
 5. Open **Stream settings** from Remote play settings, Library or a remote game’s options. These settings apply to every remote game and PC on this device. Choose Lowest Latency, Balanced or Max Visuals, then resolution, frame rate and HDR. The preset sets bitrate, codec, decoder and frame delivery automatically. **Shortcuts** lets you record your own controller and keyboard combinations. **Advanced settings** contains manual video, audio and input controls. Changes apply to the next stream.
 
+Discovery listens for both multicast and unicast mDNS replies on each LAN adapter. Saved addresses and advertised custom ports are checked first. The fallback checks the attached /24 (or smaller) on up to eight adapters, with independent 800 ms probe deadlines and a 28-second overall limit. Results appear as they arrive; virtual adapters cannot consume the entire scan before Wi-Fi/Ethernet is checked.
+
 Both devices must be able to reach each other. Remote play does not open router ports or configure a VPN. A reachable VPN hostname/address can be entered like any other host address.
 
 ## Starting and ending a session
@@ -22,7 +24,7 @@ The existing game launch animation remains visible while the client connects. Th
 
 When the host reports that app has stopped, the client ends its stream and returns to the game page. Back returns to the selected Library tile. Two successful state checks confirm the exit; a failed request is not treated as a closed game. A replacement app on the host also ends this client's stream without stopping the replacement app.
 
-The active remote game page has **Disconnect** and **Return to stream**. Return uses the existing connection. The initial video bar also has Disconnect, Game page and Hide, and hides automatically after five seconds unless you interact with it.
+The active remote game page has **Disconnect**, **Return to stream** and **End session**. Return uses the existing connection. After disconnecting, **Resume game** and **End session** remain available while the host session is open. **End session** asks for confirmation, sends the authenticated Moonlight quit request and verifies the PC is free. It may close the game, so save first. A different game or a session the host refuses to let this client end is left alone; failures remain visible for retry. Hosts reporting FREE are treated as finished even if they retain the previous game ID. The initial video bar also has Disconnect, Game page and Hide, and hides automatically after five seconds unless you interact with it.
 
 Default shortcuts:
 
@@ -72,7 +74,7 @@ For Vibepollo's Steam integration, enable **Steam auto-sync → Remove uninstall
 
 - This browser shows the host's **published apps**, not an inventory of everything installed on its disk. Configure the host's game library or its existing library integration to publish additional games.
 - The standard protocol exposes app/session state, not a universal game-window-ready signal. Some games can show a host desktop, splash screen or launcher after the stream becomes ready. Exact window detection cannot be guaranteed across unmodified Sunshine/Apollo/Vibepollo hosts.
-- Automatic termination depends on the host tracking the actual game. Desktop sessions or detached launcher commands can remain active after the game exits. Configure those apps to track their game's lifetime, or disconnect manually.
+- Automatic termination depends on the host tracking the actual game. Desktop sessions or detached launcher commands can remain active after the game exits. Configure those apps to track their game's lifetime, or use **End session**. An optional [Windows Steam tracking wrapper](host-game-tracking.md) is included for detached shortcuts; it requires a host shortcut change.
 - StreamLight's CLI selects apps by name. Give apps unique names on the host; ambiguous duplicates are reported before launch. Invisible ordering prefixes are retained for launching while labels are cleaned for display.
 - A host already running a different app is left alone. Close that app before launching another game. Selecting the same running app resumes it.
 - Cached libraries remain browsable while a PC is offline. Starting or refreshing needs a reachable, paired host. Artwork downloads are limited to cards as they become visible.

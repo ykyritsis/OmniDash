@@ -31,8 +31,8 @@ body.garrison .remote-quality-dialog .remote-help { margin-top: 22px; }
 body.garrison #remote-advanced[hidden] { display: none; }
 body.garrison #remote-advanced h3 { color: var(--g-text); font: 600 var(--remote-body-size)/1.4 var(--g-font); margin: 24px 0 10px; }
 body.garrison .remote-quality-footer { position: sticky; bottom: -2px; z-index: 1; padding: 12px 0 4px; background: var(--g-dialog-bg); border-top: 1px solid #ffffff16; }
-body.garrison #detail-disconnect { padding: 0 24px; min-height: 56px; width: auto; font: 600 var(--remote-body-size)/1.2 var(--g-font); }
-body.garrison #detail-disconnect[hidden] { display: none; }
+body.garrison :is(#detail-disconnect,#detail-end-session) { padding: 0 24px; min-height: 56px; width: auto; font: 600 var(--remote-body-size)/1.2 var(--g-font); }
+body.garrison :is(#detail-disconnect,#detail-end-session)[hidden] { display: none; }
 body.garrison #detail-session-info > small { flex-basis: 100%; font: 400 var(--remote-small-size)/1.4 var(--g-font); color: var(--g-text-2); }
 body.garrison #remote-discovered { display: flex; flex-direction: column; gap: 10px; margin: 24px 0; }
 body.garrison .remote-discovered-pc { width: 100%; border: 0; border-radius: 10px; padding: 18px; background: var(--g-surface); color: var(--g-text); cursor: pointer; text-align: left; }
