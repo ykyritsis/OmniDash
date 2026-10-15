@@ -16,9 +16,9 @@ const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_CACHE_BYTES = 600 * 1024 * 1024;
 const ARTWORK_FIELDS = ['tile', 'grid', 'wide', 'hero', 'logo'];
 
-function createArtworkCache(directory, { fetchImage = fetch, allowedHosts = ALLOWED_HOSTS } = {}) {
-  const inflight = new Map();
-  let knownBytes;
+function createArtworkCache(directory, { fetchImage = fetch, allowedHosts = ALLOWED_HOSTS, now = Date.now } = {}) {
+  const inflight = new Map(), files = new Map(), retryAfter = new Map(), waiting = [];
+  let knownBytes, indexLoading, sizeLoading, downloads = 0;
 
   function allowed(url) {
     try {
@@ -28,50 +28,74 @@ function createArtworkCache(directory, { fetchImage = fetch, allowedHosts = ALLO
   }
 
   async function cachedPath(url) {
+    // One directory read replaces probing every possible extension for every
+    // cover, logo and hero. Still check a hit so deleted files can be repaired.
+    if (!indexLoading) indexLoading = fs.readdir(directory).catch(() => []).then(entries => {
+      for (const name of entries) if (/^[a-f0-9]{64}\.(jpg|png|webp|avif|gif|svg)$/.test(name)) files.set(name.slice(0, 64), path.join(directory, name));
+    });
+    await indexLoading;
     const hash = createHash('sha256').update(url).digest('hex');
-    for (const suffix of IMAGE_TYPES.values()) {
-      const filename = path.join(directory, `${hash}${suffix}`);
-      try { await fs.access(filename); return filename; } catch { /* Try the next image format. */ }
-    }
+    const filename = files.get(hash);
+    if (filename) try { await fs.access(filename); return filename; } catch { files.delete(hash); knownBytes = undefined; }
     return null;
   }
 
   async function sizeOnDisk() {
     if (knownBytes !== undefined) return knownBytes;
-    try {
-      const entries = await fs.readdir(directory, { withFileTypes: true });
-      const sizes = await Promise.all(entries.filter(entry => entry.isFile()).map(entry => fs.stat(path.join(directory, entry.name)).then(stat => stat.size).catch(() => 0)));
-      knownBytes = sizes.reduce((total, size) => total + size, 0);
-    } catch { knownBytes = 0; }
-    return knownBytes;
+    if (!sizeLoading) sizeLoading = (async () => {
+      const entries = (await fs.readdir(directory, { withFileTypes: true }).catch(() => [])).filter(entry => entry.isFile());
+      let bytes = 0;
+      for (let i = 0; i < entries.length; i += 16) bytes += (await Promise.all(entries.slice(i, i + 16).map(entry => fs.stat(path.join(directory, entry.name)).then(stat => stat.size).catch(() => 0)))).reduce((total, size) => total + size, 0);
+      knownBytes = bytes; return bytes;
+    })().finally(() => { sizeLoading = null; });
+    return sizeLoading;
+  }
+
+  async function download(task) {
+    if (downloads >= 4) await new Promise(resolve => waiting.push(resolve));
+    else downloads++;
+    try { return await task(); }
+    finally { const next = waiting.shift(); if (next) next(); else downloads--; }
   }
 
   async function store(url) {
     if (!allowed(url)) return url;
     const existing = await cachedPath(url);
     if (existing) return pathToFileURL(existing).href;
-    if (await sizeOnDisk() >= MAX_CACHE_BYTES) return url;
-    try {
-      const response = await fetchImage(url, { signal: AbortSignal.timeout(12000) });
-      if (!response.ok || !allowed(response.url || url)) return url;
-      const mime = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      const extension = IMAGE_TYPES.get(mime);
-      if (!extension || Number(response.headers.get('content-length') || 0) > MAX_IMAGE_BYTES) return url;
-      const chunks = [];
-      let byteCount = 0;
-      for await (const chunk of response.body) {
-        byteCount += chunk.length;
-        if (byteCount > MAX_IMAGE_BYTES) { await response.body.cancel().catch(() => {}); return url; }
-        chunks.push(chunk);
-      }
-      if (!byteCount || (await sizeOnDisk()) + byteCount > MAX_CACHE_BYTES) return url;
-      const filename = path.join(directory, `${createHash('sha256').update(url).digest('hex')}${extension}`);
-      await fs.mkdir(directory, { recursive: true });
-      await fs.writeFile(`${filename}.tmp`, Buffer.concat(chunks));
-      await fs.rename(`${filename}.tmp`, filename);
-      knownBytes += byteCount;
-      return pathToFileURL(filename).href;
-    } catch { return url; }
+    if (now() < (retryAfter.get(url) || 0)) return url;
+    return download(async () => {
+      // Failed sources get a short backoff instead of retrying on every card.
+      retryAfter.delete(url); retryAfter.set(url, now() + 30000);
+      while (retryAfter.size > 512) retryAfter.delete(retryAfter.keys().next().value);
+      if (await sizeOnDisk() >= MAX_CACHE_BYTES) return url;
+      try {
+        const response = await fetchImage(url, { signal: AbortSignal.timeout(12000) });
+        if (!response.ok || !allowed(response.url || url)) { await response.body?.cancel().catch(() => {}); return url; }
+        const mime = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        const extension = IMAGE_TYPES.get(mime);
+        if (!extension || Number(response.headers.get('content-length') || 0) > MAX_IMAGE_BYTES) { await response.body?.cancel().catch(() => {}); return url; }
+        const chunks = [];
+        let byteCount = 0;
+        for await (const chunk of response.body) {
+          byteCount += chunk.length;
+          if (byteCount > MAX_IMAGE_BYTES) { await response.body.cancel().catch(() => {}); return url; }
+          chunks.push(chunk);
+        }
+        await sizeOnDisk();
+        if (!byteCount || knownBytes + byteCount > MAX_CACHE_BYTES) return url;
+        const hash = createHash('sha256').update(url).digest('hex');
+        const filename = path.join(directory, `${hash}${extension}`);
+        // Reserve before yielding to disk I/O so parallel downloads obey the cap.
+        knownBytes += byteCount;
+        try {
+          await fs.mkdir(directory, { recursive: true });
+          await fs.writeFile(`${filename}.tmp`, Buffer.concat(chunks));
+          await fs.rename(`${filename}.tmp`, filename);
+        } catch (error) { knownBytes -= byteCount; throw error; }
+        files.set(hash, filename); retryAfter.delete(url);
+        return pathToFileURL(filename).href;
+      } catch { return url; }
+    });
   }
 
   function cacheImage(url) {

@@ -440,15 +440,12 @@ renderHomeCollections = function () {
   refreshFocusables();
 };
 // Jump back in: six recent games, then a tile that opens the whole library.
-const gRenderLibrary = renderLibrary;
-renderLibrary = function (...args) {
-  gRenderLibrary.apply(this, args);
-  const cards = [...recentRow.querySelectorAll('.game-card')];
-  cards.slice(6).forEach(card => card.remove());
-  const more = displayedLibraryGames().filter(game => !game.isApp && game.installed !== false && !cards.slice(0, 6).some(card => card.dataset.gameId === game.id)).slice(0, 4);
-  if (cards.length) recentRow.insertAdjacentHTML('beforeend', `<button class="g-library-tile focusable" type="button" data-action="library" aria-label="Open your library"><span class="g-collage">${more.map(game => `<span>${gameArt(game)}</span>`).join('')}</span><span class="g-library-label">${gIcon('library')}<strong>My games</strong></span></button>`);
-  renderHomeCollections();
-  refreshFocusables();
+const gRenderRecentGames = renderRecentGames;
+renderRecentGames = function (games = homeRecentGames()) {
+  const recent = games.slice(0, 6), ids = new Set(recent.map(game => game.id));
+  gRenderRecentGames(recent);
+  const more = displayedLibraryGames().filter(game => !game.isApp && game.installed !== false && !ids.has(game.id)).slice(0, 4);
+  if (recent.length) recentRow.insertAdjacentHTML('beforeend', `<button class="g-library-tile focusable" type="button" data-action="library" aria-label="Open your library"><span class="g-collage">${more.map(game => `<span>${gameArt(game)}</span>`).join('')}</span><span class="g-library-label">${gIcon('library')}<strong>My games</strong></span></button>`);
 };
 setTimeout(() => loadXboxStore().then(() => { if (state.view === 'home') renderHomeCollections(); }), 6000);
 
@@ -1772,17 +1769,17 @@ navigateConsoleHome = function (direction, current) {
   if (row && ['left', 'right'].includes(direction)) {
     const cards = [...recentRow.querySelectorAll('.focusable')];
     const next = cards[cards.indexOf(current) + (direction === 'left' ? -1 : 1)];
-    if (next) setFocusedElement(next, { scroll: false });
+    if (next) setFocusedElement(next);
     return true;
   }
-  if (row && direction === 'up') { setFocusedElement(document.querySelector('.top-center-nav [data-action="home"]'), { scroll: false }); return true; }
+  if (row && direction === 'up') { setFocusedElement(document.querySelector('.top-center-nav [data-action="home"]')); return true; }
   if (row && direction === 'down') {
     const band = [...document.querySelectorAll('#home-view .collection-band')].find(item => item.offsetParent !== null);
     const target = band?.querySelector('.game-row .focusable, .g-publisher-cards .focusable') || band?.querySelector('.focusable');
     if (target) setFocusedElement(target);
     return true;
   }
-  if (current?.closest('.topbar') && direction === 'down') { setFocusedElement(recentRow.querySelector('.selected') || recentRow.querySelector('.focusable'), { scroll: false }); return true; }
+  if (current?.closest('.topbar') && direction === 'down') { setFocusedElement(recentRow.querySelector('.selected') || recentRow.querySelector('.focusable')); return true; }
   return false;
 };
 

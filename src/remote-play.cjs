@@ -128,6 +128,8 @@ function historyKey(game) { return game.uuid || String(game.launchTitle || game.
 function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = () => {}, request = wireRequest, spawnProcess = spawn, now = Date.now, discover = discoverHosts, resolveArtwork = async () => null }) {
   let hosts=null, preferences=null, loading=null, saving=Promise.resolve(), pairing=null, session=null, disposed=false, acquiring=false, launchGeneration=0;
   const workers=new Set(), refreshing=new Map(), coverRequests=new Map();
+  const coverQueue=[];let activeCovers=0;
+  const savedFiles=new Map();
   let scanning=null, checking=null;
   let viewportState={top:72,height:720};
   const profile=path.join(directory,'engine'), iniFile=path.join(profile,'FoggyBytes','StreamLight.ini');
@@ -144,7 +146,21 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
       if(migrated)await save();return hosts;
     })();return loading;
   }
-  async function save() {const files={'hosts.json':JSON.stringify(hosts),'preferences.json':JSON.stringify(preferences)};saving=saving.catch(()=>{}).then(async()=>{await fs.mkdir(directory,{recursive:true});for(const [name,text] of Object.entries(files)){const file=path.join(directory,name);await fs.writeFile(file+'.tmp',text);await fs.rename(file+'.tmp',file);}});return saving;}
+  async function save() {
+    const files={'hosts.json':JSON.stringify(hosts),'preferences.json':JSON.stringify(preferences)};
+    saving=saving.catch(()=>{}).then(async()=>{
+      await fs.mkdir(directory,{recursive:true});
+      for(const [name,text] of Object.entries(files)){
+        if(savedFiles.get(name)===text)continue;
+        const file=path.join(directory,name);await fs.writeFile(file+'.tmp',text);
+        for(let attempt=0;;attempt++){
+          try{await fs.rename(file+'.tmp',file);break;}
+          catch(error){if(attempt>=2||!['EPERM','EACCES','EBUSY'].includes(error.code))throw error;await new Promise(resolve=>setTimeout(resolve,25*(attempt+1)));}
+        }
+        savedFiles.set(name,text);
+      }
+    });return saving;
+  }
   function emit(phase, extra={}) { onStatus({ phase, session:publicSession(), ...extra }); }
   function publicSession() { return session ? { hostId:session.host.id, appId:session.game.appId, gameId:session.game.id, title:session.game.title, phase:session.phase, view:session.view||'stream', startedAt:session.startedAt, lastPlayed:session.game.lastPlayed || 0, preferences:session.preferences } : null; }
   async function runtime() {
@@ -297,29 +313,37 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     const revision=game.artVersion?'-'+crypto.createHash('sha256').update(game.artVersion).digest('hex').slice(0,12):'';
     return path.join(directory,'covers',host.id,`${game.appId}${revision}.png`);
   }
+  async function withCoverSlot(task) {
+    if(activeCovers>=3)await new Promise(resolve=>coverQueue.push(resolve));else activeCovers++;
+    try{return disposed||session?null:await task();}
+    finally{const next=coverQueue.shift();if(next)next();else activeCovers--;}
+  }
   async function covers(id, appIds) {
     const host=await find(id), allowed=new Set((host.games || []).map(game=>game.appId));
     if(!Array.isArray(appIds))throw new Error('Choose games from this host.');
-    const ids=[...new Set(appIds.map(String))].filter(appId=>allowed.has(appId)).slice(0,32), result=[];let next=0;
+    const ids=[...new Set(appIds.map(String))].filter(appId=>allowed.has(appId)).slice(0,32), result=[];let next=0,changed=false,auth;
+    if(!ids.length||disposed||session)return result;
     await fs.mkdir(path.join(directory,'covers',id),{recursive:true});
     await Promise.all(Array.from({length:Math.min(3,ids.length)},async()=>{while(next<ids.length && !disposed && !session){const appId=ids[next++],key=id+':'+appId;
-      if(!coverRequests.has(key))coverRequests.set(key,(async()=>{
+      if(!coverRequests.has(key))coverRequests.set(key,withCoverSlot(async()=>{
         const game=host.games.find(game=>game.appId===appId),file=coverFile(host,game);
         let artwork=await resolveArtwork(game,{network:host.online!==false}).catch(()=>null);
         if(!artwork?.tile&&!artwork?.grid){
           if(!await fs.access(file).then(()=>true,()=>false)){
             if(host.online===false)return null;
-            const auth=await identity(host),image=await request(host,'appasset',{...auth,binary:true,params:{appid:appId,AssetType:'2',AssetIdx:'0'}});
+            auth ||= identity(host);const image=await request(host,'appasset',{...await auth,binary:true,params:{appid:appId,AssetType:'2',AssetIdx:'0'}});
             if(!image.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) && !(image[0]===255&&image[1]===216))return null;
             await fs.writeFile(file,image);
           }
           artwork={...artwork,tile:pathToFileURL(file).href,imageSource:'remote-host',remoteArtworkVersion:1};
         }
-        game.artwork=artwork;const item={appId,tile:artwork.tile||artwork.grid,artwork};emit('artwork',{hostId:id,...item});return item;
-      })().catch(()=>null).finally(()=>coverRequests.delete(key)));
+        const item={appId,tile:artwork.tile||artwork.grid,artwork};
+        if(JSON.stringify(game.artwork)!==JSON.stringify(artwork)){game.artwork=artwork;changed=true;emit('artwork',{hostId:id,...item});}
+        return item;
+      }).catch(()=>null).finally(()=>coverRequests.delete(key)));
       const item=await coverRequests.get(key);if(item)result.push(item);
     }}));
-    await save();return result;
+    if(changed)await save();return result;
   }
   async function stop(reason='disconnected') {
     launchGeneration++;
@@ -327,6 +351,21 @@ function createRemotePlay({ directory, runtimeDirectory, getWindow, onStatus = (
     active.phase='stopping';clearTimeout(active.timer);clearTimeout(active.deadline);emit('stopping');
     active.stopping=(async()=>{
       const worker=active.worker||await active.workerReady?.catch(()=>null);if(worker)await worker.stop();
+      if(reason==='stream-ended'&&session===active){
+        // The decoder often exits before the next 1.5-second status poll. Read
+        // the host again before publishing the page, otherwise it offers Resume
+        // for a session which the host has already ended. Never infer an exit
+        // from a network error, and never cancel a still-running host game.
+        try{
+          const auth=await identity(active.host);
+          for(let attempt=0;attempt<3;attempt++){
+            const current=updateHostState(active.host,await request(active.host,'serverinfo',{...auth,timeout:1500}));
+            if(current!==null&&current!==active.game.appId){reason='game-closed';break;}
+            if(attempt<2)await new Promise(resolve=>setTimeout(resolve,250));
+          }
+          await save();
+        }catch{/* Keep the last known session when the host cannot be reached. */}
+      }
       if(session===active){session=null;emit('ended',{reason,hostId:active.host.id,appId:active.game.appId,gameId:active.game.id,title:active.game.title,host:publicHost(active.host)});}
       restoreWindow();return true;
     })();return active.stopping;

@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 35](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.35/Xbox-Preview-UI-Setup-0.27.0-beta.35.exe)** · [Setup](#getting-started) · [Beta 35 notes](docs/release-0.27.0-beta.35.md)
+**[Download beta 36](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.36/Xbox-Preview-UI-Setup-0.27.0-beta.36.exe)** · [Setup](#getting-started) · [Beta 36 notes](docs/release-0.27.0-beta.36.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,20 +31,21 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 35
+## Beta 36
 
-- Network discovery listens for multicast and unicast replies, prioritizes saved PCs, and uses bounded probes across Wi-Fi/Ethernet and virtual adapters.
-- Remote game pages offer **End session** after disconnecting as well as while connected. **Resume game** clearly means the host session is still open. End session uses a confirmation and verifies the host has stopped.
-- Fixed stale host game IDs being mistaken for live sessions. Host-reported game exit ends the stream and returns to its game page, even from another app page.
-- The profile menu now has four everyday actions. PC Gamerscore loads from its saved calculation and updates automatically in the background, pausing during gameplay.
+- Controller navigation scrolls all the way to **My games** in Jump back in, including handheld screens and enlarged text.
+- Remote cover updates keep the existing Home tiles and controller focus. Home collections render once per library refresh.
+- Local and remote game pages share prefetched details, with bounded caches and region-aware refreshes. Artwork downloads are shared and limited across callers; cached reads avoid repeated format probes and settings writes.
+- Automatic stream completion checks the host's final state before returning to the game page, fixing a race that could leave a stale **Resume game** button. Detached host shortcuts still need process tracking configured on the host.
+- Retains **End session**, improved discovery, the simplified profile menu and automatic background PC Gamerscore updates.
 - Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
 - Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.27.0-beta.35.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.27.0-beta.36.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[beta 35 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.35)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 36 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.36)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

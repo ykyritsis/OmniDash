@@ -104,6 +104,13 @@ async function main(){
     serverState='SUNSHINE_SERVER_FREE';await until(()=>!remote.active(),6500);assert(events.some(event=>event.phase==='ended'&&event.reason==='game-closed'&&event.gameId==='remote:test-host:10'));
     assert.equal((await remote.checkHosts()).hosts[0].currentGame,'0','A stale app ID on a FREE host must not offer Resume');serverState='';
     assert.equal(workerCount,1,'Concurrent launch attempts must not spawn two decoders');
+    current='10';serverState='SUNSHINE_SERVER_BUSY';await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
+    // Decoder termination can beat the host's FREE response and the next poll.
+    setTimeout(()=>{serverState='SUNSHINE_SERVER_FREE';},100);
+    emitNative({type:'stderr',text:'Connection terminated: 0'});await until(()=>!remote.active(),6000);
+    assert.equal(events.filter(event=>event.phase==='ended').at(-1).reason,'game-closed');
+    assert.equal(events.filter(event=>event.phase==='ended').at(-1).host.currentGame,'0','Decoder exit must reconcile host state before showing the page');
+    assert.equal(cancelCalls,0,'Automatic stream exit must never cancel a different or still-running host game');serverState='';
     await pause(40);current='10';const cancelled=remote.start(host.id,'10');await remote.stop();await cancelled;assert.equal(remote.active(),null,'Cancelling during connection must prevent a late stream');
     await remote.start(host.id,'10');await pause(40);emitFrame();await until(()=>remote.active()?.phase==='playing');
     remote.viewport({top:0,height:800});emitNative({type:'toggle-controls',source:'controller'});await until(()=>events.some(event=>event.phase==='page'));assert.equal(remote.active()?.view,'page');assert.equal(remote.active()?.phase,'playing','The game page must not end the stream');
@@ -134,7 +141,21 @@ async function main(){
   try{
     assert.deepEqual((await cachedRemote.covers(host.id,['10']))[0].artwork,cachedArt,'Full shared artwork must reach the UI without host identity or connectivity');
     assert.equal(resolved,1);assert(artworkEvents.some(event=>event.phase==='artwork'&&event.artwork.logo===cachedArt.logo));
+    const saved=await fs.stat(path.join(cachedDirectory,'hosts.json')),eventCount=artworkEvents.length;
+    await pause(20);await cachedRemote.covers(host.id,['10']);
+    assert.equal(artworkEvents.length,eventCount,'Identical artwork must not re-render cards');
+    assert.equal((await fs.stat(path.join(cachedDirectory,'hosts.json'))).mtimeMs,saved.mtimeMs,'Cached artwork reads must not rewrite host settings');
   }finally{cachedRemote.dispose();}
+  const batchHosts=['batch-a','batch-b'].map(id=>({...host,id,online:false,games:Array.from({length:6},(_,i)=>({id:`remote:${id}:${i+1}`,appId:String(i+1),title:`Cover ${i+1}`,artwork:{}}))}));
+  await fs.writeFile(path.join(cachedDirectory,'hosts.json'),JSON.stringify(batchHosts));
+  let coverActive=0,coverPeak=0,coverLookups=0;
+  const batchedRemote=createRemotePlay({directory:cachedDirectory,runtimeDirectory:runtime,getWindow:()=>null,resolveArtwork:async()=>{coverLookups++;coverActive++;coverPeak=Math.max(coverPeak,coverActive);await pause(15);coverActive--;return cachedArt;}});
+  try{
+    const batches=await Promise.all([batchedRemote.covers('batch-a',['1','2','3','4','5','6']),batchedRemote.covers('batch-b',['1','2','3','4','5','6']),batchedRemote.covers('batch-a',['1','2'])]);
+    assert.deepEqual(batches.map(items=>items.length),[6,6,2]);
+    assert.equal(coverLookups,12,'Overlapping callers must share host cover requests');
+    assert(coverPeak>1&&coverPeak<=3,'Cover work must be bounded across hosts and callers');
+  }finally{batchedRemote.dispose();}
   console.log('PASS address and XML/Qt parsing; shared depot download sizes, offline fallback and coalescing; storage deduplication; private identity isolation; stream readiness, launch races, connection loss and game-exit lifecycle');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

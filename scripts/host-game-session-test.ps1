@@ -14,6 +14,9 @@ $arguments = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-
 $output = Join-Path $fixtureDir 'monitor.stdout'
 $errors = Join-Path $fixtureDir 'monitor.stderr'
 $monitor = Start-Process -FilePath $shell -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $output -RedirectStandardError $errors
+# Retain the process handle so Windows PowerShell 5 can read its exit code even
+# after the short-lived fixture has closed.
+[void]$monitor.Handle
 $gameFixture = $null
 try {
     Start-Sleep -Milliseconds 900

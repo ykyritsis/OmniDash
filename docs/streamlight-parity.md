@@ -1,6 +1,8 @@
-# StreamLight parity audit — beta 35
+# StreamLight parity audit — beta 36
 
 Compared on 15 October 2026 against [StreamLight 7.0.0](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), the version bundled in this app. GitHub's release API confirmed 7.0.0 as the newest published release. This is a source and integration audit, not a handheld performance benchmark.
+
+Beta 36 adds a final authenticated host-status check when the decoder exits before its next poll. Remote artwork updates preserve Home nodes and focus, downloads share bounded queues, page prefetch includes remote games, and inactive clients pause background status checks. These launcher optimizations do not change the native decoding pipeline. Detached host launch shortcuts still require correct process tracking on the host.
 
 ## Implemented and inherited
 

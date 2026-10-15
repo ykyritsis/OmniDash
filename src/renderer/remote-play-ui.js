@@ -66,9 +66,14 @@
   function syncGames(){state.remoteGames=remote.hosts.flatMap(host=>(host.games||[]).map(game=>({...game,hostName:host.name,hostStatus:host.status})));}
   function refreshHome(){
     if(state.view!=='home')return;
-    const recent=homeRecentGames().slice(0,6),signature=JSON.stringify(recent.map(game=>[game.id,game.title,game.hostName,game.hostStatus,lastPlayedAt(game),game.artwork]));
-    if(signature!==homeSignature){homeSignature=signature;const active=document.activeElement,id=active?.dataset.gameId,scroll=document.querySelector('main').scrollTop;window.renderLibrary();if(id&&!active.isConnected){const next=recentRow.querySelector(`[data-game-id="${CSS.escape(id)}"]`);if(next)setFocusedElement(next,{scroll:false});}document.querySelector('main').scrollTop=scroll;}
-    for(const game of recent.filter(game=>game.remoteHostId&&!homeCoverRequests.has(game.id))){homeCoverRequests.add(game.id);window.launcher.remotePlayCovers(game.remoteHostId,[game.appId]).then(items=>items.forEach(item=>applyArtwork(game.remoteHostId,item))).catch(()=>{});}
+    const recent=homeRecentGames().slice(0,6),signature=JSON.stringify(recent.map(game=>[game.id,game.title,game.hostName,lastPlayedAt(game)]));
+    // Artwork arrives separately. Rebuilding Home for every cover used to lose
+    // focus and re-create every collection, including their image elements.
+    if(signature!==homeSignature){homeSignature=signature;const active=document.activeElement,id=active?.dataset.gameId,libraryTile=active?.matches('.g-library-tile'),scroll=document.querySelector('main').scrollTop,left=recentRow.scrollLeft;window.renderLibrary();if(!active.isConnected){const next=id?recentRow.querySelector(`[data-game-id="${CSS.escape(id)}"]`):libraryTile?recentRow.querySelector('.g-library-tile'):null;if(next)setFocusedElement(next,{scroll:false});}recentRow.scrollLeft=left;document.querySelector('main').scrollTop=scroll;}
+    if(state.remotePlaySession)return;
+    const batches=new Map();
+    for(const game of recent.filter(game=>game.remoteHostId&&!homeCoverRequests.has(game.id))){homeCoverRequests.add(game.id);if(!batches.has(game.remoteHostId))batches.set(game.remoteHostId,[]);batches.get(game.remoteHostId).push(game);}
+    for(const [hostId,games] of batches)window.launcher.remotePlayCovers(hostId,games.map(game=>game.appId)).then(items=>items.forEach(item=>applyArtwork(hostId,item))).catch(()=>{for(const game of games)homeCoverRequests.delete(game.id);});
   }
   function acceptSnapshot(value){remote=value;syncGames();renderHosts();if(state.libraryRemote)renderLibrary();if(value.session&&!state.remotePlaySession){state.remotePlaySession=value.session;if(value.session.view==='page')showSessionPage(value.session).catch(()=>{});else if(value.session.phase==='playing'){document.body.classList.add('remote-streaming');showStreamBar(value.session,true);}}paintDetail();refreshHome();}
   const streaming=document.querySelector('[data-settings-page="g-streaming"]');
@@ -119,9 +124,12 @@
   const coverObserver=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){waitingCovers.set(entry.target.dataset.coverHost+':'+entry.target.dataset.coverApp,{host:entry.target.dataset.coverHost,app:entry.target.dataset.coverApp});coverObserver.unobserve(entry.target);}clearTimeout(coverTimer);coverTimer=setTimeout(fetchCovers,80);},{root:document.querySelector('main'),rootMargin:'150px'});
   function applyArtwork(hostId,item){
     const game=hostById(hostId)?.games.find(game=>game.appId===item.appId);if(!game)return;
-    game.artwork=item.artwork||{...game.artwork,tile:item.tile};syncGames();
-    refreshHome();
+    const artwork=item.artwork||{...game.artwork,tile:item.tile};
+    if(JSON.stringify(game.artwork)===JSON.stringify(artwork))return;
+    game.artwork=artwork;const saved=state.remoteGames?.find(value=>value.id===game.id);if(saved)saved.artwork=artwork;
+    document.querySelectorAll(`.game-card[data-game-id="${CSS.escape(game.id)}"]`).forEach(card=>{const art=card.querySelector(':scope > img, :scope > .art-fallback');if(art)art.outerHTML=gameArt(game);});
     const art=library.querySelector(`[data-game-id="${CSS.escape(game.id)}"] .remote-game-art`);if(art)art.innerHTML=gameArt(game);
+    if(state.view==='home'&&state.selectedGameId===game.id)updateAmbient(game,true);
     if(state.view==='detail'&&state.detailGameId===game.id){const hero=game.artwork.hero||game.artwork.wide||game.artwork.tile;if(hero)document.querySelector('#detail-global-art').style.backgroundImage=`url("${hero.replaceAll('"','%22')}")`;}
   }
   async function fetchCovers(){
@@ -341,7 +349,8 @@
   };
   document.querySelector('#remote-game-search').addEventListener('input',renderLibrary);
   const search=openConsoleSearch;openConsoleSearch=function(...args){if(state.view==='library'&&state.libraryRemote&&!document.querySelector('dialog[open]')){const input=document.querySelector('#remote-game-search');setFocusedElement(input);if(state.controllerClick||document.body.classList.contains('controller-input'))openNativeKeyboard(input);return;}return search(...args);};
-  setInterval(()=>{if(!state.remotePlaySession&&(state.view==='home'&&state.remoteGames?.some(game=>lastPlayedAt(game)>0)||state.view==='library'&&state.libraryRemote||state.view==='detail'&&state.detailGameId?.startsWith('remote:')||settingsDialog.open&&document.querySelector('[data-settings-page="g-streaming"]')?.hidden===false))refreshHosts(true).catch(()=>{});},20000);
+  function checkVisibleHosts(){if(!document.hidden&&document.hasFocus()&&!state.activeGameSession&&!state.remotePlaySession&&(state.view==='home'&&state.remoteGames?.some(game=>lastPlayedAt(game)>0)||state.view==='library'&&state.libraryRemote||state.view==='detail'&&state.detailGameId?.startsWith('remote:')||settingsDialog.open&&document.querySelector('[data-settings-page="g-streaming"]')?.hidden===false))refreshHosts(true).catch(()=>{});}
+  setInterval(checkVisibleHosts,20000);window.addEventListener('focus',checkVisibleHosts);document.addEventListener('visibilitychange',checkVisibleHosts);
   const perform=performAction;performAction=async function(action,source){
     try{
       if(action==='remote-stream-hide'){hideStreamBar();return;}

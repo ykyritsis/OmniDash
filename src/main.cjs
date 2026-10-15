@@ -850,11 +850,14 @@ function invalidateGameDetails(id) {
 
 // Game pages open from a copy saved on disk (up to a week old) while a fresh copy loads behind it.
 const detailDiskFile = () => path.join(path.dirname(settingsPath()), 'game-details-cache.json');
-let detailDisk = null, detailDiskTimer = null;
+let detailDisk = null, detailDiskTimer = null, detailDiskLoading = null;
 async function loadDetailDisk() {
   if (detailDisk) return detailDisk;
-  try { detailDisk = JSON.parse(await fs.readFile(detailDiskFile(), 'utf8')) || {}; } catch { detailDisk = {}; }
-  return detailDisk;
+  if (!detailDiskLoading) detailDiskLoading = fs.readFile(detailDiskFile(), 'utf8').then(JSON.parse).catch(() => ({})).then(value => {
+    detailDisk = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return detailDisk;
+  });
+  return detailDiskLoading;
 }
 function saveDetailDisk() {
   clearTimeout(detailDiskTimer);

@@ -607,7 +607,7 @@ function updateAmbient(game, force = false) {
   if (force) state.ambientKey = '';
   applyAmbientImage(game, fallback, 'artwork');
   if (!state.shuffleHomeScreenshots) return;
-  window.launcher.getGameDetails(game.id).then((details) => {
+  loadGamePageDetails(game).then((details) => {
     const screenshots = [...new Set((details.screenshots || []).filter(Boolean))];
     state.homeScreenshotCache.set(game.id, screenshots);
     if (!screenshots.length || requestToken !== state.homeAmbientRequestToken || state.selectedGameId !== game.id || !state.shuffleHomeScreenshots) return;
@@ -908,6 +908,9 @@ function homeRecentGames() {
   return [...local, ...remote].filter(game => !state.searchQuery || game.title.toLowerCase().includes(state.searchQuery))
     .sort((a, b) => lastPlayedAt(b) - lastPlayedAt(a));
 }
+function renderRecentGames(games = homeRecentGames()) {
+  recentRow.innerHTML = games.slice(0, 9).map((game, index) => card(game, index)).join('');
+}
 function renderLibrary() {
   renderCollectionOptions();
   const homeGames = homeRecentGames();
@@ -926,10 +929,7 @@ function renderLibrary() {
     emptyState.querySelector('h2').textContent = 'No games found yet';
     emptyState.querySelector('p').textContent = 'We scan Steam and Epic Games automatically. You can also add any Windows game manually.';
   }
-  const visibleHomeGames = homeGames.slice(0, 9);
-  recentRow.innerHTML = hasGames
-    ? visibleHomeGames.map((game, index) => card(game, index)).join('')
-    : '';
+  renderRecentGames(homeGames);
   renderDashboard();
   renderHomeCollections();
   renderLibraryView();
@@ -1065,10 +1065,11 @@ function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = 
   heroSubtitle.textContent = game.remoteHostId ? `Remote play · ${game.hostName}` : game.installed === false ? `Not installed · ${game.provider}` : `Installed with ${game.provider}`;
   heroProvider.textContent = game.provider.toUpperCase();
   heroPlay.hidden = false;
-  if (game.artwork?.logo) {
+  const showJumpLogo = !document.body.classList.contains('garrison');
+  if (showJumpLogo && game.artwork?.logo) {
     jumpLogo.innerHTML = `<img src="${escapeHtml(game.artwork.logo)}" alt="" draggable="false">`;
     jumpLogo.hidden = false;
-  } else {
+  } else if (showJumpLogo) {
     jumpLogo.innerHTML = '';
     jumpLogo.hidden = true;
     if (!game.remoteHostId && !logoRequested.has(id) && game.artwork?.tile) {
@@ -1294,8 +1295,35 @@ function openControllerStatus() {
   setTimeout(() => setFocusedElement(document.querySelector('#controller-connect-button'), { scroll: false }), 0);
 }
 
+function findGameForDetails(gameId) {
+  for (const games of [state.games, state.remoteGames, ...Object.values(state.steamDiscovery), state.gamePassCatalog, ...Object.values(state.xboxStore || {})]) {
+    if (!Array.isArray(games)) continue;
+    const game = games.find(item => item.id === gameId);
+    if (game) return game;
+  }
+}
+// Focus prefetch, ambient screenshots and the page share one IPC request. Keep
+// only a small working set, keyed by region and metadata identity as well as ID.
+const gamePageDetails = new Map();
+function loadGamePageDetails(game) {
+  const key = JSON.stringify([state.region || 'auto', game.id, game.title, game.appId, game.steamAppId, game.achievementReferenceAppId, game.xboxProductId]);
+  const cached = gamePageDetails.get(key);
+  if (cached && (cached.pending || Date.now() < cached.expires)) {
+    gamePageDetails.delete(key); gamePageDetails.set(key, cached);
+    return cached.promise;
+  }
+  const entry = { pending: true, expires: 0 };
+  entry.promise = Promise.resolve().then(() => game.remoteHostId ? window.launcher.remotePlayDetails(game.remoteHostId, game.appId)
+    : game.xboxProductId && game.discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId)
+    : game.discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id))
+    .then(details => { entry.pending = false; entry.expires = Date.now() + (details.metadataSource === 'Local library' ? 30000 : 300000); return details; })
+    .catch(error => { if (gamePageDetails.get(key) === entry) gamePageDetails.delete(key); throw error; });
+  gamePageDetails.set(key, entry);
+  while (gamePageDetails.size > 80) gamePageDetails.delete(gamePageDetails.keys().next().value);
+  return entry.promise;
+}
 function openGameDetails(gameId) {
-  const game = state.games.find((item) => item.id === gameId) || state.remoteGames?.find(item => item.id === gameId) || Object.values(state.steamDiscovery).filter(Array.isArray).flat().find((item) => item.id === gameId) || state.gamePassCatalog?.find(item => item.id === gameId) || Object.values(state.xboxStore || {}).filter(Array.isArray).flat().find(item => item.id === gameId);
+  const game = findGameForDetails(gameId);
   if (!game) return;
   const discoveryOnly = game.discoveryOnly === true;
   if (state.view !== 'detail') {
@@ -1429,7 +1457,7 @@ function openGameDetails(gameId) {
     const remote=state.remotePlaySession;
     setFocusedElement(remote?.gameId===game.id&&remote.view==='page'?document.querySelector('#detail-disconnect'):playButton,{scroll:false});
   }, 0);
-  (game.remoteHostId ? window.launcher.remotePlayDetails(game.remoteHostId,game.appId) : game.xboxProductId && discoveryOnly ? window.launcher.getCatalogDetails(game.xboxProductId) : discoveryOnly ? window.launcher.getSteamDiscoveryDetails(game.appId) : window.launcher.getGameDetails(game.id)).then((details) => {
+  loadGamePageDetails(game).then((details) => {
     if (requestToken !== state.detailRequestToken || state.detailGameId !== game.id) return;
     document.querySelector('#detail-byline').textContent = [details.publisher || details.developer || game.provider, ...(details.genres || []).slice(0, 3)].filter(Boolean).join(' • ');
     document.querySelector('#detail-description').textContent = details.description || `Play ${game.title} from your ${game.provider} library.`;

@@ -46,38 +46,40 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) gSlee
 // game's details (kept on disk by the launcher) and warms its hero art and first gallery thumbnails, so
 // pressing A shows a finished page. Skipped while a direction is held, or in the background.
 const gPrefetched = new Map();
-const gPrefetchImages = [];
+const gPrefetchImages = new Map();
 let gPrefetchTimer = 0, gPrefetchBusy = false;
 function gPreloadImage(url) {
-  if (!url || !/^(https?:|file:|data:)/.test(url)) return;
+  if (!url || !/^(https?:|file:|data:)/.test(url) || gPrefetchImages.has(url)) return;
   const image = new Image();
   image.decoding = 'async';
   image.src = url;
   // Kept for a while so the decoded copy isn't thrown away before the page opens.
-  gPrefetchImages.push(image);
-  if (gPrefetchImages.length > 24) gPrefetchImages.shift();
+  gPrefetchImages.set(url, image);
+  image.onerror = () => gPrefetchImages.delete(url);
+  if (gPrefetchImages.size > 24) gPrefetchImages.delete(gPrefetchImages.keys().next().value);
 }
 async function gPrefetchGame(gameId) {
-  if (window.gSafeMode) return;
-  const game = state.games.find(item => item.id === gameId);
-  if (!game || game.isApp || gPrefetchBusy || gPrefetched.has(gameId)) return;
+  if (window.gSafeMode || document.hidden || !document.hasFocus() || state.activeGameSession || state.remotePlaySession) return;
+  const game = findGameForDetails(gameId), key = `${state.region || 'auto'}:${gameId}`;
+  if (!game || game.isApp || gPrefetchBusy || Date.now() - (gPrefetched.get(key) || 0) < 300000) return;
   gPrefetchBusy = true;
-  gPrefetched.set(gameId, Date.now());
+  gPrefetched.set(key, Date.now());
   if (gPrefetched.size > 200) gPrefetched.delete(gPrefetched.keys().next().value);
   try {
     gPreloadImage(game.artwork?.hero || game.artwork?.wide);
-    const details = await window.launcher.getGameDetails(gameId);
+    const details = await loadGamePageDetails(game);
+    if (document.hidden || !document.hasFocus() || state.activeGameSession || state.remotePlaySession) return;
     const shots = [...new Set((details?.screenshots || []).filter(Boolean))].slice(0, 4);
     for (const url of shots) gPreloadImage(typeof galleryThumb === 'function' ? galleryThumb(url) : url);
     if (details?.videos?.[0]?.preview) gPreloadImage(details.videos[0].preview);
-  } catch { gPrefetched.delete(gameId); }
+  } catch { gPrefetched.delete(key); }
   finally { gPrefetchBusy = false; }
 }
 const gPrefetchFocus = setFocusedElement;
 setFocusedElement = function (element, options = {}) {
   const result = gPrefetchFocus(element, options);
   clearTimeout(gPrefetchTimer);
-  const gameId = element?.classList?.contains('game-card') ? element.dataset.gameId : '';
+  const gameId = element?.matches('.game-card, .remote-game-card, .g-store-card') ? element.dataset.gameId : '';
   if (gameId && !state.navRepeat && document.hasFocus()) gPrefetchTimer = setTimeout(() => { if (state.focusedElement === element) gPrefetchGame(gameId); }, 350);
   return result;
 };
