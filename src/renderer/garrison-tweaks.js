@@ -68,10 +68,12 @@ async function gPrefetchGame(gameId) {
   try {
     gPreloadImage(game.artwork?.hero || game.artwork?.wide);
     const details = await loadGamePageDetails(game);
+    if (details?.metadataSource === 'Local library') gPrefetched.delete(key);
     if (document.hidden || !document.hasFocus() || state.activeGameSession || state.remotePlaySession) return;
+    if (state.focusedElement?.dataset.gameId !== gameId && !(state.view === 'detail' && state.detailGameId === gameId)) return;
     const shots = [...new Set((details?.screenshots || []).filter(Boolean))].slice(0, 4);
     for (const url of shots) gPreloadImage(typeof galleryThumb === 'function' ? galleryThumb(url) : url);
-    if (details?.videos?.[0]?.preview) gPreloadImage(details.videos[0].preview);
+    if (details?.videos?.[0]?.preview) gPreloadImage(launcherMedia.trailerPreview(details.videos[0].preview));
   } catch { gPrefetched.delete(key); }
   finally { gPrefetchBusy = false; }
 }

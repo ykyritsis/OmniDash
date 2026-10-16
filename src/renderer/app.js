@@ -606,7 +606,13 @@ function pickNewScreenshot(images, gameId, previousByGame) {
   const choices = images.length > 1 ? images.filter((image) => image !== previous) : images;
   const image = choices[Math.floor(Math.random() * choices.length)] || images[0];
   if (image) previousByGame.set(gameId, image);
+  while (previousByGame.size > 80) previousByGame.delete(previousByGame.keys().next().value);
   return image;
+}
+function cacheHomeScreenshots(gameId, images) {
+  state.homeScreenshotCache.delete(gameId);
+  state.homeScreenshotCache.set(gameId, images);
+  while (state.homeScreenshotCache.size > 80) state.homeScreenshotCache.delete(state.homeScreenshotCache.keys().next().value);
 }
 
 function updateAmbient(game, force = false) {
@@ -622,7 +628,7 @@ function updateAmbient(game, force = false) {
   if (!state.shuffleHomeScreenshots) return;
   loadGamePageDetails(game).then((details) => {
     const screenshots = [...new Set((details.screenshots || []).filter(Boolean))];
-    state.homeScreenshotCache.set(game.id, screenshots);
+    cacheHomeScreenshots(game.id, screenshots);
     if (!screenshots.length || requestToken !== state.homeAmbientRequestToken || state.selectedGameId !== game.id || !state.shuffleHomeScreenshots) return;
     applyAmbientImage(game, pickNewScreenshot(screenshots, game.id, state.lastHomeScreenshotByGame), 'screenshot');
   }).catch(() => {});
@@ -861,12 +867,16 @@ function renderSteamLocalStatus(target = '#onboard-steam-status') {
   else element.textContent = 'Steam desktop app not detected. Other installed games can still be imported.';
 }
 
-async function refreshSteamLocalStatus() {
-  try {
-    state.steamLocalStatus = await window.launcher.getSteamLocalStatus();
+let steamLocalStatusPending = null;
+function refreshSteamLocalStatus() {
+  if (steamLocalStatusPending) return steamLocalStatusPending;
+  steamLocalStatusPending = Promise.resolve().then(() => window.launcher.getSteamLocalStatus()).then(status => {
+    state.steamLocalStatus = status;
     renderSteamLocalStatus();
     renderSteamLocalStatus('#settings-steam-local-status');
-  } catch { /* Steam status is optional; local installed-game scanning still works. */ }
+  }).catch(() => { /* Keep the last usable status when Steam is unavailable. */ })
+    .finally(() => { steamLocalStatusPending = null; });
+  return steamLocalStatusPending;
 }
 
 function updateUninstalledRequirement(keyInputId, checkboxId, noteId = '') {
@@ -1042,6 +1052,7 @@ function renderSelectedGameNews(game) {
     ? Promise.resolve(cached.items)
     : window.launcher.getGameNews(game.id).then((items) => {
       state.newsCache.set(game.id, { at: Date.now(), items });
+      while (state.newsCache.size > 80) state.newsCache.delete(state.newsCache.keys().next().value);
       return items;
     });
   newsPromise.then((items) => {
@@ -1172,8 +1183,8 @@ function setFocusedElement(element, { scroll = true } = {}) {
   if (state.view === 'home' && !activeDialog && element.parentElement !== recentRow) collapseDashboardTiles();
   refreshFocusables();
   if (state.focusedElement !== element) playUiSound('navigate');
+  if (state.focusedElement !== element) state.focusedElement?.classList.remove('focused');
   state.focusedElement = element;
-  document.querySelectorAll('.focused').forEach((item) => item.classList.remove('focused'));
   const index = state.focusables.indexOf(element);
   if (index >= 0) state.focusIndex = index;
   element.classList.add('focused');
@@ -1502,7 +1513,7 @@ function openGameDetails(gameId) {
     document.querySelector('#detail-rating').textContent = details.ageRating ? `Age rating ${details.ageRating}` : '';
     const images = launcherMedia.uniqueScreenshots(details.screenshots);
     state.galleryImages = images;
-    state.homeScreenshotCache.set(game.id, images);
+    cacheHomeScreenshots(game.id, images);
     if (state.useRandomScreenshotBackground && images.length) {
       const screenshot = pickNewScreenshot(images, game.id, state.lastDetailScreenshotByGame);
       const currentLayer = state.detailBackdropLayer === 0 ? heroArt : alternateHeroArt;
@@ -2063,6 +2074,7 @@ async function openSettings() {
 }
 
 function showView(view, { restore = null } = {}) {
+  if (state.view === 'detail' && view !== 'detail') { state.detailRequestToken++; state.newsRequestToken++; }
   document.body.dataset.pageDirection = restore ? 'back' : 'forward';
   state.view = view;
   const isLibrary = view === 'library';
@@ -2083,6 +2095,7 @@ function showView(view, { restore = null } = {}) {
   // Hidden pages are rebuilt once, on entry, before choosing controller focus.
   if (isLibrary && !state.libraryRemote && state.libraryViewDirty) renderLibraryView();
   else if (view === 'home' && state.homeLibraryDirty) renderHomeLibrary();
+  if (view === 'home') window.renderFriendsActivity?.();
   if (state.view !== view) return;
   document.querySelectorAll('.top-nav-button').forEach((button) => button.classList.toggle('active', button.dataset.action === view));
   const mainScroller = document.querySelector('main');
@@ -2222,7 +2235,13 @@ async function performAction(action, source) {
     document.querySelector('#recent-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  if (action === 'give-feedback') { await window.launcher.openFeedback(); return; }
+  if (['give-feedback', 'request-feature', 'get-help', 'game-bar-settings'].includes(action)) {
+    try {
+      if (action === 'game-bar-settings') await window.launcher.openGameBarSettings();
+      else await window.launcher.openFeedback({ 'give-feedback':'feedback', 'request-feature':'feature', 'get-help':'help' }[action]);
+    } catch { showToast('Couldn’t open that link. Please try again.'); }
+    return;
+  }
   if (['account-connect','account-disconnect','account-client'].includes(action)) { await accountLibraryAction(action,source); return; }
   if (action === 'avatar-picker') {
     state.profileOriginal = { avatarId: selectedAvatarId, displayName: state.displayName, avatarImage: customAvatarData };
@@ -2466,10 +2485,6 @@ async function performAction(action, source) {
     try { await window.launcher.openSteamHelp('sgdbApiKey'); }
     catch (error) { showToast(error.message || 'Could not open SteamGridDB'); }
     return;
-  }
-  if (action === 'open-fse-setup') {
-    try { await window.launcher.openFseSetup(); }
-    catch (error) { showToast(error.message || 'Could not open Xbox Mode setup'); }
   }
   if (action === 'rescan') await scanLibrary(false);
   if (action === 'add-game') {
@@ -2962,9 +2977,21 @@ function gamepadMove(direction) {
 }
 
 let gamepadPollTimer = null;
+let gamepadIdleTimer = null, gamepadConnected = true;
+function stopGamepadPoll() {
+  if (gamepadPollTimer !== null) cancelAnimationFrame(gamepadPollTimer);
+  if (gamepadIdleTimer !== null) clearTimeout(gamepadIdleTimer);
+  gamepadPollTimer = gamepadIdleTimer = null;
+}
 
 function scheduleGamepadPoll() {
-  if (gamepadPollTimer !== null || window.remotePlayUI?.capturesInput || document.visibilityState !== 'visible' || !document.hasFocus()) return;
+  if (gamepadPollTimer !== null || gamepadIdleTimer !== null || window.remotePlayUI?.capturesInput || document.visibilityState !== 'visible' || !document.hasFocus()) return;
+  // Keyboard/touch-only sessions need no per-frame controller work. The connect
+  // event wakes immediately; the slow fallback covers missed device events.
+  if (!gamepadConnected) {
+    gamepadIdleTimer = setTimeout(() => { gamepadIdleTimer = null; pollGamepad(); }, 250);
+    return;
+  }
   // Every frame, so a press lands on the next frame like a console.
   gamepadPollTimer = requestAnimationFrame(() => {
     gamepadPollTimer = null;
@@ -2977,6 +3004,7 @@ function pollGamepad() {
   if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
   if (window.remotePlayUI?.capturesInput) { state.previousButtons = []; return; }
   const connected = getConnectedControllers();
+  gamepadConnected = connected.length > 0;
   if (window.remotePlayUI?.captureControllerShortcut(connected)) { state.previousButtons = []; return; }
   if (window.remotePlayUI?.suppressHeldButtons(connected)) return;
   // Prefer whichever controller was just used. Keeping a stale first device
@@ -3067,11 +3095,12 @@ function pollGamepad() {
 }
 
 window.addEventListener('gamepadconnected', (event) => {
-  if (isUsableController(event.gamepad)) focusForGamepad(event.gamepad);
+  if (isUsableController(event.gamepad)) { stopGamepadPoll(); gamepadConnected = true; focusForGamepad(event.gamepad); scheduleGamepadPoll(); }
   else refreshControllerStatus();
 });
 
 window.addEventListener('focus', () => {
+  stopGamepadPoll(); gamepadConnected = true;
   state.gamepadIndex = null;
   state.previousButtons = [];
   refreshControllerStatus();
@@ -3085,16 +3114,15 @@ window.addEventListener('focus', () => {
 });
 
 window.addEventListener('blur', () => {
-  if (gamepadPollTimer !== null) cancelAnimationFrame(gamepadPollTimer);
-  gamepadPollTimer = null;
+  stopGamepadPoll();
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') {
-    if (gamepadPollTimer !== null) cancelAnimationFrame(gamepadPollTimer);
-    gamepadPollTimer = null;
+    stopGamepadPoll();
     return;
   }
+  stopGamepadPoll(); gamepadConnected = true;
   state.gamepadIndex = null;
   state.previousButtons = [];
   refreshControllerStatus();

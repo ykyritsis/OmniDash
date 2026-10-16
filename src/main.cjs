@@ -26,6 +26,7 @@ const { createRemotePlay } = require('./remote-play.cjs');
 const { createRemoteArtwork } = require('./remote-artwork.cjs');
 const { readSteamLocalLibrary, manifestProgress, applySteamLocalData, contentLogProgress, clientDownloadProgress, clientDownloadItems, parseVdf: parseSteamVdf } = require('./steam-local.cjs');
 const { createUpdater } = require('./updater.cjs');
+const { createWindowsShell, SUPPORT_LINKS } = require('./windows-shell.cjs');
 const { createSteamFamilyLibrary } = require('./steam-family.cjs');
 const { duplicateGroups, providers: duplicateProviders } = require('./library-duplicates.cjs');
 const storeOffers = createStoreOffers();
@@ -2120,15 +2121,16 @@ function registerIpc() {
     await shell.openExternal(`https://www.trueachievements.com/searchresults.aspx?search=${encodeURIComponent(game.title)}`);
     return true;
   });
-  ipcMain.handle('app:feedback', async () => { await shell.openExternal('https://github.com/ykyritsis/xbox-cloud-preview-on-pc/issues'); return true; });
-  ipcMain.handle('app:game-bar', async () => {
-    if (process.platform !== 'win32') throw new Error('Game Bar requires Windows.');
-    // Windows owns the overlay and the physical Guide button. Use its launch
-    // protocol for the on-screen shortcut without synthesizing global keys.
-    await shell.openExternal('ms-gamebar:');
-    return true;
+  const windowsShell = createWindowsShell({
+    runtimeDirectory: app.isPackaged ? path.join(process.resourcesPath, 'streamlight') : path.join(__dirname, '..', '.packaging-staging', 'streamlight'),
+    getWindow: () => mainWindow
   });
-  ipcMain.handle('app:fse-setup', async () => { await shell.openExternal('https://github.com/ashpynov/AnyFSE#readme'); return true; });
+  ipcMain.handle('app:game-bar', () => windowsShell.openGameBar());
+  ipcMain.handle('app:game-bar-settings', async () => { await shell.openExternal('ms-settings:gaming-gamebar'); return true; });
+  ipcMain.handle('app:feedback', async (_event, destination = 'feedback') => {
+    if (!Object.hasOwn(SUPPORT_LINKS, destination)) throw new Error('Unknown support destination.');
+    await shell.openExternal(SUPPORT_LINKS[destination]); return true;
+  });
   ipcMain.handle('settings:save', async (_event, incoming) => {
     const existing = await readSettings();
     const allowed = {};

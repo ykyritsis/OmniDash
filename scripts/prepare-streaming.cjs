@@ -44,6 +44,7 @@ async function prepareStreaming(){
   }
   await exec(path.join(process.env.WINDIR||'C:\\Windows','Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/nowarn:0649','/target:exe','/platform:x64','/reference:System.Web.Extensions.dll',`/out:${path.join(runtime,'WindowBridge.exe')}`,path.join(root,'src','remote-play','WindowBridge.cs')],{windowsHide:true});
   await fs.copyFile(path.join(root,'src','remote-play','LICENSE.StreamLight'),path.join(runtime,'LICENSE.StreamLight'));
+  await exec(path.join(process.env.WINDIR||'C:\\Windows','Microsoft.NET','Framework64','v4.0.30319','csc.exe'),['/nologo','/target:exe','/platform:x64',`/out:${path.join(runtime,'WindowsShell.exe')}`,path.join(root,'src','WindowsShell.cs')],{windowsHide:true});
   const data={engine:'StreamLight',version:'7.0.0',source:'https://github.com/FoggyBytes/StreamLight/tree/v7.0.0',installerSha256:installerHash,files:await manifest(runtime)};
   await fs.writeFile(path.join(runtime,'runtime-manifest.json'),JSON.stringify(data,null,2));
   console.log(`Prepared StreamLight ${data.version} and native window bridge (${Object.keys(data.files).length} files).`);

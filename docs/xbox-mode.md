@@ -1,15 +1,16 @@
-# Xbox Full Screen Experience (Xbox Mode)
+# Xbox mode
 
-The installer and portable EXE can run *inside* Windows 11's Gaming Full Screen Experience (Xbox Mode), but neither registers Xbox Preview UI directly in the Windows Home-app dropdown. That requires a separately packaged and signed gaming-home identity. Until such a bridge is built and tested, use an opt-in third-party bridge; do not mistake the installer for native FSE registration.
+Xbox Preview UI includes its own Windows gaming-home bridge. A separate bridge installation is no longer required.
 
-## Use the installed or portable app with AnyFSE
+1. Open **Settings → Appearance → Xbox mode** in the launcher.
+2. If prompted, open Windows Developer Mode settings and enable Developer Mode. The current bridge uses opt-in unpackaged registration.
+3. Choose **Add to Xbox mode** in the launcher.
+4. In Windows **Settings → Gaming → Xbox mode**, choose **Xbox Preview UI** as your home app. Availability depends on your Windows version and device.
 
-1. Install `Xbox-Preview-UI-Setup-*.exe`, or put the portable EXE in a stable folder. Pointing the bridge at a moved or renamed file will break the launch path.
-2. Review and install [AnyFSE](https://github.com/ashpynov/AnyFSE) using its own instructions. This is independent third-party software. Review its installer, permissions, and security notes before proceeding.
-3. In AnyFSE settings, select **Custom executable** and point it at the installed `Xbox Preview UI.exe` or portable EXE.
-4. In Windows **Settings → Gaming → Full Screen Experience**, select **AnyFSE** as Home. Windows starts AnyFSE, which starts Xbox Preview UI.
-5. To undo it, switch Home back to **Xbox** in Windows Settings; then remove AnyFSE if you no longer need it.
+Registration happens only when you choose it. The app does not enable Developer Mode or change your home-app selection automatically.
 
-This is not the same as seeing “Xbox Preview UI” directly in the Windows dropdown. A native selectable Home app requires a separate, signed MSIX gaming-home bridge with Windows' `windows.gamingApp` registration and associated capability. We do not silently install a bridge, certificate, service, or change your Windows Home setting. The [AnyFSE project](https://github.com/ashpynov/AnyFSE) documents its own permissions and optional device-button service; review those before choosing it.
+To remove it, first choose another home app in Windows Settings, then select **Remove from Xbox mode** in the launcher. Portable users should keep their executable at the registered location, or register again after moving it.
 
-The app's **Fullscreen on launch** setting should be enabled. Controller navigation still belongs to the launcher; Xbox Game Bar and hardware Guide-button behavior can depend on Windows and your device.
+The on-screen Xbox button opens Windows Game Bar. **Settings → Input → Windows Game Bar settings** opens Windows' own configuration. Physical Xbox/Guide-button behavior remains controlled by Windows and your device.
+
+For help or bug reports, use the project's [GitHub issues](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/issues).

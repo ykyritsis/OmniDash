@@ -6,8 +6,10 @@
   band.hidden = true;
   band.setAttribute('aria-labelledby', 'g-activity-title');
   document.querySelector('.dashboard-recent')?.after(band);
+  let lastMarkup = '';
 
   window.renderFriendsActivity = function () {
+    if (state.view !== 'home') return;
     const live = ['ready', 'partial'].includes(state.gFriends?.status);
     const list = live ? (state.gFriends.friends || []).filter(friend => friend?.game && friend.gameId && !['offline', 'unknown'].includes(friend.state)) : [];
     const focused = band.contains(document.activeElement) ? document.activeElement.dataset.friendId : null;
@@ -15,14 +17,18 @@
     const scroll = band.querySelector('.game-row')?.scrollLeft || 0;
     band.hidden = !list.length;
     if (!list.length) {
+      if (!lastMarkup) return;
+      lastMarkup = '';
       band.innerHTML = '';
       refreshFocusables();
       if (focused) setFocusedElement(recentRow.querySelector('.focusable'), { scroll: false });
       return;
     }
-    band.innerHTML = `<div class="collection-intro"><h2 id="g-activity-title"><span class="collection-brand"><span>Friends' activity</span></span></h2><small class="g-activity-count">${list.length} playing now</small></div>
+    const ownedGames = new Map();
+    for (const game of state.games) if (game.provider === 'Steam' && game.appId && !ownedGames.has(String(game.appId))) ownedGames.set(String(game.appId), game);
+    const markup = `<div class="collection-intro"><h2 id="g-activity-title"><span class="collection-brand"><span>Friends' activity</span></span></h2><small class="g-activity-count">${list.length} playing now</small></div>
       <div class="game-row collection-covers" role="list">${list.map(friend => {
-        const owned = state.games.find(game => game.provider === 'Steam' && String(game.appId) === friend.gameId);
+        const owned = ownedGames.get(String(friend.gameId));
         // Large IDs represent non-Steam shortcuts, which have no Steam store artwork/page.
         const storeGame = /^[1-9]\d{0,9}$/.test(friend.gameId);
         const art = owned?.artwork?.tile ? gameArt(owned) : storeGame
@@ -30,6 +36,9 @@
           : `<span class="art-fallback"><span class="fallback-title">${escapeHtml(friend.game)}</span></span>`;
         return `<button class="game-card g-friend-card focusable" type="button" role="listitem" data-action="${storeGame ? 'g-friend-join' : 'g-friend-chat'}" data-friend-id="${escapeHtml(friend.id)}" aria-label="${escapeHtml(`${friend.game} — ${friend.name}`)}"><span class="g-friend-art">${art}</span><span class="g-card-text"><strong>${escapeHtml(friend.game)}</strong><span class="g-activity-player">${gFriendAvatar(friend)}<small>${escapeHtml(friend.name)}</small></span></span></button>`;
       }).join('')}</div>`;
+    if (markup === lastMarkup) return;
+    lastMarkup = markup;
+    band.innerHTML = markup;
     band.querySelector('.game-row').scrollLeft = scroll;
     refreshFocusables();
     if (focused) {

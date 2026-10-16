@@ -1065,10 +1065,10 @@ async function garrisonAction(action, source) {
   if (action === 'g-game-bar') {
     if (gGameBarOpening) return true;
     gGameBarOpening = true;
-    source.setAttribute('aria-busy','true');
+    source?.setAttribute('aria-busy','true');
     try { await window.launcher.openGameBar(); }
-    catch { showToast('Couldn’t open Game Bar. Make sure it’s installed and enabled in Windows.'); }
-    finally { gGameBarOpening = false; source.removeAttribute('aria-busy'); }
+    catch (error) { showToast(String(error.message || 'Couldn’t open Game Bar. Check Settings → Input.').replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '')); }
+    finally { gGameBarOpening = false; source?.removeAttribute('aria-busy'); }
     return true;
   }
   const game = state.games.find(item => item.id === state.optionsGameId);
@@ -1505,8 +1505,8 @@ const gSettingsPages = [
     ${gAction('g-set-calculator', 'Gamerscore calculator', 'See how achievements and rarity add up to 1,000 points per game.', gIcon('calculator', 'g-trailing'))}
     ${gAction('profile-score-sync', 'Update Gamerscore', 'Check your verified Steam achievements.', gIcon('refresh', 'g-trailing'))}
     <button class="g-setting-row g-setting-feedback focusable" type="button" data-action="give-feedback">${gIcon('feedback')}<span><strong>Give feedback</strong></span></button>
-    ${gAction('give-feedback', 'Request a feature', '', gIcon('open', 'g-trailing'))}
-    ${gAction('open-fse-setup', 'Get help', '', gIcon('open', 'g-trailing'))}
+    ${gAction('request-feature', 'Request a feature', 'Open an issue on our GitHub.', gIcon('open', 'g-trailing'))}
+    ${gAction('get-help', 'Get help', 'Read the setup guide on our GitHub.', gIcon('open', 'g-trailing'))}
   </div>`);
 
   const privacy = page('g-privacy', `<div class="g-setting-list">
@@ -1539,6 +1539,7 @@ const gSettingsPages = [
   page('g-input', `<div class="g-setting-list">
     ${gAction('controller-status', 'Controller', '<span id="g-settings-controller">Checking…</span>', gIcon('chevronRight', 'g-trailing'))}
     ${info('Xbox button', 'Opens Windows Game Bar.')}
+    ${gAction('game-bar-settings', 'Windows Game Bar settings', 'Check Game Bar and controller button settings.', gIcon('open', 'g-trailing'))}
     ${info('Controller shortcuts', 'Y searches · Menu opens game options · B goes back.')}
     ${info('Keyboard and mouse', 'Arrow keys move focus · Enter selects · Esc goes back.')}
   </div>`);

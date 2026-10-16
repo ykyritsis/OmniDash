@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download 0.4.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.4.0/Xbox-Preview-UI-Setup-0.4.0.exe)** · [Setup](#getting-started) · [0.4.0 notes](docs/release-0.4.0.md)
+**[Download 0.5.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.5.0/Xbox-Preview-UI-Setup-0.5.0.exe)** · [Setup](#getting-started) · [0.5.0 notes](docs/release-0.5.0.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,13 +31,18 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## 0.4.0
+## 0.5.0
+
+- Faster friends shelves preserve artwork, scrolling and focus. Hidden-page responses and stale artwork prefetch stop doing unnecessary UI work.
+- Idle controller polling and overlapping Steam status checks do less background work; screenshot/news caches stay bounded.
+- Help, feedback and feature requests point to this GitHub project; the Xbox mode setup guide is current.
+- The Xbox button uses a native Game Bar helper with useful errors and a Windows Settings shortcut. Live overlay confirmation is still outstanding; see the release notes.
 
 - Rounded Library selection glows no longer clip against the tab bar or source filters.
 - Ghosts, Infinite Warfare and other Steam galleries keep valid trailer thumbnails, repair cached preview links and merge duplicate trailers. Short titles make each trailer identifiable.
-- Version numbering now starts at **0.4.0**, with future feature releases advancing to **0.5.0**, **0.6.0**, and so on.
+- Feature releases advance through **0.5.0**, **0.6.0**, and onward; patch versions cover smaller fixes.
 
-**Updating from 0.27.0-beta:** download and install 0.4.0 once. The older updater treats the new number as lower; your settings remain in Windows app data. Subsequent updates use the new version series.
+**Updating from 0.27.0-beta:** download and install 0.5.0 once. The older updater treats the new number as lower; your settings remain in Windows app data. Subsequent updates use the new version series.
 
 - Faster Store and search refreshes reuse cards, decoded artwork and controller focus. Ownership lookups and currency formatting avoid repeated work.
 - Fixes offline Store retry loops, uppercase searches, controller entry into search results, stale responses, false ownership matches and missing-price labels.
@@ -58,11 +63,11 @@ Device images are illustrative mockups based on app captures, not photographs of
 - Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
 - Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.4.0.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.5.0.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[0.4.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.4.0)**. Download the Setup executable for your handheld or desktop.
+Get **[0.5.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.5.0)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
@@ -188,7 +193,7 @@ Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.co
 
 This is a purely fan-made, unofficial launcher. Xbox, Xbox Game Pass, Microsoft, PlayStation, Steam, SteamGridDB, ASUS, game names, logos, and artwork belong to their respective owners. Nothing here implies their sponsorship, approval, or affiliation. The app does not bundle games, grant licenses, bypass DRM, or provide content you do not own. Artwork, news, screenshots, achievements, and metadata remain subject to their source services' rights and terms.
 
-Console layout reference: [DashX by saVantCZ](https://github.com/saVantCZ/DashX). DashX theme code and media are not bundled with this project. System icons use the Segoe MDL2 Assets font supplied by Windows. In Settings → General → Volume & audio, you can load a personal sound folder containing `navigation.wav` and `activation.wav`, with optional `back.wav` and `launch.wav`. Imported sounds stay in your local profile and are not included in builds or uploads.
+System icons use the Segoe MDL2 Assets font supplied by Windows. In Settings → Audio & Video, you can load a personal sound folder containing `navigation.wav` and `activation.wav`, with optional `back.wav` and `launch.wav`. Imported sounds stay in your local profile and are not included in builds or uploads.
 
 The optional startup animation uses the Xbox mark with an original synthesized chime, not Microsoft's console sound recording. Interface sounds can be muted and the animation disabled in Settings → General → Volume & audio. Reduced motion is respected. Personal sound packs can include `startup.wav` alongside `navigation.wav` and `activation.wav`; those user-provided files are not distributed with the app.
 
