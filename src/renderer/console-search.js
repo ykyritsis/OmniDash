@@ -31,7 +31,7 @@ function openConsoleSearch(selectedGameId = '') {
   searchPopover.hidden = false;
   renderConsoleSearch();
   dialog.showModal();
-  const selected = [...dialog.querySelectorAll('.console-search-game')].find(card => card.dataset.gameId === selectedGameId);
+  const selected = [...dialog.querySelectorAll('.console-search-game, .g-store-card')].find(card => card.dataset.gameId === selectedGameId);
   setFocusedElement(selected || librarySearch, { scroll: false });
   if (state.controllerClick && !selected) openNativeKeyboard(librarySearch);
 }
@@ -39,7 +39,7 @@ function openConsoleSearch(selectedGameId = '') {
 function navigateConsoleSearch(direction, current) {
   const dialog = document.querySelector('#console-search-dialog');
   if (topmostOpenDialog() !== dialog) return false;
-  const cards = [...dialog.querySelectorAll('.console-search-game')];
+  const cards = [...dialog.querySelectorAll('.console-search-game, .g-store-card')];
   if (current === librarySearch && direction === 'down') {
     if (cards[0]) setFocusedElement(cards[0]);
     return true;

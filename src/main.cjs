@@ -826,68 +826,104 @@ async function fetchSteamNews(appId) {
   }
 }
 
-function scheduleScreenshotCache(game, details) {
+function scheduleScreenshotCache(game, details, isCurrent = () => true) {
   if (!details.screenshots?.length || process.env.NEBULA_DEMO === '1') return;
+  const originalArtwork = game.artwork;
   const task = (async () => {
     const cachedScreenshots = [];
     for (let index = 0; index < details.screenshots.length; index += 4) {
       cachedScreenshots.push(...await Promise.all(details.screenshots.slice(index, index + 4).map(url => artworkCache.cacheImage(url))));
     }
-    if (!currentLibrary.some(entry => entry.id === game.id)) return;
+    if (!isCurrent() || game.artwork !== originalArtwork || !currentLibrary.includes(game)) return;
     game.artwork = { ...(game.artwork || {}), screenshots: cachedScreenshots };
     details.screenshots = cachedScreenshots;
     await writeSettings({ artwork: { [game.id]: game.artwork } });
   })();
-  artworkCacheTask = Promise.allSettled([artworkCacheTask, task]);
+  artworkCacheTask = Promise.allSettled([artworkCacheTask, task]).then(() => {});
 }
 
-const xboxAgeRating = product => ratings.xboxAgeRating(product, steamCountry());
+const xboxAgeRating = (product, country = steamCountry()) => ratings.xboxAgeRating(product, country);
 const detailCacheKey = (id, country = steamCountry()) => `v3:${country}:${id}`;
+let detailCacheEpoch = 0;
+const detailTtl = (data, fullTtl) => data?.metadataSource === 'Local library' ? 30000 : fullTtl;
+const detailAge = entry => entry && Number.isFinite(entry.at) ? Date.now() - entry.at : Infinity;
+function rememberGameDetails(key, data, ttl = detailTtl(data, 15 * 60 * 1000)) {
+  gameDetailCache.delete(key);
+  gameDetailCache.set(key, { at: Date.now(), expires: Date.now() + ttl, data });
+  while (gameDetailCache.size > 160) gameDetailCache.delete(gameDetailCache.keys().next().value);
+  return data;
+}
 function invalidateGameDetails(id) {
+  detailCacheEpoch++;
+  gameDetailRequests.clear();
   for (const key of gameDetailCache.keys()) if (key === id || key.endsWith(`:${id}`)) gameDetailCache.delete(key);
-  if (detailDisk) for (const key of Object.keys(detailDisk)) if (key === id || key.endsWith(`:${id}`)) delete detailDisk[key];
+  if (detailDisk) {
+    for (const key of Object.keys(detailDisk)) if (key === id || key.endsWith(`:${id}`)) delete detailDisk[key];
+    saveDetailDisk();
+  }
+}
+function clearGameDetails() {
+  detailCacheEpoch++;
+  gameDetailCache.clear(); gameDetailRequests.clear();
+  detailDisk = {};
+  saveDetailDisk();
 }
 
 // Game pages open from a copy saved on disk (up to a week old) while a fresh copy loads behind it.
 const detailDiskFile = () => path.join(path.dirname(settingsPath()), 'game-details-cache.json');
 let detailDisk = null, detailDiskTimer = null, detailDiskLoading = null;
+let detailDiskWriteQueue = Promise.resolve();
 async function loadDetailDisk() {
   if (detailDisk) return detailDisk;
-  if (!detailDiskLoading) detailDiskLoading = fs.readFile(detailDiskFile(), 'utf8').then(JSON.parse).catch(() => ({})).then(value => {
-    detailDisk = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    return detailDisk;
-  });
+  if (!detailDiskLoading) {
+    const epoch = detailCacheEpoch;
+    detailDiskLoading = fs.readFile(detailDiskFile(), 'utf8').then(JSON.parse).catch(() => ({})).then(value => {
+      if (!detailDisk) detailDisk = epoch === detailCacheEpoch && value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      return detailDisk || {};
+    }).finally(() => { detailDiskLoading = null; });
+  }
   return detailDiskLoading;
 }
 function saveDetailDisk() {
   clearTimeout(detailDiskTimer);
-  detailDiskTimer = setTimeout(() => fs.writeFile(detailDiskFile(), JSON.stringify(detailDisk)).catch(() => {}), 2000);
+  detailDiskTimer = setTimeout(() => {
+    detailDiskWriteQueue = detailDiskWriteQueue.catch(() => {}).then(() => fs.writeFile(detailDiskFile(), JSON.stringify(detailDisk))).catch(() => {});
+  }, 2000);
 }
 async function fetchGameDetails(game) {
   const country = steamCountry(), key = detailCacheKey(game.id, country);
   const memory = gameDetailCache.get(key);
-  if (memory && Date.now() - memory.at < 15 * 60 * 1000) return memory.data;
+  if (memory && detailAge(memory) >= 0 && Date.now() < memory.expires) {
+    gameDetailCache.delete(key); gameDetailCache.set(key, memory);
+    return memory.data;
+  }
   const disk = (await loadDetailDisk())[key];
   // Like a console's title cache: a page seen in the last day opens straight from disk with no network
   // at all; older copies (up to a week) still open at once and refresh behind the page.
-  if (disk?.data && Date.now() - disk.at < 24 * 60 * 60 * 1000) { gameDetailCache.set(key, { at: Date.now(), data: disk.data }); return disk.data; }
+  if (disk?.data && detailAge(disk) >= 0 && detailAge(disk) < detailTtl(disk.data, 24 * 60 * 60 * 1000)) return rememberGameDetails(key, disk.data);
   let fresh = gameDetailRequests.get(key);
-  if (!fresh) fresh = fetchGameDetailsFresh(game, country).then(data => {
-    delete detailDisk[key];
-    detailDisk[key] = { at: Date.now(), data };
-    const keys = Object.keys(detailDisk);
-    for (let index = 0; index < keys.length - 1500; index++) delete detailDisk[keys[index]];
-    saveDetailDisk();
-    return data;
-  }).finally(() => gameDetailRequests.delete(key));
-  gameDetailRequests.set(key, fresh);
-  if (disk?.data && Date.now() - disk.at < 7 * 24 * 60 * 60 * 1000) { fresh.catch(() => {}); return disk.data; }
+  if (!fresh) {
+    const epoch = detailCacheEpoch;
+    fresh = fetchGameDetailsFresh(game, country).then(data => {
+      if (epoch !== detailCacheEpoch) return data;
+      // A temporary outage must not replace a useful saved page with an empty one.
+      if (data.metadataSource === 'Local library' && disk?.data?.metadataSource !== 'Local library'
+        && disk?.data && detailAge(disk) >= 0 && detailAge(disk) < 7 * 24 * 60 * 60 * 1000) return rememberGameDetails(key, disk.data, 30000);
+      rememberGameDetails(key, data);
+      delete detailDisk[key];
+      detailDisk[key] = { at: Date.now(), data };
+      const keys = Object.keys(detailDisk);
+      for (let index = 0; index < keys.length - 1500; index++) delete detailDisk[keys[index]];
+      saveDetailDisk();
+      scheduleScreenshotCache(game, data, () => epoch === detailCacheEpoch);
+      return data;
+    }).finally(() => { if (gameDetailRequests.get(key) === fresh) gameDetailRequests.delete(key); });
+    gameDetailRequests.set(key, fresh);
+  }
+  if (disk?.data && detailAge(disk) >= 0 && detailAge(disk) < detailTtl(disk.data, 7 * 24 * 60 * 60 * 1000)) { fresh.catch(() => {}); return disk.data; }
   return fresh;
 }
 async function fetchGameDetailsFresh(game, country = steamCountry()) {
-  const key = detailCacheKey(game.id, country);
-  const cached = gameDetailCache.get(key);
-  if (cached && Date.now() - cached.at < 15 * 60 * 1000) return cached.data;
   const fallback = {
     title: game.title, provider: game.provider, description: '', fullDescription: '', genres: [], developer: '', publisher: '', releaseDate: '',
     screenshots: game.artwork?.screenshots || [], dlc: [], dlcStatus: 'unavailable',
@@ -895,7 +931,8 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     achievementCount: 0, supportedLanguages: '', metacriticScore: null, metadataSource: 'Local library'
   };
   // Xbox.com's product summary carries the official rating badge, trailers and product ID.
-  const xboxSummaryRequest = consoleServices.findXboxProduct(game.title).catch(() => null);
+  const xboxSummaryRequest = consoleServices.findXboxProduct(game.title, country).catch(() => null);
+  const xboxDetailsRequest = fetchXboxCatalogDetails(game.title, country).catch(() => null);
   const applyXboxSummary = async (details) => {
     const summary = await xboxSummaryRequest;
     if (!summary) return details;
@@ -907,11 +944,9 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     return details;
   };
   const xboxFallback = async () => {
-    const xboxDetails = await fetchXboxCatalogDetails(game.title);
+    const xboxDetails = await xboxDetailsRequest;
     const result = await applyXboxSummary(xboxDetails ? { ...fallback, ...xboxDetails } : { ...fallback });
     result.screenshots = uniqueScreenshots(result.screenshots);
-    gameDetailCache.set(key, { at: Date.now(), data: result });
-    scheduleScreenshotCache(game, result);
     return result;
   };
   let appId = /^\d+$/.test(String(game.achievementReferenceAppId || game.appId || '')) ? String(game.achievementReferenceAppId || game.appId) : '';
@@ -921,7 +956,6 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     if (match?.appId && titleMatchScore(game.title, match.title) >= 90) appId = match.appId;
   } catch { /* An imported title may not have a Steam store listing. */ }
   if (!appId) return xboxFallback();
-  const xboxDetailsRequest = fetchXboxCatalogDetails(game.title).catch(() => null);
   try {
     const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&l=english&cc=${country}`, {
       headers: { 'Accept-Language': 'en-US,en;q=0.9' }, signal: AbortSignal.timeout(10000)
@@ -991,8 +1025,6 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     details.screenshotThumbs = details.screenshots.map(url => String(url).replace(/\.1920x1080\.jpg/, '.600x338.jpg'));
     if (details.rating) details.ageRating = details.rating.label;
     if (!details.screenshots.length) details.screenshots = fallback.screenshots;
-    gameDetailCache.set(key, { at: Date.now(), data: details });
-    scheduleScreenshotCache(game, details);
     return details;
   } catch { return xboxFallback(); }
 }
@@ -1152,9 +1184,9 @@ async function fetchXboxCatalogArtwork(title) {
   }
 }
 
-async function fetchXboxCatalogDetails(title) {
+async function fetchXboxCatalogDetails(title, country = steamCountry()) {
   try {
-    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=${steamCountry()}&languages=en-${steamCountry()}&fieldsTemplate=details&platformdependencyname=windows.xbox`;
+    const endpoint = `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/Games/products?query=${encodeURIComponent(title)}&market=${country}&languages=en-${country}&fieldsTemplate=details&platformdependencyname=windows.xbox`;
     const response = await fetch(endpoint, { signal: AbortSignal.timeout(6500) });
     if (!response.ok) return null;
     const body = await response.json();
@@ -1194,7 +1226,7 @@ async function fetchXboxCatalogDetails(title) {
       categories,
       screenshots,
       dlcStatus: 'unavailable',
-      rating: xboxAgeRating(product),
+      rating: xboxAgeRating(product, country),
       metadataSource: 'Xbox Store',
       // The Xbox app's "Playable on", "Capabilities" and publisher info come straight from these.
       xboxInfo: {
@@ -2196,11 +2228,12 @@ function registerIpc() {
     const settings = await readSettings();
     const artwork = Object.fromEntries(Object.entries(settings.artwork || {}).filter(([, entry]) => !entry?.manual));
     await writeSettings({ artwork }, { replaceArtwork: true });
-    gameDetailCache.clear();
+    clearGameDetails();
     return Object.keys(settings.artwork || {}).length - Object.keys(artwork).length;
   });
   ipcMain.handle('settings:reset-all', async () => {
     artworkScanEpoch++;
+    clearGameDetails();
     await artworkCacheTask.catch(() => {});
     await librarySnapshotWriteQueue;
     await playerProfile.reset();
@@ -2215,7 +2248,6 @@ function registerIpc() {
     await replaceSettings({ ...SETTINGS_DEFAULTS });
     currentLibrary = [];
     activeGameSession = null;
-    gameDetailCache.clear();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setFullScreen(SETTINGS_DEFAULTS.fullscreen);
       mainWindow.webContents.setZoomFactor(1);

@@ -3,7 +3,7 @@
 (function(root) {
   const providers = ['Steam','Xbox PC','Epic Games','GOG Galaxy','Ubisoft Connect','EA app','Battle.net','Rockstar Games','PC','Google Drive'];
   function titleKey(title) {
-    return String(title || '').normalize('NFKC').replace(/[™®©]/g,'').toLocaleLowerCase('en').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    return String(title || '').replace(/[™®©]/g,'').normalize('NFKC').toLocaleLowerCase('en').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
   }
   function duplicateGroups(games) {
     const grouped = new Map();
@@ -64,7 +64,28 @@
       return result;
     };
   }
-  const api={titleKey,duplicateGroups,chooseCopy,visibleCopies,createViewCache,providers};
+  // Build once for a shelf/search render. Empty IDs and non-Latin titles must
+  // never collapse into a match; explicit editions keep their own identities.
+  function createOwnershipIndex(games, settings = {}) {
+    const steam = new Map(), xbox = new Map(), titles = new Map();
+    const add = (map, key, game) => { if (key) { if (!map.has(key)) map.set(key, []); map.get(key).push(game); } };
+    for (const game of games) {
+      if (game.isApp || game.isLauncher) continue;
+      if (game.provider === 'Steam') add(steam, String(game.appId || ''), game);
+      add(xbox, String(game.xboxProductId || '').toUpperCase(), game);
+      add(titles, titleKey(game.title), game);
+    }
+    return { find(game) {
+      const appId = game.provider === 'Steam' ? String(game.appId || '') : '';
+      const productId = String(game.xboxProductId || '').toUpperCase();
+      const exact = (appId && steam.get(appId)) || (productId && xbox.get(productId));
+      const copies = exact || (titles.get(titleKey(game.title)) || []).filter(item =>
+        !(appId && item.provider === 'Steam' && item.appId && String(item.appId) !== appId)
+        && !(productId && item.xboxProductId && String(item.xboxProductId).toUpperCase() !== productId));
+      return copies.length === 1 ? copies[0] : copies.length ? chooseCopy(copies, settings) : undefined;
+    } };
+  }
+  const api={titleKey,duplicateGroups,chooseCopy,visibleCopies,createViewCache,createOwnershipIndex,providers};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.libraryDuplicates=api;
 })(typeof globalThis==='object'?globalThis:this);

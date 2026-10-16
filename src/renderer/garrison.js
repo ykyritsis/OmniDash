@@ -416,8 +416,9 @@ homeCollections.prepend(gHomeRows);
 for (const child of [...homeCollections.children]) if (child !== gHomeRows) child.hidden = true;
 function gStoreRow(id, title, games, list) {
   if (!games?.length) return '';
+  const ownership = gStoreOwnership();
   return `<section class="collection-band" data-tone="xbox" aria-labelledby="${id}-title"><div class="collection-intro"><h2 id="${id}-title"><span class="collection-brand"><span>${escapeHtml(title)}</span></span></h2><button class="collection-open focusable" data-action="collection-store" data-chart="${list}">See all <span aria-hidden="true">›</span></button></div>
-    <div class="game-row collection-covers" role="list">${games.slice(0, 12).map(game => `<button class="g-store-card g-home-store focusable" type="button" role="listitem" data-action="g-store-game" data-game-id="${escapeHtml(game.id)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gStoreCaption(game))}</small></span></button>`).join('')}</div></section>`;
+    <div class="game-row collection-covers" role="list">${games.slice(0, 12).map(game => `<button class="g-store-card g-home-store focusable" type="button" role="listitem" data-action="g-store-game" data-game-id="${escapeHtml(game.id)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gStoreCaption(game, ownership))}</small></span></button>`).join('')}</div></section>`;
 }
 renderHomeCollections = function () {
   if (state.view !== 'home') { homeCollectionsDirty = true; return; }
@@ -664,14 +665,24 @@ for (const id of ['#shuffle-home-screenshots-toggle', '#random-screenshot-backgr
 
 // ---------- Store: the Xbox Store's own lists, in the Library's tab bar and cover grid ----------
 const gStoreLists = { popular: 'Popular', newReleases: 'New releases', free: 'Free to play' };
+const gPriceFormats = new Map();
 function gPrice(price) {
-  if (!price) return '';
-  if (!price.list) return 'Free';
-  const format = new Intl.NumberFormat(undefined, { style: 'currency', currency: price.currency || 'USD' });
+  if (!price || !Number.isFinite(price.list) || price.list < 0) return '';
+  if (price.list === 0) return 'Free';
+  const currency = String(price.currency || 'USD').toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) return '';
+  let format = gPriceFormats.get(currency);
+  if (!format) {
+    format = new Intl.NumberFormat(undefined, { style: 'currency', currency });
+    gPriceFormats.set(currency, format);
+    if (gPriceFormats.size > 32) gPriceFormats.delete(gPriceFormats.keys().next().value);
+  }
   return price.discount && price.msrp > price.list ? `${format.format(price.list)} · −${Math.round(price.discount)}%` : format.format(price.list);
 }
-function gStoreCaption(game) {
-  const owned = state.games.find(item => item.xboxProductId === game.xboxProductId || normalizeConsoleTitle(item.title) === normalizeConsoleTitle(game.title));
+function gStoreOwnership() { return libraryDuplicates.createOwnershipIndex(state.games, state); }
+function gOwnedCopy(game, ownership = gStoreOwnership()) { return ownership.find(game); }
+function gStoreCaption(game, ownership) {
+  const owned = gOwnedCopy(game, ownership);
   return owned ? 'Owned' : gPrice(game.price) || 'View details';
 }
 async function loadXboxStore(force = false) {
@@ -679,19 +690,28 @@ async function loadXboxStore(force = false) {
   if (gStoreRequest) return gStoreRequest;
   state.xboxStore = { ...(state.xboxStore || {}), status: 'loading' };
   const epoch = gStoreEpoch;
-  gStoreRequest = window.launcher.getXboxStore().then(result => { if (epoch === gStoreEpoch) state.xboxStore = result; return result; })
-    .catch(() => { if (epoch === gStoreEpoch) state.xboxStore = { status: 'unavailable' }; return state.xboxStore; })
+  gStoreRequest = Promise.resolve().then(() => window.launcher.getXboxStore()).then(result => { if (epoch === gStoreEpoch) state.xboxStore = { ...state.xboxStore, ...result }; return result; })
+    .catch(() => { if (epoch === gStoreEpoch) state.xboxStore = { ...state.xboxStore, status: 'unavailable' }; return state.xboxStore; })
     .finally(() => { if (epoch !== gStoreEpoch) return; gStoreRequest = null; if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore(); });
   return gStoreRequest;
 }
 let gStoreRequest = null;
 let gStoreEpoch = 0;
-renderNativeStore = function (grid) {
+function gRenderStoreGrid(grid, markup, fallback = document.querySelector('#g-store-query')) {
+  if (grid.gStoreMarkup === markup) return;
+  const focused = document.activeElement?.closest?.('.g-store-card');
+  const focusedId = focused && grid.contains(focused) ? focused.dataset.gameId : '';
+  grid.innerHTML = markup;
+  grid.gStoreMarkup = markup;
+  refreshFocusables();
+  if (focusedId) setFocusedElement(grid.querySelector(`[data-game-id="${CSS.escape(focusedId)}"]`) || fallback, { scroll: false });
+}
+renderNativeStore = function (grid, { searching = false } = {}) {
   document.querySelector('#store-rail')?.remove();
   const view = document.querySelector('#store-view');
   view.classList.add('native-store', 'g-store');
   if (!gStoreLists[consoleStoreTab]) consoleStoreTab = 'popular';
-  if (!state.xboxStore || state.xboxStore.status === 'unavailable' && !gStoreRequest) loadXboxStore(state.xboxStore?.status === 'unavailable');
+  if (!state.xboxStore?.status) loadXboxStore();
   const games = state.xboxStore?.[consoleStoreTab] || [];
   document.querySelector('#store-heading').textContent = 'Store';
   document.querySelectorAll('.console-store-tabs button').forEach(tab => {
@@ -706,23 +726,22 @@ renderNativeStore = function (grid) {
     toolbar.innerHTML = '<span id="g-store-count"></span>';
     view.querySelector('.console-store-tabs').after(toolbar);
   }
+  toolbar.hidden = false;
   const browse = document.querySelector('#browse-steam-shop');
   if (browse) browse.hidden = true;
-  const focused = document.activeElement?.closest?.('.g-store-card')?.dataset.gameId;
   grid.className = 'library-grid g-store-grid';
+  if (searching) return;
   if (!games.length) {
     const loading = !state.xboxStore || state.xboxStore.status === 'loading';
     toolbar.querySelector('#g-store-count').textContent = '';
-    grid.innerHTML = loading
+    gRenderStoreGrid(grid, loading
       ? `<div class="g-score-loading"><span class="g-spinner"></span>Getting the Store ready…</div>`
-      : `<div class="g-empty">${gIcon('shop')}<h2>The Store is unavailable right now</h2><p>Your installed games are still ready to play. Check your connection and try again.</p><button class="g-button focusable" type="button" data-action="g-store-retry">Try again</button></div>`;
-    refreshFocusables();
+      : `<div class="g-empty">${gIcon('shop')}<h2>The Store is unavailable right now</h2><p>Your installed games are still ready to play. Check your connection and try again.</p><button class="g-button focusable" type="button" data-action="g-store-retry">Try again</button></div>`);
     return;
   }
   toolbar.querySelector('#g-store-count').textContent = `${games.length} games`;
-  grid.innerHTML = games.map(game => `<button class="g-store-card focusable" type="button" data-action="g-store-game" data-game-id="${escapeHtml(game.id)}" aria-label="${escapeHtml(game.title)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gStoreCaption(game))}</small></span></button>`).join('');
-  refreshFocusables();
-  if (focused) setFocusedElement(grid.querySelector(`[data-game-id="${CSS.escape(focused)}"]`), { scroll: false });
+  const ownership = gStoreOwnership();
+  gRenderStoreGrid(grid, games.map(game => `<button class="g-store-card focusable" type="button" data-action="g-store-game" data-game-id="${escapeHtml(game.id)}" aria-label="${escapeHtml(game.title)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gStoreCaption(game, ownership))}</small></span></button>`).join(''));
 };
 selectNativeStoreGame = function (game) { state.storeSelectedId = game.id; };
 requestStoreOffer = function () {};
@@ -730,11 +749,11 @@ navigateNativeStore = function () { return false; };
 // A Store game opens its page; owned copies open the library entry instead.
 const gPerformAction = performAction;
 performAction = async function (action, source) {
-  if (action === 'g-store-retry') { await loadXboxStore(true); return; }
+  if (action === 'g-store-retry') { const request = loadXboxStore(true); renderConsoleStore(); await request; return; }
   if (action === 'g-store-game') {
     const game = Object.values(state.xboxStore || {}).filter(Array.isArray).flat().find(item => item.id === source.dataset.gameId);
     if (!game) return;
-    const owned = state.games.find(item => item.xboxProductId === game.xboxProductId || normalizeConsoleTitle(item.title) === normalizeConsoleTitle(game.title));
+    const owned = gOwnedCopy(game);
     await openGameDetails(owned ? owned.id : game.id);
     return;
   }
@@ -1321,7 +1340,7 @@ renderDetailInputMethods = function (game, details = {}) {
   info.insertAdjacentHTML('afterbegin', pill + languages);
   if (game.discoveryOnly && game.xboxProductId && game.price !== undefined) {
     const button = document.querySelector('#detail-play');
-    button.innerHTML = `<strong>${!game.price || !game.price.list ? 'Get' : `Buy ${escapeHtml(gPrice({ ...game.price, discount: 0 }))}`}</strong>`;
+    button.innerHTML = `<strong>${!price ? 'View in Xbox app' : game.price.list === 0 ? 'Get' : `Buy ${escapeHtml(gPrice({ ...game.price, discount: 0 }))}`}</strong>`;
   }
 };
 

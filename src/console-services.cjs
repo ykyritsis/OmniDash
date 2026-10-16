@@ -136,14 +136,19 @@ function createConsoleServices(directory, request = fetch, { getCountry = () => 
   // Xbox.com's own browse and search service: lists, prices, ratings and trailers.
   const storeCache = new Map();
   const storePending = new Map();
+  function cacheStore(key, data) {
+    storeCache.delete(key);
+    storeCache.set(key, { at: Date.now(), data });
+    while (storeCache.size > 256) storeCache.delete(storeCache.keys().next().value);
+    return data;
+  }
   function sharedStoreRequest(key, work) {
     if (storePending.has(key)) return storePending.get(key);
     const pending = work().finally(() => storePending.delete(key));
     storePending.set(key, pending); return pending;
   }
-  const xboxLocale = () => `en-${getCountry()}`;
-  async function emerald(pathName, body) {
-    const response = await request(`https://emerald.xboxservices.com/xboxcomfd/${pathName}?locale=${xboxLocale()}`, {
+  async function emerald(pathName, body, country = getCountry()) {
+    const response = await request(`https://emerald.xboxservices.com/xboxcomfd/${pathName}?locale=en-${country}`, {
       method: 'POST', signal: AbortSignal.timeout(12000),
       headers: { 'Content-Type': 'application/json', 'x-ms-api-version': '1.1', 'MS-CV': `${Math.random().toString(36).slice(2, 12)}.1` },
       body: JSON.stringify(body)
@@ -155,7 +160,7 @@ function createConsoleServices(directory, request = fetch, { getCountry = () => 
     if (!image?.url) return null;
     try { const url = new URL(image.url.replace(/^\/\//, 'https://')); if (url.protocol !== 'https:' || !/^store-images\.s?-?microsoft\.com$/.test(url.hostname)) return null; url.searchParams.set('w', String(width)); return url.href; } catch { return null; }
   };
-  function mapSummary(summary) {
+  function mapSummary(summary, country = getCountry()) {
     if (!PRODUCT_ID.test(summary?.productId || '') || !summary.title) return null;
     const images = summary.images || {};
     const price = summary.specificPrices?.purchaseable?.[0] || null;
@@ -165,8 +170,9 @@ function createConsoleServices(directory, request = fetch, { getCountry = () => 
     return {
       id: `xbox-${summary.productId}`, xboxProductId: summary.productId, title: summary.title, provider: 'Xbox', installed: false, discoveryOnly: true, controls: 'unknown',
       artwork: { tile: box, grid: box, tileIsSquare: Boolean(images.boxArt), hero: storeImage(images.superHeroArt, 1920), wide: storeImage(images.superHeroArt, 1200), imageSource: 'xbox-catalog' },
-      price: price ? { list: Number(price.listPrice) || 0, msrp: Number(price.msrp) || 0, discount: Number(price.discountPercentage) || 0, currency: price.currency || 'USD' } : null,
-      rating: rating ? chooseRating(getCountry(), normalizeRating({ system: String(rating.boardName || ''), label: String(rating.rating || ''), value: String(rating.ratingAge || ''), description: String(rating.ratingDescription || rating.description || ''), descriptors: (rating.descriptors || []).join(', '), interactive: (rating.interactiveDescriptions || []).join(', '), image: badge })) : null,
+      price: price && price.listPrice != null && String(price.listPrice).trim() !== '' && Number.isFinite(Number(price.listPrice)) && Number(price.listPrice) >= 0
+        ? { list: Number(price.listPrice), msrp: Number(price.msrp) || 0, discount: Number(price.discountPercentage) || 0, currency: price.currency || 'USD' } : null,
+      rating: rating ? chooseRating(country, normalizeRating({ system: String(rating.boardName || ''), label: String(rating.rating || ''), value: String(rating.ratingAge || ''), description: String(rating.ratingDescription || rating.description || ''), descriptors: (rating.descriptors || []).join(', '), interactive: (rating.interactiveDescriptions || []).join(', '), image: badge })) : null,
       videos: uniqueVideos([...(summary.cmsVideos || []), ...(summary.videos || [])].filter(video => video.purpose === 'trailer' || video.previewImage).map(video => ({ title: String(video.title || video.previewImage?.caption || 'Trailer'), preview: storeImage(video.previewImage, 960), stream: /^https:\/\/cdn\.trailers\.xboxservices\.com\/[^\s"]+\.m3u8(\?|$)/.test(String(video.url || '')) ? video.url : null })).filter(video => video.preview)).slice(0, 8),
       publisher: summary.publisherName || '', categories: summary.categories || [], releaseDate: summary.releaseDate || '', description: summary.description || '', averageRating: Number(summary.averageRating) || null
     };
@@ -177,44 +183,46 @@ function createConsoleServices(directory, request = fetch, { getCountry = () => 
     free: { orderby: { id: 'orderby', choices: [{ id: 'Popularity' }] }, PlayWith: { id: 'PlayWith', choices: [{ id: 'PC' }] }, Price: { id: 'Price', choices: [{ id: '0' }] } }
   };
   async function getXboxStore() {
-    const key = `lists:${xboxLocale()}`;
+    const country = getCountry(), key = `lists:en-${country}`;
     const cached = storeCache.get(key);
     if (cached && Date.now() - cached.at < 30 * 60 * 1000) return cached.data;
-    const entries = await Promise.all(Object.entries(browseFilters).map(async ([key, filter]) => {
-      const encoded = Buffer.from(JSON.stringify(filter)).toString('base64');
-      const body = await emerald('browse', { Filters: encoded, EncodedFilters: encoded, ReturnFilters: false, ChannelKeyToBeUsedInResponse: key, ChannelId: '' }).catch(() => null);
-      return [key, (body?.productSummaries || []).map(mapSummary).filter(Boolean).slice(0, 36)];
-    }));
-    const data = { status: entries.some(([, items]) => items.length) ? 'ready' : 'unavailable', ...Object.fromEntries(entries) };
-    if (data.status === 'ready') storeCache.set(key, { at: Date.now(), data });
-    return data;
+    return sharedStoreRequest(key, async () => {
+      const entries = await Promise.all(Object.entries(browseFilters).map(async ([key, filter]) => {
+        const encoded = Buffer.from(JSON.stringify(filter)).toString('base64');
+        const body = await emerald('browse', { Filters: encoded, EncodedFilters: encoded, ReturnFilters: false, ChannelKeyToBeUsedInResponse: key, ChannelId: '' }, country).catch(() => null);
+        return [key, (body?.productSummaries || []).map(item => mapSummary(item, country)).filter(Boolean).slice(0, 36)];
+      }));
+      const data = { status: entries.some(([, items]) => items.length) ? 'ready' : 'unavailable', ...Object.fromEntries(entries) };
+      if (data.status === 'ready') cacheStore(key, data);
+      return data;
+    });
   }
-  const normal = value => String(value || '').toLowerCase().replace(/\b(standard|edition|pc|windows|game of the year|goty|definitive)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
-  async function findXboxProduct(title) {
-    const key = `search:${xboxLocale()}:${normal(title)}`;
+  const normal = value => String(value || '').replace(/[™®©]/g, '').normalize('NFKC').toLowerCase().replace(/\b(standard|edition|pc|windows|game of the year|goty|definitive)\b/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  async function findXboxProduct(title, country = getCountry()) {
+    const key = `search:en-${country}:${normal(title)}`;
     const cached = storeCache.get(key);
     if (cached && Date.now() - cached.at < 6 * 60 * 60 * 1000) return cached.data;
-    const body = await emerald('search/games', { Query: String(title).slice(0, 120), Filters: 'e30=', ReturnFilters: false, ChannelKeyToBeUsedInResponse: 'S', ChannelId: '' }).catch(() => null);
-    const wanted = normal(title);
-    const match = (body?.productSummaries || []).map(mapSummary).filter(Boolean).find(item => normal(item.title) === wanted) || null;
-    storeCache.set(key, { at: Date.now(), data: match });
-    return match;
+    return sharedStoreRequest(key, async () => {
+      const body = await emerald('search/games', { Query: String(title).slice(0, 120), Filters: 'e30=', ReturnFilters: false, ChannelKeyToBeUsedInResponse: 'S', ChannelId: '' }, country).catch(() => null);
+      if (!body) return null; // A network failure is not a six-hour negative match.
+      const wanted = normal(title);
+      const match = (body?.productSummaries || []).map(item => mapSummary(item, country)).filter(Boolean).find(item => normal(item.title) === wanted) || null;
+      return cacheStore(key, match);
+    });
   }
   // Store search, as in the Xbox app: every PC game matching the words, with prices.
   async function searchXboxStore(query) {
     const text = String(query || '').trim().slice(0, 120);
     if (!text) return [];
-    const key = `find:${xboxLocale()}:${text.toLowerCase()}`;
+    const country = getCountry(), key = `find:en-${country}:${text.toLowerCase()}`;
     const cached = storeCache.get(key);
     if (cached && Date.now() - cached.at < 30 * 60 * 1000) return cached.data;
     return sharedStoreRequest(key, async () => {
-    // Games you can play on PC only, as the PC app's Store does.
-    const filters = Buffer.from(JSON.stringify({ PlayWith: { id: 'PlayWith', choices: [{ id: 'PC' }] } })).toString('base64');
-    const body = await emerald('search/games', { Query: text, Filters: filters, ReturnFilters: false, ChannelKeyToBeUsedInResponse: 'S', ChannelId: '' });
-    const data = (body?.productSummaries || []).map(mapSummary).filter(Boolean).slice(0, 30);
-    storeCache.set(key, { at: Date.now(), data });
-    while (storeCache.size > 256) storeCache.delete(storeCache.keys().next().value);
-    return data;
+      // Games you can play on PC only, as the PC app's Store does.
+      const filters = Buffer.from(JSON.stringify({ PlayWith: { id: 'PlayWith', choices: [{ id: 'PC' }] } })).toString('base64');
+      const body = await emerald('search/games', { Query: text, Filters: filters, ReturnFilters: false, ChannelKeyToBeUsedInResponse: 'S', ChannelId: '' }, country);
+      const data = (body?.productSummaries || []).map(item => mapSummary(item, country)).filter(Boolean).slice(0, 30);
+      return cacheStore(key, data);
     });
   }
   return {getGamePassCatalog,getXboxStore,findXboxProduct,searchXboxStore,browseFiles,readGamerpic,getCatalogDetails:async id=>{if(!PRODUCT_ID.test(id))throw Error('Invalid game');const country=getCountry();const game=(await getGamePassCatalog().catch(()=>[])).find(item=>item.xboxProductId===id);if(game)return game.details;const result=await request(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=${id}&market=${country}&languages=en-${country}`,{signal:AbortSignal.timeout(12000)});if(!result.ok)throw Error('Xbox Store details are unavailable');const product=(await result.json()).Products?.[0];if(!product)throw Error('Game is not in the Xbox Store');return mapProduct(product,country).details;}};

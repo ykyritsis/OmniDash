@@ -15,13 +15,11 @@ function gRememberXboxGame(game) {
   state.xboxStore = { ...(state.xboxStore || {}), gRemembered: [game, ...list.filter(item => item.id !== game.id)].slice(0, 60) };
   return game;
 }
-function gOwnedCopy(game) {
-  return state.games.find(item => (game.appId && item.provider === 'Steam' && String(item.appId) === String(game.appId))
-    || (game.xboxProductId && item.xboxProductId === game.xboxProductId) || normalizeConsoleTitle(item.title) === normalizeConsoleTitle(game.title));
-}
 // Hidden games stay out of every search, the Store's included.
 function gHiddenMatch(game) {
-  return (state.hiddenGames || []).some(item => (game.appId && String(item.appId) === String(game.appId)) || normalizeConsoleTitle(item.title) === normalizeConsoleTitle(game.title));
+  const title = libraryDuplicates.titleKey(game.title);
+  return (state.hiddenGames || []).some(item => (game.appId && game.provider === 'Steam' && item.provider === 'Steam' && String(item.appId) === String(game.appId))
+    || (game.xboxProductId && item.xboxProductId === game.xboxProductId) || (title && libraryDuplicates.titleKey(item.title) === title));
 }
 
 // ---------- Store search ----------
@@ -44,11 +42,12 @@ function gStoreSearchField() {
 }
 async function gRunStoreSearch(value, focusResults = false) {
   const query = String(value || '').trim();
+  if (query !== gStoreSearch.query) gStoreSearch.results = null;
   gStoreSearch.query = query;
   const request = ++gStoreSearch.request;
-  if (query.length < 2) { gStoreSearch.results = null; gStoreSearch.loading = false; renderConsoleStore(); return; }
+  if (query.length < 2) { gStoreSearch.results = null; gStoreSearch.loading = false; if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore(); return; }
   gStoreSearch.loading = true;
-  renderConsoleStore();
+  if (state.view === 'store' && state.consoleStoreMode !== 'gamepass') renderConsoleStore();
   let results;
   try { results = await window.launcher.searchStore(query); }
   catch (error) { results = { xbox: [], steam: [], error: error.message || 'The Store couldn’t search right now.' }; }
@@ -57,7 +56,7 @@ async function gRunStoreSearch(value, focusResults = false) {
   gStoreSearch.results = { xbox: (results.xbox || []).filter(game => !gHiddenMatch(game)), steam: (results.steam || []).filter(game => !gHiddenMatch(game)), error: results.error || '' };
   state.xboxStore = { ...(state.xboxStore || {}), gSearch: gStoreSearch.results.xbox };
   for (const game of gStoreSearch.results.steam) gRememberSteamGame(game);
-  if (state.view !== 'store') return;
+  if (state.view !== 'store' || state.consoleStoreMode === 'gamepass') return;
   renderConsoleStore();
   if (focusResults) setFocusedElement(document.querySelector('#console-store-grid .g-store-card') || document.querySelector('#g-store-query'), { scroll: true });
 }
@@ -90,36 +89,33 @@ function resetRegionViews() {
   if (gStoreSearch.query.length >= 2) gRunStoreSearch(gStoreSearch.query);
   loadXboxStore(true);
 }
-function gStoreResultCard(game, kind) {
-  const owned = gOwnedCopy(game);
+function gStoreResultCard(game, kind, ownership) {
+  const owned = gOwnedCopy(game, ownership);
   const caption = owned ? 'Owned' : gPrice(game.price) || 'View details';
   return `<button class="g-store-card focusable" type="button" data-action="g-store-result" data-kind="${kind}" data-game-id="${escapeHtml(game.id)}" aria-label="${escapeHtml(game.title)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(caption)}${kind === 'steam' && !owned ? ' · Steam' : ''}</small></span></button>`;
 }
 const gSearchRenderStore = renderNativeStore;
 renderNativeStore = function (grid) {
-  gSearchRenderStore(grid);
+  gSearchRenderStore(grid, { searching: gStoreSearch.query.length >= 2 });
   gStoreSearchField();
   const clear = document.querySelector('.g-store-search-clear');
   if (clear) clear.hidden = !gStoreSearch.query;
   document.querySelector('#store-view').classList.toggle('g-store-searching', Boolean(gStoreSearch.query.length >= 2));
   if (gStoreSearch.query.length < 2) return;
   const count = document.querySelector('#g-store-count');
-  const focused = document.activeElement?.closest?.('.g-store-card')?.dataset.gameId;
   if (gStoreSearch.loading && !gStoreSearch.results) {
     if (count) count.textContent = '';
-    grid.innerHTML = `<div class="g-score-loading"><span class="g-spinner"></span>Searching the Store…</div>`;
-    refreshFocusables();
+    gRenderStoreGrid(grid, `<div class="g-score-loading" role="status"><span class="g-spinner"></span>Searching the Store…</div>`);
     return;
   }
   const { xbox = [], steam = [], error = '' } = gStoreSearch.results || {};
   const total = xbox.length + steam.length;
   if (count) count.textContent = `${total} result${total === 1 ? '' : 's'} for “${gStoreSearch.query}”`;
-  grid.innerHTML = total
-    ? (xbox.length ? `<h2 class="g-store-results-head">Xbox Store</h2>${xbox.map(game => gStoreResultCard(game, 'xbox')).join('')}` : '')
-      + (steam.length ? `<h2 class="g-store-results-head">More on Steam</h2>${steam.map(game => gStoreResultCard(game, 'steam')).join('')}` : '')
-    : `<div class="g-empty">${gIcon('search')}<h2>${error ? 'The Store couldn’t search right now' : `No results for “${escapeHtml(gStoreSearch.query)}”`}</h2><p>${escapeHtml(error || 'Check the spelling, or try a shorter name.')}</p></div>`;
-  refreshFocusables();
-  if (focused) setFocusedElement(grid.querySelector(`[data-game-id="${CSS.escape(focused)}"]`), { scroll: false });
+  const ownership = gStoreOwnership();
+  gRenderStoreGrid(grid, total
+    ? (xbox.length ? `<h2 class="g-store-results-head">Xbox Store</h2>${xbox.map(game => gStoreResultCard(game, 'xbox', ownership)).join('')}` : '')
+      + (steam.length ? `<h2 class="g-store-results-head">More on Steam</h2>${steam.map(game => gStoreResultCard(game, 'steam', ownership)).join('')}` : '')
+    : `<div class="g-empty">${gIcon('search')}<h2>${error ? 'The Store couldn’t search right now' : `No results for “${escapeHtml(gStoreSearch.query)}”`}</h2><p>${escapeHtml(error || 'Check the spelling, or try a shorter name.')}</p></div>`);
 };
 
 // ---------- Pages for games you don't own ----------
@@ -141,7 +137,7 @@ renderDetailInputMethods = function (game, details = {}) {
   if (game?.discoveryOnly && !game.xboxProductId && game.appId && game.price !== undefined) {
     const button = document.querySelector('#detail-play');
     const price = game.price;
-    if (button) button.innerHTML = `<strong>${!price ? 'View on Steam' : !price.list ? 'Get on Steam' : `Buy ${escapeHtml(gPrice({ ...price, discount: 0 }))}`}</strong>`;
+    if (button) button.innerHTML = `<strong>${!gPrice(price) ? 'View on Steam' : price.list === 0 ? 'Get on Steam' : `Buy ${escapeHtml(gPrice({ ...price, discount: 0 }))}`}</strong>`;
   }
   return result;
 };
@@ -174,9 +170,7 @@ performAction = async function (action, source) {
 
 // Game Pass tiles carry the same title block as library tiles, with "Owned" for games you have.
 // Owned titles are looked up once per library, not once per tile.
-let gOwnedIndex = { games: null, titles: new Set(), products: new Set() };
-function gCatalogCardText(game) {
-  if (gOwnedIndex.games !== state.games) gOwnedIndex = { games: state.games, titles: new Set(state.games.map(item => normalizeConsoleTitle(item.title))), products: new Set(state.games.map(item => item.xboxProductId).filter(Boolean)) };
-  const owned = gOwnedIndex.products.has(game.xboxProductId) || gOwnedIndex.titles.has(normalizeConsoleTitle(game.title));
+function gCatalogCardText(game, ownership) {
+  const owned = gOwnedCopy(game, ownership);
   return `<span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small class="g-status">${owned ? 'Owned' : 'Game Pass'}</small></span>`;
 }

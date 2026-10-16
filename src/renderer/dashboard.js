@@ -110,9 +110,14 @@ function renderConsoleStore() {
   document.querySelector('#store-view').classList.toggle('native-store',!gamepass);
   if(document.querySelector('#store-rail'))document.querySelector('#store-rail').hidden=gamepass;
   if(!gamepass) { renderNativeStore(grid); return; }
+  const toolbar = document.querySelector('#store-view .g-store-toolbar');
+  if (toolbar) toolbar.hidden = true;
+  document.querySelector('#store-view').classList.remove('g-store-searching');
+  delete grid.gStoreMarkup;
   grid.className='library-grid';
   const games = state.gamePassCatalog || [];
-  const caption = typeof gCatalogCardText === 'function' ? gCatalogCardText : game => `<span class="console-game-label">${escapeHtml(game.title)}</span>`;
+  const ownership = typeof gStoreOwnership === 'function' ? gStoreOwnership() : null;
+  const caption = typeof gCatalogCardText === 'function' ? game => gCatalogCardText(game, ownership) : game => `<span class="console-game-label">${escapeHtml(game.title)}</span>`;
   grid.innerHTML = games.length ? games.map(game => `<button class="game-card focusable console-catalog-card" data-action="gamepass-game" data-catalog-id="${escapeHtml(game.id)}" role="listitem" aria-label="${escapeHtml(game.title)}">${gameArt(game)}${caption(game)}</button>`).join('') : '<p class="console-store-empty">'+(state.gamePassError ? 'Game Pass is unavailable right now. Try again later.' : 'Getting games ready…')+'</p>';
   refreshFocusables();
 }
@@ -225,7 +230,7 @@ async function consoleAction(action, source) {
   if (action === 'gamepass-game') {
     const game = state.gamePassCatalog?.find(item=>item.id===source.dataset.catalogId);
     if (!game) return true;
-    const owned = state.games.find(item=>item.xboxProductId===game.xboxProductId || normalizeConsoleTitle(item.title)===normalizeConsoleTitle(game.title));
+    const owned = gOwnedCopy(game);
     if (owned) openGameDetails(owned.id);
     else { state.catalogDetailGame=game; await openGameDetails(game.id); }
     return true;
