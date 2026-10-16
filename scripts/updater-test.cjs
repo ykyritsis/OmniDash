@@ -26,6 +26,11 @@ const releases = [
 ];
 assert.equal(pickRelease(releases, { portable: true }).url, 'https://h/portable');
 assert.equal(pickRelease(releases, { portable: false }).url, 'https://h/setup');
+assert.equal(pickRelease(releases, { portable: false, currentVersion: '0.4.0' }), null, 'The new version series must not roll back to legacy betas');
+const modernRelease = { tag_name:'v0.5.0',assets:[{name:'Xbox-Preview-UI-Setup-0.5.0.exe',browser_download_url:'https://h/new'},{name:'SHA256SUMS.txt',browser_download_url:'https://h/new-sums'}] };
+assert.equal(pickRelease([...releases, modernRelease], { portable:false,currentVersion:'0.4.0' }).version,'0.5.0');
+assert(compareVersions('0.5.0','0.4.0')>0);
+assert(compareVersions('0.4.1','0.4.0')>0);
 assert.equal(pickRelease([{ tag_name: 'v1.0.0', assets: [{ name: 'Xbox-Preview-UI-Setup-1.0.0.exe', browser_download_url: 'a' }] }], { portable: false }), null, 'no checksums means no update');
 
 // sha256sum output, with and without the binary marker.

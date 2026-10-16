@@ -42,11 +42,16 @@ function compareVersions(a, b) {
 }
 
 // The newest published release that has the build this copy needs (installer or portable), with its checksums.
-function pickRelease(releases, { portable }) {
+function pickRelease(releases, { portable, currentVersion }) {
+  // The public version was reset from 0.27.0-beta.N to 0.4.0. Keep SemVer
+  // comparison standard, but never offer that retired beta line to a new build.
+  // Old installed updaters require a one-time manual installation of 0.4.0.
+  const legacyBeta = version => /^v?0\.27\.0-beta\.\d+$/.test(String(version));
   for (const release of releases || []) {
     if (release.draft) continue;
     const version = String(release.tag_name || '').replace(/^v/i, '');
     if (!parseVersion(version)) continue;
+    if (currentVersion && !legacyBeta(currentVersion) && legacyBeta(version)) continue;
     const assets = release.assets || [];
     const build = assets.find(asset => asset.name === (portable ? `Xbox-Preview-UI-Portable-${version}.exe` : `Xbox-Preview-UI-Setup-${version}.exe`));
     const sums = assets.find(asset => asset.name === 'SHA256SUMS.txt');
@@ -159,7 +164,7 @@ function createUpdater({ app, getWindow, isGameRunning, log = () => {}, currentV
     publish({ state: 'checking', error: '' });
     try {
       const releases = JSON.parse(await requestText(`https://api.github.com/repos/${REPO}/releases?per_page=6`));
-      const found = pickRelease(releases, { portable });
+      const found = pickRelease(releases, { portable, currentVersion });
       const newer = found && compareVersions(found.version, currentVersion) > 0;
       if (!newer) { publish({ state: 'current', version: currentVersion, checkedAt: Date.now() }); return snapshot(); }
       await fsp.mkdir(workDir, { recursive: true });

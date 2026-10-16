@@ -1015,7 +1015,7 @@ async function fetchGameDetailsFresh(game, country = steamCountry()) {
     {
       const steamVideos = (item.movies || []).map(movie => ({
         title: String(movie.name || 'Trailer'),
-        preview: String(movie.thumbnail || '').replace(/movie\.293x165\.jpg/, 'movie.600x338.jpg'),
+        preview: String(movie.thumbnail || ''),
         stream: String(movie.hls_h264 || '')
       })).filter(video => /^https:\/\/video\.(akamai|fastly|cloudflare)\.steamstatic\.com\/[^\s"]+\.m3u8(\?|$)/.test(video.stream) && /^https:\/\/[^/]*steamstatic\.com\//.test(video.preview));
       details.videos = uniqueVideos([...(details.videos || []), ...steamVideos], { playableOnly: true }).slice(0, 6);

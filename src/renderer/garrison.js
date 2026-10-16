@@ -65,6 +65,11 @@ state.gLayout = gPrefs.layout === 'list' ? 'list' : 'grid';
   toolbar.append(filter, sortWrap, spacer, document.querySelector('#library-count'), view);
   document.querySelector('.library-heading-row').after(toolbar);
   document.querySelector('.console-library-content').prepend(document.querySelector('.g-library-tabs-row'), document.querySelector('#g-source-chips'));
+  const tabs = document.querySelector('.console-library-nav');
+  const tabsFrame = document.createElement('div');
+  tabsFrame.className = 'g-library-nav-frame';
+  tabs.before(tabsFrame);
+  tabsFrame.append(tabs);
   document.querySelector('.g-round-add').innerHTML = gIcon('add');
 })();
 
@@ -1355,7 +1360,7 @@ function renderGarrisonTrailers(game, details) {
   if (!gallery.querySelector('img')) gallery.innerHTML = '';
   // Some older Steam trailers have no preview image; those show the game's first screenshot instead.
   const still = galleryThumb((details.screenshots || [])[0] || game.artwork?.wide || game.artwork?.hero || '');
-  gallery.insertAdjacentHTML('afterbegin', videos.slice(0, 6).map((video, index) => `<button class="g-trailer focusable" type="button" role="listitem" data-action="g-trailer" data-index="${index}" data-product-id="${escapeHtml(productId)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.preview || still)}" alt="" ${index < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${still ? ` data-fallback="${escapeHtml(still)}"` : ''} /><span class="g-trailer-play">${gIcon('play')}</span></button>`).join(''));
+  gallery.insertAdjacentHTML('afterbegin', videos.slice(0, 6).map((video, index) => `<button class="g-trailer focusable" type="button" role="listitem" data-action="g-trailer" data-index="${index}" data-product-id="${escapeHtml(productId)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.preview || still)}" alt="" ${index < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${still ? ` data-fallback="${escapeHtml(still)}"` : ''} /><span class="g-trailer-play">${gIcon('play')}</span><span class="g-trailer-caption">${escapeHtml(launcherMedia.trailerCaption(video.title, details.title || game.title))}</span></button>`).join(''));
   refreshFocusables();
 }
 

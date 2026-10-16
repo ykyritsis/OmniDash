@@ -41,6 +41,26 @@ body.garrison :is(.g-add-list, .g-filter-groups, .g-onboard-services) {
   scroll-padding-block: var(--g-focus-space);
 }
 body.garrison .focusable { scroll-margin-block: var(--g-focus-space); }
+/* The pill paints separately from its scrolling viewport, leaving the full
+   halo inside the viewport instead of cropping it into a rectangle. */
+body.garrison .g-library-nav-frame {
+  flex: 1;
+  min-width: 0;
+  height: calc(5 * var(--p));
+  border-radius: 999px;
+  background: var(--g-surface);
+}
+body.garrison .g-library-nav-frame .console-library-nav {
+  box-sizing: border-box;
+  width: calc(100% + 2 * var(--g-focus-space));
+  height: calc(100% + 2 * var(--g-focus-space));
+  margin: calc(-1 * var(--g-focus-space));
+  padding: var(--g-focus-space) calc(var(--g-focus-space) + clamp(6px, calc(.55 * var(--g-vp) / 100), 10px));
+  scroll-padding-inline: calc(var(--g-focus-space) + 10px);
+  border-radius: 0;
+  background: none;
+}
+body.garrison .g-source-chips:focus-within { mask-image: none; -webkit-mask-image: none; }
 body.garrison .g-flyout { padding: 20px; }
 body.garrison .g-detail-rating .g-link { justify-self: start; border-radius: 4px; }
 

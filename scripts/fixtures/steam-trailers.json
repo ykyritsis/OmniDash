@@ -1,0 +1,76 @@
+[
+  {
+    "appId": "209160",
+    "title": "Call of Duty®: Ghosts",
+    "source": "https://store.steampowered.com/api/appdetails?appids=209160&l=english&cc=AU",
+    "videos": [
+      {
+        "title": "Call of Duty®: Ghosts \"Epic Night Out\" Live-Action Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2030019/movie.293x165.jpg?t=1447359449",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/15053/bc56b1145806b2b43ef481652e99a22e1731e03e/1750493412/hls_264_master.m3u8?t=1447359449"
+      },
+      {
+        "title": "Call of Duty®: Ghosts Extinction Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2029955/movie.293x165.jpg?t=1447359325",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/14814/91df2997418b67754342132c16f50f88672a205b/1750493398/hls_264_master.m3u8?t=1447359325"
+      },
+      {
+        "title": "Call of Duty®: Ghosts Gameplay Launch Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2029908/movie.293x165.jpg?t=1447359288",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/14729/e6aa62558318861f6a7aeb14415d95604bc02a9b/1750493395/hls_264_master.m3u8?t=1447359288"
+      },
+      {
+        "title": "Call of Duty®: Ghosts COD Time Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2029794/movie.293x165.jpg?t=1447359231",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/14544/eac30e8428e4b69ed548dad4f78a81833104fc29/1750493387/hls_264_master.m3u8?t=1447359231"
+      },
+      {
+        "title": "Call of Duty®: Ghosts Clans Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2029788/movie.293x165.jpg?t=1447359230",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/14538/ec90e78f7a1065dfbd3c4c453bb069cd506d9786/1750493387/hls_264_master.m3u8?t=1447359230"
+      },
+      {
+        "title": "Call of Duty®: Ghosts Squads Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2029623/movie.293x165.jpg?t=1447359089",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/209160/14176/e5002a0e10b70bdcc6951b7c3fd459aad936aad3/1750493383/hls_264_master.m3u8?t=1447359089"
+      }
+    ]
+  },
+  {
+    "appId": "292730",
+    "title": "Call of Duty®: Infinite Warfare",
+    "source": "https://store.steampowered.com/api/appdetails?appids=292730&l=english&cc=AU",
+    "videos": [
+      {
+        "title": "Call of Duty®: Infinite Warfare - 2/28 Quartermaster Update",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256680527/movie.293x165.jpg?t=1488342320",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/92347/21c2660dea5dff38feb8be2fdd23a913c8ab04fe/1750502852/hls_264_master.m3u8?t=1488342320"
+      },
+      {
+        "title": "Official Call of Duty®: Infinite Warfare - Reverb Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256674661/movie.293x165.jpg?t=1479248799",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/80415/dc5a9987b4fca2353662671ea590ef8321fb34f9/1750502816/hls_264_master.m3u8?t=1479248799"
+      },
+      {
+        "title": "Official Call of Duty®: Infinite Warfare - Story Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256670983/movie.293x165.jpg?t=1474337904",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/73169/bc479d35d6223857d87b527395fe96d08fe43c08/1750502716/hls_264_master.m3u8?t=1474337904"
+      },
+      {
+        "title": "Official Call of Duty®: Infinite Warfare - Terminal Bonus Map Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256672835/movie.293x165.jpg?t=1476924640",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/76959/e335d969f2298ceabb21fde418f1d7c0e0781260/1750502765/hls_264_master.m3u8?t=1476924640"
+      },
+      {
+        "title": "Call of Duty®: Modern Warfare® Remastered - Launch Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256671712/movie.293x165.jpg?t=1475177074",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/74729/edbf86644c867e71d7a8ff63f38ce693674eda05/1750502747/hls_264_master.m3u8?t=1475177074"
+      },
+      {
+        "title": "Official Call of Duty®: Infinite Warfare - Multiplayer Reveal Trailer",
+        "preview": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/256670071/movie.293x165.jpg?t=1472853665",
+        "stream": "https://video.akamai.steamstatic.com/store_trailers/292730/71362/bd491cb6338fb1d337305c538fb71c70dd9f6c88/1750502669/hls_264_master.m3u8?t=1472853665"
+      }
+    ]
+  }
+]

@@ -117,6 +117,7 @@ body.garrison .g-sale-pill { border-color: #f5c400; background: rgba(90, 72, 0, 
 /* Trailers lead the gallery, with the Xbox play badge. */
 body.garrison .g-trailer { position: relative; flex: 0 0 calc(395 * var(--u)); aspect-ratio: 16 / 9; padding: 0; overflow: hidden; border: 0; border-radius: calc(10 * var(--u)); background: #111; cursor: pointer; }
 body.garrison .g-trailer img { width: 100%; height: 100%; object-fit: cover; }
+body.garrison .g-trailer-caption { position: absolute; inset: auto 0 0; padding: 22px 10px 8px; background: linear-gradient(transparent, rgba(0, 0, 0, .9)); color: #fff; font: 600 clamp(12px, calc(1 * var(--g-vp) / 100), 19px)/1.2 var(--g-font); text-align: left; pointer-events: none; }
 body.garrison .g-trailer-play { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: calc(64 * var(--u)); height: calc(64 * var(--u)); margin: calc(-32 * var(--u)) 0 0 calc(-32 * var(--u)); border-radius: 50%; background: rgba(20, 20, 20, .72); color: #fff; }
 body.garrison .g-trailer-play svg.g-glyph { font-size: calc(30 * var(--u)); margin-left: calc(4 * var(--u)); }
 
