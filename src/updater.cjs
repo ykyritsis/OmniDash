@@ -107,8 +107,11 @@ function downloadTo(url, file, { onProgress, redirects = 5 } = {}) {
       });
       response.pipe(out);
       out.on('finish', () => out.close(() => resolve(file)));
-      out.on('error', reject);
-      response.on('error', reject);
+      // A mid-download failure used to leave the partial write stream open (and the .partial file
+      // behind), because only the response was rejected.
+      const fail = error => { out.destroy(); response.destroy(); fs.rm(file, { force: true }, () => {}); reject(error); };
+      out.on('error', fail);
+      response.on('error', fail);
     });
     request.setTimeout(30000, () => request.destroy(new Error('The download stalled')));
     request.on('error', reject);

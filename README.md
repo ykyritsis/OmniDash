@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download 0.5.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.5.0/Xbox-Preview-UI-Setup-0.5.0.exe)** · [Setup](#getting-started) · [0.5.0 notes](docs/release-0.5.0.md)
+**[Download 0.5.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.5.0/Xbox-Preview-UI-Setup-0.5.0.exe)** · [Setup](#getting-started) · [0.5.1 notes](docs/release-0.5.1.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -30,6 +30,18 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 [Desktop mockup](docs/promo/beta25-v2/promo-desktop.jpg) · [Full screenshot](docs/promo/beta25-v2/screenshot-home.png)
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
+
+## 0.5.1
+
+An audit pass over the whole launcher. Highlights:
+
+- The launcher window can no longer be navigated away from the bundled page while it still holds the privileged bridge, privileged actions now verify which window asked for them, and clearing a Steam key no longer leaves a copy in the settings backup.
+- A full-screen blur that ran under the 14-second launch animation is gone, the gallery thumbnail strip uses small screenshots instead of full-size ones, typing in search is debounced, and held arrow keys share the gamepad repeat ceiling.
+- **Tile corners** and **Text size** now change what they name; previously a later stylesheet silently overrode both. **Filter → Show hidden games** works from the default Library path.
+- Queue focus survives an automatic refresh, a failed Steam download-controls switch reports the error instead of waiting silently, and failed actions no longer look like dead buttons.
+- `npm test` runs the whole suite, `npm run audit:static` checks the renderer/main boundary, and `npm run profile:startup` measures start-up.
+
+[Full release notes](docs/release-0.5.1.md)
 
 ## 0.5.0
 
@@ -63,11 +75,11 @@ Device images are illustrative mockups based on app captures, not photographs of
 - Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
 - Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.5.0.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.5.1.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[0.5.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.5.0)**. Download the Setup executable for your handheld or desktop.
+Get **[0.5.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.5.0)**. Download the Setup executable for your handheld or desktop. The `main` branch is now on **0.5.1**; its build is produced with `npm run dist` until a 0.5.1 release is published.
 
 | File | Choose this for |
 | --- | --- |
@@ -81,7 +93,7 @@ Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Ch
 
 1. Install or unpack your downloaded build, then choose a profile.
 2. Connect your libraries. Installed games are discovered from local launchers and manifests.
-3. Optionally add a **SteamGridDB key** in **Settings → Manage games → Artwork** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
+3. Optionally add a **SteamGridDB key** in **Settings → Library → Artwork services** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
 4. Enable **Steam download controls** from the Queue to pause and resume Steam downloads. The connection stays on this PC (`127.0.0.1`).
 
 Installed Steam games, recorded local playtime and Steam's hidden-game list need no API key. A Steam Web API key enables additional account data, including uninstalled games, personal achievement progress and verified friend presence, subject to your Steam privacy settings.
@@ -93,7 +105,7 @@ Installed Steam games, recorded local playtime and Steam's hidden-game list need
 
 - Jump back in, Recently added, favourites, custom collections, controller-friendly games and multiplayer shelves.
 - Steam friend activity shows verified friends who are currently in a game.
-- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and grid/list layouts.
+- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and layouts.
 - Launcher discovery for Steam, Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon where installed locally.
 - Artwork-led game pages with descriptions, screenshots, trailers where available, input support and achievements.
 - Manage artwork, files, shortcuts, collections, favourites, hiding and uninstalling from game options.
@@ -142,13 +154,15 @@ Installed Steam games, recorded local playtime and Steam's hidden-game list need
 
 ## Run or build from source
 
-Install Node.js 20 or newer, then:
+Install Node.js 22.5 or newer (the test suite uses `node:sqlite`), then:
 
 ```powershell
 npm install
 npm run prepare:streaming
 npm start
 ```
+
+Run the test suites with `npm test`, or `npm run test:unit` for the suites that need no Electron runtime.
 
 Create Windows builds:
 

@@ -209,31 +209,48 @@ async function gPollDownloads() {
 }
 function gRefreshQueue(focusSelector = '') {
   const focused = document.activeElement;
+  // Containment has to be read before the rows are replaced: afterwards the old node is detached and
+  // this test can only ever be false, which used to leave focus pointing at a removed button.
+  const inside = Boolean(focused && libraryGrid.contains(focused));
   const key = focusSelector || (focused?.dataset?.appId ? `[data-action="${focused.dataset.action}"][data-app-id="${CSS.escape(focused.dataset.appId)}"]` : focused?.dataset?.gameId ? `.g-queue-main[data-game-id="${CSS.escape(focused.dataset.gameId)}"]` : focused?.dataset?.action === 'g-queue-all' ? '[data-action="g-queue-all"]' : '');
   renderGarrisonQueue();
   refreshFocusables();
-  if (key && libraryGrid.contains(focused) || focusSelector) setFocusedElement(libraryGrid.querySelector(key), { scroll: false });
+  if (key && (inside || focusSelector)) {
+    const next = libraryGrid.querySelector(key);
+    if (next) setFocusedElement(next, { scroll: false });
+  }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) gPollDownloads(); });
-// Pause and resume use Steam's own download controls. They're turned on once, with the player's OK.
+// Controls are checked once and remembered, so each press goes straight to Steam.
+let gDownloadControlsLive = 0;
+let gEnablingDownloadControls = false;
 async function gEnsureDownloadControls() {
+  // A second press while Steam is restarting used to start a second 45-second wait.
+  if (gEnablingDownloadControls) { showToast('Still turning on download controls…'); return false; }
   const status = await window.launcher.getSteamDownloadControls().catch(() => ({}));
   if (status.live) return true;
   if (status.enabled) { showToast('Steam is starting. Try again in a moment.'); return false; }
   const choice = await gChoice('Pause and resume here', 'To pause and resume Steam downloads from here, Steam needs its download controls turned on. Steam restarts quietly in the background to apply it.<br><br>The controls only accept connections from this PC, but while they\'re on, other apps on this PC could also control Steam. You can turn them off in Settings › Manage games.', [['on', 'Turn on', true], ['', 'Not now']]);
   if (choice !== 'on') return false;
   if (state.activeGameSession) { showToast('Close your game first. Steam has to restart to turn this on.'); return false; }
-  showToast('Turning on download controls…');
-  await window.launcher.setSteamDownloadControls(true);
-  for (let attempt = 0; attempt < 30; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if ((await window.launcher.getSteamDownloadControls().catch(() => ({}))).live) { showToast('Download controls are on'); return true; }
+  // Failures here used to reject into the click dispatcher, leaving the toast up for 45 s with no error.
+  gEnablingDownloadControls = true;
+  try {
+    showToast('Turning on download controls…');
+    await window.launcher.setSteamDownloadControls(true);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      if ((await window.launcher.getSteamDownloadControls().catch(() => ({}))).live) { showToast('Download controls are on'); return true; }
+    }
+    showToast('Steam is still starting. Try again in a moment.');
+    return false;
+  } catch (error) {
+    showToast(error?.message || 'Steam could not be turned on.');
+    return false;
+  } finally {
+    gEnablingDownloadControls = false;
   }
-  showToast('Steam is still starting. Try again in a moment.');
-  return false;
 }
-// Controls are checked once and remembered, so each press goes straight to Steam.
-let gDownloadControlsLive = 0;
 async function gQueueAction(appId, action) {
   if (Date.now() - gDownloadControlsLive > 60000) {
     if (!await gEnsureDownloadControls()) return;
@@ -375,7 +392,10 @@ applyLibraryResult = function (result, ...rest) {
 
 const gRenderLibraryView = renderLibraryView;
 renderLibraryView = function () {
-  const tab = state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
+  // The hidden-games view is its own grid, so it takes precedence over the Installed tab. Without
+  // this the top-bar Library button (which selects Installed) kept tab at 'installed' and the
+  // filter's "Show hidden games" switch appeared to do nothing.
+  const tab = state.gHiddenView ? 'games' : state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
     : state.installFilter === 'installed' && !state.consoleLibraryGroups && state.libraryCategory !== 'apps' ? 'installed' : 'games';
   libraryView.dataset.gTab = tab;
   gRenderLibraryView();
@@ -1107,7 +1127,9 @@ async function garrisonAction(action, source) {
   }
   if (action === 'g-source') {
     const value = source.dataset.source;
-    state.gHiddenView = value === 'hidden';
+    // No chip ever carries data-source="hidden" (the switch is 'hide'/'show' in the filter sheet),
+    // so this must not claim to enable the hidden view.
+    state.gHiddenView = false;
     state.consoleLibraryGroups = value === 'groups';
     state.libraryCategory = value === 'apps' ? 'apps' : 'games';
     state.collectionFilter = value === 'favorites' ? 'favorites' : 'all';

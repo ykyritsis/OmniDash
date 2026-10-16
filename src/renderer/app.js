@@ -4,6 +4,9 @@ const state = {
   customCollections: [],
   activeGameSession: null,
   selectedGameId: null,
+  // The card currently carrying the .selected highlight, so focus changes patch two nodes
+  // instead of re-querying every .game-card in the document.
+  selectedCard: null,
   focusIndex: 0,
   focusables: [],
   previousButtons: [],
@@ -1127,12 +1130,19 @@ function selectGame(id, moveFocus = true, selectedElement = null, refreshNews = 
   }
   if (changed) updateAmbient(game);
   const finishTileMotion = beginDashboardTileMotion(selectedElement);
-  document.querySelectorAll('.game-card.selected').forEach((element) => element.classList.remove('selected'));
-  if (selectedElement?.classList.contains('game-card')) selectedElement.classList.add('selected');
+  // Only the card that loses the highlight and the one that gains it need touching. This used to be
+  // a whole-document query on every focus change, i.e. on every held direction repeat.
+  const previousCard = state.selectedCard;
+  if (previousCard && previousCard !== selectedElement && previousCard.isConnected) previousCard.classList.remove('selected');
+  if (selectedElement?.classList.contains('game-card')) { selectedElement.classList.add('selected'); state.selectedCard = selectedElement; }
+  else if (previousCard && !previousCard.isConnected) state.selectedCard = null;
   finishTileMotion();
   if (refreshNews && state.view === 'detail' && (changed || (!state.newsCache.has(id) && state.newsPendingGameId !== id))) renderSelectedGameNews(game);
   if (moveFocus) {
-    const matchingCard = [...document.querySelectorAll('.game-card[data-game-id]')].find((element) => element.dataset.gameId === id);
+    // Cards for a game can appear in several shelves at once, so the document is only searched when
+    // the selected game actually changes and the known card is gone or belongs to another game.
+    let matchingCard = state.selectedCard && state.selectedCard.dataset.gameId === id && state.selectedCard.isConnected ? state.selectedCard : null;
+    if (!matchingCard) matchingCard = [...document.querySelectorAll('.game-card[data-game-id]')].find((element) => element.dataset.gameId === id);
     if (matchingCard) setFocusedElement(matchingCard);
   }
   updateControllerPrompts();
@@ -1653,7 +1663,10 @@ function showGalleryImage(index) {
 }
 
 function renderGalleryThumbnails() {
-  galleryThumbnails.innerHTML = state.galleryImages.map((image, index) => `<button class="gallery-thumbnail${index === state.galleryIndex ? ' active' : ''} focusable" type="button" data-action="gallery-select" data-gallery-index="${index}" aria-label="Show screenshot ${index + 1}"${index === state.galleryIndex ? ' aria-current="true"' : ''}><img src="${escapeHtml(image)}" alt="" loading="lazy" /></button>`).join('');
+  // galleryThumb swaps Steam's 1920x1080 screenshots for the 600x338 variant. Without it the strip
+  // downloaded and decoded a full-size JPEG per tile, which is hundreds of MB of bitmaps for a row
+  // of thumbnails on a handheld.
+  galleryThumbnails.innerHTML = state.galleryImages.map((image, index) => `<button class="gallery-thumbnail${index === state.galleryIndex ? ' active' : ''} focusable" type="button" data-action="gallery-select" data-gallery-index="${index}" aria-label="Show screenshot ${index + 1}"${index === state.galleryIndex ? ' aria-current="true"' : ''}><img src="${escapeHtml(galleryThumb(image))}" alt="" loading="lazy" decoding="async" /></button>`).join('');
 }
 
 function promoteRecentlyLaunchedGame(game) {
@@ -2674,7 +2687,9 @@ async function performAction(action, source) {
 document.addEventListener('click', (event) => {
   if (!launchOverlay.hidden) return;
   const target = event.target.closest('[data-action]');
-  if (target) performAction(target.dataset.action, target);
+  // performAction is async and some branches await IPC without their own try/catch. Without this a
+  // failed call was an unhandled rejection with no toast, so the button just looked dead.
+  if (target) performAction(target.dataset.action, target).catch(error => showToast(error?.message || 'That action failed.'));
 });
 
 document.addEventListener('contextmenu', (event) => {
@@ -2687,6 +2702,10 @@ document.addEventListener('contextmenu', (event) => {
 document.addEventListener('focusin', (event) => {
   if (event.target.classList.contains('focusable') && state.focusedElement !== event.target) setFocusedElement(event.target);
 });
+
+// Ceiling for held arrow-key movement, matching the tightest gamepad repeat interval.
+const KEYBOARD_MOVE_INTERVAL = 65;
+let lastKeyboardMove = 0;
 
 document.addEventListener('keydown', (event) => {
   if (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen()) { event.preventDefault(); if (event.key === 'Escape' || event.key === 'Backspace') cancelLaunchWait(); return; }
@@ -2710,7 +2729,13 @@ document.addEventListener('keydown', (event) => {
     showGalleryImage(state.galleryIndex + (event.key === 'ArrowRight' ? 1 : -1));
     return;
   }
-  if (directions[event.key] && !isTextInput) { event.preventDefault(); moveFocus(directions[event.key]); }
+  if (directions[event.key] && !isTextInput) {
+    event.preventDefault();
+    // Holding an arrow key repeats at roughly 30/s, and one step measures every focusable in the
+    // page. Key repeat is device-generated, so it needs the same ceiling the gamepad path uses.
+    const now = performance.now();
+    if (now - lastKeyboardMove >= KEYBOARD_MOVE_INTERVAL) { lastKeyboardMove = now; moveFocus(directions[event.key]); }
+  }
   if (event.key === 'Enter' && event.target === artworkQuery) { event.preventDefault(); runArtworkSearch(); }
   if (event.key === 'Enter' && event.target === librarySearch) {
     event.preventDefault();
@@ -2929,7 +2954,7 @@ for (const dialog of document.querySelectorAll('dialog')) {
 }
 
 librarySearch.addEventListener('input', () => {
-  renderConsoleSearch();
+  scheduleConsoleSearch();
 });
 document.querySelector('#library-collection').addEventListener('change', event => {
   state.collectionFilter = event.target.value; renderLibraryView(); refreshFocusables();

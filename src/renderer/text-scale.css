@@ -1,0 +1,24 @@
+/* Text size corrections.
+   console.css declares the --text-scale rules, but dashboard.css is loaded after it in index.html
+   (console.css line 9, dashboard.css line 10) and re-states font-size for the same selectors, so the
+   Settings "Text size" slider had no effect on headings, the library count, option buttons or game
+   descriptions. The rules here repeat only what a later sheet overrides, with the realised size
+   wrapped in calc(<px> * var(--text-scale)) so 100% keeps the existing appearance. */
+
+:root { --text-scale: 1; }
+
+.section-heading h2 { font-size: calc(clamp(23px, 2vw, 36px) * var(--text-scale)); }
+.section-heading > span { font-size: calc(14px * var(--text-scale)); }
+/* garrison.css:96 sets the Home shelf heading with the `font` shorthand and three classes, which
+   outranks both console.css and a plain .section-heading h2 rule, so the Text size slider had no
+   effect on the main Home shelf titles. Same realised size, now scaled. */
+body.garrison .dashboard-recent .section-heading h2,
+body.garrison .collection-band .collection-intro h2 { font-size: calc(clamp(18px, calc(1.4 * var(--g-vp) / 100), 28px) * var(--text-scale)); }
+.library-count,
+.console-library-title .library-count { font-size: calc(17px * var(--text-scale)); }
+.detail-description { font-size: calc(18px * var(--text-scale)); }
+.options-shortcuts .option-button { font-size: calc(17px * var(--text-scale)); }
+
+@media (min-width: 1900px) {
+  .section-heading h2 { font-size: calc(clamp(27px, 1.25vw, 38px) * var(--text-scale)); }
+}

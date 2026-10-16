@@ -107,7 +107,12 @@ async function loadSteamProfile() {
         let data = achievementProfileCache.get(game.id);
         if (!data || Date.now() - data.at > 5 * 60 * 1000) {
           data = { ...await window.launcher.getGameAchievements(game.id).catch(() => ({ items: [] })), at: Date.now() };
-          if (data.progressAvailable) achievementProfileCache.set(game.id, data);
+          if (data.progressAvailable) {
+            achievementProfileCache.set(game.id, data);
+            // Entries hold a full achievement list per game, so keep the same bound the other
+            // caches in this app use instead of growing for the life of the process.
+            while (achievementProfileCache.size > 64) achievementProfileCache.delete(achievementProfileCache.keys().next().value);
+          }
         }
         if (request !== profileLoadId || !avatarDialog.open) return;
         const row = [...achievementRoot.querySelectorAll('[data-game-id]')].find(node => node.dataset.gameId === game.id);
