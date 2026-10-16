@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {duplicateGroups,visibleCopies,chooseCopy}=require('../src/library-duplicates.cjs');
+const {duplicateGroups,visibleCopies,chooseCopy,createViewCache}=require('../src/library-duplicates.cjs');
 const games=[
   {id:'steam-1',title:'DOOM®',provider:'Steam',installed:false,playCount:7},
   {id:'xbox-1',title:'Doom',provider:'Xbox PC',installed:true,artwork:{tile:'kept'}},
@@ -19,3 +19,31 @@ assert.equal(chooseCopy(groups[0].copies,{duplicatePreferences:{doom:'steam-1'}}
 assert.equal(games[0].playCount,7);assert.equal(games[1].artwork.tile,'kept');
 assert.equal(duplicateGroups([{id:'1',title:'Same',provider:'Steam'},{id:'2',title:'Same',provider:'Steam'}]).length,0);
 console.log('PASS cross-library matching, edition separation, installed preference, per-game override and preservation of every source entry');
+const cache=createViewCache(), settings={duplicateMode:'preferred',duplicatePreferredProvider:'Steam',duplicatePreferences:{}};
+const library=games.map(game=>({...game}));
+const first=cache(library,settings);
+assert.equal(cache(library,settings),first,'Repeated queries reuse the presentation');
+assert.deepEqual(first.copyIds.get('steam-1'),['steam-1','xbox-1','epic-1']);
+library[0].artwork={tile:'new art'};library[0].playCount++;
+assert.equal(cache(library,settings),first,'Art and history do not change duplicate selection');
+library[0].installed=true;
+assert.equal(cache(library,settings).games[0].id,'steam-1','An install changes the preferred copy immediately');
+settings.duplicatePreferences.doom='epic-1';
+assert.equal(cache(library,settings).games[0].id,'epic-1','An in-place override must invalidate the cache');
+delete settings.duplicatePreferences.doom; settings.duplicatePreferredProvider='Xbox PC';
+assert.equal(cache(library,settings).games[0].id,'xbox-1','Changing automatic preference must take effect');
+library[1].title='Doom 2';
+assert(cache(library,settings).games.some(game=>game.id==='xbox-1'),'Renamed games must leave their old duplicate group');
+library[2].isApp=true;
+assert(!cache(library,settings).copyIds.has('epic-1'),'Reclassifying an app must remove it from grouping');
+library[2].isApp=false;library[2].provider='Steam';
+assert(!cache(library,settings).copyIds.has('epic-1'),'Same-provider entries must stay separate');
+library[2].provider='Epic Games';library[2].isLauncher=true;
+assert(!cache(library,settings).copyIds.has('epic-1'),'Launchers must stay separate');
+library[2].isLauncher=false;library[2]={...library[2],id:'replacement'};
+assert(cache(library,settings).copyIds.has('replacement'),'Replacement objects/IDs must not retain old references');
+library.reverse();
+assert.deepEqual(cache(library,settings).games,visibleCopies(library,settings),'Reordering the library must reorder the presentation');
+library.pop();
+assert.deepEqual(cache(library,settings).games,visibleCopies(library,settings),'Removing games must invalidate the presentation');
+console.log('PASS duplicate view cache retains live artwork/history and invalidates on install, preference, title, type, identity, provider and order changes');

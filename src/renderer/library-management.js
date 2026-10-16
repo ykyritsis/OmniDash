@@ -1,10 +1,11 @@
 // Keep all source entries for launch, artwork and history. Preferences affect
 // the combined library; explicitly browsing a source shows that source's copy.
+const libraryViewCache = libraryDuplicates.createViewCache();
 function displayedLibraryGames(provider = 'all') {
   if(state.duplicateMode!=='preferred')return state.games;
-  const groups=libraryDuplicates.duplicateGroups(state.games);
-  state.duplicateCopyIds=new Map(groups.flatMap(group=>group.copies.map(game=>[game.id,group.copies.map(copy=>copy.id)])));
-  return provider !== 'all' ? state.games : libraryDuplicates.visibleCopies(state.games,state,groups);
+  const view=libraryViewCache(state.games,state);
+  state.duplicateCopyIds=view.copyIds;
+  return provider !== 'all' ? state.games : view.games;
 }
 function libraryCopyIds(game) { return state.duplicateMode==='preferred' ? state.duplicateCopyIds?.get(game.id) || [game.id] : [game.id]; }
 function duplicateSettingsPayload() {

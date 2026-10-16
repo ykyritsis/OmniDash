@@ -410,27 +410,38 @@ window.launcher.onLibraryTrending((result) => {
   renderHomeCollections();
 });
 window.launcher.onLibraryArtwork((changes) => {
+  const gamesById = new Map(state.games.map(game => [game.id,game]));
+  let controlsChanged = false;
   for (const change of changes) {
-    const game = state.games.find((item) => item.id === change.id);
+    const game = gamesById.get(change.id);
     if (!game) continue;
+    const previousControls = game.controls;
+    const previousTile = gameArt(game), previousHero = gameArt(game, '', true);
     game.artwork = change.artwork;
     if (game.controls === 'unknown') game.controls = change.artwork?.controls || 'unknown';
-    document.querySelectorAll(`.game-card[data-game-id="${CSS.escape(game.id)}"]`).forEach((cardElement) => {
-      const oldArt = cardElement.querySelector(':scope > img, :scope > .art-fallback');
-      if (oldArt) oldArt.outerHTML = gameArt(game);
-      const oldControl = cardElement.querySelector(':scope > .control-badge');
-      if (oldControl) oldControl.outerHTML = controlBadge(game);
-    });
-    if (game.id === state.selectedGameId) selectGame(game.id, false, null, false);
+    const tileChanged = previousTile !== gameArt(game), heroChanged = previousHero !== gameArt(game, '', true);
+    if (tileChanged || heroChanged) {
+      // Update the artwork itself, including collection cards and the My games
+      // collage. Keep buttons, decoded unchanged images and scroll/focus intact.
+      for (const element of document.querySelectorAll(`[data-art-game-id="${CSS.escape(game.id)}"]`)) {
+        const featured = element.dataset.artFeatured === 'true';
+        if (featured ? heroChanged : tileChanged) element.outerHTML = gameArt(game, element.dataset.artClass || '', featured);
+      }
+      if (game.id === state.selectedGameId) {
+        if (document.body.classList.contains('garrison')) {
+          if (heroChanged) updateAmbient(game);
+        } else selectGame(game.id, false, null, false);
+      }
+    }
+    if (previousControls !== game.controls) {
+      controlsChanged = true;
+      for (const badge of document.querySelectorAll(`.game-card[data-game-id="${CSS.escape(game.id)}"] > .control-badge`)) badge.outerHTML = controlBadge(game);
+    }
   }
-  const collage = document.querySelector('#dashboard-features .library-collage');
-  const visibleIds = new Set([...recentRow.querySelectorAll('.game-card')].map(node => node.dataset.gameId));
-  if (collage) collage.innerHTML = displayedLibraryGames().filter((game) => !game.isApp && game.installed !== false && !visibleIds.has(game.id)).slice(0, 4).map((game) => `<span class="library-collage-art">${gameArt(game)}</span>`).join('');
-  scheduleHomeCollections();
-  updateControllerPrompts();
+  // Controller metadata can change row membership; a cover alone cannot.
+  if (controlsChanged) { scheduleHomeCollections(); updateControllerPrompts(); }
 });
-// Artwork arrives in many small batches while it loads in the background. Rebuilding every Home row for
-// each one made navigation hitch, so rows refresh at most every 2.5 seconds, and only while Home is showing.
+// Coalesce metadata that changes Home collection membership while covers are loading.
 let homeCollectionsTimer = 0, homeCollectionsDirty = false;
 function scheduleHomeCollections() {
   homeCollectionsDirty = true;
@@ -453,7 +464,9 @@ document.addEventListener('error', (event) => {
     image.dataset.coverIndex = String(next);
     image.src = candidates[next].tile;
   } else {
-    image.replaceWith(Object.assign(document.createElement('span'), { className: 'art-fallback broken-cover', textContent: game.title }));
+    const fallback = Object.assign(document.createElement('span'), { className: 'art-fallback broken-cover', textContent: game.title });
+    Object.assign(fallback.dataset, {artGameId:game.id,artClass:image.dataset.artClass || '',artFeatured:image.dataset.artFeatured || 'false'});
+    image.replaceWith(fallback);
   }
 }, true);
 
@@ -634,8 +647,9 @@ function gameArt(game, className = '', featured = false) {
   // Non-square artwork is cropped by the square tile, without adding another
   // title over its own wordmark. The centred logo is an explicit choice.
   const showCenteredLogo = !featured && game.artwork?.logo && (game.artwork?.overlayLogo === true || !url);
-  if (url && !showCenteredLogo) return `<img class="${className}" src="${escapeHtml(url)}" data-art-game-id="${escapeHtml(game.id)}" data-cover-index="0" alt="" loading="${featured ? 'eager' : 'lazy'}" decoding="async" draggable="false">`;
-  return `<span class="art-fallback" style="--hue:${hashHue(game.title)}">
+  const identity = `data-art-game-id="${escapeHtml(game.id)}" data-art-class="${escapeHtml(className)}" data-art-featured="${featured}"`;
+  if (url && !showCenteredLogo) return `<img class="${className}" src="${escapeHtml(url)}" ${identity} data-cover-index="0" alt="" loading="${featured ? 'eager' : 'lazy'}" decoding="async" draggable="false">`;
+  return `<span class="art-fallback" ${identity} style="--hue:${hashHue(game.title)}">
     ${url ? `<img class="fallback-art" src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" draggable="false">` : ''}
     <span class="fallback-scrim"></span>
     ${showCenteredLogo ? `<img class="tile-logo" src="${escapeHtml(game.artwork.logo)}" alt="" loading="lazy" decoding="async" draggable="false">` : `<span class="fallback-title">${escapeHtml(game.title)}</span>`}
@@ -722,7 +736,17 @@ function appendLibraryPage() {
   return true;
 }
 
+function trimHiddenLibraryPages() {
+  if (state.consoleLibraryGroups || state.libraryRendered <= LIBRARY_PAGE) return;
+  // Preserve the full grid while viewing a game's details so Back keeps its
+  // exact card and position. Home/Store only need the first page kept warm.
+  const cards = libraryGrid.querySelectorAll(':scope > .game-card, :scope > .app-list-card');
+  for (let index = LIBRARY_PAGE; index < cards.length; index++) cards[index].remove();
+  if (cards.length) state.libraryRendered = Math.min(cards.length,LIBRARY_PAGE);
+}
+
 function renderLibraryView() {
+  state.libraryViewDirty = false;
   libraryView.classList.toggle('show-groups', Boolean(state.consoleLibraryGroups));
   libraryView.classList.toggle('show-apps', state.libraryCategory === 'apps');
   const displayed = displayedLibraryGames(state.sourceFilter);
@@ -855,14 +879,13 @@ function updateUninstalledRequirement(keyInputId, checkboxId, noteId = '') {
 }
 
 function matchesCollection(game, collection) {
-  const categories = (game.steamCategories || []).join(' ');
   if (collection === 'favorites') return libraryCopyIds(game).some(id=>state.favoriteGameIds.includes(id));
   if (collection === 'family-shared') return game.steamFamilyShared === true;
   if (collection.startsWith('custom:')) return libraryCopyIds(game).some(id=>state.customCollections.find((item) => item.id === collection.slice(7))?.gameIds.includes(id));
   // Steam's own store filters: Full controller support, and Local & party (shared/split screen, LAN, Remote Play Together).
   if (collection === 'controller') return game.controls === 'controller';
-  if (collection === 'solo') return /single-player/i.test(categories);
-  if (collection === 'multiplayer') return /shared\/split screen|lan (pvp|co-op)|remote play together/i.test(categories);
+  if (collection === 'solo') return /single-player/i.test((game.steamCategories || []).join(' '));
+  if (collection === 'multiplayer') return /shared\/split screen|lan (pvp|co-op)|remote play together/i.test((game.steamCategories || []).join(' '));
   if (collection === 'installed') return game.installed !== false;
   return true;
 }
@@ -911,8 +934,8 @@ function homeRecentGames() {
 function renderRecentGames(games = homeRecentGames()) {
   recentRow.innerHTML = games.slice(0, 9).map((game, index) => card(game, index)).join('');
 }
-function renderLibrary() {
-  renderCollectionOptions();
+function renderHomeLibrary(redirectToApps = false) {
+  state.homeLibraryDirty = false;
   const homeGames = homeRecentGames();
   const hasGames = homeGames.length > 0;
   const hasApps = state.games.some((game) => game.isApp);
@@ -932,12 +955,18 @@ function renderLibrary() {
   renderRecentGames(homeGames);
   renderDashboard();
   renderHomeCollections();
-  renderLibraryView();
   if (hasGames && !homeGames.some((game) => game.id === state.selectedGameId)) selectGame(homeGames[0].id, false);
-  else if (!hasGames && hasApps && state.view === 'home' && !state.searchQuery) showView('library');
+  else if (redirectToApps && !hasGames && hasApps && state.view === 'home' && !state.searchQuery) showView('library');
+}
+function renderLibrary() {
+  renderCollectionOptions();
+  state.homeLibraryDirty = true;
+  state.libraryViewDirty = true;
+  if (state.view === 'home') renderHomeLibrary(true);
+  else if (state.view === 'library') renderLibraryView();
   if (state.selectedGameId) {
-    const selectedCard = [...document.querySelectorAll('.game-card[data-game-id]')]
-      .find((element) => element.dataset.gameId === state.selectedGameId && element.offsetParent !== null);
+    const selectedCard = [...document.querySelectorAll(`.game-card[data-game-id="${CSS.escape(state.selectedGameId)}"]`)]
+      .find((element) => element.offsetParent !== null);
     if (selectedCard) selectGame(state.selectedGameId, false, selectedCard, false);
   }
   updateControllerPrompts();
@@ -2050,6 +2079,11 @@ function showView(view, { restore = null } = {}) {
   libraryView.hidden = !isLibrary;
   gameDetailView.hidden = !isDetail;
   document.querySelector('#store-view').hidden = !isStore;
+  if (view === 'home' || isStore) trimHiddenLibraryPages();
+  // Hidden pages are rebuilt once, on entry, before choosing controller focus.
+  if (isLibrary && !state.libraryRemote && state.libraryViewDirty) renderLibraryView();
+  else if (view === 'home' && state.homeLibraryDirty) renderHomeLibrary();
+  if (state.view !== view) return;
   document.querySelectorAll('.top-nav-button').forEach((button) => button.classList.toggle('active', button.dataset.action === view));
   const mainScroller = document.querySelector('main');
   mainScroller.scrollTo({ top: restore?.scrollTop || 0, behavior: 'instant' });
@@ -3143,16 +3177,29 @@ function galleryThumb(url) {
   return value;
 }
 
+// Sorting a large library used to read and parse localStorage for every pair
+// of games. Read once, update on launch, and invalidate for other windows.
+let lastLaunchHistory;
+function launchHistory() {
+  if (lastLaunchHistory) return lastLaunchHistory;
+  try {
+    const saved = JSON.parse(localStorage.getItem('lastLaunched') || '{}');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) return lastLaunchHistory = saved;
+  } catch { /* Storage unavailable or invalid. */ }
+  return lastLaunchHistory = {};
+}
+window.addEventListener('storage', event => {
+  if (event.key === 'lastLaunched' || event.key === null) lastLaunchHistory = undefined;
+});
 // When a game was last played, from whichever launcher knows: Steam's own record or a launch from here.
 function lastPlayedAt(game) {
-  let launched = 0;
-  try { launched = Number(JSON.parse(localStorage.getItem('lastLaunched') || '{}')[game.id]) || 0; } catch { /* Storage unavailable. */ }
+  const launched = Number(launchHistory()[game.id]) || 0;
   return Math.max(Number(game.steamLastPlayed) || 0, Number(game.lastPlayed) || 0, launched);
 }
 function rememberLaunch(gameId) {
+  const map = launchHistory();
+  map[gameId] = Date.now();
   try {
-    const map = JSON.parse(localStorage.getItem('lastLaunched') || '{}');
-    map[gameId] = Date.now();
     localStorage.setItem('lastLaunched', JSON.stringify(map));
   } catch { /* Storage unavailable. */ }
 }

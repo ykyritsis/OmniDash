@@ -38,7 +38,33 @@
     }
     return visible;
   }
-  const api={titleKey,duplicateGroups,chooseCopy,visibleCopies,providers};
+  function createViewCache() {
+    let snapshot = [], preferences = [], mode, preferredProvider, result;
+    return function view(games, settings = {}) {
+      const choices = settings.duplicatePreferences || {};
+      // Games can be updated in place after an install or a metadata edit.
+      // Check the fields that affect grouping/selection, without normalizing
+      // every title and allocating every group again on each Home row.
+      const unchanged = result && mode === settings.duplicateMode && preferredProvider === settings.duplicatePreferredProvider
+        && preferences.length === Object.keys(choices).length && preferences.every(([key,value]) => choices[key] === value)
+        && snapshot.length === games.length && snapshot.every((old,i) => {
+          const game = games[i];
+          return old.game === game && old.id === game.id && old.title === game.title && old.provider === game.provider
+            && old.installed === game.installed && old.isApp === game.isApp && old.isLauncher === game.isLauncher;
+        });
+      if (unchanged) return result;
+      snapshot = games.map(game => ({game,id:game.id,title:game.title,provider:game.provider,installed:game.installed,isApp:game.isApp,isLauncher:game.isLauncher}));
+      preferences = Object.entries(choices); mode = settings.duplicateMode; preferredProvider = settings.duplicatePreferredProvider;
+      const groups = duplicateGroups(games), copyIds = new Map();
+      for (const group of groups) {
+        const ids = group.copies.map(game => game.id);
+        for (const id of ids) copyIds.set(id,ids);
+      }
+      result = {groups,copyIds,games:visibleCopies(games,settings,groups)};
+      return result;
+    };
+  }
+  const api={titleKey,duplicateGroups,chooseCopy,visibleCopies,createViewCache,providers};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.libraryDuplicates=api;
 })(typeof globalThis==='object'?globalThis:this);

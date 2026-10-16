@@ -28,7 +28,12 @@ const { createArtworkCache } = require('../src/artwork-cache.cjs');
       fetchImage: () => { throw Error('Network must not be used for a cached image'); }
     });
     assert.equal(await offline.cacheImage(url), first);
-    assert.equal((await offline.cacheArtwork(artwork)).tile, first);
+    assert.equal(await offline.cacheArtwork(artwork), artwork, 'An unchanged cached cover must not trigger a renderer notification');
+    const custom = {tile:'file:///custom-cover.png',manual:true};
+    assert.equal(await offline.cacheArtwork(custom),custom,'A local manual cover must remain untouched');
+    const changed = await offline.cacheArtwork({...artwork,tile:url});
+    assert.equal(changed.tile,first,'Replacing an online cover with its offline copy must still notify callers');
+    assert.equal(changed.sourceUrls.tile,url);
     await fs.unlink(fileURLToPath(first));
     assert.equal(await cache.cacheImage(url), first, 'A deleted cache file must be downloaded again');
     assert.equal(requests, 2);

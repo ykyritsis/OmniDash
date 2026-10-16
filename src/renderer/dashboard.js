@@ -76,6 +76,9 @@ function updateConsoleClock() {
 }
 function renderDashboard() {
   document.querySelector('#dashboard-player-name').textContent = state.displayName;
+  // Garrison has its own Home shortcuts. Don't build hidden legacy cards or
+  // load their eager hero images on every library refresh.
+  if (document.body.classList.contains('garrison')) return;
   const games = displayedLibraryGames().filter(game => !game.isApp && game.installed !== false);
   const visibleIds = new Set([...recentRow.querySelectorAll('.game-card')].map(node => node.dataset.gameId));
   const preview = games.filter(game => !visibleIds.has(game.id)).slice(0, 4);

@@ -420,6 +420,9 @@ function gStoreRow(id, title, games, list) {
     <div class="game-row collection-covers" role="list">${games.slice(0, 12).map(game => `<button class="g-store-card g-home-store focusable" type="button" role="listitem" data-action="g-store-game" data-game-id="${escapeHtml(game.id)}"><span class="g-store-art">${gameArt(game)}</span><span class="g-card-text"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gStoreCaption(game))}</small></span></button>`).join('')}</div></section>`;
 }
 renderHomeCollections = function () {
+  if (state.view !== 'home') { homeCollectionsDirty = true; return; }
+  homeCollectionsDirty = false;
+  clearTimeout(homeCollectionsTimer); homeCollectionsTimer = 0;
   const saved = captureCollectionPosition();
   favoritesShelf.hidden = true;
   homeCollections.hidden = false;

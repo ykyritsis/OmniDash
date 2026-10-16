@@ -114,7 +114,9 @@ function createArtworkCache(directory, { fetchImage = fetch, allowedHosts = ALLO
       next.sourceUrls[field] = source;
       next[field] = await cacheImage(source);
     }));
-    return next;
+    // Preserve identity for an already-cached cover. Callers can then avoid
+    // sending unchanged artwork to the renderer or rewriting preferences.
+    return ARTWORK_FIELDS.some(field => next[field] !== artwork[field] || next.sourceUrls[field] !== artwork.sourceUrls?.[field]) ? next : artwork;
   }
 
   return { cacheImage, cacheArtwork, cachedPath };

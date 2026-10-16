@@ -1682,22 +1682,30 @@ async function scanLibrary({ refreshArt = false } = {}) {
   }
 
   if (scanEpoch === artworkScanEpoch && (process.env.NEBULA_DEMO !== '1' || process.env.NEBULA_DEMO_ART === '1')) {
-    const toCache = currentLibrary.filter(game => game.artwork && !game.isLauncher);
+    const toCache = currentLibrary.filter(game => game.artwork && !game.isLauncher), cachedArtwork = new Map();
     const cacheOne = async game => {
-      const cached = await artworkCache.cacheArtwork(game.artwork);
-      if (scanEpoch !== artworkScanEpoch) return;
+      const previous = game.artwork;
+      const cached = await artworkCache.cacheArtwork(previous);
+      // A manual edit or a newer scan owns the artwork if it changed while
+      // this download was in flight. Never overwrite it with an older cover.
+      if (scanEpoch !== artworkScanEpoch || game.artwork !== previous || cached === previous) return null;
       game.artwork = cached;
       artwork[game.id] = cached;
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:artwork', [{ id: game.id, artwork: cached }]);
+      cachedArtwork.set(game,cached);
+      return { id: game.id, artwork: cached };
     };
     artworkCacheTask = (async () => {
       for (let index = 0; index < toCache.length && scanEpoch === artworkScanEpoch; index += 4) {
-        await Promise.all(toCache.slice(index, index + 4).map(cacheOne));
+        const changes = (await Promise.all(toCache.slice(index, index + 4).map(cacheOne))).filter(Boolean);
+        if (changes.length && scanEpoch === artworkScanEpoch && mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:artwork', changes);
         if (index % 40 === 0) progress(95 + Math.round(4 * index / Math.max(toCache.length, 1)), `Saving artwork for offline use…`);
       }
     })();
     await artworkCacheTask.catch(() => {});
-    if (scanEpoch === artworkScanEpoch) await writeSettings({ artwork });
+    if (cachedArtwork.size && scanEpoch === artworkScanEpoch) {
+      const updates = Object.fromEntries([...cachedArtwork].filter(([game,entry]) => game.artwork === entry).map(([game,entry]) => [game.id,entry]));
+      if (Object.keys(updates).length) await writeSettings({ artwork: updates });
+    }
   }
 
   if (scanEpoch === artworkScanEpoch) await writeLibrarySnapshot({ games: currentLibrary, ...librarySummary }, scanEpoch).catch(() => {});

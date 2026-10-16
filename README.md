@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 37](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.37/Xbox-Preview-UI-Setup-0.27.0-beta.37.exe)** · [Setup](#getting-started) · [Beta 37 notes](docs/release-0.27.0-beta.37.md)
+**[Download beta 38](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.38/Xbox-Preview-UI-Setup-0.27.0-beta.38.exe)** · [Setup](#getting-started) · [Beta 38 notes](docs/release-0.27.0-beta.38.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,23 +31,27 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 37
+## Beta 38
 
+- Faster large-library refreshes: Home and Library build their own visible page, with hidden pages refreshed on entry.
+- Preferred-copy grouping and play history are reused while their inputs stay unchanged. Installs, library edits and new launches update them immediately.
+- Local cover updates patch artwork in place, preserving controller focus, scroll positions and decoded unchanged images. Cached artwork skips redundant notifications and settings writes.
+- Extra library card pages are released on Home/Store; returning from a game page retains the selected card and position.
 - Bright white borders and a soft white glow provide a consistent focus effect across games, navigation, Settings and menus.
 - MA15+ uses the official Australian classification badge, bundled for offline use.
 - Controller navigation scrolls all the way to **My games** in Jump back in, including handheld screens and enlarged text.
-- Remote cover updates keep the existing Home tiles and controller focus. Home collections render once per library refresh.
+- Remote cover updates keep the existing Home tiles and controller focus.
 - Local and remote game pages share prefetched details, with bounded caches and region-aware refreshes. Artwork downloads are shared and limited across callers; cached reads avoid repeated format probes and settings writes.
 - Automatic stream completion checks the host's final state before returning to the game page, fixing a race that could leave a stale **Resume game** button. Detached host shortcuts still need process tracking configured on the host.
 - Retains **End session**, improved discovery, the simplified profile menu and automatic background PC Gamerscore updates.
 - Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
 - Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.27.0-beta.37.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.27.0-beta.38.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[beta 37 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.37)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 38 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.38)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

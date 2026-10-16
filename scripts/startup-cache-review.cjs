@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const output = path.resolve(__dirname, '../.visual-review');
-const profile = path.join(output, 'cache-profile');
+// A fresh profile also keeps short test runs out of the crash-recovery counter.
+const profile = path.join(output, `cache-profile-${Date.now()}-${process.pid}`);
 process.env.NEBULA_DEMO = '1';
 process.env.NEBULA_REVIEW = '1';
 process.env.NEBULA_REVIEW_SCAN_DELAY = '2400';
@@ -17,7 +18,9 @@ fs.writeFileSync(imagePath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC
 fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify({ onboardingComplete: true, fullscreen: false }));
 fs.writeFileSync(path.join(profile, 'library-snapshot.json'), JSON.stringify({
   version: 1,
-  savedAt: Date.now(),
+  // Fresh snapshots intentionally defer scanning for 15 minutes. Exercise the
+  // stale-snapshot path, which refreshes quietly four seconds after startup.
+  savedAt: Date.now() - 16 * 60 * 1000,
   summary: { steamStatus: 'disabled', epicStatus: 'needs-helper' },
   games: [{ id: 'cached-fixture', title: 'Cached Preview Game', provider: 'PC', installed: true, executable: process.execPath, artwork: { tile: pathToFileURL(imagePath).href, tileIsSquare: true } }]
 }));
@@ -33,8 +36,13 @@ app.on('browser-window-created', (_, window) => {
         await pause(50);
       }
       if (!cached) throw Error('Saved library did not appear promptly');
-      await pause(450);
-      const startup = await run("({cached:state.games.some(game=>game.id==='cached-fixture'),fullScreen:state.fullScreenImport,background:scanProgress.classList.contains('background-refresh'),visible:!scanProgress.hidden})");
+      if (await run('state.fullScreenImport')) throw Error('Cached Home was blocked by full-screen import');
+      let startup;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        startup = await run("({cached:state.games.some(game=>game.id==='cached-fixture'),fullScreen:state.fullScreenImport,background:scanProgress.classList.contains('background-refresh'),visible:!scanProgress.hidden})");
+        if (startup.background && startup.visible) break;
+        await pause(50);
+      }
       if (!startup.cached || startup.fullScreen || !startup.background || !startup.visible) throw Error(`Refresh blocked cached Home: ${JSON.stringify(startup)}`);
       const imageLoaded = await run("(() => { const image = document.querySelector('.game-card[data-game-id=\"cached-fixture\"] img'); return Boolean(image?.complete && image.naturalWidth > 0); })()");
       if (!imageLoaded) throw Error('Cached file artwork was not displayed by the renderer');
