@@ -51,10 +51,10 @@
 
     <header class="topbar">
       <div class="g-top-left">
-        <button class="g-xbox-pill focusable" type="button" data-action="g-friends" aria-label="Friends" data-g-label="Friends">
-          <img class="g-xbox-mark" src="assets/xbox.svg" alt="" />
-          <span id="controller-status-button" class="g-pill-status controller-status-button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M3 19.5a6 6 0 0 1 12 0"/><path d="M18 9v6M15 12h6"/></svg><span id="g-pill-count">0</span><span id="controller-status-dot" class="controller-status-dot" aria-hidden="true"></span></span>
-        </button>
+        <div class="g-xbox-pill" role="group" aria-label="Xbox and friends">
+          <button id="g-game-bar-button" class="g-xbox-action focusable" type="button" data-action="g-game-bar" aria-label="Open Game Bar" data-g-label="Game Bar" title="Open Game Bar"><img class="g-xbox-mark" src="assets/xbox.svg" alt="" /></button>
+          <button class="g-xbox-action focusable" type="button" data-action="g-friends" aria-label="Friends" data-g-label="Friends"><span id="controller-status-button" class="g-pill-status controller-status-button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M3 19.5a6 6 0 0 1 12 0"/><path d="M18 9v6M15 12h6"/></svg><span id="g-pill-count">0</span><span id="controller-status-dot" class="controller-status-dot" aria-hidden="true"></span></span></button>
+        </div>
         <button id="g-notifications-button" class="g-icon-button focusable" type="button" data-action="g-notifications" aria-label="Notifications" data-g-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V10a6 6 0 0 1 12 0v6.5l1.6 2H4.4z"/><path d="M10 21h4"/></svg><span id="g-notification-badge" class="g-badge" hidden></span></button>
       </div>
       <nav class="top-center-nav" aria-label="Main navigation">

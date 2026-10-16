@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('launcher', {
   getGameNews: (gameId) => ipcRenderer.invoke('news:get', gameId),
   getGameDetails: (gameId) => ipcRenderer.invoke('game:details', gameId),
   openLink: (url) => ipcRenderer.invoke('app:open-link', url),
+  openGameBar: () => ipcRenderer.invoke('app:game-bar'),
   getGameStorage: (gameId) => ipcRenderer.invoke('game:storage', gameId),
   getGamerscoreBreakdown: (gameId) => ipcRenderer.invoke('gamerscore:breakdown', gameId),
   openRatingInfo: (system) => ipcRenderer.invoke('app:rating-info', system),

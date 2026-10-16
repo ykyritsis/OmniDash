@@ -1036,7 +1036,17 @@ async function gGameAction(game, action, success) {
 }
 
 // ---------- Actions ----------
+let gGameBarOpening = false;
 async function garrisonAction(action, source) {
+  if (action === 'g-game-bar') {
+    if (gGameBarOpening) return true;
+    gGameBarOpening = true;
+    source.setAttribute('aria-busy','true');
+    try { await window.launcher.openGameBar(); }
+    catch { showToast('Couldn’t open Game Bar. Make sure it’s installed and enabled in Windows.'); }
+    finally { gGameBarOpening = false; source.removeAttribute('aria-busy'); }
+    return true;
+  }
   const game = state.games.find(item => item.id === state.optionsGameId);
   if (action === 'g-account') { openGFlyout(gAccountMenu, source, gAccountMarkup()); return true; }
   if (action === 'g-notifications') { openGFlyout(gNotificationMenu, source, gNotificationsMarkup()); return true; }

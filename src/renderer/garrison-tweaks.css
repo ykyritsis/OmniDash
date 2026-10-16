@@ -85,3 +85,8 @@ body.garrison .pc-score-breakdown p { margin: calc(.8 * var(--p)) 0; font-size: 
 body.garrison .profile-section-heading h3 { font: 600 calc(1.9 * var(--p)) / 1.2 var(--g-font); color: #fff; }
 body.garrison .profile-section-heading span { font-size: calc(1.1 * var(--p)); color: rgba(255, 255, 255, .5); }
 body.garrison .profile-tabs { padding: 0 calc(3 * var(--p)); gap: calc(1.4 * var(--p)); }
+/* Two independent shortcuts share the Xbox pill, including on touch screens. */
+body.garrison .g-xbox-pill { gap: 2px; padding: 3px; min-height: 54px; cursor: default; }
+body.garrison .g-xbox-pill:hover { background: rgba(255, 255, 255, .04); }
+body.garrison .g-xbox-action { display: inline-flex; align-items: center; justify-content: center; align-self: stretch; min-width: 44px; min-height: 44px; padding: 0 calc(8 * var(--u)); border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+body.garrison .g-xbox-action:hover { background: var(--g-surface-2); }

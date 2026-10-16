@@ -4,7 +4,7 @@
 
 A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
 
-**[Download beta 38](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.38/Xbox-Preview-UI-Setup-0.27.0-beta.38.exe)** · [Setup](#getting-started) · [Beta 38 notes](docs/release-0.27.0-beta.38.md)
+**[Download beta 39](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.39/Xbox-Preview-UI-Setup-0.27.0-beta.39.exe)** · [Setup](#getting-started) · [Beta 39 notes](docs/release-0.27.0-beta.39.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -31,8 +31,9 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
-## Beta 38
+## Beta 39
 
+- The Xbox logo at the top left opens Windows Game Bar. Friends has a separate button beside it; both support touch, keyboard and controller navigation with the shared white focus glow.
 - Faster large-library refreshes: Home and Library build their own visible page, with hidden pages refreshed on entry.
 - Preferred-copy grouping and play history are reused while their inputs stay unchanged. Installs, library edits and new launches update them immediately.
 - Local cover updates patch artwork in place, preserving controller focus, scroll positions and decoded unchanged images. Cached artwork skips redundant notifications and settings writes.
@@ -47,11 +48,11 @@ Device images are illustrative mockups based on app captures, not photographs of
 - Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
 - Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
 
-[Full release notes](docs/release-0.27.0-beta.38.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+[Full release notes](docs/release-0.27.0-beta.39.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
 
 ## Download
 
-Get **[beta 38 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.38)**. Download the Setup executable for your handheld or desktop.
+Get **[beta 39 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.27.0-beta.39)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |

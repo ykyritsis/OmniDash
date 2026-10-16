@@ -2089,6 +2089,13 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle('app:feedback', async () => { await shell.openExternal('https://github.com/ykyritsis/xbox-cloud-preview-on-pc/issues'); return true; });
+  ipcMain.handle('app:game-bar', async () => {
+    if (process.platform !== 'win32') throw new Error('Game Bar requires Windows.');
+    // Windows owns the overlay and the physical Guide button. Use its launch
+    // protocol for the on-screen shortcut without synthesizing global keys.
+    await shell.openExternal('ms-gamebar:');
+    return true;
+  });
   ipcMain.handle('app:fse-setup', async () => { await shell.openExternal('https://github.com/ashpynov/AnyFSE#readme'); return true; });
   ipcMain.handle('settings:save', async (_event, incoming) => {
     const existing = await readSettings();
