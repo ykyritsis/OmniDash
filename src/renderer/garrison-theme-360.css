@@ -1,6 +1,8 @@
 /* 360: the Xbox 360 Metro dashboard. Sizes are 1080p console pixels (--cpx), taken from 720p captures x1.5.
-   Pivots: 45 px light lowercase, centred on y 230, the current one white. The tile band: 450 px tall, centred,
-   6 px gaps: a 231 px lime column, a 597 x 450 featured tile, 294 px columns. Selection: a 3 px white frame. */
+   Pivots: 50 px light lowercase, the current one white. The tile band is one symmetric group: a 294 px lime
+   column, a 597 x 470 px featured tile and a 294 px game column, 6 px gaps. The group is centred on the frame
+   and its featured tile sits on the screen's centre line; vertically it is centred between the pivots and the
+   bottom hints. Selection: a 3 px white frame. */
 body.garrison[data-g-theme="x360"] {
   --g-bg: #2a2a2a;
   --g-green: #6cb344;
@@ -13,7 +15,9 @@ body.garrison[data-g-theme="x360"] {
   --g-lib-side: calc(420 * var(--cpx));
   --x-lime: #6cb344;
   --x-gap: calc(6 * var(--cpx));
-  --x-band: calc(450 * var(--cpx));
+  --x-band: calc(470 * var(--cpx));
+  /* The two outer columns are deliberately equal so the featured tile lands dead centre. */
+  --x-side: calc(294 * var(--cpx));
 }
 html:has(body[data-g-theme="x360"]) { background: #1c1c1c; }
 .g-360-only, #g-360-home, #g-360-status, #g-360-hints, .g-360-peek { display: none; }
@@ -45,10 +49,13 @@ body.garrison[data-g-theme="x360"].detail-active main { padding-top: 0; }
 /* ---------- Home: the three-column band, like the console ---------- */
 body.garrison[data-g-theme="x360"] #home-view > :not(#g-360-home):not(#g-hub-host) { display: none !important; }
 body.garrison[data-g-theme="x360"] #g-360-home {
-  display: flex; align-items: flex-start; justify-content: center; gap: var(--x-gap); height: calc(var(--x-band) + 60 * var(--cpx)); margin-top: calc(8 * var(--cpx));
+  display: flex; align-items: flex-start; justify-content: center; gap: var(--x-gap); height: calc(var(--x-band) + 60 * var(--cpx));
+  /* Band top = 50vh - 193 cpx: the middle of the room between the pivot baseline and the bottom hints.
+     The main bar's 285 cpx and the Home shelf's 1.6vh padding are already there, so subtract both. */
+  margin-top: calc(50vh - 1.6vh - 478 * var(--cpx));
 }
-body.garrison[data-g-theme="x360"] .g-360-col { display: grid; grid-template-rows: 1fr 1fr; gap: var(--x-gap); width: calc(231 * var(--cpx)); height: var(--x-band); position: relative; }
-body.garrison[data-g-theme="x360"] .g-360-col.wide { width: calc(294 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-col { display: grid; grid-template-rows: 1fr 1fr; gap: var(--x-gap); width: var(--x-side); height: var(--x-band); position: relative; }
+body.garrison[data-g-theme="x360"] .g-360-col.wide { width: var(--x-side); }
 /* The console's Home band is three columns; the fourth was our addition and made it too wide. The next pivot peeks in instead. */
 body.garrison[data-g-theme="x360"] #g-360-home > .g-360-col:last-child { display: none; }
 body.garrison[data-g-theme="x360"] .g-360-feature { position: relative; width: calc(597 * var(--cpx)); height: var(--x-band); }
@@ -59,7 +66,8 @@ body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big) {
 }
 body.garrison[data-g-theme="x360"] .g-360-tile.lime { background: var(--x-lime); justify-content: space-between; }
 body.garrison[data-g-theme="x360"] .g-360-tile.lime .g-glyph { align-self: center; width: calc(80 * var(--cpx)); height: calc(80 * var(--cpx)); margin-top: calc(28 * var(--cpx)); }
-body.garrison[data-g-theme="x360"] .g-360-tile span, body.garrison[data-g-theme="x360"] .g-360-tile em { position: relative; font: 400 calc(34 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+/* Direct label spans only: the cover fallback is a span too and must keep its absolute fill. */
+body.garrison[data-g-theme="x360"] .g-360-tile > span:not(.g-cover-fallback), body.garrison[data-g-theme="x360"] .g-360-tile em { position: relative; font: 400 calc(34 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
 body.garrison[data-g-theme="x360"] .g-360-tile em { font-style: normal; font-size: calc(23 * var(--cpx)); opacity: .9; }
 body.garrison[data-g-theme="x360"] .g-360-tile.art::before, body.garrison[data-g-theme="x360"] .g-360-big::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 50%, rgba(0, 0, 0, .68)); }
 body.garrison[data-g-theme="x360"] .g-360-tile.ad { background: linear-gradient(135deg, #2f9d2f, #0f5a0f 70%); justify-content: center; }
@@ -89,7 +97,7 @@ body.garrison[data-g-theme="x360"] .g-360-dots i.on { background: #fff; box-shad
 body.garrison[data-g-theme="x360"] .g-360-adlabel { position: absolute; left: 0; top: calc(100% + 14 * var(--cpx)); color: rgba(255, 255, 255, .8); font: 400 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; }
 /* The neighbouring pivots peek in at the edges, dimmed. */
 body.garrison[data-g-theme="x360"].home-active .g-360-peek {
-  display: grid; position: fixed; top: calc(293 * var(--cpx)); width: calc(112 * var(--cpx)); height: var(--x-band); grid-template-rows: 1fr 1fr; gap: var(--x-gap); opacity: .3; pointer-events: none; z-index: 1;
+  display: grid; position: fixed; top: calc(50vh - 193 * var(--cpx)); width: calc(112 * var(--cpx)); height: var(--x-band); grid-template-rows: 1fr 1fr; gap: var(--x-gap); opacity: .3; pointer-events: none; z-index: 1;
 }
 body.garrison[data-g-theme="x360"] .g-360-peek i { display: block; height: auto; background: linear-gradient(150deg, #86c95e, var(--x-lime) 55%, #4d8a2e); }
 body.garrison[data-g-theme="x360"] #g-360-peek-left { left: 0; }
