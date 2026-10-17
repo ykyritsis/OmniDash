@@ -136,3 +136,79 @@ body[data-g-theme="x360"] #g-360-card .pic :is(img, svg) { width: 100%; height: 
 body[data-g-theme="x360"] #g-360-card strong { font-size: calc(26 * var(--cpx)); font-weight: 400; }
 body[data-g-theme="x360"] #g-360-card .stars { color: var(--x-lime); letter-spacing: calc(2 * var(--cpx)); }
 @keyframes g-card-in { from { opacity: 0; transform: translateY(calc(-8 * var(--cpx))); } to { opacity: 1; transform: none; } }
+
+/* ---------- Settings, per console: the screen each one actually had ----------
+   The launcher's settings pages are shared, so each console gets its own shell around them: the panel
+   shape, the tab rail, the row separators, the type and the selection colour. PS3 and PS4 are dark
+   consoles; the Wii Settings screen and 3DS System Settings are light, so their shells are light and
+   their text is forced dark (the pages are built for a dark panel). */
+body.garrison.g-retro #settings-dialog { font-family: var(--g-font); border: 0; }
+
+/* PS3: the XMB settings column, black with hairline rules and the SCE font. */
+body[data-g-theme="ps3"] #settings-dialog { background: #050506 !important; border-radius: 0 !important; }
+body[data-g-theme="ps3"] #settings-dialog .settings-sidebar { width: calc(430 * var(--cpx)); padding: calc(56 * var(--cpx)) calc(24 * var(--cpx)); background: #000 !important; border-right: 1px solid rgba(255, 255, 255, .16) !important; }
+body[data-g-theme="ps3"] #settings-dialog .settings-sidebar-brand { margin-bottom: calc(34 * var(--cpx)); }
+body[data-g-theme="ps3"] #settings-dialog .settings-sidebar-brand strong { font: 400 calc(38 * var(--cpx))/1.1 var(--g-font); }
+body[data-g-theme="ps3"] #settings-dialog .settings-sidebar-brand small { display: none; }
+body[data-g-theme="ps3"] #settings-dialog .settings-tab { height: calc(58 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border-radius: 0; background: transparent; box-shadow: none; color: rgba(255, 255, 255, .72); font: 400 calc(25 * var(--cpx))/1 var(--g-font); text-align: left; }
+body[data-g-theme="ps3"] #settings-dialog .settings-tab.active { background: linear-gradient(90deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .02)) !important; box-shadow: inset calc(4 * var(--cpx)) 0 #fff !important; color: #fff; }
+body[data-g-theme="ps3"] #settings-dialog :is(.settings-tab.focused, .settings-tab:focus-visible) { box-shadow: inset 0 0 0 calc(2 * var(--cpx)) #fff !important; }
+body[data-g-theme="ps3"] #settings-dialog .settings-scroll { padding: calc(56 * var(--cpx)) calc(80 * var(--cpx)); background: #0a0b0d; }
+body[data-g-theme="ps3"] #settings-dialog :is(h1, h2, h3) { color: #fff; font: 400 calc(34 * var(--cpx))/1.15 var(--g-font); }
+body[data-g-theme="ps3"] #settings-dialog .g-setting-row, body[data-g-theme="ps3"] #settings-dialog .toggle-row { min-height: calc(84 * var(--cpx)); padding: 0 calc(20 * var(--cpx)); border: 0; border-bottom: 1px solid rgba(255, 255, 255, .12); background: transparent; }
+body[data-g-theme="ps3"] #settings-dialog .g-setting-row strong, body[data-g-theme="ps3"] #settings-dialog .toggle-row strong { font: 400 calc(26 * var(--cpx))/1.2 var(--g-font); }
+
+/* PS4: navy panels, light SST type, sky-blue selection. */
+body[data-g-theme="ps4"] #settings-dialog { background: linear-gradient(180deg, #0c1728, #060c18) !important; border-radius: calc(4 * var(--cpx)) !important; }
+body[data-g-theme="ps4"] #settings-dialog .settings-sidebar { width: calc(420 * var(--cpx)); padding: calc(60 * var(--cpx)) calc(26 * var(--cpx)); background: rgba(6, 14, 28, .96) !important; }
+body[data-g-theme="ps4"] #settings-dialog .settings-tab { height: calc(62 * var(--cpx)); padding: 0 calc(20 * var(--cpx)); border-radius: calc(3 * var(--cpx)); background: transparent; color: rgba(255, 255, 255, .74); font: 300 calc(25 * var(--cpx))/1 var(--g-font); text-align: left; }
+body[data-g-theme="ps4"] #settings-dialog .settings-tab.active { background: #1d4f9e !important; box-shadow: inset calc(4 * var(--cpx)) 0 #4fc3f7 !important; color: #fff; }
+body[data-g-theme="ps4"] #settings-dialog :is(.settings-tab.focused, .settings-tab:focus-visible) { box-shadow: inset 0 0 0 calc(2 * var(--cpx)) #fff !important; }
+body[data-g-theme="ps4"] #settings-dialog .settings-scroll { padding: calc(60 * var(--cpx)) calc(90 * var(--cpx)); }
+body[data-g-theme="ps4"] #settings-dialog :is(h1, h2, h3) { color: #fff; font: 300 calc(36 * var(--cpx))/1.15 var(--g-font); }
+body[data-g-theme="ps4"] #settings-dialog .g-setting-row, body[data-g-theme="ps4"] #settings-dialog .toggle-row { min-height: calc(80 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border: 0; border-bottom: 1px solid rgba(255, 255, 255, .1); border-radius: 0; background: rgba(22, 35, 61, .65); }
+body[data-g-theme="ps4"] #settings-dialog .g-setting-row strong, body[data-g-theme="ps4"] #settings-dialog .toggle-row strong { font: 300 calc(26 * var(--cpx))/1.2 var(--g-font); }
+
+/* Wii: the light Wii Settings screen, rounded white cards on grey with cyan outlines. */
+body[data-g-theme="wii"] #settings-dialog { background: #f0f1f2 !important; color: #555 !important; border-radius: calc(26 * var(--cpx)) !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #39c1ef, 0 calc(18 * var(--cpx)) calc(50 * var(--cpx)) rgba(0, 0, 0, .45) !important; }
+body[data-g-theme="wii"] #settings-dialog .settings-sidebar { width: calc(420 * var(--cpx)); padding: calc(40 * var(--cpx)) calc(22 * var(--cpx)); background: #e4e6e9 !important; border-radius: calc(26 * var(--cpx)) 0 0 calc(26 * var(--cpx)); }
+body[data-g-theme="wii"] #settings-dialog .settings-sidebar-brand strong { color: #555; font: 400 calc(34 * var(--cpx))/1.1 var(--g-font); }
+body[data-g-theme="wii"] #settings-dialog .settings-sidebar-brand small { color: #9a9a9a; }
+body[data-g-theme="wii"] #settings-dialog .settings-tab { height: calc(62 * var(--cpx)); padding: 0 calc(22 * var(--cpx)); border-radius: calc(31 * var(--cpx)); background: transparent; color: #555 !important; font: 400 calc(24 * var(--cpx))/1 var(--g-font); text-align: left; }
+body[data-g-theme="wii"] #settings-dialog .settings-tab.active { background: #fff !important; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #39c1ef !important; color: #2a2a2a !important; }
+body[data-g-theme="wii"] #settings-dialog .settings-scroll { padding: calc(40 * var(--cpx)) calc(44 * var(--cpx)); background: #f7f7f8; }
+body[data-g-theme="wii"] #settings-dialog :is(h1, h2, h3) { color: #555 !important; font: 400 calc(34 * var(--cpx))/1.15 var(--g-font); }
+body[data-g-theme="wii"] #settings-dialog :is(p, span, strong, small, label, em, li, dt, dd, .g-setting-row, .toggle-row) { color: #555 !important; }
+body[data-g-theme="wii"] #settings-dialog .g-setting-row, body[data-g-theme="wii"] #settings-dialog .toggle-row { min-height: calc(88 * var(--cpx)); margin: 0 0 calc(12 * var(--cpx)); padding: 0 calc(24 * var(--cpx)); border: 0; border-radius: calc(18 * var(--cpx)); background: #fff; box-shadow: inset 0 0 0 1px #e2e4e6; }
+body[data-g-theme="wii"] #settings-dialog .g-settings-group { color: #8a8f94 !important; }
+body[data-g-theme="wii"] #settings-dialog .settings-sidebar-note { color: #8a8f94 !important; }
+body[data-g-theme="wii"] #settings-dialog :is(.settings-tab.focused, .settings-tab:focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #39c1ef !important; }
+
+/* 3DS: System Settings, light grey with rounded tiles and the mint selector. */
+body[data-g-theme="3ds"] #settings-dialog { background: #f2f2f0 !important; color: #3c3c3c !important; border-radius: calc(14 * var(--cpx)) !important; box-shadow: 0 0 0 calc(4 * var(--cpx)) #121314, 0 calc(18 * var(--cpx)) calc(50 * var(--cpx)) rgba(0, 0, 0, .45) !important; }
+body[data-g-theme="3ds"] #settings-dialog .settings-sidebar { width: calc(400 * var(--cpx)); padding: calc(36 * var(--cpx)) calc(20 * var(--cpx)); background: #e6e6e2 !important; border-radius: calc(14 * var(--cpx)) 0 0 calc(14 * var(--cpx)); }
+body[data-g-theme="3ds"] #settings-dialog .settings-sidebar-brand strong { color: #3c3c3c; font: 400 calc(32 * var(--cpx))/1.1 var(--g-font); }
+body[data-g-theme="3ds"] #settings-dialog .settings-sidebar-brand small { color: #8f8f8a; }
+body[data-g-theme="3ds"] #settings-dialog .settings-tab { height: calc(56 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border-radius: calc(8 * var(--cpx)); background: transparent; color: #3c3c3c !important; font: 400 calc(23 * var(--cpx))/1 var(--g-font); text-align: left; }
+body[data-g-theme="3ds"] #settings-dialog .settings-tab.active { background: #fff !important; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; color: #1f6f5a !important; }
+body[data-g-theme="3ds"] #settings-dialog .settings-scroll { padding: calc(36 * var(--cpx)) calc(40 * var(--cpx)); background: #fbfbf9; }
+body[data-g-theme="3ds"] #settings-dialog :is(h1, h2, h3) { color: #3c3c3c !important; font: 400 calc(32 * var(--cpx))/1.15 var(--g-font); }
+body[data-g-theme="3ds"] #settings-dialog :is(p, span, strong, small, label, em, li, dt, dd, .g-setting-row, .toggle-row) { color: #3c3c3c !important; }
+body[data-g-theme="3ds"] #settings-dialog .g-setting-row, body[data-g-theme="3ds"] #settings-dialog .toggle-row { min-height: calc(78 * var(--cpx)); margin: 0 0 calc(10 * var(--cpx)); padding: 0 calc(20 * var(--cpx)); border: 0; border-radius: calc(10 * var(--cpx)); background: #fff; box-shadow: 0 calc(1 * var(--cpx)) calc(2 * var(--cpx)) rgba(0, 0, 0, .12), inset 0 0 0 1px #dededa; }
+body[data-g-theme="3ds"] #settings-dialog .g-settings-group { color: #8f8f8a !important; }
+body[data-g-theme="3ds"] #settings-dialog .settings-sidebar-note { color: #8f8f8a !important; }
+body[data-g-theme="3ds"] #settings-dialog :is(.settings-tab.focused, .settings-tab:focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; }
+/* The settings pages sit inside .settings-main > .settings-scroll > .dialog-header, which each have their
+   own dark surface; the two light consoles repaint them here. */
+body[data-g-theme="wii"] #settings-dialog .settings-main { background: #f7f7f8 !important; }
+body[data-g-theme="wii"] #settings-dialog .dialog-header { background: #f0f1f2 !important; border-bottom: 1px solid #dcdfe2 !important; }
+body[data-g-theme="wii"] #settings-dialog .dialog-header :is(h2, p, .eyebrow, .settings-heading-copy) { color: #555 !important; }
+body[data-g-theme="wii"] #settings-dialog .dialog-header .eyebrow { color: #9aa0a6 !important; }
+body[data-g-theme="wii"] #settings-dialog .close-button { background: #e6e8ea !important; color: #666 !important; border-radius: 50% !important; }
+body[data-g-theme="wii"] #settings-dialog .close-button:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #39c1ef !important; }
+body[data-g-theme="3ds"] #settings-dialog .settings-main { background: #fbfbf9 !important; }
+body[data-g-theme="3ds"] #settings-dialog .dialog-header { background: #f2f2f0 !important; border-bottom: 1px solid #dededa !important; }
+body[data-g-theme="3ds"] #settings-dialog .dialog-header :is(h2, p, .eyebrow, .settings-heading-copy) { color: #3c3c3c !important; }
+body[data-g-theme="3ds"] #settings-dialog .dialog-header .eyebrow { color: #8f8f8a !important; }
+body[data-g-theme="3ds"] #settings-dialog .close-button { background: #ecece8 !important; color: #555 !important; border-radius: 50% !important; }
+body[data-g-theme="3ds"] #settings-dialog .close-button:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; }
