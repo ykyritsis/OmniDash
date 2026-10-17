@@ -118,7 +118,11 @@
     if (item.image) return `<span class="xmb-icon pic" style="background-image:${url(item.image)}"></span>`;
     return `<span class="xmb-icon${big ? ' big' : ''}">${img(item.file && PS3I(item.file), icon(item.glyph))}</span>`;
   }
-  function renderXmb() {
+  // The XMB shell is built once and then only its positions and classes change. Rebuilding the markup on
+  // every press (which is what this did) throws the old nodes away, so the CSS transitions never run and
+  // everything snaps; the console slides its categories and its item column.
+  let xmbBuiltBar = '', xmbBuiltList = '', xmbSwapTimer = 0;
+  function renderXmb(rebuild = true) {
     const cats = xmbCategories();
     xmbCat = Math.max(0, Math.min(xmbCat, cats.length - 1));
     const cat = cats[xmbCat], items = cat.items;
@@ -135,12 +139,41 @@
       if (index > sel) { const y = below; below += step; return y; }
       return 124 - (sel - 1 - index) * 82;
     });
-    host.innerHTML = `<i class="xmb-pic" aria-hidden="true"></i><canvas class="xmb-wave" aria-hidden="true"></canvas>
-      <div class="xmb-bar">${cats.map((c, i) => `<span class="xmb-cat${i === xmbCat ? ' on' : ''}" style="--x:${560 + (i - xmbCat) * 210}">${img(PS3I(c.file), icon(c.glyph))}<b>${esc(c.label)}</b></span>`).join('')}</div>
-      <div class="xmb-list">${items.map((item, index) => `<button class="xmb-item focusable${index === sel ? ' on' : index < sel ? ' above' : ''}${item.game ? ' is-game' : ''}" type="button" ${attrs(item)} data-xmb-index="${index}" style="--y:${pos[index]}" aria-label="${esc(item.label)}">
-        ${xmbIcon(item, index === sel)}<span class="xmb-copy"><strong>${esc(item.label)}</strong>${item.sub ? `<small>${esc(item.sub)}</small>` : ''}</span></button>`).join('')}</div>`;
+    if (!host.querySelector('.xmb-list')) {
+      host.innerHTML = `<i class="xmb-pic" aria-hidden="true"></i><canvas class="xmb-wave" aria-hidden="true"></canvas>
+        <div class="xmb-bar"></div><div class="xmb-list"></div>`;
+      xmbBuiltBar = xmbBuiltList = '';
+    }
+    const bar = host.querySelector('.xmb-bar'), list = host.querySelector('.xmb-list');
+    const barKey = cats.map(c => c.id).join('|');
+    if (rebuild || xmbBuiltBar !== barKey) {
+      bar.innerHTML = cats.map(c => `<span class="xmb-cat">${img(PS3I(c.file), icon(c.glyph))}<b>${esc(c.label)}</b></span>`).join('');
+      xmbBuiltBar = barKey;
+    }
+    [...bar.children].forEach((el, i) => {
+      el.style.setProperty('--x', String(560 + (i - xmbCat) * 210));
+      el.classList.toggle('on', i === xmbCat);
+    });
+    const listKey = `${cat.id}|${items.length}`;
+    if (rebuild || xmbBuiltList !== listKey) {
+      list.innerHTML = items.map((item, index) => `<button class="xmb-item focusable${item.game ? ' is-game' : ''}" type="button" ${attrs(item)} data-xmb-index="${index}" aria-label="${esc(item.label)}">
+        ${xmbIcon(item, index === sel)}<span class="xmb-copy"><strong>${esc(item.label)}</strong>${item.sub ? `<small>${esc(item.sub)}</small>` : ''}</span></button>`).join('');
+      xmbBuiltList = listKey;
+      // A new column (another category, or the same one after the library changed) fades up from below.
+      // The class is dropped once the animation has finished, or its fill would override the item transitions.
+      if (!reducedMotion()) {
+        list.classList.remove('xmb-swap'); void list.offsetWidth; list.classList.add('xmb-swap');
+        clearTimeout(xmbSwapTimer);
+        xmbSwapTimer = setTimeout(() => list.classList.remove('xmb-swap'), 420);
+      }
+    }
+    [...list.children].forEach((el, i) => {
+      el.style.setProperty('--y', String(pos[i]));
+      el.classList.toggle('on', i === sel);
+      el.classList.toggle('above', i < sel);
+    });
     chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>`;
-    focusEl(host.querySelector('.xmb-item.on'));
+    focusEl(list.querySelector('.xmb-item.on'));
     xmbBackdrop(items[sel]);
     loadCaptures();
     xmbWave.start();
@@ -171,7 +204,7 @@
       if (next === current) return;
       xmbItem[cat.id] = next; play('navigate');
     }
-    renderXmb();
+    renderXmb(false);
   }
   // The wave: translucent ribbons with a bright crest and drifting sparkles, drawn at 30fps on half-size
   // canvas. The crest glow is a wide faint stroke under a thin bright one rather than a canvas shadow, which
@@ -238,18 +271,50 @@
   }
   // The PlayStation button shapes, as the What's New tile showed them.
   const PS4_SHAPES = '<svg class="ps4-shapes" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="5" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M35 5 L43 18 H27 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="13" cy="35" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M30 28 L42 40 M42 28 L30 40" stroke="currentColor" stroke-width="2"/></svg>';
-  function renderPs4() {
+  // Same rule as the XMB: the shell, the tile row and the function area are built once, then only their
+  // classes and offsets change, so the tiles can grow and slide and the function area can drop in.
+  let ps4BuiltTiles = '';
+  function renderPs4(rebuild = true) {
     const list = ps4List();
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
-    const tile = (item, i) => `<button class="ps4-tile focusable${item.system ? ' system' : ''}${item.store ? ' store' : ''}${item.glass ? ' glass' : ''}${item.library ? ' library' : ''}${i === ps4Focus ? ' sel' : ''}" type="button" ${attrs(item)} data-ps4-index="${i}" aria-label="${esc(item.label)}"
-      style="--x:${i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? PS4_SHAPES : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}${i === ps4Focus ? '<em>Start</em>' : ''}</button>`;
-    host.innerHTML = `<i class="ps4-art" aria-hidden="true"></i>
-      <div class="ps4-functions${ps4Area === 'fn' ? ' open' : ''}" aria-label="Function area">${PS4_FUNCTIONS.map(([action, glyph, label, file], i) => `<button class="ps4-fn focusable${ps4Area === 'fn' && i === ps4Fn ? ' sel' : ''}" type="button" data-action="${action}" data-ps4-fn="${i}" aria-label="${label}">${img(PS4I(file), icon(glyph))}<span>${label}</span></button>`).join('')}</div>
-      <div class="ps4-home${ps4Area === 'fn' ? ' away' : ''}"><div class="ps4-row" role="list">${list.map(tile).join('')}</div>
-      <div class="ps4-under"><div class="ps4-menu">${sel.game ? ['Overview', 'Recent Activity', 'Related Items'].map((label, i) => `<button class="ps4-sub focusable${ps4Area === 'sub' && ps4Sub === i ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="${i}">${label}</button>`).join('') : ''}</div>
-        <div class="ps4-info"><h2>${esc(sel.label)}</h2><div class="ps4-cards">${sel.game ? `<button class="ps4-card wide focusable${ps4Area === 'sub' && ps4Sub === 3 ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="3" data-g-wide-art="${esc(sel.game.id)}"><b>${esc(sel.game.lastPlayed ? 'Recently played' : 'Overview')}</b><small>${esc(sel.game.title)}</small></button><span class="ps4-ach"></span>` : `<p class="ps4-sub-copy">${esc(sel.sub || '')}</p>`}</div></div></div></div>
-      <div class="ps4-hints"><span><i class="ps4-x"></i>Enter</span>${sel.game ? '<span><i class="ps4-opt">OPTIONS</i></span>' : ''}</div>`;
+    const tileX = i => (i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260);
+    const tile = (item, i) => `<button class="ps4-tile focusable${item.system ? ' system' : ''}${item.store ? ' store' : ''}${item.glass ? ' glass' : ''}${item.library ? ' library' : ''}" type="button" ${attrs(item)} data-ps4-index="${i}" aria-label="${esc(item.label)}"
+      style="--x:${tileX(i)}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? PS4_SHAPES : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}<em>Start</em></button>`;
+    const shell = host.querySelector('.ps4-home');
+    if (!shell) {
+      host.innerHTML = `<i class="ps4-art" aria-hidden="true"></i><i class="ps4-art" aria-hidden="true"></i>
+        <div class="ps4-functions" aria-label="Function area"></div>
+        <div class="ps4-home"><div class="ps4-row" role="list"></div><div class="ps4-under"></div></div>
+        <div class="ps4-hints"></div>`;
+      ps4BuiltTiles = '';
+      ps4ArtFront = 1;
+    }
+    const row = host.querySelector('.ps4-row'), functions = host.querySelector('.ps4-functions');
+    const tilesKey = list.map(item => (item.game ? item.game.id : item.label)).join('|');
+    if (rebuild || ps4BuiltTiles !== tilesKey) {
+      row.innerHTML = list.map(tile).join('');
+      ps4BuiltTiles = tilesKey;
+    }
+    [...row.children].forEach((el, i) => {
+      el.style.setProperty('--x', String(tileX(i)));
+      el.classList.toggle('sel', i === ps4Focus);
+    });
+    if (!functions.children.length) functions.innerHTML = PS4_FUNCTIONS.map(([action, glyph, label, file], i) => `<button class="ps4-fn focusable" type="button" data-action="${action}" data-ps4-fn="${i}" aria-label="${label}">${img(PS4I(file), icon(glyph))}<span>${label}</span></button>`).join('');
+    [...functions.children].forEach((el, i) => el.classList.toggle('sel', ps4Area === 'fn' && i === ps4Fn));
+    functions.classList.toggle('open', ps4Area === 'fn');
+    host.querySelector('.ps4-home').classList.toggle('away', ps4Area === 'fn');
+    host.querySelector('.ps4-under').innerHTML = `<div class="ps4-menu">${sel.game ? ['Overview', 'Recent Activity', 'Related Items'].map((label, i) => `<button class="ps4-sub focusable${ps4Area === 'sub' && ps4Sub === i ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="${i}">${label}</button>`).join('') : ''}</div>
+      <div class="ps4-info"><h2>${esc(sel.label)}</h2><div class="ps4-cards">${sel.game ? `<button class="ps4-card wide focusable${ps4Area === 'sub' && ps4Sub === 3 ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="3" data-g-wide-art="${esc(sel.game.id)}"><b>${esc(sel.game.lastPlayed ? 'Recently played' : 'Overview')}</b><small>${esc(sel.game.title)}</small></button><span class="ps4-ach"></span>` : `<p class="ps4-sub-copy">${esc(sel.sub || '')}</p>`}</div></div>`;
+    // The content row is new text every time, so it comes in rather than swapping under the eye.
+    if (!reducedMotion() && ps4LastUnder !== ps4Focus) {
+      const under = host.querySelector('.ps4-under');
+      under.classList.remove('ps4-swap'); void under.offsetWidth; under.classList.add('ps4-swap');
+      clearTimeout(ps4SwapTimer);
+      ps4SwapTimer = setTimeout(() => under.classList.remove('ps4-swap'), 420);
+    }
+    ps4LastUnder = ps4Focus;
+    host.querySelector('.ps4-hints').innerHTML = `<span><i class="ps4-x"></i>Enter</span>${sel.game ? '<span><i class="ps4-opt">OPTIONS</i></span>' : ''}`;
     const online = state.gFriends?.online || 0;
     const alerts = online + (window.gDownloads?.active?.length || 0);
     const note = window.gDownloads?.active?.[0] ? `Downloading ${window.gDownloads.active[0].title}` : online ? `${online} friend${online === 1 ? ' is' : 's are'} online` : 'Welcome back';
@@ -261,6 +326,7 @@
     const target = ps4Area === 'fn' ? host.querySelector('.ps4-fn.sel') : ps4Area === 'sub' ? host.querySelector(`[data-ps4-sub="${ps4Sub}"]`) : host.querySelector('.ps4-tile.sel');
     focusEl(target || host.querySelector('.ps4-tile.sel'));
   }
+  let ps4LastUnder = -1, ps4SwapTimer = 0;
   function ps4Achievements(game) {
     achievements(game).then(items => {
       const slot = host.querySelector('.ps4-ach');
@@ -270,10 +336,23 @@
       try { refreshFocusables(); } catch { /* Not ready. */ }
     });
   }
+  // Two stacked layers so the backdrop crossfades as the selection moves, instead of popping from one
+  // game's art to the next.
+  let ps4ArtFront = 1;
   function ps4Background(item) {
-    const layer = host.querySelector('.ps4-art');
-    if (!layer || !item?.game || !window.gWideArt) return;
-    window.gWideArt(item.game).then(src => { if (layer.isConnected && src) { layer.style.backgroundImage = cssUrl(src); layer.classList.add('on'); } });
+    const layers = host.querySelectorAll('.ps4-art');
+    if (layers.length < 2 || !item?.game || !window.gWideArt) return;
+    const gameId = item.game.id;
+    window.gWideArt(item.game).then(src => {
+      if (!src || !layers[0].isConnected) return;
+      if (host.dataset.ps4Art === gameId) return;
+      host.dataset.ps4Art = gameId;
+      const next = 1 - ps4ArtFront;
+      layers[next].style.backgroundImage = cssUrl(src);
+      layers[next].classList.add('on');
+      layers[ps4ArtFront].classList.remove('on');
+      ps4ArtFront = next;
+    });
   }
   function ps4Move(direction) {
     const list = ps4List();
@@ -297,7 +376,7 @@
       else if (direction === 'down') { if (!list[ps4Focus]?.game) return; ps4Area = 'sub'; ps4Sub = 0; play('navigate'); }
       else { const next = Math.max(0, Math.min(list.length - 1, ps4Focus + (direction === 'right' ? 1 : -1))); if (next === ps4Focus) return; ps4Focus = next; play('navigate'); }
     }
-    renderPs4();
+    renderPs4(false);
   }
 
   // =========================== Wii: the Wii Menu ===========================
@@ -478,14 +557,29 @@
   }
 
   // =========================== Rendering, navigation, sounds ===========================
-  function render() {
+  const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let renderedTheme = '', enterTimer = 0;
+  function render(rebuild = true) {
+    const id = theme();
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
     document.body.classList.toggle('home-active', state.view === 'home');
-    if (!on()) { host.innerHTML = ''; chrome.innerHTML = ''; return; }
+    if (!on()) { host.innerHTML = ''; chrome.innerHTML = ''; renderedTheme = ''; return; }
+    // Picking a console redraws the whole dashboard with a short entrance, the way the console's own
+    // home screen arrived. It is only for a theme change, not for a library or artwork refresh.
+    if (id !== renderedTheme) {
+      renderedTheme = id;
+      if (!reducedMotion()) {
+        document.body.classList.remove('retro-enter');
+        void document.body.offsetWidth;
+        document.body.classList.add('retro-enter');
+        clearTimeout(enterTimer);
+        enterTimer = setTimeout(() => document.body.classList.remove('retro-enter'), 1100);
+      }
+    }
     try {
-      ({ ps3: renderXmb, ps4: renderPs4, wii: renderWii, '3ds': renderDs })[theme()]();
+      ({ ps3: renderXmb, ps4: renderPs4, wii: renderWii, '3ds': renderDs })[id](rebuild);
     } catch (error) {
       // A console screen that cannot be built must never leave the dashboard hidden behind an empty
       // overlay: drop back to the launcher's own Home and say so in the console.
@@ -530,7 +624,7 @@
   document.addEventListener('focusin', event => {
     if (!on() || !host.contains(event.target) && !chrome.contains(event.target)) return;
     const t = theme(), el = event.target;
-    if (t === 'ps4' && el.closest('.ps4-tile') && Number(el.dataset.ps4Index) !== ps4Focus) { ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; renderPs4(); }
+    if (t === 'ps4' && el.closest('.ps4-tile') && Number(el.dataset.ps4Index) !== ps4Focus) { ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; renderPs4(false); }
     if (t === 'wii' && el.closest('.wii-ch')) { wiiFocus = Number(el.dataset.wiiIndex); wiiBar = -1; }
   });
   document.addEventListener('click', event => {
@@ -540,9 +634,9 @@
     const action = el.dataset.action;
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
     // A first click on an XMB item, PS4 tile or 3DS icon that isn't selected selects it, as the pointer did.
-    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); play('navigate'); renderXmb(); return; }
+    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); play('navigate'); renderXmb(false); return; }
     if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); renderDs(); return; }
-    if (theme() === 'ps4' && el.classList.contains('ps4-tile') && !el.classList.contains('sel')) { stop(); ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; play('navigate'); renderPs4(); return; }
+    if (theme() === 'ps4' && el.classList.contains('ps4-tile') && !el.classList.contains('sel')) { stop(); ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; play('navigate'); renderPs4(false); return; }
     if (action === 'g-retro-settings') { stop(); play('confirm'); Promise.resolve(typeof openSettings === 'function' ? openSettings() : settingsDialog.showModal()).then(() => { try { showSettingsPage(el.dataset.page); } catch { /* Missing. */ } }); return; }
     if (action === 'g-ps4-overview') { stop(); play('confirm'); if (typeof openGameDetails === 'function') openGameDetails(el.dataset.gameId); return; }
     if (action === 'g-retro-preview') { stop(); play('confirm'); wiiPreview = el.dataset.gameId; render(); return; }
