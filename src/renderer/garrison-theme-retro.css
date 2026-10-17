@@ -34,6 +34,11 @@ body.garrison.g-retro .console-library-content { padding: calc(56 * var(--cpx)) 
 body.garrison.g-retro .library-grid { grid-template-columns: repeat(auto-fill, minmax(calc(190 * var(--cpx)), 1fr)) !important; gap: calc(12 * var(--cpx)) !important; }
 body.garrison.g-retro .g-library-toolbar { display: none !important; }
 body.garrison.g-retro:not(.home-active) #g-retro-chrome { display: none !important; }
+/* Each console had its own action colour; keep the Xbox green out of its Play and install buttons. */
+body.garrison[data-g-theme="ps3"] { --g-xbox-green: #3a6fc4; --g-xbox-green-hover: #4b80d6; }
+body.garrison[data-g-theme="ps4"] { --g-xbox-green: #1f7ae0; --g-xbox-green-hover: #2f8bf0; }
+body.garrison[data-g-theme="wii"] { --g-xbox-green: #2aa7e0; --g-xbox-green-hover: #43b8ec; }
+body.garrison[data-g-theme="3ds"] { --g-xbox-green: #1f9ad6; --g-xbox-green-hover: #2fabe8; }
 
 /* =========================== PS3: XMB =========================== */
 body.garrison[data-g-theme="ps3"] { --r-accent: #3a6fc4; --g-font: "g-retro-xmb", "Segoe UI", Arial, sans-serif; color: #fff; }
@@ -120,6 +125,7 @@ body[data-g-theme="ps4"] .ps4-s.clock { right: calc(110 * var(--cpx)); font-size
 }
 #g-retro .ps4-tile > :is(img, .g-glyph, .g-mdl2) { width: 52%; height: 52%; }
 #g-retro .ps4-tile.glass { background: linear-gradient(135deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .08)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+#g-retro .ps4-shapes { width: 62%; height: 62%; color: rgba(255, 255, 255, .92); filter: drop-shadow(0 1px calc(3 * var(--cpx)) rgba(0, 0, 0, .35)); }
 #g-retro .ps4-tile.store { background: #0b62c9; }
 #g-retro .ps4-tile.store > img { width: 100%; height: 100%; object-fit: cover; }
 #g-retro .ps4-tile.sel.store > img { width: calc(356 * var(--cpx)); height: calc(356 * var(--cpx)); margin-top: calc(-78 * var(--cpx)); }
@@ -160,7 +166,9 @@ body[data-g-theme="ps4"] .ps4-s.clock { right: calc(110 * var(--cpx)); font-size
 #g-retro .ps4-fn.sel span, #g-retro .ps4-fn:is(.focused, :focus-visible) span { opacity: 1; }
 
 /* =========================== Wii =========================== */
-body.garrison[data-g-theme="wii"] { --r-accent: #34bdef; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; color: #444; }
+/* The launcher's own screens (library, settings, details) stay dark, so the body text stays light; the
+   light consoles set their own colours on the screens that are light. */
+body.garrison[data-g-theme="wii"] { --r-accent: #34bdef; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; color: #fff; }
 html:has(body[data-g-theme="wii"]) { background: #ececec; }
 body[data-g-theme="wii"] #g-theme-wall { display: block; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .022) 0 calc(1 * var(--cpx)), transparent calc(1 * var(--cpx)) calc(4 * var(--cpx))), linear-gradient(#f2f2f2, #e9e9e9 70%, #e4e4e4); }
 #g-retro .wii-bands { position: absolute; inset: 0; pointer-events: none; }
@@ -212,7 +220,7 @@ body.g-retro-pack #g-retro .wii-ch::before { content: ""; position: absolute; in
 #g-retro .wii-arrow:is(.focused, :focus-visible) { transform: scale(1.15); }
 body[data-g-theme="wii"] #g-retro-chrome .wii-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; height: calc(229 * var(--cpx)); color: #707070; font-family: var(--g-font); }
 body[data-g-theme="wii"] .wii-bar-shape { position: absolute; inset: 0; width: 100%; height: 100%; }
-body[data-g-theme="wii"] .wii-glow { position: absolute; left: 50%; top: calc(-150 * var(--cpx)); width: calc(880 * var(--cpx)); height: calc(470 * var(--cpx)); transform: translateX(-50%); background: radial-gradient(ellipse at 50% 74%, #fff 0%, rgba(255, 255, 255, .95) 40%, rgba(255, 255, 255, 0) 72%); pointer-events: none; }
+body[data-g-theme="wii"] .wii-glow { position: absolute; left: 50%; top: calc(-200 * var(--cpx)); width: calc(860 * var(--cpx)); height: calc(400 * var(--cpx)); transform: translateX(-50%); background: radial-gradient(ellipse 54% 100% at 50% 100%, #fff 0%, #fff 38%, rgba(255, 255, 255, .82) 58%, rgba(255, 255, 255, 0) 80%); pointer-events: none; }
 body[data-g-theme="wii"] .wii-ring { position: absolute; top: calc(10 * var(--cpx)); width: calc(300 * var(--cpx)); height: calc(219 * var(--cpx)); border-radius: calc(86 * var(--cpx)); background: linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12)); box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .85), 0 calc(2 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .07); }
 body[data-g-theme="wii"] .wii-ring.left { left: calc(-58 * var(--cpx)); }
 body[data-g-theme="wii"] .wii-ring.right { right: calc(-58 * var(--cpx)); }
@@ -246,7 +254,7 @@ body:not(.g-retro-pack) #g-retro .wii-pbtn { border: calc(4 * var(--cpx)) solid 
 
 /* =========================== 3DS =========================== */
 /* Native 3DS pixels. Capped so the pair always fits: 400 + 320 native wide plus the gap, and 240 tall. */
-body.garrison[data-g-theme="3ds"] { --r-accent: #2fa7e8; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; --k: min(calc(2.48 * var(--cpx)), calc(96vw / 736), calc(88vh / 240)); color: #333; }
+body.garrison[data-g-theme="3ds"] { --r-accent: #2fa7e8; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; --k: min(calc(2.48 * var(--cpx)), calc(96vw / 736), calc(88vh / 240)); color: #fff; }
 html:has(body[data-g-theme="3ds"]) { background: #1a1a1a; }
 body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-gradient(ellipse 80% 80% at 50% 40%, #34343a, #0c0c0f 82%); }
 #g-retro .ds-bg { position: absolute; inset: 0; background: center / cover no-repeat; opacity: .46; transition: opacity .7s ease; }
@@ -276,7 +284,7 @@ body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-grad
 #g-retro .ds-banner.system .ds-art { left: 30%; right: 30%; box-shadow: none; display: grid; place-items: center; }
 #g-retro .ds-banner.system .ds-art svg { width: 100%; height: 100%; filter: drop-shadow(0 calc(3 * var(--k)) calc(5 * var(--k)) rgba(0, 0, 0, .2)); }
 @keyframes ds-float { 50% { transform: translateY(calc(-2 * var(--k))); } }
-#g-retro .ds-plate { position: absolute; left: calc(40 * var(--k)); right: calc(40 * var(--k)); top: calc(172 * var(--k)); display: flex; align-items: center; gap: calc(8 * var(--k)); height: calc(38 * var(--k)); padding: 0 calc(8 * var(--k)); border-radius: calc(6 * var(--k)); background: rgba(255, 255, 255, .95); box-shadow: 0 calc(1 * var(--k)) calc(3 * var(--k)) rgba(0, 0, 0, .2); }
+#g-retro .ds-plate { position: absolute; left: calc(40 * var(--k)); right: calc(40 * var(--k)); top: calc(172 * var(--k)); display: flex; align-items: center; gap: calc(8 * var(--k)); height: calc(38 * var(--k)); padding: 0 calc(8 * var(--k)); border-radius: calc(6 * var(--k)); background: rgba(255, 255, 255, .95); color: #333; box-shadow: 0 calc(1 * var(--k)) calc(3 * var(--k)) rgba(0, 0, 0, .2); }
 #g-retro .ds-plate-icon { flex: none; width: calc(28 * var(--k)); height: calc(28 * var(--k)); border-radius: calc(4 * var(--k)); background: center / cover no-repeat; }
 #g-retro .ds-plate-icon svg { width: 100%; height: 100%; }
 #g-retro .ds-plate strong { display: block; font: 400 calc(12 * var(--k))/1.2 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(260 * var(--k)); }

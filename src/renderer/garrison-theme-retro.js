@@ -236,12 +236,14 @@
       { label: 'PlayStation™Store', sub: 'Games and add-ons', action: 'dashboard-store', file: 'plus', glyph: 'shop', system: true, store: true },
       { label: 'Library', sub: 'All your games and apps', action: 'library', glyph: 'library', system: true, library: true }];
   }
+  // The PlayStation button shapes, as the What's New tile showed them.
+  const PS4_SHAPES = '<svg class="ps4-shapes" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="5" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M35 5 L43 18 H27 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="13" cy="35" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M30 28 L42 40 M42 28 L30 40" stroke="currentColor" stroke-width="2"/></svg>';
   function renderPs4() {
     const list = ps4List();
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
     const tile = (item, i) => `<button class="ps4-tile focusable${item.system ? ' system' : ''}${item.store ? ' store' : ''}${item.glass ? ' glass' : ''}${item.library ? ' library' : ''}${i === ps4Focus ? ' sel' : ''}" type="button" ${attrs(item)} data-ps4-index="${i}" aria-label="${esc(item.label)}"
-      style="--x:${i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? img(PS4I('new'), icon('friends')) : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}${i === ps4Focus ? '<em>Start</em>' : ''}</button>`;
+      style="--x:${i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? PS4_SHAPES : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}${i === ps4Focus ? '<em>Start</em>' : ''}</button>`;
     host.innerHTML = `<i class="ps4-art" aria-hidden="true"></i>
       <div class="ps4-functions${ps4Area === 'fn' ? ' open' : ''}" aria-label="Function area">${PS4_FUNCTIONS.map(([action, glyph, label, file], i) => `<button class="ps4-fn focusable${ps4Area === 'fn' && i === ps4Fn ? ' sel' : ''}" type="button" data-action="${action}" data-ps4-fn="${i}" aria-label="${label}">${img(PS4I(file), icon(glyph))}<span>${label}</span></button>`).join('')}</div>
       <div class="ps4-home${ps4Area === 'fn' ? ' away' : ''}"><div class="ps4-row" role="list">${list.map(tile).join('')}</div>

@@ -23,6 +23,8 @@ const SHOW = {
   store: `showView('store')`,
   halo: `(() => { const t = document.body.dataset.gTheme; localStorage.setItem('g-bg:' + t, 'pack:Halo_4'); gSetTheme('helix'); gSetTheme(t); showView('home'); })()`,
   onboarding: `(() => { onboardingDialog.showModal(); showOnboardingStep(0); })()`,
+  // The console on-screen keyboard, opened on a throwaway field.
+  keyboard: `(() => { showView('home'); let f = document.querySelector('#review-osk-field'); if (!f) { f = document.createElement('input'); f.id = 'review-osk-field'; f.type = 'text'; document.body.append(f); } f.value = 'Forza'; openNativeKeyboard(f); })()`,
   // Switch theme the way the picker does, then close the dialog a moment later: the real switch path.
   switchps3: `(() => { settingsDialog.showModal(); showSettingsPage('personalization'); document.querySelector('[data-g-theme-pick="ps3"]').click(); setTimeout(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); }, 1200); })()`,
   switchwii: `(() => { settingsDialog.showModal(); showSettingsPage('personalization'); document.querySelector('[data-g-theme-pick="wii"]').click(); setTimeout(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); }, 1200); })()`,

@@ -30,6 +30,31 @@ body[data-g-theme="x360"] #g-osk .g-osk-key { background: linear-gradient(#fffff
 body[data-g-theme="x360"] #g-osk .g-osk-key.done { background: var(--x-lime, #6cb344); color: #fff; }
 body[data-g-theme="x360"] #g-osk .g-osk-key:is(.focused, :focus-visible) { background: var(--x-lime, #6cb344); color: #fff; box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(12 * var(--cpx)) rgba(108, 179, 68, .7) !important; }
 body[data-g-theme="x360"] #g-osk .g-osk-hints { color: #444; }
+/* PS3: XMB black, white-outlined keys, the SCE font. */
+body[data-g-theme="ps3"] #g-osk { background: rgba(8, 9, 11, .97); font-family: var(--g-font); }
+body[data-g-theme="ps3"] #g-osk .g-osk-field { border: 1px solid rgba(255, 255, 255, .5); border-radius: calc(6 * var(--cpx)); background: rgba(255, 255, 255, .12); }
+body[data-g-theme="ps3"] #g-osk .g-osk-key { border-radius: calc(6 * var(--cpx)); background: rgba(255, 255, 255, .14); }
+body[data-g-theme="ps3"] #g-osk .g-osk-key.done { background: #3a6fc4; }
+body[data-g-theme="ps3"] #g-osk .g-osk-key:is(.focused, :focus-visible) { background: #fff; color: #111; }
+/* PS4: navy panels, blue keys. */
+body[data-g-theme="ps4"] #g-osk { background: #0a1226; font-family: var(--g-font); }
+body[data-g-theme="ps4"] #g-osk .g-osk-field { border-radius: calc(4 * var(--cpx)); background: #16233d; }
+body[data-g-theme="ps4"] #g-osk .g-osk-key { border-radius: calc(3 * var(--cpx)); background: #1b2d4d; }
+body[data-g-theme="ps4"] #g-osk .g-osk-key.done { background: #1f7ae0; }
+body[data-g-theme="ps4"] #g-osk .g-osk-key:is(.focused, :focus-visible) { background: #fff; color: #0a1226; }
+/* Wii: white rounded keys on the grey menu. */
+body[data-g-theme="wii"] #g-osk { background: linear-gradient(#f4f4f4, #dcdcde); color: #555; font-family: var(--g-font); }
+body[data-g-theme="wii"] #g-osk .g-osk-field { border-radius: calc(30 * var(--cpx)); background: #fff; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #c9cbcf; }
+body[data-g-theme="wii"] #g-osk .g-osk-key { border-radius: calc(12 * var(--cpx)); background: linear-gradient(#fff, #e9e9e9); color: #555; box-shadow: 0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .18); }
+body[data-g-theme="wii"] #g-osk .g-osk-key.done { background: #39c1ef; color: #fff; }
+body[data-g-theme="wii"] #g-osk .g-osk-key:is(.focused, :focus-visible) { background: #fff; box-shadow: 0 0 0 calc(3 * var(--cpx)) #39c1ef !important; }
+body[data-g-theme="wii"] #g-osk .g-osk-hints { color: #555; }
+/* 3DS: the touch screen's white keys with the mint outline. */
+body[data-g-theme="3ds"] #g-osk { background: #1f2226; font-family: var(--g-font); }
+body[data-g-theme="3ds"] #g-osk .g-osk-field { border-radius: calc(6 * var(--cpx)); background: #fff; color: #333; }
+body[data-g-theme="3ds"] #g-osk .g-osk-key { border-radius: calc(8 * var(--cpx)); background: #fff; color: #333; box-shadow: 0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .35); }
+body[data-g-theme="3ds"] #g-osk .g-osk-key.done { background: #43e0ad; color: #10251f; }
+body[data-g-theme="3ds"] #g-osk .g-osk-key:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; }
 
 /* ---------- Settings group headings (garrison-theme-settings.js) ---------- */
 .g-settings-group { display: none; }
