@@ -56,11 +56,11 @@ body[data-g-theme="ps3"] #g-theme-wall {
 #g-retro.pic-on .xmb-pic { opacity: .58; }
 #g-retro .xmb-wave { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #g-retro .xmb-bar { position: absolute; inset: 0; pointer-events: none; }
-#g-retro .xmb-cat { position: absolute; left: 0; top: calc(292 * var(--cpx)); display: grid; justify-items: center; width: calc(140 * var(--cpx)); height: calc(64 * var(--cpx)); transform: translate(calc(var(--x) * var(--cpx)), 0) translate(-50%, -50%); opacity: .4; transition: transform .3s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
-#g-retro .xmb-cat > :is(img, .g-glyph, .g-mdl2) { width: calc(88 * var(--cpx)); height: calc(62 * var(--cpx)); object-fit: contain; color: #fff; filter: drop-shadow(0 0 calc(3 * var(--cpx)) rgba(0, 0, 0, .45)); transition: transform .34s cubic-bezier(.34, 1.45, .64, 1), filter .3s ease; }
-#g-retro .xmb-cat b { position: absolute; top: calc(100% + 40 * var(--cpx)); white-space: nowrap; font: 400 calc(30 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 1px calc(6 * var(--cpx)) rgba(0, 0, 0, .6); transition: opacity .24s ease; }
+#g-retro .xmb-cat { position: absolute; left: 0; top: calc(292 * var(--cpx)); display: grid; justify-items: center; width: calc(156 * var(--cpx)); height: calc(94 * var(--cpx)); transform: translate(calc(var(--x) * var(--cpx)), 0) translate(-50%, -50%); opacity: .48; transition: transform .3s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
+#g-retro .xmb-cat > :is(img, .g-glyph, .g-mdl2) { width: calc(128 * var(--cpx)); height: calc(90 * var(--cpx)); object-fit: contain; color: #fff; filter: drop-shadow(0 0 calc(4 * var(--cpx)) rgba(0, 0, 0, .45)); transition: transform .34s cubic-bezier(.34, 1.45, .64, 1), filter .3s ease; }
+#g-retro .xmb-cat b { position: absolute; top: calc(100% + 6 * var(--cpx)); white-space: nowrap; font: 400 calc(32 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 1px calc(7 * var(--cpx)) rgba(0, 0, 0, .65); transition: opacity .24s ease; }
 #g-retro .xmb-cat.on { opacity: 1; }
-#g-retro .xmb-cat.on > :is(img, .g-glyph, .g-mdl2) { transform: scale(1.16); filter: drop-shadow(0 0 calc(9 * var(--cpx)) rgba(255, 255, 255, .55)); }
+#g-retro .xmb-cat.on > :is(img, .g-glyph, .g-mdl2) { transform: scale(1.07); filter: drop-shadow(0 0 calc(8 * var(--cpx)) rgba(255, 255, 255, .48)); }
 #g-retro .xmb-cat.on b { opacity: 1; }
 #g-retro .xmb-list { position: absolute; inset: 0; pointer-events: none; }
 #g-retro .xmb-item {
@@ -68,27 +68,27 @@ body[data-g-theme="ps3"] #g-theme-wall {
   background: none; color: #fff; text-align: left; transform: translateY(calc(var(--y) * var(--cpx))); transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; cursor: pointer; white-space: nowrap; pointer-events: auto; will-change: transform;
 }
 #g-retro .xmb-item.above { opacity: .55; }
-#g-retro .xmb-icon { position: absolute; left: 0; top: 0; display: grid; place-items: center; width: calc(74 * var(--cpx)); height: calc(74 * var(--cpx)); transform: translate(-50%, -50%); transition: transform .34s cubic-bezier(.34, 1.4, .64, 1), box-shadow .3s ease; }
-#g-retro .xmb-icon > :is(img, .g-glyph, .g-mdl2) { width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); object-fit: contain; filter: drop-shadow(0 0 calc(2 * var(--cpx)) rgba(0, 0, 0, .5)); }
-#g-retro .xmb-icon.game { border-radius: calc(4 * var(--cpx)); background: var(--cover, rgba(255, 255, 255, .14)) center / cover no-repeat; box-shadow: 0 0 0 1px rgba(255, 255, 255, .35), 0 calc(2 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 0, 0, .35); }
-#g-retro .xmb-icon.pic { width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); background: center / cover no-repeat; border-radius: calc(3 * var(--cpx)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
-#g-retro .xmb-item.on .xmb-icon { transform: translate(-50%, -50%) scale(1.34); }
-#g-retro .xmb-item.on .xmb-icon > :is(img, .g-glyph, .g-mdl2) { filter: drop-shadow(0 0 calc(7 * var(--cpx)) rgba(255, 255, 255, .7)); }
-#g-retro .xmb-item.on .xmb-icon.game { box-shadow: 0 0 0 1px rgba(255, 255, 255, .7), 0 0 calc(16 * var(--cpx)) rgba(255, 255, 255, .3); }
-#g-retro .xmb-item.on::before { content: ""; position: absolute; left: calc(-84 * var(--cpx)); top: 0; transform: translateY(-50%); border-top: calc(11 * var(--cpx)) solid transparent; border-bottom: calc(11 * var(--cpx)) solid transparent; border-left: calc(17 * var(--cpx)) solid rgba(255, 255, 255, .92); filter: drop-shadow(0 0 calc(5 * var(--cpx)) rgba(255, 255, 255, .55)); animation: xmb-cursor .26s cubic-bezier(.22, 1, .36, 1) both; }
-#g-retro .xmb-copy { position: absolute; left: calc(76 * var(--cpx)); top: 0; transform: translateY(-50%) translateX(calc(-14 * var(--cpx))); opacity: 0; transition: opacity .24s ease .05s, transform .3s cubic-bezier(.22, 1, .36, 1) .05s; }
+#g-retro .xmb-icon { position: absolute; left: 0; top: 0; display: grid; place-items: center; width: calc(104 * var(--cpx)); height: calc(104 * var(--cpx)); transform: translate(-50%, -50%); transition: transform .34s cubic-bezier(.34, 1.4, .64, 1), box-shadow .3s ease; }
+#g-retro .xmb-icon > :is(img, .g-glyph, .g-mdl2) { width: calc(86 * var(--cpx)); height: calc(86 * var(--cpx)); object-fit: contain; filter: drop-shadow(0 0 calc(3 * var(--cpx)) rgba(0, 0, 0, .5)); }
+#g-retro .xmb-icon.game { border-radius: calc(5 * var(--cpx)); background: var(--cover, rgba(255, 255, 255, .14)) center / cover no-repeat; box-shadow: 0 0 0 1px rgba(255, 255, 255, .35), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .35); }
+#g-retro .xmb-icon.pic { width: calc(86 * var(--cpx)); height: calc(86 * var(--cpx)); background: center / cover no-repeat; border-radius: calc(4 * var(--cpx)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
+#g-retro .xmb-item.on .xmb-icon { transform: translate(-50%, -50%) scale(1.15); }
+#g-retro .xmb-item.on .xmb-icon > :is(img, .g-glyph, .g-mdl2) { filter: drop-shadow(0 0 calc(7 * var(--cpx)) rgba(255, 255, 255, .58)); }
+#g-retro .xmb-item.on .xmb-icon.game { box-shadow: 0 0 0 1px rgba(255, 255, 255, .7), 0 0 calc(20 * var(--cpx)) rgba(255, 255, 255, .32); }
+#g-retro .xmb-item.on::before { content: ""; position: absolute; left: calc(-102 * var(--cpx)); top: 0; transform: translateY(-50%); border-top: calc(14 * var(--cpx)) solid transparent; border-bottom: calc(14 * var(--cpx)) solid transparent; border-left: calc(21 * var(--cpx)) solid rgba(255, 255, 255, .92); filter: drop-shadow(0 0 calc(6 * var(--cpx)) rgba(255, 255, 255, .55)); animation: xmb-cursor .26s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .xmb-copy { position: absolute; left: calc(120 * var(--cpx)); top: 0; max-width: calc(760 * var(--cpx)); transform: translateY(-50%) translateX(calc(-16 * var(--cpx))); opacity: 0; transition: opacity .24s ease .05s, transform .3s cubic-bezier(.22, 1, .36, 1) .05s; }
 #g-retro .xmb-item.on .xmb-copy { opacity: 1; transform: translateY(-50%); }
-#g-retro .xmb-copy strong { display: block; font: 400 calc(40 * var(--cpx))/1.12 var(--g-font); text-shadow: 0 1px calc(6 * var(--cpx)) rgba(0, 0, 0, .6); }
-#g-retro .xmb-copy small { display: block; margin-top: calc(3 * var(--cpx)); font: 400 calc(23 * var(--cpx))/1.2 var(--g-font); opacity: .76; }
+#g-retro .xmb-copy strong { display: block; max-width: calc(760 * var(--cpx)); overflow: hidden; text-overflow: ellipsis; font: 400 calc(48 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 2px calc(8 * var(--cpx)) rgba(0, 0, 0, .62); }
+#g-retro .xmb-copy small { display: block; margin-top: calc(4 * var(--cpx)); font: 400 calc(27 * var(--cpx))/1.2 var(--g-font); opacity: .78; }
 body[data-g-theme="ps3"] #g-retro-chrome .xmb-clock {
-  position: fixed; right: calc(88 * var(--cpx)); top: calc(80 * var(--cpx)); z-index: 5; display: flex; align-items: center; gap: calc(16 * var(--cpx)); width: calc(510 * var(--cpx)); height: calc(58 * var(--cpx)); padding: 0 calc(20 * var(--cpx)) 0 calc(18 * var(--cpx));
-  border: 1px solid rgba(255, 255, 255, .5); border-right: 0; border-radius: calc(8 * var(--cpx)) 0 0 calc(8 * var(--cpx)); background: linear-gradient(rgba(40, 44, 50, .5), rgba(14, 16, 20, .42));
-  box-shadow: inset 0 0 calc(8 * var(--cpx)) rgba(255, 255, 255, .16); color: #fff; font: 400 calc(21 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px calc(4 * var(--cpx)) rgba(0, 0, 0, .6);
+  position: fixed; right: calc(24 * var(--cpx)); top: calc(48 * var(--cpx)); z-index: 5; display: flex; align-items: center; gap: calc(18 * var(--cpx)); width: calc(560 * var(--cpx)); height: calc(78 * var(--cpx)); padding: 0 calc(22 * var(--cpx)) 0 calc(20 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .5); border-right: 0; border-radius: calc(10 * var(--cpx)) 0 0 calc(10 * var(--cpx)); background: linear-gradient(rgba(44, 48, 54, .52), rgba(14, 16, 20, .44));
+  box-shadow: inset 0 0 calc(10 * var(--cpx)) rgba(255, 255, 255, .16); color: #fff; font: 400 calc(26 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px calc(5 * var(--cpx)) rgba(0, 0, 0, .6);
 }
-body[data-g-theme="ps3"] .xmb-me { display: inline-flex; align-items: center; gap: calc(10 * var(--cpx)); font-size: calc(18 * var(--cpx)); }
-body[data-g-theme="ps3"] .xmb-me i { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #b4f07e, #3fae25 70%); box-shadow: 0 0 calc(4 * var(--cpx)) rgba(80, 220, 40, .7); }
+body[data-g-theme="ps3"] .xmb-me { display: inline-flex; align-items: center; gap: calc(11 * var(--cpx)); font-size: calc(22 * var(--cpx)); }
+body[data-g-theme="ps3"] .xmb-me i { width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #b4f07e, #3fae25 70%); box-shadow: 0 0 calc(5 * var(--cpx)) rgba(80, 220, 40, .7); }
 body[data-g-theme="ps3"] .xmb-time { margin-left: auto; }
-body[data-g-theme="ps3"] .xmb-dial { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); border: calc(2.5 * var(--cpx)) solid #fff; border-radius: 50%; position: relative; }
+body[data-g-theme="ps3"] .xmb-dial { width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); border: calc(3 * var(--cpx)) solid #fff; border-radius: 50%; position: relative; }
 body[data-g-theme="ps3"] .xmb-dial::before { content: ""; position: absolute; left: 45%; top: 18%; width: 12%; height: 36%; background: #fff; border-radius: 2px; }
 body[data-g-theme="ps3"] .xmb-dial::after { content: ""; position: absolute; left: 50%; top: 46%; width: 30%; height: 12%; background: #fff; border-radius: 2px; }
 /* The item column slides up into place when a category's list changes, and the cursor pops in. */
@@ -113,31 +113,31 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
 body.garrison[data-g-theme="ps4"] { --r-accent: #1f7ae0; --g-font: "g-retro-sst", "Segoe UI", Arial, sans-serif; color: #fff; }
 html:has(body[data-g-theme="ps4"]) { background: #0a3f93; }
 body[data-g-theme="ps4"] #g-theme-wall { display: block; background: radial-gradient(ellipse 90% 80% at 70% 10%, #3f86e0 0%, #1d5ec2 45%, #0d3f97 100%); }
-#g-retro .ps4-art { position: absolute; inset: 0; background: center 25% / cover no-repeat; opacity: 0; transition: opacity .7s ease; pointer-events: none; }
-#g-retro .ps4-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(9, 40, 100, .55), rgba(9, 40, 100, .25) 35%, rgba(6, 22, 60, .8) 75%); }
-#g-retro .ps4-art.on { opacity: 1; }
-body[data-g-theme="ps4"] #g-retro-chrome .ps4-status { position: fixed; inset: 0 0 auto; z-index: 5; height: calc(166 * var(--cpx)); background: linear-gradient(180deg, rgba(7, 30, 74, .46) 0%, rgba(7, 30, 74, .3) 62%, rgba(7, 30, 74, 0) 100%); font: 300 calc(22 * var(--cpx))/1 var(--g-font); pointer-events: none; }
+#g-retro .ps4-art { position: absolute; inset: 0; background: center 25% / cover no-repeat; opacity: 0; transition: opacity .75s ease; pointer-events: none; }
+#g-retro .ps4-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7, 31, 78, .52), rgba(8, 34, 86, .22) 34%, rgba(4, 14, 40, .62) 82%); }
+#g-retro .ps4-art.on { opacity: .3; }
+body[data-g-theme="ps4"] #g-retro-chrome .ps4-status { position: fixed; inset: 0 0 auto; z-index: 5; height: calc(150 * var(--cpx)); background: linear-gradient(180deg, rgba(7, 30, 74, .42) 0%, rgba(7, 30, 74, .22) 62%, rgba(7, 30, 74, 0) 100%); font: 300 calc(22 * var(--cpx))/1 var(--g-font); pointer-events: none; }
 body[data-g-theme="ps4"] #g-retro-chrome .ps4-status::after { content: ""; position: absolute; inset: auto 0 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22) 12%, rgba(255, 255, 255, .22) 88%, transparent); }
-body[data-g-theme="ps4"] .ps4-s { position: absolute; top: calc(99 * var(--cpx)); display: flex; align-items: center; gap: calc(12 * var(--cpx)); transform: translateY(-50%); white-space: nowrap; text-shadow: 0 1px calc(4 * var(--cpx)) rgba(0, 0, 0, .35); }
+body[data-g-theme="ps4"] .ps4-s { position: absolute; top: calc(78 * var(--cpx)); display: flex; align-items: center; gap: calc(12 * var(--cpx)); transform: translateY(-50%); white-space: nowrap; text-shadow: 0 1px calc(4 * var(--cpx)) rgba(0, 0, 0, .35); }
 body[data-g-theme="ps4"] .ps4-s > :is(img, .g-glyph, .g-mdl2, svg) { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); color: #fff; }
 body[data-g-theme="ps4"] .ps4-s em { font-style: normal; }
 body[data-g-theme="ps4"] .ps4-s.note b { position: absolute; left: calc(24 * var(--cpx)); top: calc(-16 * var(--cpx)); display: grid; place-items: center; min-width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); padding: 0 calc(4 * var(--cpx)); border-radius: calc(13 * var(--cpx)); background: #f2607a; color: #fff; font: 700 calc(15 * var(--cpx))/1 var(--g-font); text-shadow: none; }
 body[data-g-theme="ps4"] .ps4-s sup { position: absolute; left: calc(36 * var(--cpx)); top: calc(-12 * var(--cpx)); font-size: calc(15 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.store { left: calc(102 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.note { left: calc(228 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.friends { left: calc(805 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.party { left: calc(935 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.me { left: calc(1050 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.store { left: calc(52 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.note { left: calc(258 * var(--cpx)); gap: calc(16 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.friends { left: calc(786 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.party { left: calc(903 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.me { left: calc(956 * var(--cpx)); }
 body[data-g-theme="ps4"] .ps4-s.me i { width: calc(72 * var(--cpx)); height: calc(72 * var(--cpx)); overflow: hidden; border-radius: calc(3 * var(--cpx)); background: rgba(255, 255, 255, .2); }
 body[data-g-theme="ps4"] .ps4-s.me :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
-body[data-g-theme="ps4"] .ps4-s.trophy { left: calc(1530 * var(--cpx)); }
-body[data-g-theme="ps4"] .ps4-s.clock { right: calc(110 * var(--cpx)); font-size: calc(36 * var(--cpx)); }
-#g-retro .ps4-home { position: absolute; inset: 0; transition: transform .3s ease, opacity .3s ease; }
-#g-retro .ps4-home.away { transform: translateY(calc(140 * var(--cpx))); opacity: 0; pointer-events: none; }
-#g-retro .ps4-row { position: absolute; left: 0; top: 0; height: calc(620 * var(--cpx)); width: 100%; }
+body[data-g-theme="ps4"] .ps4-s.trophy { left: calc(1478 * var(--cpx)); }
+body[data-g-theme="ps4"] .ps4-s.clock { right: calc(52 * var(--cpx)); font-size: calc(36 * var(--cpx)); }
+#g-retro .ps4-home { position: absolute; inset: 0; transition: transform .34s ease, opacity .3s ease; }
+#g-retro .ps4-home.away { transform: translateY(calc(300 * var(--cpx))); opacity: 0; pointer-events: none; }
+#g-retro .ps4-row { position: absolute; left: 0; top: 0; height: calc(660 * var(--cpx)); width: 100%; }
 #g-retro .ps4-tile {
-  position: absolute; top: calc(215 * var(--cpx)); left: 0; width: calc(237 * var(--cpx)); height: calc(237 * var(--cpx)); padding: 0; border: 0;
-  background: rgba(255, 255, 255, .1) var(--cover, none) 50% 50% / calc(237 * var(--cpx)) calc(237 * var(--cpx)) no-repeat; color: #fff; display: grid; place-items: center; cursor: pointer;
+  position: absolute; top: calc(222 * var(--cpx)); left: 0; width: calc(214 * var(--cpx)); height: calc(214 * var(--cpx)); padding: 0; border: 0;
+  background: rgba(255, 255, 255, .1) var(--cover, none) 50% 50% / calc(214 * var(--cpx)) calc(214 * var(--cpx)) no-repeat; color: #fff; display: grid; place-items: center; cursor: pointer;
   transform: translateX(calc(var(--x) * var(--cpx)));
   transition: transform .32s cubic-bezier(.22, 1, .36, 1), top .32s cubic-bezier(.22, 1, .36, 1), width .32s cubic-bezier(.22, 1, .36, 1), height .32s cubic-bezier(.22, 1, .36, 1),
     background-size .32s cubic-bezier(.22, 1, .36, 1), background-position .32s cubic-bezier(.22, 1, .36, 1), box-shadow .25s ease;
@@ -150,43 +150,47 @@ body[data-g-theme="ps4"] .ps4-s.clock { right: calc(110 * var(--cpx)); font-size
 #g-retro .ps4-shapes { width: 62%; height: 62%; color: rgba(255, 255, 255, .92); filter: drop-shadow(0 1px calc(3 * var(--cpx)) rgba(0, 0, 0, .35)); }
 #g-retro .ps4-tile.store { background: #0b62c9; }
 #g-retro .ps4-tile.store > img { width: 100%; height: 100%; object-fit: cover; }
-#g-retro .ps4-tile.sel.store > img { width: calc(356 * var(--cpx)); height: calc(356 * var(--cpx)); margin-top: calc(-78 * var(--cpx)); }
+#g-retro .ps4-tile.sel.store > img { width: calc(376 * var(--cpx)); height: calc(337 * var(--cpx)); margin-top: calc(-84 * var(--cpx)); }
 #g-retro .ps4-tile.library { background: #11253f; }
 #g-retro .ps4-lib { display: grid; grid-template-columns: repeat(3, calc(26 * var(--cpx))); gap: calc(8 * var(--cpx)); }
 #g-retro .ps4-lib i { height: calc(70 * var(--cpx)); border: calc(3 * var(--cpx)) solid #fff; border-radius: calc(3 * var(--cpx)); }
-#g-retro .ps4-tile.sel { top: calc(183 * var(--cpx)); width: calc(356 * var(--cpx)); height: calc(424 * var(--cpx)); background-size: calc(356 * var(--cpx)) calc(356 * var(--cpx)); background-position: 50% 0%; place-items: start center; padding-top: calc(78 * var(--cpx)); box-shadow: 0 0 0 calc(3 * var(--cpx)) #4fc3f7, 0 0 calc(18 * var(--cpx)) rgba(79, 195, 247, .8) !important; }
+#g-retro .ps4-tile.sel { top: calc(177 * var(--cpx)); width: calc(376 * var(--cpx)); height: calc(433 * var(--cpx)); background-size: calc(376 * var(--cpx)) calc(337 * var(--cpx)); background-position: 50% 0%; place-items: start center; padding-top: calc(84 * var(--cpx)); box-shadow: 0 0 0 calc(3 * var(--cpx)) #4fc3f7, 0 0 calc(20 * var(--cpx)) rgba(79, 195, 247, .8) !important; }
 #g-retro .ps4-tile.sel em { opacity: 1; transform: none; }
-#g-retro .ps4-tile.sel > :is(img, .g-glyph, .g-mdl2) { width: calc(190 * var(--cpx)); height: calc(190 * var(--cpx)); }
-#g-retro .ps4-tile.sel em { position: absolute; left: 0; right: 0; bottom: 0; display: grid; place-items: center; height: calc(68 * var(--cpx)); background: rgba(8, 22, 58, .92); font: 400 calc(23 * var(--cpx))/1 var(--g-font); font-style: normal; }
-#g-retro .ps4-under { position: absolute; left: calc(337 * var(--cpx)); top: calc(624 * var(--cpx)); right: calc(100 * var(--cpx)); display: grid; grid-template-columns: calc(356 * var(--cpx)) 1fr; gap: calc(26 * var(--cpx)); }
-#g-retro .ps4-menu { padding-top: calc(72 * var(--cpx)); }
-#g-retro .ps4-sub { display: block; width: 100%; height: calc(64 * var(--cpx)); padding: 0 calc(12 * var(--cpx)); border: 0; background: rgba(8, 22, 58, .82); color: #fff; font: 300 calc(26 * var(--cpx))/1 var(--g-font); text-align: left; cursor: pointer; }
+#g-retro .ps4-tile.sel > :is(img, .g-glyph, .g-mdl2) { width: calc(196 * var(--cpx)); height: calc(196 * var(--cpx)); }
+#g-retro .ps4-tile.sel em { position: absolute; left: 0; right: 0; bottom: 0; display: grid; place-items: center; height: calc(92 * var(--cpx)); background: rgba(7, 20, 54, .92); font: 400 calc(27 * var(--cpx))/1 var(--g-font); font-style: normal; }
+#g-retro .ps4-under { position: absolute; left: calc(328 * var(--cpx)); top: calc(536 * var(--cpx)); right: calc(76 * var(--cpx)); display: grid; grid-template-columns: calc(376 * var(--cpx)) 1fr; gap: calc(16 * var(--cpx)); }
+#g-retro .ps4-menu { padding-top: calc(80 * var(--cpx)); }
+#g-retro .ps4-sub { display: block; width: 100%; height: calc(49 * var(--cpx)); padding: 0 calc(12 * var(--cpx)); border: 0; background: rgba(8, 22, 58, .82); color: #fff; font: 300 calc(23 * var(--cpx))/1 var(--g-font); text-align: left; cursor: pointer; }
+#g-retro .ps4-sub + .ps4-sub { box-shadow: inset 0 calc(1 * var(--cpx)) 0 rgba(255, 255, 255, .1); }
 #g-retro .ps4-sub.sel, #g-retro .ps4-sub:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #4fc3f7 !important; background: rgba(30, 80, 160, .9); }
-#g-retro .ps4-info h2 { margin: 0 0 calc(16 * var(--cpx)); font: 300 calc(60 * var(--cpx))/1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 calc(2 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .45); }
-#g-retro .ps4-info h2 em { margin-left: calc(20 * var(--cpx)); font: 300 calc(30 * var(--cpx))/1 var(--g-font); font-style: normal; opacity: .6; vertical-align: middle; }
+#g-retro .ps4-info h2 { margin: 0 0 calc(14 * var(--cpx)); font: 300 calc(60 * var(--cpx))/1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 calc(2 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .45); }
+#g-retro .ps4-info h2 em { margin-left: calc(18 * var(--cpx)); font: 300 calc(30 * var(--cpx))/1 var(--g-font); font-style: normal; opacity: .6; vertical-align: middle; }
 #g-retro .ps4-cards { display: flex; gap: calc(3 * var(--cpx)); }
-#g-retro .ps4-card { position: relative; width: calc(254 * var(--cpx)); height: calc(250 * var(--cpx)); padding: 0; border: 0; background: #222 var(--ach, none) center 38% / 70% no-repeat; background-color: #2c3440; color: #fff; text-align: left; cursor: pointer; overflow: hidden; }
-#g-retro .ps4-card.wide { width: calc(511 * var(--cpx)); background: var(--g-art, #223) center / cover no-repeat; }#g-retro .ps4-card b, #g-retro .ps4-card small { position: relative; z-index: 1; display: block; padding: 0 calc(12 * var(--cpx)); }
-#g-retro .ps4-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(64 * var(--cpx)); background: rgba(8, 22, 58, .92); }
-#g-retro .ps4-card b { position: absolute; bottom: calc(30 * var(--cpx)); font: 400 calc(21 * var(--cpx))/1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-#g-retro .ps4-card small { position: absolute; bottom: calc(9 * var(--cpx)); font: 300 calc(16 * var(--cpx))/1 var(--g-font); opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-#g-retro .ps4-card.sel, #g-retro .ps4-card:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #4fc3f7, 0 0 calc(14 * var(--cpx)) rgba(79, 195, 247, .7) !important; }
-#g-retro .ps4-sub-copy { margin: 0; font: 300 calc(24 * var(--cpx))/1.3 var(--g-font); opacity: .85; }
-#g-retro .ps4-hints { position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: calc(40 * var(--cpx)); height: calc(114 * var(--cpx)); padding: 0 calc(104 * var(--cpx)); background: linear-gradient(180deg, rgba(6, 16, 44, .55), #060b1e 55%); font: 300 calc(24 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-card { position: relative; width: calc(274 * var(--cpx)); height: calc(333 * var(--cpx)); padding: 0; border: 0; background: #222 var(--ach, none) center 38% / 70% no-repeat; background-color: #2c3440; color: #fff; text-align: left; cursor: pointer; overflow: hidden; }
+#g-retro .ps4-card.wide { width: calc(546 * var(--cpx)); background: var(--g-art, #223) center / cover no-repeat; }#g-retro .ps4-card b, #g-retro .ps4-card small { position: relative; z-index: 1; display: block; padding: 0 calc(12 * var(--cpx)); }
+#g-retro .ps4-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(78 * var(--cpx)); background: rgba(8, 22, 58, .92); }
+#g-retro .ps4-card b { position: absolute; bottom: calc(34 * var(--cpx)); font: 400 calc(25 * var(--cpx))/1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#g-retro .ps4-card small { position: absolute; bottom: calc(12 * var(--cpx)); font: 300 calc(18 * var(--cpx))/1 var(--g-font); opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#g-retro .ps4-card.sel, #g-retro .ps4-card:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #4fc3f7, 0 0 calc(16 * var(--cpx)) rgba(79, 195, 247, .7) !important; }
+#g-retro .ps4-card.generic { background: radial-gradient(circle at 50% 32%, rgba(104, 158, 236, .3), rgba(12, 28, 62, .96) 68%); }
+#g-retro .ps4-card-glyph { position: absolute; left: 50%; top: 36%; display: grid; place-items: center; width: calc(108 * var(--cpx)); height: calc(108 * var(--cpx)); transform: translate(-50%, -50%); opacity: .9; }
+#g-retro .ps4-card-glyph > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; color: #fff; filter: drop-shadow(0 calc(2 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .4)); }
+#g-retro .ps4-sub-copy { margin: calc(20 * var(--cpx)) 0 0; font: 300 calc(26 * var(--cpx))/1.3 var(--g-font); opacity: .85; }
+#g-retro .ps4-hints { position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: calc(48 * var(--cpx)); height: calc(136 * var(--cpx)); padding: 0 calc(96 * var(--cpx)); background: linear-gradient(180deg, rgba(6, 16, 44, .55), #060b1e 55%); font: 300 calc(27 * var(--cpx))/1 var(--g-font); }
 #g-retro .ps4-hints::before { content: ""; position: absolute; inset: 0 0 auto; height: calc(46 * var(--cpx)); background: radial-gradient(ellipse 40% 100% at 50% 100%, rgba(80, 130, 230, .22), transparent 70%); }
 #g-retro .ps4-hints span { display: inline-flex; align-items: center; gap: calc(10 * var(--cpx)); }
-#g-retro .ps4-x { position: relative; width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .85); border-radius: 50%; }
+#g-retro .ps4-x { position: relative; width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .85); border-radius: 50%; }
 #g-retro .ps4-x::before, #g-retro .ps4-x::after { content: ""; position: absolute; left: 50%; top: 50%; width: 60%; height: calc(2 * var(--cpx)); background: #9ec5ff; transform: translate(-50%, -50%) rotate(45deg); }
 #g-retro .ps4-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
-#g-retro .ps4-opt { padding: calc(4 * var(--cpx)) calc(10 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .7); border-radius: calc(12 * var(--cpx)); font: 400 calc(14 * var(--cpx))/1 var(--g-font); font-style: normal; letter-spacing: .05em; }
+#g-retro .ps4-opt { padding: calc(5 * var(--cpx)) calc(12 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .7); border-radius: calc(14 * var(--cpx)); font: 400 calc(16 * var(--cpx))/1 var(--g-font); font-style: normal; letter-spacing: .05em; }
 /* The function area: Up from the content row, as on the console. */
-#g-retro .ps4-functions { position: absolute; left: 0; right: 0; top: calc(330 * var(--cpx)); display: flex; justify-content: center; gap: calc(40 * var(--cpx)); opacity: 0; transform: translateY(calc(-60 * var(--cpx))); transition: opacity .26s ease, transform .34s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
+#g-retro .ps4-functions { position: absolute; left: 0; right: 0; top: calc(178 * var(--cpx)); display: flex; justify-content: center; gap: calc(40 * var(--cpx)); opacity: 0; transform: translateY(calc(-60 * var(--cpx))); transition: opacity .26s ease, transform .34s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
 #g-retro .ps4-functions.open { opacity: 1; transform: none; pointer-events: auto; }
-#g-retro .ps4-fn { position: relative; display: grid; place-items: center; width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); border: 0; background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); color: #fff; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+#g-retro .ps4-fn { position: relative; display: grid; place-items: center; width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); border: 0; background: transparent; color: #fff; cursor: pointer; transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }
 #g-retro .ps4-fn > img { object-fit: contain; }
-#g-retro .ps4-fn > :is(img, .g-glyph, .g-mdl2) { width: calc(76 * var(--cpx)); height: calc(76 * var(--cpx)); }
-#g-retro .ps4-fn span { position: absolute; top: calc(100% + 18 * var(--cpx)); white-space: nowrap; font: 300 calc(24 * var(--cpx))/1 var(--g-font); opacity: 0; }
-#g-retro .ps4-fn.sel, #g-retro .ps4-fn:is(.focused, :focus-visible) { transform: scale(1.12); background: rgba(255, 255, 255, .18); box-shadow: 0 0 0 calc(3 * var(--cpx)) #4fc3f7, 0 0 calc(16 * var(--cpx)) rgba(79, 195, 247, .7) !important; }
+#g-retro .ps4-fn > :is(img, .g-glyph, .g-mdl2) { width: calc(76 * var(--cpx)); height: calc(76 * var(--cpx)); filter: drop-shadow(0 calc(2 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .45)); }
+#g-retro .ps4-fn span { position: absolute; top: calc(100% + 16 * var(--cpx)); white-space: nowrap; font: 300 calc(24 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 2px calc(8 * var(--cpx)) rgba(0, 0, 0, .5); }
+#g-retro .ps4-fn.sel, #g-retro .ps4-fn:is(.focused, :focus-visible) { transform: scale(1.1); background: rgba(8, 20, 50, .34); box-shadow: 0 0 0 calc(3 * var(--cpx)) rgba(255, 255, 255, .92), 0 0 calc(22 * var(--cpx)) rgba(120, 190, 255, .55) !important; }
 #g-retro .ps4-fn.sel span, #g-retro .ps4-fn:is(.focused, :focus-visible) span { opacity: 1; }
 /* Moving along the row brings the content in under it, and choosing the console plays the home screen in. */
 #g-retro .ps4-under.ps4-swap { animation: ps4-under-in .34s cubic-bezier(.22, 1, .36, 1) both; }

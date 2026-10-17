@@ -11,9 +11,11 @@ body.garrison[data-g-theme="series"] {
   --g-green-hover: #1a8f1a;
   --g-radius: calc(4 * var(--cpx));
   --tile-radius: calc(4 * var(--cpx)) !important;
-  --g-tile: calc(176 * var(--cpx));
-  --g-gap: calc(12 * var(--cpx));
-  --g-ring: 0 0 0 calc(4 * var(--cpx)) #fff, 0 calc(8 * var(--cpx)) calc(22 * var(--cpx)) rgba(0, 0, 0, .55);
+  /* Six recent tiles fill the dashboard's width, exactly as the console spaces its row. */
+  --s-tile: calc((100vw - 2 * var(--g-gutter) - 5 * var(--g-gap) - 2px) / 6);
+  --g-tile: var(--s-tile);
+  --g-gap: calc(15 * var(--cpx));
+  --g-ring: 0 0 0 calc(4 * var(--cpx)) #fff, 0 0 0 calc(8 * var(--cpx)) rgba(0, 0, 0, .82), 0 calc(16 * var(--cpx)) calc(38 * var(--cpx)) rgba(0, 0, 0, .6);
   --g-font: "Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
   --g-lib-side: calc(420 * var(--cpx));
   --s-green: #3fbf3f;
@@ -26,76 +28,127 @@ body.garrison[data-g-theme="series"] .g-swirl-ribbons { transform-origin: 50% 80
 @keyframes g-swirl { from { transform: translate(-2%, 0) scale(1.02); } to { transform: translate(2%, -2%) scale(1.06) rotate(-1deg); } }
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer {
   visibility: visible !important; z-index: 0; background-size: cover !important; background-position: center 30% !important; transition: opacity .7s ease !important;
+  /* The game's art owns the middle of the screen, but it falls away at the edges so the green swirl is never lost. */
+  -webkit-mask-image: radial-gradient(ellipse 80% 76% at 50% 38%, #000 30%, rgba(0, 0, 0, .9) 52%, rgba(0, 0, 0, .34) 78%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 76% at 50% 38%, #000 30%, rgba(0, 0, 0, .9) 52%, rgba(0, 0, 0, .34) 78%, transparent 100%);
 }
-body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { opacity: 1 !important; }
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { opacity: .94 !important; }
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer::after {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .55) 0, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 42%, rgba(2, 8, 2, .78) 66%, #020802 88%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .58) 0, rgba(0, 0, 0, .1) 18%, rgba(0, 0, 0, 0) 40%, rgba(3, 20, 3, .4) 66%, rgba(4, 28, 4, .68) 100%);
 }
 
 /* ---------- Top bar ---------- */
 body.garrison[data-g-theme="series"] .topbar {
-  height: calc(132 * var(--cpx)); padding: 0 var(--g-gutter); background: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent);
+  height: calc(142 * var(--cpx)); padding: 0 var(--g-gutter); background: linear-gradient(180deg, rgba(0, 0, 0, .58), rgba(0, 0, 0, .06) 62%, transparent);
 }
-body.garrison[data-g-theme="series"] .g-xbox-pill { height: calc(52 * var(--cpx)); min-height: 0; min-width: 0; padding: 0 calc(14 * var(--cpx)) 0 calc(4 * var(--cpx)); gap: calc(6 * var(--cpx)); border: 0; background: rgba(0, 0, 0, .3); }
+body.garrison[data-g-theme="series"] .g-xbox-pill { height: calc(52 * var(--cpx)); min-height: 0; min-width: 0; padding: 0 calc(14 * var(--cpx)) 0 calc(4 * var(--cpx)); gap: calc(6 * var(--cpx)); border: 0; background: transparent; }
 body.garrison[data-g-theme="series"] .g-xbox-action { min-height: 0; padding: 0 calc(8 * var(--cpx)); }
 body.garrison[data-g-theme="series"] .g-xbox-mark { width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
-body.garrison[data-g-theme="series"] .top-center-nav { gap: calc(36 * var(--cpx)); }
-body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) { position: relative; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); border-radius: 50%; }
-body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) > svg { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); }
-body.garrison[data-g-theme="series"] .top-nav-button .gamepass-glyph { transform: scale(.8); }
-body.garrison[data-g-theme="series"] .top-nav-button.active { background: transparent; color: #fff; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green); }
-body.garrison[data-g-theme="series"] .top-nav-button.focused { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; background: rgba(255, 255, 255, .12); }
-body.garrison[data-g-theme="series"] .top-nav-button:is(.active, .focused)::after {
-  content: attr(data-g-label); display: block !important; opacity: 1; padding: 0; background: none; position: absolute; top: calc(100% + 10 * var(--cpx)); left: 50%;
-  transform: translateX(-50%); white-space: nowrap; color: #fff; font: 600 calc(16 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px 4px rgba(0, 0, 0, .8); pointer-events: none;
+body.garrison[data-g-theme="series"] .top-center-nav { gap: calc(42 * var(--cpx)); }
+/* Two extra controller-only pivots belong to the 360; they must not leave empty circles in the Series bar. */
+body.garrison[data-g-theme="series"] .top-center-nav .g-360-only { display: none !important; }
+body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) {
+  position: relative; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); border-radius: 50%; background: rgba(8, 12, 8, .34) !important;
+  transition: background-color .18s ease, box-shadow .18s ease, transform .22s cubic-bezier(.34, 1.56, .64, 1) !important;
 }
-body.garrison[data-g-theme="series"] .dashboard-clock { margin-left: calc(14 * var(--cpx)); font: 600 calc(22 * var(--cpx))/1 var(--g-font); color: #fff; }
+body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) > svg { width: calc(29 * var(--cpx)); height: calc(29 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .top-nav-button .gamepass-glyph { width: calc(38 * var(--cpx)); height: calc(25 * var(--cpx)); border-width: calc(2 * var(--cpx)); border-radius: calc(4 * var(--cpx)); font-size: calc(8 * var(--cpx)); transform: none; }
+body.garrison[data-g-theme="series"] .top-nav-button:hover { background: rgba(255, 255, 255, .12) !important; transform: scale(1.06); }
+body.garrison[data-g-theme="series"] .top-nav-button.active { background: rgba(16, 124, 16, .22) !important; color: #fff; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green), 0 0 calc(20 * var(--cpx)) rgba(63, 191, 63, .38); }
+body.garrison[data-g-theme="series"] .top-nav-button.focused { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; background: rgba(255, 255, 255, .16) !important; transform: scale(1.08); }
+body.garrison[data-g-theme="series"] .top-nav-button:is(.active, .focused)::after {
+  content: attr(data-g-label); display: block !important; opacity: 1; padding: 0; background: none; position: absolute; top: calc(100% + 12 * var(--cpx)); left: 50%;
+  transform: translateX(-50%); white-space: nowrap; color: #fff; font: 600 calc(19 * var(--cpx))/1 var(--g-font); letter-spacing: .01em; text-shadow: 0 1px 6px rgba(0, 0, 0, .9); pointer-events: none;
+}
+body.garrison[data-g-theme="series"] .dashboard-clock { margin-left: calc(16 * var(--cpx)); font: 600 calc(26 * var(--cpx))/1 var(--g-font); letter-spacing: .01em; color: #fff; text-shadow: 0 1px 5px rgba(0, 0, 0, .6); }
 body.garrison[data-g-theme="series"] .topbar #profile-button { display: none !important; }
 body.garrison[data-g-theme="series"] #g-series-me {
-  display: flex; align-items: center; gap: calc(12 * var(--cpx)); margin-right: calc(18 * var(--cpx)); padding: calc(4 * var(--cpx)) calc(16 * var(--cpx)) calc(4 * var(--cpx)) calc(4 * var(--cpx));
-  border: 0; border-radius: calc(32 * var(--cpx)); background: transparent; color: #fff; text-align: left;
+  display: flex; align-items: center; gap: calc(13 * var(--cpx)); margin-right: calc(22 * var(--cpx)); padding: calc(4 * var(--cpx)) calc(18 * var(--cpx)) calc(4 * var(--cpx)) calc(4 * var(--cpx));
+  border: 0; border-radius: calc(34 * var(--cpx)); background: rgba(8, 12, 8, .3); color: #fff; text-align: left;
+  transition: background-color .18s ease, box-shadow .18s ease !important;
 }
-body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar { display: grid; place-items: center; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); overflow: hidden; border-radius: 50%; background: #2a2b2b; }
+body.garrison[data-g-theme="series"] #g-series-me:hover { background: rgba(255, 255, 255, .1); }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar { display: grid; place-items: center; width: calc(60 * var(--cpx)); height: calc(60 * var(--cpx)); overflow: hidden; border-radius: 50%; background: #2a2b2b; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .25); }
 body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
 body.garrison[data-g-theme="series"] #g-series-me .g-me-copy { display: grid; gap: calc(2 * var(--cpx)); }
-body.garrison[data-g-theme="series"] #g-series-me strong { font: 600 calc(20 * var(--cpx))/1.15 var(--g-font); }
-body.garrison[data-g-theme="series"] #g-series-me small { font: 400 calc(15 * var(--cpx))/1.2 var(--g-font); color: rgba(255, 255, 255, .7); }
-body.garrison[data-g-theme="series"] #g-series-me:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="series"] #g-series-me strong { font: 600 calc(22 * var(--cpx))/1.15 var(--g-font); }
+body.garrison[data-g-theme="series"] #g-series-me small { font: 400 calc(16 * var(--cpx))/1.2 var(--g-font); color: rgba(255, 255, 255, .7); }
+body.garrison[data-g-theme="series"] #g-series-me:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; background: rgba(255, 255, 255, .12); }
 
-/* ---------- Home ---------- */
+/* ---------- Home: one row of wide recent games, then four wide cards, low on the game's art ---------- */
 body.garrison[data-g-theme="series"] main { padding-top: 0; }
-body.garrison[data-g-theme="series"] #home-view { --g-tile: calc(176 * var(--cpx)); padding-top: calc(560 * var(--cpx)); }
+body.garrison[data-g-theme="series"].home-active main { padding-bottom: 0; }
+body.garrison[data-g-theme="series"] #home-view { --g-tile: var(--s-tile); padding-top: calc(600 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .dashboard-recent { display: flex; flex-direction: column; margin: 0; padding: 0; }
+/* The console Home is the art, the recent row and the four cards. The launcher's lower shelves stay off it, so
+   the dashboard can never scroll behind the player. */
+body.garrison[data-g-theme="series"].home-active :is(#home-collections, #g-home-rows, .collection-shelf, #dashboard-features, #favorites-shelf, #recently-played-shelf) { display: none !important; }
 body.garrison[data-g-theme="series"] .dashboard-recent > .section-heading { display: none !important; }
 body.garrison[data-g-theme="series"] #recent-row, body.garrison[data-g-theme="series"] #recent-row.row-focused {
-  gap: var(--g-gap); padding: calc(10 * var(--cpx)) var(--g-gutter) calc(52 * var(--cpx)); margin: 0 !important;
+  display: flex; align-items: flex-start; gap: var(--g-gap); height: auto; margin: 0 !important;
+  padding: calc(18 * var(--cpx)) var(--g-gutter) calc(74 * var(--cpx)); overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
 }
+/* Six wide tiles fill the width; the row is the console's, not a strip of small squares. */
 body.garrison[data-g-theme="series"] #recent-row > :is(.game-card, .g-library-tile),
 body.garrison[data-g-theme="series"] #recent-row:not(.row-focused) > :is(.game-card, .g-library-tile) {
-  flex: 0 0 var(--g-tile); width: var(--g-tile); height: var(--g-tile); border-radius: var(--tile-radius); transition: transform .14s ease, box-shadow .14s ease !important;
+  flex: 0 0 var(--s-tile); width: var(--s-tile); height: auto; aspect-ratio: 5 / 3; min-width: 0; border-radius: var(--tile-radius);
+  background: rgba(255, 255, 255, .07); box-shadow: 0 calc(6 * var(--cpx)) calc(20 * var(--cpx)) rgba(0, 0, 0, .32);
+  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .22s ease, filter .22s ease !important;
 }
-body.garrison[data-g-theme="series"] #recent-row > .game-card:is(.focused, :focus-visible) { transform: scale(1.08) !important; z-index: 2; }
+body.garrison[data-g-theme="series"] #recent-row > .game-card > :is(img, .art-fallback) {
+  width: 100%; height: 100%; border-radius: var(--tile-radius); overflow: hidden;
+}
+@media (hover: hover) {
+  body.garrison[data-g-theme="series"] #recent-row > .game-card:hover { transform: scale(1.045); z-index: 3; box-shadow: 0 calc(12 * var(--cpx)) calc(32 * var(--cpx)) rgba(0, 0, 0, .5); }
+}
+/* The selected tile grows, keeps its art big, and wears the bright white frame with a dark edge so it reads on any art. */
+body.garrison[data-g-theme="series"] #recent-row > .game-card:is(.focused, :focus, :focus-visible) {
+  transform: scale(1.115) translateY(calc(-1 * var(--cpx))) !important; z-index: 4;
+  box-shadow: var(--g-ring) !important; overflow: visible;
+}
+/* Its name drops out beneath the frame, in dashboard type. */
 body.garrison[data-g-theme="series"] #recent-row > .game-card .g-card-text { display: none !important; }
-body.garrison[data-g-theme="series"] #recent-row > .game-card.focused::after {
-  content: attr(aria-label); position: absolute; left: 0; top: calc(100% + 12 * var(--cpx)); max-width: calc(var(--g-tile) * 3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: #fff; font: 600 calc(18 * var(--cpx))/1.2 var(--g-font); text-shadow: 0 1px 6px rgba(0, 0, 0, .9); transform: scale(.926); transform-origin: 0 0;
+body.garrison[data-g-theme="series"] #recent-row > .game-card:is(.focused, :focus, :focus-visible) .g-card-text {
+  display: flex !important; flex-direction: row; align-items: baseline; position: absolute; left: 0; right: auto; top: calc(100% + 12 * var(--cpx)); bottom: auto;
+  max-width: calc(var(--s-tile) * 3.6); margin: 0; padding: 0; background: none; pointer-events: none;
+  transform: scale(.897); transform-origin: 0 0;
 }
-body.garrison[data-g-theme="series"] #g-series-cards { display: flex; gap: var(--g-gap); padding: 0 var(--g-gutter) calc(40 * var(--cpx)); overflow-x: auto; scrollbar-width: none; }
+body.garrison[data-g-theme="series"] #recent-row > .game-card .g-card-text :is(em, small) { display: none !important; }
+body.garrison[data-g-theme="series"] #recent-row > .game-card .g-card-text strong {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #fff;
+  font: 600 calc(24 * var(--cpx))/1.2 var(--g-font); text-shadow: 0 2px 12px rgba(0, 0, 0, .92), 0 0 2px rgba(0, 0, 0, .8);
+}
+/* The lower shelf: four wide cards that fill the width, with calm spacing. */
+body.garrison[data-g-theme="series"] #g-series-cards {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(15 * var(--cpx));
+  padding: 0 var(--g-gutter); margin: 0; overflow: visible;
+}
+body.garrison[data-g-theme="series"] #g-series-cards > :nth-child(n+5) { display: none !important; }
 body.garrison[data-g-theme="series"] .g-series-card {
-  position: relative; flex: 0 0 calc(420 * var(--cpx)); height: calc(150 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: var(--tile-radius);
-  background: var(--g-card-art, linear-gradient(135deg, #1b5e1b, #0d2b0d)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer; transition: transform .14s ease;
+  position: relative; width: 100%; height: calc(168 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: calc(6 * var(--cpx));
+  background: var(--g-card-art, linear-gradient(135deg, #1b5e1b, #0d2b0d)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer;
+  box-shadow: 0 calc(8 * var(--cpx)) calc(24 * var(--cpx)) rgba(0, 0, 0, .35);
+  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease !important;
 }
+body.garrison[data-g-theme="series"] .g-series-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 55%); }
 body.garrison[data-g-theme="series"] .g-series-card[data-action="dashboard-gamepass"] { background: radial-gradient(circle at 80% 20%, #46c946, #107c10 45%, #0a3f0a); }
 body.garrison[data-g-theme="series"] .g-series-card[data-action="dashboard-store"] { background: linear-gradient(120deg, #2b1050, #6b1f8f 55%, #d1418c); }
 body.garrison[data-g-theme="series"] .g-series-card[data-action="g-friends"] { background: linear-gradient(135deg, #1d2a36, #0e1620); }
 body.garrison[data-g-theme="series"] .g-series-card > span {
-  position: absolute; inset: auto 0 0; display: flex !important; flex-direction: column; align-items: flex-start; gap: calc(4 * var(--cpx));
-  padding: calc(30 * var(--cpx)) calc(18 * var(--cpx)) calc(14 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .75));
+  position: absolute; inset: auto 0 0; display: flex !important; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--cpx));
+  padding: calc(36 * var(--cpx)) calc(20 * var(--cpx)) calc(16 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .78));
 }
 body.garrison[data-g-theme="series"] .g-series-card > span > :is(strong, small) { display: block; position: static; margin: 0; white-space: normal; }
-body.garrison[data-g-theme="series"] .g-series-card strong { font: 600 calc(20 * var(--cpx))/1.2 var(--g-font); }
-body.garrison[data-g-theme="series"] .g-series-card small { font: 400 calc(16 * var(--cpx))/1.3 var(--g-font); color: rgba(255, 255, 255, .8); }
-body.garrison[data-g-theme="series"] .g-series-card:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; transform: scale(1.04); z-index: 2; }
+body.garrison[data-g-theme="series"] .g-series-card strong { font: 600 calc(23 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="series"] .g-series-card small { font: 400 calc(17 * var(--cpx))/1.32 var(--g-font); color: rgba(255, 255, 255, .82); }
+@media (hover: hover) {
+  body.garrison[data-g-theme="series"] .g-series-card:hover { transform: scale(1.025); box-shadow: 0 calc(14 * var(--cpx)) calc(34 * var(--cpx)) rgba(0, 0, 0, .5); }
+}
+body.garrison[data-g-theme="series"] .g-series-card:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring) !important; transform: scale(1.035); z-index: 2; }
+/* A quiet rise for the whole lower stack when Home arrives. */
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) .dashboard-recent { animation: g-series-enter .55s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-series-enter { from { opacity: 0; transform: translateY(calc(26 * var(--cpx))); } to { opacity: 1; transform: none; } }
 /* The rows further down keep the same tile language. */
 body.garrison[data-g-theme="series"] :is(.collection-band, #g-home-rows > *) { background: transparent; }
 body.garrison[data-g-theme="series"] .collection-band .collection-intro h2 { font: 600 calc(24 * var(--cpx))/1.2 var(--g-font) !important; }
@@ -112,7 +165,7 @@ body.garrison[data-g-theme="series"] .g-lib-search {
   border-radius: calc(26 * var(--cpx)); background: #2a2b2b; color: rgba(255, 255, 255, .78); font: 400 calc(19 * var(--cpx))/1 var(--g-font);
 }
 body.garrison[data-g-theme="series"] .g-lib-search .g-glyph { width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); }
-body.garrison[data-g-theme="series"] .g-lib-search:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green) !important; color: #fff; }
+body.garrison[data-g-theme="series"] .g-lib-search:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green) !important; color: #fff; }
 body.garrison[data-g-theme="series"] .g-lib-nav { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); }
 body.garrison[data-g-theme="series"] .g-lib-nav hr { width: 100%; margin: calc(14 * var(--cpx)) 0; border: 0; border-top: 1px solid rgba(255, 255, 255, .1); }
 body.garrison[data-g-theme="series"] .g-lib-item {
@@ -124,7 +177,7 @@ body.garrison[data-g-theme="series"] .g-lib-item .g-glyph { width: calc(24 * var
 body.garrison[data-g-theme="series"] .g-lib-item em { margin-left: auto; font-style: normal; font-size: calc(18 * var(--cpx)); color: rgba(255, 255, 255, .6); }
 body.garrison[data-g-theme="series"] .g-lib-item.active { background: #107c10; }
 body.garrison[data-g-theme="series"] .g-lib-item.active em { color: #fff; }
-body.garrison[data-g-theme="series"] .g-lib-item:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="series"] .g-lib-item:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
 body.garrison[data-g-theme="series"] .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(14 * var(--cpx)) calc(10 * var(--cpx)); font: 400 calc(16 * var(--cpx))/1.3 var(--g-font); }
 body.garrison[data-g-theme="series"] .g-lib-storage strong { display: block; font-weight: 600; }
 body.garrison[data-g-theme="series"] .g-lib-storage small { color: rgba(255, 255, 255, .65); }
@@ -195,13 +248,6 @@ body[data-g-theme="series"]:has(#g-theme-saver.on) #g-theme-wall { z-index: 79; 
 /* ---------- Motion ---------- */
 body.garrison[data-g-theme="series"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-series-page .32s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes g-series-page { from { opacity: 0; transform: translateY(calc(16 * var(--cpx))); } to { opacity: 1; transform: none; } }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) :is(#recent-row > *, .g-series-card) { animation: g-series-tile .4s cubic-bezier(.2, .8, .2, 1) both; }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(2) { animation-delay: .03s; }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(3) { animation-delay: .06s; }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(4) { animation-delay: .09s; }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(n+5) { animation-delay: .12s; }
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) .g-series-card { animation-delay: .16s; }
-@keyframes g-series-tile { from { opacity: 0; transform: translateY(calc(20 * var(--cpx))) scale(.96); } to { opacity: 1; transform: none; } }
 body.garrison[data-g-theme="series"] .g-series-card > span, body.garrison[data-g-theme="series"] .g-series-card > span > * { text-align: left; }
 body.garrison[data-g-theme="series"] .g-library-toolbar .g-sort-pill :is(span, select, button, strong) { font-size: inherit; }
 
@@ -242,3 +288,7 @@ body.garrison[data-g-theme="series"] .g-store-card.focused { transform: scale(1.
 body.garrison[data-g-theme="series"]:not(.home-active):not(.detail-active):not(.library-active) main { padding-top: calc(160 * var(--cpx)); }
 /* The Series bar has only your profile on the left; the Xbox button on the controller still opens Game Bar. */
 body.garrison[data-g-theme="series"] .g-top-left > :not(#g-series-me) { display: none !important; }
+/* Reduced motion: nothing travels; the dashboard simply is there. */
+html.reduce-motion body.garrison[data-g-theme="series"] :is(.dashboard-recent, #recent-row, #g-series-cards, .g-series-card, #g-series-me, .top-nav-button) { animation: none !important; transition: none !important; }
+html.reduce-motion body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer { animation: none !important; }
+html.reduce-motion body.garrison[data-g-theme="series"] .g-swirl-ribbons { animation: none !important; }

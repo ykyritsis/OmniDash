@@ -95,8 +95,9 @@
   }
 
   // =========================== PS3: the XrossMediaBar ===========================
-  // Measured from a 1080p XMB: categories on a row 285px down with the selected column at x 559 and 205px
-  // apart; items above the selection stack up over the row, the selection sits at 479, the rest from 675.
+  // Measured from a 1080p XMB, then scaled up to the console's bold living-room size: categories on a row
+  // 292px down, the selected column at 560 with 224px between icons; items above the selection stack to the
+  // top of the screen, the selection sits at 468, the rest from 650 and step by 118.
   const MONTH = ['#a7adb5', '#c9a227', '#6c9d2f', '#d780a9', '#3e8e41', '#8d4fb3', '#2a9d97', '#3d8fd6', '#2f62c9', '#7a43b8', '#9a6230', '#b8302d'];
   let xmbCat = 6, xmbItem = {};
   const xmbCategories = () => {
@@ -142,12 +143,12 @@
     const hour = now().getHours();
     document.body.style.setProperty('--xmb-night', String(hour >= 21 || hour < 5 ? .42 : hour >= 18 || hour < 7 ? .22 : 0));
     // Vertical positions: the selection, the items under it, and the ones above that climb over the row.
-    const step = 94;
-    let below = 604;
+    const step = 118;
+    let below = 650;
     const pos = items.map((item, index) => {
       if (index === sel) return 468;
       if (index > sel) { const y = below; below += step; return y; }
-      return 124 - (sel - 1 - index) * 82;
+      return 172 - (sel - 1 - index) * 116;
     });
     if (!host.querySelector('.xmb-list')) {
       host.innerHTML = `<i class="xmb-pic" aria-hidden="true"></i><canvas class="xmb-wave" aria-hidden="true"></canvas>
@@ -161,7 +162,7 @@
       xmbBuiltBar = barKey;
     }
     [...bar.children].forEach((el, i) => {
-      el.style.setProperty('--x', String(560 + (i - xmbCat) * 210));
+      el.style.setProperty('--x', String(560 + (i - xmbCat) * 224));
       el.classList.toggle('on', i === xmbCat);
     });
     const listKey = `${cat.id}|${items.length}`;
@@ -224,7 +225,7 @@
     let raf = 0, last = 0, t = 0;
     const sparks = Array.from({ length: 54 }, () => ({ x: Math.random(), y: .28 + Math.random() * .55, s: .4 + Math.random() * 1.5, p: Math.random() * 6.28, v: .003 + Math.random() * .009 }));
     // base height, amplitude, wavelength, drift, opacity, band thickness, slope (all fractions of the canvas)
-    const ribbons = [[.515, .02, 1.1, .0003, .3, .2, -.05], [.6, .013, 1.65, .00042, .14, .14, -.08], [.66, .01, .92, .00025, .085, .11, -.115]];
+    const ribbons = [[.515, .02, 1.1, .0003, .23, .2, -.05], [.6, .013, 1.65, .00042, .105, .14, -.08], [.66, .01, .92, .00025, .062, .11, -.115]];
     function frame(stamp) {
       const canvas = host.querySelector('canvas.xmb-wave');
       if (!canvas || theme() !== 'ps3' || state.view !== 'home') { raf = 0; return; }
@@ -249,11 +250,11 @@
         fill.addColorStop(.46, `rgba(255,255,255,${alpha * .46})`);
         fill.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = fill; g.fill(body);
-        const bright = Math.min(.95, alpha * 2.6);
+        const bright = Math.min(.92, alpha * 2.2);
         g.lineCap = 'round';
-        g.strokeStyle = `rgba(255,255,255,${bright * .18})`; g.lineWidth = 7; g.stroke(crest);
-        g.strokeStyle = `rgba(255,255,255,${bright * .34})`; g.lineWidth = 3; g.stroke(crest);
-        g.strokeStyle = `rgba(255,255,255,${bright})`; g.lineWidth = 1.4; g.stroke(crest);
+        g.strokeStyle = `rgba(255,255,255,${bright * .14})`; g.lineWidth = 6; g.stroke(crest);
+        g.strokeStyle = `rgba(255,255,255,${bright * .3})`; g.lineWidth = 2.4; g.stroke(crest);
+        g.strokeStyle = `rgba(255,255,255,${bright})`; g.lineWidth = 1.2; g.stroke(crest);
       }
       for (const spark of sparks) {
         spark.x = (spark.x + spark.v * .05) % 1;
@@ -268,8 +269,9 @@
   document.addEventListener('visibilitychange', () => { if (theme() === 'ps3') xmbWave.start(); });
 
   // =========================== PS4: the home screen ===========================
-  // Measured from the 2013 home: status bar at y 99, tiles 220px from y 222 with the selected tile 356px
-  // (Start bar under it) from x 330, the game name and content cards below, a dark hint bar from y 940.
+  // Measured from the 2013 home: the status/function row sits 78px down, square tiles are 214px from y 222,
+  // the chosen tile grows to 376x433 from (328, 177) with its Start bar, the game name at y 536 and the
+  // content cards from 611, and the dark hint bar starts at 944.
   let ps4Focus = 1, ps4Area = 'row', ps4Fn = 0, ps4Sub = 0;
   const PS4_FUNCTIONS = [['dashboard-store', 'shop', 'PlayStation Store', 'ps'], ['g-notifications', 'bell', 'Notifications', 'info'], ['g-friends', 'friends', 'Friends', 'friends'],
     ['g-account', 'contact', 'Profile', 'user'], ['g-account', 'trophy', 'Trophies', 'trophy'], ['settings', 'settings', 'Settings', 'settings'], ['power-menu', 'power', 'Power', 'off']];
@@ -288,9 +290,9 @@
     const list = ps4List();
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
-    const tileX = i => (i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260);
+    const tileX = i => (i === ps4Focus ? 328 : i < ps4Focus ? 328 - (ps4Focus - i) * 232 : 709 + (i - ps4Focus - 1) * 226);
     const tile = (item, i) => `<button class="ps4-tile focusable${item.system ? ' system' : ''}${item.store ? ' store' : ''}${item.glass ? ' glass' : ''}${item.library ? ' library' : ''}" type="button" ${attrs(item)} data-ps4-index="${i}" aria-label="${esc(item.label)}"
-      style="--x:${tileX(i)}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? PS4_SHAPES : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}<em>Start</em></button>`;
+      style="--x:${tileX(i)}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? PS4_SHAPES : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}<em>${item.game ? 'Start' : 'Open'}</em></button>`;
     const shell = host.querySelector('.ps4-home');
     if (!shell) {
       host.innerHTML = `<i class="ps4-art" aria-hidden="true"></i><i class="ps4-art" aria-hidden="true"></i>
@@ -299,6 +301,10 @@
         <div class="ps4-hints"></div>`;
       ps4BuiltTiles = '';
       ps4ArtFront = 1;
+      // The shell was thrown away, so the two backdrop layers are empty again: forget which game's art the
+      // old shell had, or the next render would think it is already showing and leave the screen flat.
+      host.dataset.ps4Art = '';
+      ps4ArtWanted = '';
     }
     const row = host.querySelector('.ps4-row'), functions = host.querySelector('.ps4-functions');
     const tilesKey = list.map(item => (item.game ? item.game.id : item.label)).join('|');
@@ -342,20 +348,32 @@
       const slot = host.querySelector('.ps4-ach');
       if (!slot || host.querySelector('.ps4-card.wide')?.dataset.gameId !== game.id) return;
       const pick = [...items].sort((a, b) => (Number(b.unlocked) || 0) - (Number(a.unlocked) || 0) || (a.rarity ?? 100) - (b.rarity ?? 100)).slice(0, 2);
-      slot.outerHTML = pick.map((a, i) => `<button class="ps4-card focusable${ps4Area === 'sub' && ps4Sub === 4 + i ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(game.id)}" data-ps4-sub="${4 + i}" style="--ach:${url(a.unlocked ? a.icon : a.lockedIcon || a.icon)}"><b>${esc(a.title)}</b><small>${esc(a.unlocked ? 'Trophy earned' : a.description || 'Not yet earned')}</small></button>`).join('');
+      // A game with no achievement data should still show the same rhythm as the console's three content
+      // cards: the wide art card plus two square cards, rather than one lonely card and a gap.
+      const cards = pick.length ? pick.map((a, i) => ({ label: a.title, sub: a.unlocked ? 'Trophy earned' : a.description || 'Not yet earned', subIndex: 4 + i, art: a.unlocked ? a.icon : a.lockedIcon || a.icon }))
+        : [{ label: 'Trophy Collection', sub: 'Achievements and progress', subIndex: 4, glyph: 'trophy' }, { label: 'Captures', sub: 'Screenshots and clips', subIndex: 5, glyph: 'photo' }];
+      slot.outerHTML = cards.map(card => `<button class="ps4-card focusable${card.glyph ? ' generic' : ''}${ps4Area === 'sub' && ps4Sub === card.subIndex ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(game.id)}" data-ps4-sub="${card.subIndex}"${card.art ? ` style="--ach:${url(card.art)}"` : ''}>${card.glyph ? `<span class="ps4-card-glyph" aria-hidden="true">${card.glyph === 'trophy' ? img(PS4I('trophy'), icon('star')) : icon(card.glyph)}</span>` : ''}<b>${esc(card.label)}</b><small>${esc(card.sub)}</small></button>`).join('');
       try { refreshFocusables(); } catch { /* Not ready. */ }
+      // Moving right from the wide card can land on a card that the first paint did not have yet; put the
+      // focus on the freshly inserted card so the d-pad does not appear to do nothing.
+      if (ps4Area === 'sub' && ps4Sub >= 4) { const card = host.querySelector(`[data-ps4-sub="${ps4Sub}"]`); if (card) focusEl(card); }
     });
   }
   // Two stacked layers so the backdrop crossfades as the selection moves, instead of popping from one
-  // game's art to the next.
-  let ps4ArtFront = 1;
+  // game's art to the next. The layer only commits if its game is still the wanted one when the art
+  // arrives, so moving quickly along the row can never put an earlier game's art back on top.
+  let ps4ArtFront = 1, ps4ArtWanted = '';
   function ps4Background(item) {
-    const layers = host.querySelectorAll('.ps4-art');
-    if (layers.length < 2 || !item?.game || !window.gWideArt) return;
+    if (!item?.game || !window.gWideArt) return;
     const gameId = item.game.id;
+    // Already on screen: claim it as the wanted art so a slower fetch for a tile the player has since
+    // skipped past cannot land on top of it.
+    if (host.dataset.ps4Art === gameId) { ps4ArtWanted = gameId; return; }
+    if (ps4ArtWanted === gameId) return;
+    ps4ArtWanted = gameId;
     window.gWideArt(item.game).then(src => {
-      if (!src || !layers[0].isConnected) return;
-      if (host.dataset.ps4Art === gameId) return;
+      const layers = host.querySelectorAll('.ps4-art');
+      if (!src || layers.length < 2 || !layers[0].isConnected || ps4ArtWanted !== gameId) return;
       host.dataset.ps4Art = gameId;
       const next = 1 - ps4ArtFront;
       layers[next].style.backgroundImage = cssUrl(src);
@@ -373,8 +391,10 @@
     } else if (ps4Area === 'sub') {
       const subs = [...host.querySelectorAll('[data-ps4-sub]')].map(el => Number(el.dataset.ps4Sub));
       if (direction === 'up' && ps4Sub > 0 && ps4Sub < 3) ps4Sub -= 1;
-      else if (direction === 'up') { ps4Area = 'row'; }
+      else if (direction === 'up' && ps4Sub >= 3) { ps4Area = 'row'; }
+      else if (direction === 'up') { ps4Area = 'fn'; }
       else if (direction === 'down' && ps4Sub < 2) ps4Sub += 1;
+      else if (direction === 'down' && ps4Sub === 2) ps4Sub = 3;
       else if (direction === 'right' && ps4Sub < 3) ps4Sub = 3;
       else if (direction === 'right' && subs.includes(ps4Sub + 1)) ps4Sub += 1;
       else if (direction === 'left' && ps4Sub > 3) ps4Sub -= 1;

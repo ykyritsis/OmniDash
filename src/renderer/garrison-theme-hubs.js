@@ -193,6 +193,36 @@
     step(direction > 0 ? 1 : -1);
   };
 
+  // The One laid its Home out as a Metro grid, so the sticks move through it spatially rather than in a list.
+  function nearestInDirection(items, current, direction) {
+    const box = current.getBoundingClientRect();
+    const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
+    let best = null, bestScore = Infinity;
+    for (const item of items) {
+      if (item === current) continue;
+      const rect = item.getBoundingClientRect();
+      const dx = rect.left + rect.width / 2 - cx, dy = rect.top + rect.height / 2 - cy;
+      const primary = direction === 'left' ? -dx : direction === 'right' ? dx : direction === 'up' ? -dy : dy;
+      if (primary <= 4) continue;
+      const secondary = direction === 'up' || direction === 'down' ? Math.abs(dx) : Math.abs(dy);
+      const score = primary + secondary * 1.5;
+      if (score < bestScore) { best = item; bestScore = score; }
+    }
+    return best;
+  }
+  function moveWithin(group, direction, current) {
+    const items = [...group.querySelectorAll('.focusable')].filter(el => el.offsetParent !== null);
+    if (!items.includes(current)) return false;
+    if (direction === 'left' || direction === 'right') {
+      const next = items[items.indexOf(current) + (direction === 'left' ? -1 : 1)];
+      if (next) { setFocusedElement(next, { scroll: false }); return true; }
+      return false;
+    }
+    const next = nearestInDirection(items, current, direction);
+    if (next) { setFocusedElement(next, { scroll: false }); return true; }
+    return false;
+  }
+
   // Controller: Up from a hub's tiles reaches the headings; Left/Right on the headings switches hubs; Down goes in.
   if (typeof navigateConsoleHome === 'function') {
     const base = navigateConsoleHome;
@@ -207,11 +237,23 @@
           }
           return true;
         }
+        if (theme() === 'one') {
+          const group = focused?.closest?.('#recent-row, #g-one-pins, #g-one-spotlight');
+          if (group) {
+            if (direction === 'left' || direction === 'right') return moveWithin(group, direction, focused);
+            if (direction === 'down' && moveWithin(group, 'down', focused)) return true;
+            if (direction === 'up') {
+              if (moveWithin(group, 'up', focused)) return true;
+              setFocusedElement(pivots.querySelector('.active'), { scroll: false });
+              return true;
+            }
+          }
+        }
         if (direction === 'up' && focused?.closest?.('#g-hub-host, #g-360-home, #home-view .dashboard-recent')) {
           const tiles = [...document.querySelectorAll('#g-hub-host .focusable, #g-360-home .focusable, #home-view .dashboard-recent .focusable')].filter(el => el.offsetParent);
           const top = Math.min(...tiles.map(el => el.getBoundingClientRect().top));
           if (focused.getBoundingClientRect().top - top < 20) { setFocusedElement(pivots.querySelector('.active'), { scroll: false }); return true; }
-          return false;
+          // A lower tile keeps moving inside its own band; the theme's grid decides where.
         }
         if (focused?.closest?.('#g-hub-host')) return false;
       }
@@ -248,7 +290,23 @@
     const recentBase = renderRecentGames;
     renderRecentGames = function (...args) { const result = recentBase.apply(this, args); renderPinned(); return result; };
   }
-  new MutationObserver(() => { hub = 'home'; renderPivots(); renderHub(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+  // One: Home opens with the Pins wall on screen; the panorama only travels when the selection moves.
+  function resetOnePanorama() {
+    if (theme() !== 'one' || state.view !== 'home') return;
+    document.querySelector('#home-view .dashboard-recent')?.scrollTo({ left: 0, behavior: 'instant' });
+  }
+  if (typeof showView === 'function') {
+    const showBase = showView;
+    showView = function (next, ...rest) {
+      const result = showBase.call(this, next, ...rest);
+      if (next === 'home') requestAnimationFrame(() => requestAnimationFrame(resetOnePanorama));
+      return result;
+    };
+  }
+  new MutationObserver(() => {
+    hub = 'home'; renderPivots(); renderHub();
+    if (theme() === 'one') requestAnimationFrame(() => requestAnimationFrame(resetOnePanorama));
+  }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   renderPivots(); renderHub();
   window.gHub = { go, current: () => hub };
 })();

@@ -44,9 +44,9 @@
   function renderStatus() {
     const friends = Number(document.querySelector('#g-pill-count')?.textContent || 0);
     const messages = Number(document.querySelector('#g-notification-badge')?.textContent || 0);
-    const score = (document.querySelector('#profile-score-value')?.textContent || '').replace(/[^\d]/g, '');
+    const score = (document.querySelector('#profile-score-value')?.textContent || '').replace(/[^\d]/g, '') || '0';
     const avatar = document.querySelector('#profile-avatar')?.innerHTML || '';
-    status.innerHTML = `<span>${icon('contact')}${friends}</span><span>${icon('chat')}${messages}</span>${score ? `<span class="g-360-score">${esc(score)} <i>G</i></span>` : ''}<button class="g-360-pic focusable" type="button" aria-label="Gamercard">${avatar}</button>`;
+    status.innerHTML = `<span>${icon('contact')}${friends}</span><span>${icon('chat')}${messages}</span><span class="g-360-score">${esc(score)} <i>G</i></span><button class="g-360-pic focusable" type="button" aria-label="Gamercard">${avatar}</button>`;
   }
 
   // ---------- Bottom hints ----------
@@ -84,13 +84,18 @@
       <div class="g-360-col">${art(third) || small('g-friends', 'Friends', 'friends')}<button class="g-360-tile lime g-360-tray focusable" type="button" data-action="g-disc-tray" aria-label="Open Tray">${window.gThemePack?.base ? `<img class="g-360-tray-img" src="${esc(window.gThemePack.base + 'Misc/disc-tray.png')}" alt="" />` : icon('download')}<span>Open Tray</span></button></div>`;
     renderStatus();
     try { refreshFocusables(); } catch { /* Not ready. */ }
+    // If nothing is focused (first paint, or a click on the background), the band is the console's starting point.
+    if (on() && state.view === 'home' && !document.querySelector('dialog[open]')) {
+      const active = document.activeElement;
+      if (!active || active === document.body || (active.closest?.('#g-360-home') && !active.classList.contains('focused'))) ensureBandFocus();
+    }
   }
   // The big tile turns over to the next recent game every few seconds, as the console's featured tile did,
   // unless you're on it.
   rotateTimer = setInterval(() => {
     if (!on() || featured.length < 2 || document.hidden || !homeView || homeView.hidden) return;
     const big = band.querySelector('.g-360-big');
-    if (!big || big.classList.contains('focused')) return;
+    if (!big || big.classList.contains('focused') || big === document.activeElement) return;
     featureIndex = (featureIndex + 1) % featured.length;
     big.classList.add('g-360-turn');
     setTimeout(() => { big.outerHTML = featureTile(featured[featureIndex]); band.querySelectorAll('.g-360-dots i').forEach((dot, i) => dot.classList.toggle('on', i === featureIndex)); try { refreshFocusables(); } catch { /* Not ready. */ } }, 260);
@@ -100,18 +105,81 @@
     const base = renderRecentGames;
     renderRecentGames = function (...args) { const result = base.apply(this, args); renderHome(); return result; };
   }
+  // The band is a real 2-D place: the sticks move between the featured tile and its neighbours.
+  const bandTiles = () => [...band.querySelectorAll('.focusable')].filter(el => el.offsetParent !== null);
+  // Keep the app's focus model and the white frame in step with real focus, even when something focuses a tile directly.
+  document.addEventListener('focusin', event => {
+    if (!on()) return;
+    const tile = event.target.closest?.('#g-360-home .focusable');
+    if (!tile) return;
+    if (!tile.classList.contains('focused')) {
+      for (const node of band.querySelectorAll('.focused')) node.classList.remove('focused');
+      tile.classList.add('focused');
+    }
+    state.focusedElement = tile;
+  });
+  function focusBandStart() {
+    const target = band.querySelector('.g-360-big') || bandTiles()[0];
+    if (target) setFocusedElement(target, { scroll: false });
+  }
+  // The band is the console's starting point whenever Home arrives; a tile can be document.activeElement
+  // without carrying the app's .focused class, so check both before leaving focus alone.
+  function ensureBandFocus() {
+    if (!on() || state.view !== 'home' || band.offsetParent === null || document.querySelector('dialog[open]')) return;
+    if (document.body.dataset.gHub && document.body.dataset.gHub !== 'home') return;
+    const active = document.activeElement;
+    if (!active || !active.closest?.('#g-360-home') || !active.classList.contains('focused')) focusBandStart();
+  }
+  function bandMove(direction, current) {
+    const items = bandTiles();
+    if (!items.includes(current)) return false;
+    const box = current.getBoundingClientRect();
+    const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
+    let best = null, bestScore = Infinity;
+    for (const item of items) {
+      if (item === current) continue;
+      const rect = item.getBoundingClientRect();
+      const dx = rect.left + rect.width / 2 - cx, dy = rect.top + rect.height / 2 - cy;
+      const primary = direction === 'left' ? -dx : direction === 'right' ? dx : direction === 'up' ? -dy : dy;
+      if (primary <= 4) continue;
+      // Horizontal moves stay on the same top edge; vertical moves stay in the same column.
+      const secondary = direction === 'up' || direction === 'down' ? Math.abs(rect.left - box.left) : Math.abs(rect.top - box.top);
+      const score = primary + secondary * 1.4;
+      if (score < bestScore) { best = item; bestScore = score; }
+    }
+    if (!best) return false;
+    setFocusedElement(best, { scroll: false });
+    return true;
+  }
   // On the 360, Home's band is where Down from the pivots lands.
   if (typeof navigateConsoleHome === 'function') {
     const homeNav = navigateConsoleHome;
     navigateConsoleHome = function (direction, focused) {
       if (on()) {
-        if (focused?.closest?.('.topbar') && direction === 'down') { setFocusedElement(band.querySelector('.g-360-big') || band.querySelector('.focusable'), { scroll: false }); return true; }
+        if (focused?.closest?.('.topbar') && direction === 'down') { focusBandStart(); return true; }
         if (focused?.closest?.('#g-360-home')) {
-          if (direction === 'up') { setFocusedElement(nav.querySelector('.top-nav-button.active') || nav.querySelector('.focusable'), { scroll: false }); return true; }
+          const box = focused.getBoundingClientRect();
+          const top = Math.min(...bandTiles().map(el => el.getBoundingClientRect().top));
+          if (direction === 'up' && box.top - top < 20) { setFocusedElement(nav.querySelector('.top-nav-button.active') || nav.querySelector('.focusable'), { scroll: false }); return true; }
+          if (bandMove(direction, focused)) return true;
           return false;
         }
+        // No visible focus (right after a theme switch, or the launcher's hidden recent cards): start on the feature.
+        if (state.view === 'home' && band.offsetParent !== null && ['down', 'right', 'left'].includes(direction)) { focusBandStart(); return true; }
       }
       return homeNav.call(this, direction, focused);
+    };
+  }
+  // Home should open with the featured tile selected, not with focus left on the hidden recent row.
+  if (typeof showView === 'function') {
+    const show = showView;
+    showView = function (next, ...rest) {
+      const result = show.call(this, next, ...rest);
+      if (next === 'home' && on()) {
+        ensureBandFocus();
+        setTimeout(ensureBandFocus, 400);
+      }
+      return result;
     };
   }
 

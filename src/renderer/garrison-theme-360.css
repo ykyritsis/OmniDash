@@ -39,50 +39,48 @@ body.garrison[data-g-theme="x360"] #g-360-status .g-glyph { width: calc(24 * var
 body.garrison[data-g-theme="x360"] #g-360-status .g-360-score i { display: inline-grid; place-items: center; width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); border-radius: 50%; background: #fff; color: #333; font: 700 calc(15 * var(--cpx))/1 var(--g-font); font-style: normal; }
 body.garrison[data-g-theme="x360"] #g-360-status .g-360-pic { width: calc(48 * var(--cpx)); height: calc(48 * var(--cpx)); overflow: hidden; background: #fff; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .8); }
 body.garrison[data-g-theme="x360"] #g-360-status .g-360-pic :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
-body.garrison[data-g-theme="x360"] .top-center-nav { position: absolute; left: calc(282 * var(--cpx)); top: calc(196 * var(--cpx)); transform: none; display: flex; gap: calc(56 * var(--cpx)); }
-body.garrison[data-g-theme="x360"] .g-360-only { display: block; }
-body.garrison[data-g-theme="x360"] .top-nav-button { width: auto; height: auto; padding: 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .5); }
-body.garrison[data-g-theme="x360"] .top-nav-button > :is(svg, .gamepass-glyph, span) { display: none; }
-body.garrison[data-g-theme="x360"] .top-nav-button::after {
-  content: attr(data-g360); display: block !important; position: static; transform: none; opacity: 1; padding: 0; background: none; color: inherit;
-  font: 300 calc(45 * var(--cpx))/1.1 var(--g-display); text-shadow: 0 1px 4px rgba(0, 0, 0, .25);
-}
-body.garrison[data-g-theme="x360"] .top-nav-button[data-action="toggle-search"] { order: -2; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-action="home"] { order: -1; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-g360="social"] { order: 0; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-action="library"] { order: 1; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-action="dashboard-gamepass"] { order: 2; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-action="dashboard-store"] { order: 3; }
-body.garrison[data-g-theme="x360"] .top-nav-button[data-g360="settings"] { order: 4; }
-body.garrison[data-g-theme="x360"] .top-nav-button.active { color: #fff; }
-body.garrison[data-g-theme="x360"] .top-nav-button.focused { color: #fff; outline: calc(3 * var(--cpx)) solid #fff; outline-offset: calc(6 * var(--cpx)); }
-body.garrison[data-g-theme="x360"] main { padding-top: calc(300 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] main { padding-top: calc(285 * var(--cpx)); }
 body.garrison[data-g-theme="x360"].detail-active main { padding-top: 0; }
 
-/* ---------- Home: one centred band ---------- */
+/* ---------- Home: the three-column band, like the console ---------- */
 body.garrison[data-g-theme="x360"] #home-view > :not(#g-360-home):not(#g-hub-host) { display: none !important; }
 body.garrison[data-g-theme="x360"] #g-360-home {
-  display: flex; align-items: flex-start; justify-content: center; gap: var(--x-gap); height: calc(var(--x-band) + 60 * var(--cpx)); margin-top: calc(33 * var(--cpx));
+  display: flex; align-items: flex-start; justify-content: center; gap: var(--x-gap); height: calc(var(--x-band) + 60 * var(--cpx)); margin-top: calc(8 * var(--cpx));
 }
 body.garrison[data-g-theme="x360"] .g-360-col { display: grid; grid-template-rows: 1fr 1fr; gap: var(--x-gap); width: calc(231 * var(--cpx)); height: var(--x-band); position: relative; }
 body.garrison[data-g-theme="x360"] .g-360-col.wide { width: calc(294 * var(--cpx)); }
+/* The console's Home band is three columns; the fourth was our addition and made it too wide. The next pivot peeks in instead. */
+body.garrison[data-g-theme="x360"] #g-360-home > .g-360-col:last-child { display: none; }
 body.garrison[data-g-theme="x360"] .g-360-feature { position: relative; width: calc(597 * var(--cpx)); height: var(--x-band); }
 body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big) {
-  position: relative; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); overflow: hidden; border: 0;
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: calc(14 * var(--cpx)) calc(16 * var(--cpx)); overflow: hidden; border: 0;
   background: var(--g-art, var(--x-lime)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer;
+  transition: transform .26s cubic-bezier(.2, .8, .2, 1), box-shadow .18s ease, filter .18s ease !important;
 }
 body.garrison[data-g-theme="x360"] .g-360-tile.lime { background: var(--x-lime); justify-content: space-between; }
-body.garrison[data-g-theme="x360"] .g-360-tile.lime .g-glyph { align-self: center; width: calc(72 * var(--cpx)); height: calc(72 * var(--cpx)); margin-top: calc(26 * var(--cpx)); }
-body.garrison[data-g-theme="x360"] .g-360-tile span, body.garrison[data-g-theme="x360"] .g-360-tile em { position: relative; font: 400 calc(30 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
-body.garrison[data-g-theme="x360"] .g-360-tile em { font-style: normal; font-size: calc(21 * var(--cpx)); opacity: .9; }
-body.garrison[data-g-theme="x360"] .g-360-tile.art::before, body.garrison[data-g-theme="x360"] .g-360-big::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0, 0, 0, .65)); }
+body.garrison[data-g-theme="x360"] .g-360-tile.lime .g-glyph { align-self: center; width: calc(80 * var(--cpx)); height: calc(80 * var(--cpx)); margin-top: calc(28 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-tile span, body.garrison[data-g-theme="x360"] .g-360-tile em { position: relative; font: 400 calc(34 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+body.garrison[data-g-theme="x360"] .g-360-tile em { font-style: normal; font-size: calc(23 * var(--cpx)); opacity: .9; }
+body.garrison[data-g-theme="x360"] .g-360-tile.art::before, body.garrison[data-g-theme="x360"] .g-360-big::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 50%, rgba(0, 0, 0, .68)); }
 body.garrison[data-g-theme="x360"] .g-360-tile.ad { background: linear-gradient(135deg, #2f9d2f, #0f5a0f 70%); justify-content: center; }
-body.garrison[data-g-theme="x360"] .g-360-caption { position: relative; display: grid; gap: calc(4 * var(--cpx)); }
-body.garrison[data-g-theme="x360"] .g-360-caption strong { font: 400 calc(33 * var(--cpx))/1.1 var(--g-font); }
-body.garrison[data-g-theme="x360"] .g-360-caption small { font: 400 calc(27 * var(--cpx))/1.1 var(--g-font); color: rgba(255, 255, 255, .92); }
-body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; z-index: 2; }
+body.garrison[data-g-theme="x360"] .g-360-caption { position: relative; display: grid; gap: calc(5 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-caption strong { font: 400 calc(38 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+body.garrison[data-g-theme="x360"] .g-360-caption small { font: 400 calc(30 * var(--cpx))/1.1 var(--g-font); color: rgba(255, 255, 255, .93); }
+@media (hover: hover) {
+  body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):hover { transform: scale(1.008); filter: brightness(1.04); }
+}
+body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):is(.focused, :focus, :focus-visible) {
+  transform: scale(1.018); z-index: 2;
+  box-shadow: 0 0 calc(26 * var(--cpx)) rgba(255, 255, 255, .42) !important;
+}
+/* The frame is a child overlay: the console's white selection border stays above the art and its caption. */
+body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):is(.focused, :focus, :focus-visible)::after {
+  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  border: calc(3 * var(--cpx)) solid #fff; box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(0, 0, 0, .4);
+}
+body.garrison[data-g-theme="x360"] .g-360-big:is(.focused, :focus, :focus-visible) { transform: scale(1.01); }
 body.garrison[data-g-theme="x360"] .g-360-big.g-360-turn { animation: g-360-turn .26s ease-in both; }
-body.garrison[data-g-theme="x360"] .g-360-big { animation: g-360-arrive .4s cubic-bezier(.2, .8, .2, 1) both; }
+body.garrison[data-g-theme="x360"] .g-360-big { animation: g-360-arrive .4s cubic-bezier(.2, .8, .2, 1); }
 @keyframes g-360-turn { to { opacity: 0; transform: translateX(calc(-30 * var(--cpx))); } }
 @keyframes g-360-arrive { from { opacity: 0; transform: translateX(calc(40 * var(--cpx))); } to { opacity: 1; transform: none; } }
 body.garrison[data-g-theme="x360"] .g-360-dots { position: absolute; left: 0; top: calc(100% + 16 * var(--cpx)); display: flex; gap: calc(8 * var(--cpx)); }
@@ -90,14 +88,16 @@ body.garrison[data-g-theme="x360"] .g-360-dots i { width: calc(7 * var(--cpx)); 
 body.garrison[data-g-theme="x360"] .g-360-dots i.on { background: #fff; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .35); }
 body.garrison[data-g-theme="x360"] .g-360-adlabel { position: absolute; left: 0; top: calc(100% + 14 * var(--cpx)); color: rgba(255, 255, 255, .8); font: 400 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; }
 /* The neighbouring pivots peek in at the edges, dimmed. */
-body.garrison[data-g-theme="x360"].home-active .g-360-peek { display: grid; position: fixed; top: calc(382 * var(--cpx)); width: calc(108 * var(--cpx)); gap: var(--x-gap); opacity: .36; pointer-events: none; z-index: 1; }
-body.garrison[data-g-theme="x360"] .g-360-peek i { display: block; height: calc(175 * var(--cpx)); background: var(--x-lime); }
+body.garrison[data-g-theme="x360"].home-active .g-360-peek {
+  display: grid; position: fixed; top: calc(293 * var(--cpx)); width: calc(112 * var(--cpx)); height: var(--x-band); grid-template-rows: 1fr 1fr; gap: var(--x-gap); opacity: .3; pointer-events: none; z-index: 1;
+}
+body.garrison[data-g-theme="x360"] .g-360-peek i { display: block; height: auto; background: linear-gradient(150deg, #86c95e, var(--x-lime) 55%, #4d8a2e); }
 body.garrison[data-g-theme="x360"] #g-360-peek-left { left: 0; }
 body.garrison[data-g-theme="x360"] #g-360-peek-left i.avatar { background: linear-gradient(160deg, #36c0e8, #1a7fb8); }
 body.garrison[data-g-theme="x360"] #g-360-peek-right { right: 0; }
 /* A Select / Y Search, bottom left. */
 body.garrison[data-g-theme="x360"] #g-360-hints {
-  display: flex; position: fixed; left: calc(210 * var(--cpx)); bottom: calc(82 * var(--cpx)); gap: calc(36 * var(--cpx)); z-index: 5; color: #fff; font: 400 calc(27 * var(--cpx))/1 var(--g-font); pointer-events: none;
+  display: flex; position: fixed; left: calc(200 * var(--cpx)); bottom: calc(128 * var(--cpx)); gap: calc(38 * var(--cpx)); z-index: 5; color: #fff; font: 400 calc(27 * var(--cpx))/1 var(--g-font); pointer-events: none;
 }
 body.garrison[data-g-theme="x360"] #g-360-hints span { display: inline-flex; align-items: center; gap: calc(10 * var(--cpx)); }
 body.garrison[data-g-theme="x360"] #g-360-hints kbd { display: inline-grid; place-items: center; width: calc(33 * var(--cpx)); height: calc(33 * var(--cpx)); border-radius: 50%; color: #fff; font: 700 calc(19 * var(--cpx))/1 var(--g-font); }
@@ -113,7 +113,7 @@ body.garrison[data-g-theme="x360"] .g-lib-nav { display: flex; flex-direction: c
 body.garrison[data-g-theme="x360"] .g-lib-item { display: flex; align-items: center; height: calc(58 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; background: transparent; color: #fff; font: 300 calc(28 * var(--cpx))/1 var(--g-display); text-align: left; }
 body.garrison[data-g-theme="x360"] .g-lib-item em { margin-left: auto; font-style: normal; font-size: calc(20 * var(--cpx)); color: rgba(255, 255, 255, .6); }
 body.garrison[data-g-theme="x360"] .g-lib-item.active { background: var(--x-lime); }
-body.garrison[data-g-theme="x360"] .g-lib-item:is(.focused, :focus-visible), body.garrison[data-g-theme="x360"] .g-lib-sort:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="x360"] .g-lib-item:is(.focused, :focus, :focus-visible), body.garrison[data-g-theme="x360"] .g-lib-sort:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
 body.garrison[data-g-theme="x360"] .g-lib-sort { margin-top: calc(30 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); border: 0; background: transparent; color: rgba(255, 255, 255, .7); font: 300 calc(22 * var(--cpx))/1.2 var(--g-display); text-align: left; }
 body.garrison[data-g-theme="x360"] .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); font: 300 calc(18 * var(--cpx))/1.3 var(--g-display); }
 body.garrison[data-g-theme="x360"] .g-lib-ring { display: block; width: calc(56 * var(--cpx)); height: calc(10 * var(--cpx)); background: linear-gradient(90deg, var(--x-lime) calc(var(--used) * 1%), rgba(255, 255, 255, .2) 0); }
@@ -127,7 +127,7 @@ body.garrison[data-g-theme="x360"] .library-grid .game-card { position: relative
 body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text { position: absolute; inset: auto 0 0; display: flex !important; flex-direction: column; padding: calc(24 * var(--cpx)) calc(10 * var(--cpx)) calc(8 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .78)); }
 body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text :is(em, small, .g-size, .g-status) { display: none !important; }
 body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text strong { font: 400 calc(18 * var(--cpx))/1.2 var(--g-font); }
-body.garrison[data-g-theme="x360"] .game-card:is(.focused, :focus-visible) { box-shadow: var(--g-ring), 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; }
+body.garrison[data-g-theme="x360"] .game-card:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring), 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; }
 
 /* ---------- Game page, Store, menus ---------- */
 body.garrison[data-g-theme="x360"] #detail-title { font: 300 calc(68 * var(--cpx))/1.05 var(--g-display); }
@@ -163,6 +163,12 @@ body.garrison[data-g-theme="x360"] #toast.g-toast-in { animation: g-360-toast .4
 /* ---------- Motion: pivots slide ---------- */
 body.garrison[data-g-theme="x360"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-360-page .38s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes g-360-page { from { opacity: 0; transform: translateX(calc(90 * var(--cpx))); } to { opacity: 1; transform: none; } }
+/* The band arrives a beat after the page, like the console easing its tiles in. */
+body.garrison[data-g-theme="x360"].home-active #g-360-home { animation: g-360-band-in .5s .06s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-360-band-in { from { opacity: 0; transform: translateY(calc(24 * var(--cpx))); } to { opacity: 1; transform: none; } }
+/* Reduced motion: no slide, no scale. */
+html.reduce-motion body.garrison[data-g-theme="x360"] :is(#home-view, #g-360-home, .g-360-tile, .g-360-big, .g-pivot) { animation: none !important; transition: none !important; }
+html.reduce-motion body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):is(.focused, :focus, :focus-visible) { transform: none !important; }
 
 /* ---------- Theme picker preview ---------- */
 .g-tp-360 { display: grid; grid-template-columns: 1fr 2.6fr 1.3fr; grid-template-rows: 18% 1fr 1fr; gap: 4%; padding: 8% 10% 12%;

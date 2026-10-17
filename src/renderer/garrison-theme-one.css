@@ -12,12 +12,14 @@ body.garrison[data-g-theme="one"] {
   --g-green-hover: #148f14;
   --g-radius: 0px;
   --tile-radius: 0px !important;
-  --o-u: calc(170 * var(--cpx));
+  /* The console's tiles: a ~250 px square at 1080p, with a big 2.2:1 last-played tile above. */
+  --o-u: calc(250 * var(--cpx));
+  --o-pin: calc(170 * var(--cpx));
   --o-gap: calc(6 * var(--cpx));
-  --o-big: calc(432 * var(--cpx));
+  --o-big: calc(570 * var(--cpx));
   --g-tile: var(--o-u);
   --g-gap: var(--o-gap);
-  --g-ring: 0 0 0 calc(3 * var(--cpx)) #fff;
+  --g-ring: 0 0 0 calc(2 * var(--cpx)) rgba(0, 0, 0, .92), 0 calc(14 * var(--cpx)) calc(34 * var(--cpx)) rgba(0, 0, 0, .55);
   --g-font: "Segoe UI", system-ui, sans-serif;
   --g-display: "Segoe UI Light", "Segoe UI", system-ui, sans-serif;
   --g-lib-side: calc(400 * var(--cpx));
@@ -48,37 +50,46 @@ body.garrison[data-g-theme="one"] .g-icon-button { width: calc(44 * var(--cpx));
 body.garrison[data-g-theme="one"] .g-icon-button > svg { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); }
 body.garrison[data-g-theme="one"] #profile-button { width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); }
 body.garrison[data-g-theme="one"] .top-actions { grid-column: 3; justify-self: end; gap: calc(10 * var(--cpx)); }
-body.garrison[data-g-theme="one"] .dashboard-clock { margin-left: calc(12 * var(--cpx)); font: 300 calc(24 * var(--cpx))/1 var(--g-display); color: #fff; }
-body.garrison[data-g-theme="one"] .top-center-nav { position: absolute; left: var(--g-gutter); top: calc(92 * var(--cpx)); transform: none; gap: calc(52 * var(--cpx)); }
-body.garrison[data-g-theme="one"] .top-nav-button { width: auto; height: auto; padding: calc(2 * var(--cpx)) 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .42); }
+/* The console kept its clock in the bottom-right corner, not in the bar. */
+body.garrison[data-g-theme="one"] .top-actions > #dashboard-clock { display: none !important; }
+body.garrison[data-g-theme="one"] #g-one-clock {
+  display: block; position: fixed; right: calc(74 * var(--cpx)); bottom: calc(14 * var(--cpx)); z-index: 4;
+  color: #fff; font: 300 calc(30 * var(--cpx))/1 var(--g-display); letter-spacing: .01em; text-shadow: 0 calc(1 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 0, 0, .55);
+}
+body.garrison[data-g-theme="one"]:not(.home-active) #g-one-clock { display: none !important; }
+body.garrison[data-g-theme="one"] .top-center-nav { position: absolute; left: var(--g-gutter); top: calc(92 * var(--cpx)); transform: none; gap: calc(54 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .top-nav-button { width: auto; height: auto; padding: calc(2 * var(--cpx)) 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .32); transition: color .18s ease, transform .24s cubic-bezier(.2, .8, .2, 1) !important; }
 body.garrison[data-g-theme="one"] .top-nav-button > :is(svg, .gamepass-glyph, span) { display: none; }
 body.garrison[data-g-theme="one"] .top-nav-button::after {
   content: attr(data-g-label); display: block !important; position: static; transform: none; opacity: 1; padding: 0; background: none; color: inherit;
-  font: 300 calc(48 * var(--cpx))/1.1 var(--g-display); letter-spacing: -.01em;
+  font: 300 calc(54 * var(--cpx))/1.1 var(--g-display); letter-spacing: -.015em;
 }
-body.garrison[data-g-theme="one"] .top-nav-button.active { color: #fff; }
+body.garrison[data-g-theme="one"] .top-nav-button.active { color: #fff; text-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 0, 0, .45); }
+body.garrison[data-g-theme="one"] .top-nav-button:hover { color: rgba(255, 255, 255, .72); }
 body.garrison[data-g-theme="one"] .top-nav-button.focused { color: #fff; outline: calc(3 * var(--cpx)) solid #fff; outline-offset: calc(6 * var(--cpx)); }
 body.garrison[data-g-theme="one"] main { padding-top: calc(196 * var(--cpx)); }
+body.garrison[data-g-theme="one"].home-active main { padding-bottom: 0; }
 
 /* ---------- Home: one panorama ---------- */
 body.garrison[data-g-theme="one"] #home-view { --g-tile: var(--o-u); padding-top: 0; }
 body.garrison[data-g-theme="one"] :is(#g-home-rows, #home-collections, #favorites-shelf, #recently-played-shelf) { display: none !important; }
 body.garrison[data-g-theme="one"] .dashboard-recent {
-  display: flex; align-items: flex-start; gap: calc(56 * var(--cpx)); margin: 0; padding: calc(6 * var(--cpx)) var(--g-gutter) calc(30 * var(--cpx)); overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth;
+  display: flex; align-items: flex-start; gap: calc(48 * var(--cpx)); margin: 0; padding: calc(12 * var(--cpx)) var(--g-gutter) calc(34 * var(--cpx)); overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth;
 }
 body.garrison[data-g-theme="one"] .dashboard-recent > .section-heading, body.garrison[data-g-theme="one"] #recent-row > .g-library-tile { display: none !important; }
-/* Pins */
-body.garrison[data-g-theme="one"] #g-one-pins { display: grid; flex: none; grid-template-columns: repeat(3, var(--o-u)); grid-auto-rows: var(--o-u); gap: var(--o-gap); }
+/* Pins: a wall of square doors on the left of the panorama. */
+body.garrison[data-g-theme="one"] #g-one-pins { display: grid; flex: none; grid-template-columns: repeat(3, var(--o-pin)); grid-auto-rows: var(--o-pin); gap: var(--o-gap); }
 body.garrison[data-g-theme="one"] .g-one-pin {
   position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: calc(12 * var(--cpx)); border: 0;
-  background: #107c10; color: #fff; text-align: left; font: 400 calc(18 * var(--cpx))/1.15 var(--g-font); cursor: pointer;
+  background: #107c10; color: #fff; text-align: left; font: 400 calc(19 * var(--cpx))/1.15 var(--g-font); cursor: pointer;
+  transition: filter .18s ease, box-shadow .18s ease !important;
 }
-body.garrison[data-g-theme="one"] .g-one-pin.wide { grid-column: span 2; background: #1a8c1a; }
+body.garrison[data-g-theme="one"] .g-one-pin.wide { grid-column: span 1; background: #1a8c1a; }
 body.garrison[data-g-theme="one"] .g-one-pin.blue { background: #1a8ad4; }
 body.garrison[data-g-theme="one"] .g-one-pin .g-glyph { width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); align-self: center; margin-top: calc(18 * var(--cpx)); }
-body.garrison[data-g-theme="one"] .g-one-pin:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; z-index: 2; }
+body.garrison[data-g-theme="one"] .g-one-pin:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring) !important; z-index: 2; }
 body.garrison[data-g-theme="one"] .g-one-pin:hover { filter: brightness(1.12); }
-/* Home: the big tile for the last game, five small tiles beneath. */
+/* Home: the big last-played tile, five square app tiles beneath. */
 body.garrison[data-g-theme="one"] #recent-row, body.garrison[data-g-theme="one"] #recent-row.row-focused {
   display: grid; flex: none; grid-template-columns: repeat(5, var(--o-u)); grid-template-rows: var(--o-big) var(--o-u); grid-auto-rows: 0; gap: var(--o-gap);
   margin: 0 !important; padding: 0; overflow: visible; height: auto;
@@ -89,14 +100,23 @@ body.garrison[data-g-theme="one"] #recent-row > .game-card, body.garrison[data-g
 body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child { grid-column: 1 / -1; grid-row: 1; }
 body.garrison[data-g-theme="one"] #recent-row > .game-card:nth-child(n+7) { display: none !important; }
 body.garrison[data-g-theme="one"] #recent-row > .game-card > :is(img, .art-fallback) { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; }
-body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child > :is(img, .art-fallback) { object-position: center 30%; }
+body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child > :is(img, .art-fallback) { object-position: center 32%; }
 body.garrison[data-g-theme="one"] #recent-row > .game-card .g-card-text {
-  display: flex !important; position: absolute; inset: auto 0 0; padding: calc(28 * var(--cpx)) calc(12 * var(--cpx)) calc(10 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .72));
+  display: flex !important; position: absolute; inset: auto 0 0; padding: calc(38 * var(--cpx)) calc(16 * var(--cpx)) calc(13 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .78));
 }
 body.garrison[data-g-theme="one"] #recent-row > .game-card .g-card-text :is(em, small) { display: none; }
-body.garrison[data-g-theme="one"] #recent-row > .game-card .g-card-text strong { font: 400 calc(17 * var(--cpx))/1.15 var(--g-font); }
-body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child .g-card-text strong { font: 400 calc(26 * var(--cpx))/1.15 var(--g-font); }
-body.garrison[data-g-theme="one"] .game-card:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; }
+body.garrison[data-g-theme="one"] #recent-row > .game-card .g-card-text strong { font: 400 calc(20 * var(--cpx))/1.15 var(--g-font); }
+body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child .g-card-text { padding: calc(80 * var(--cpx)) calc(24 * var(--cpx)) calc(18 * var(--cpx)); }
+body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child .g-card-text strong { font: 300 calc(40 * var(--cpx))/1.1 var(--g-display); letter-spacing: -.01em; }
+/* The frame is drawn inside the tile, over a dark matte, so all four sides stay visible on bright art. */
+body.garrison[data-g-theme="one"] :is(.game-card, .g-one-pin, .g-one-spot):is(.focused, :focus, :focus-visible) {
+  outline: 0 !important; box-shadow: var(--g-ring) !important; z-index: 3;
+}
+body.garrison[data-g-theme="one"] :is(.game-card, .g-one-pin, .g-one-spot):is(.focused, :focus, :focus-visible)::after {
+  content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  border: calc(4 * var(--cpx)) solid #fff; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) rgba(0, 0, 0, .8);
+}
+body.garrison[data-g-theme="one"] #recent-row > .game-card:first-child:is(.focused, :focus, :focus-visible) { z-index: 4; }
 /* Spotlight: a column of small tiles and the wide promos. */
 body.garrison[data-g-theme="one"] #g-one-spotlight { display: block; flex: none; }
 body.garrison[data-g-theme="one"] #g-one-spotlight h3 { display: none; }
@@ -115,7 +135,7 @@ body.garrison[data-g-theme="one"] .g-one-spot strong { font: 400 calc(19 * var(-
 body.garrison[data-g-theme="one"] .g-one-spot small { font: 300 calc(15 * var(--cpx))/1.2 var(--g-display); color: rgba(255, 255, 255, .85); }
 body.garrison[data-g-theme="one"] .g-one-spot.green { background: #107c10; }
 body.garrison[data-g-theme="one"] .g-one-spot.blue { background: #1a8ad4; }
-body.garrison[data-g-theme="one"] .g-one-spot:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; z-index: 2; }
+body.garrison[data-g-theme="one"] .g-one-spot:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring) !important; z-index: 2; }
 
 /* ---------- My games & apps ---------- */
 body.garrison[data-g-theme="one"] #library-view:not([hidden]) { background: #101010; }
@@ -129,10 +149,10 @@ body.garrison[data-g-theme="one"] .g-lib-item {
 body.garrison[data-g-theme="one"] .g-lib-item em { margin-left: auto; font: 300 calc(20 * var(--cpx))/1 var(--g-display); font-style: normal; color: rgba(255, 255, 255, .55); }
 body.garrison[data-g-theme="one"] .g-lib-item.active { background: #107c10; }
 body.garrison[data-g-theme="one"] .g-lib-item.active em { color: #fff; }
-body.garrison[data-g-theme="one"] .g-lib-item:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="one"] .g-lib-item:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
 body.garrison[data-g-theme="one"] .g-lib-sort { margin-top: calc(30 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); border: 0; background: transparent; color: rgba(255, 255, 255, .7); font: 300 calc(21 * var(--cpx))/1.2 var(--g-display); text-align: left; }
 body.garrison[data-g-theme="one"] .g-lib-sort span { color: #fff; }
-body.garrison[data-g-theme="one"] .g-lib-sort:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="one"] .g-lib-sort:is(.focused, :focus, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
 body.garrison[data-g-theme="one"] .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); font: 300 calc(18 * var(--cpx))/1.3 var(--g-display); }
 body.garrison[data-g-theme="one"] .g-lib-storage strong { display: block; font-weight: 400; }
 body.garrison[data-g-theme="one"] .g-lib-ring { display: block; width: calc(56 * var(--cpx)); height: calc(10 * var(--cpx)); background: linear-gradient(90deg, #107c10 calc(var(--used) * 1%), rgba(255, 255, 255, .18) 0); }
@@ -249,7 +269,7 @@ body.garrison[data-g-theme="one"] #g-series-me .g-me-copy { display: grid; gap: 
 body.garrison[data-g-theme="one"] #g-series-me strong { font: 400 calc(18 * var(--cpx))/1.1 var(--g-font); }
 body.garrison[data-g-theme="one"] #g-series-me small { font: 300 calc(15 * var(--cpx))/1.1 var(--g-display); color: rgba(255, 255, 255, .75); }
 body.garrison[data-g-theme="one"] #g-series-me .g-me-g { font-weight: 600; margin-right: calc(2 * var(--cpx)); }
-body.garrison[data-g-theme="one"] #g-series-me:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; }
+body.garrison[data-g-theme="one"] #g-series-me:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring) !important; }
 body.garrison[data-g-theme="one"] .topbar #profile-button { display: none !important; }
 /* The launch splash: the game's colour with its logo. */
 body.garrison[data-g-theme="one"] #launch-overlay.g-has-logo .g-theme-logo:not([hidden]) { max-width: calc(560 * var(--cpx)); max-height: calc(240 * var(--cpx)); }
@@ -273,3 +293,5 @@ body.garrison[data-g-theme="one"] .g-store-card .g-card-text strong { font-weigh
 body.garrison[data-g-theme="one"][data-g-bg] #g-theme-wall .g-wall-image::after { background: linear-gradient(180deg, rgba(3, 6, 12, .82) 0, rgba(3, 6, 12, .55) 22%, rgba(0, 0, 0, .05) 45%, rgba(0, 0, 0, .3)); }
 body.garrison[data-g-theme="one"] .g-one-spot.big { transition: transform .28s ease-in, opacity .28s ease-in; }
 body.garrison[data-g-theme="one"] .g-one-spot.big.g-spot-turn { transform: perspective(900px) rotateX(70deg); opacity: 0; }
+/* Reduced motion: no turns, no spring, no drift. */
+html.reduce-motion body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot, .g-pivot, #recent-row > .game-card, #g-one-clock) { animation: none !important; transition: none !important; }
