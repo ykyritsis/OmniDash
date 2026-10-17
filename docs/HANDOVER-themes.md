@@ -1,5 +1,28 @@
 # Handover: console themes (0.6.0 work in progress)
 
+> **2026-10-18 handover to Claude — read this first.** Branch `console-themes`, HEAD `6525c36`.
+> The installed copy at `%LOCALAPPDATA%\Programs\Xbox Preview UI` is current (`backup-0.6.0-test22` is the
+> previous build). Install with
+> `node_modules\electron\dist\electron.exe scripts\install-test-build.cjs` (needs `ELECTRON_RUN_AS_NODE=1` in
+> the shell); it refuses while `Xbox Preview UI.exe` runs.
+>
+> State: seven of the eight themes have had a console-accuracy pass. **Helix is intentionally untouched** (the
+> owner wants it to stay the modern PC look). **The Wii pass is unfinished** — its motion and channel details
+> were started and committed mid-way; treat the Wii section of `garrison-theme-retro.js/.css` as in progress.
+>
+> Done recently: 3DS rebuilt as a single full-bleed iiSU-style screen; per-console Settings option blocks
+> (84 blocks / 297 decorative rows in `garrison-theme-settings.js` plus the "Console options" section of
+> `garrison-theme-screens.css`) and per-console Settings shells; PS3 XMB scaled up (128x90 categories, 104
+> item icons, 48px titles, 560x78 clock); PS4 rebuilt to the reference measurements with the backdrop
+> crossfade and content-card fixes; Series wide tiles + four-card shelf; One pins wall on screen + focus
+> frames; 360 band centred (294/597/294); play time on every dashboard; 16:9 fit for non-16:9 screens; type
+> scaling to 4K via `calc(N * var(--g-vp) / 1728)` (never multiply px by a length-valued custom property —
+> that is what broke the Home gutter); `page-<id>` review screens for any Settings page.
+>
+> Next, in order: finish Wii (motion and the bar/clock against `wii/ref/menu.png`); make the PS3 option band
+> run edge to edge; check the Xbox settings blocks on pages other than Appearance; PS3's item column clipping
+> its last entry; then a full 720p/1080p/4K sweep of all eight themes and a fresh set of review captures.
+
 Status as of 2026-10-17 (evening). This covers the console theme system added on top of the 0.5.1 launcher.
 The work is on branch `console-themes`. It hasn't been released yet.
 
