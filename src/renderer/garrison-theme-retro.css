@@ -330,8 +330,9 @@ body.garrison[data-g-theme="wii"] #toast::before { background-color: #34bdef; bo
 body.garrison[data-g-theme="3ds"] #toast { border-radius: calc(10 * var(--cpx)) !important; background-color: #f4f4f4 !important; color: #333 !important; border: calc(3 * var(--cpx)) solid #43e0ad !important; font-family: var(--g-font) !important; }
 body.garrison[data-g-theme="3ds"] #toast::before { background-color: #43e0ad; }
 body.garrison.g-retro #launch-overlay { background: #000 !important; }
-body.garrison.g-retro #launch-overlay :is(.launch-vignette, .launch-brand) { display: none !important; }
-body.garrison.g-retro #launch-overlay .g-theme-cover { width: calc(340 * var(--cpx)); }
+body.garrison.g-retro #launch-overlay :is(.launch-art, .launch-vignette, .launch-brand) { display: none !important; }
+body.garrison.g-retro #launch-overlay .g-theme-cover { width: calc(340 * var(--cpx)); box-shadow: 0 0 calc(40 * var(--cpx)) rgba(0, 0, 0, .6); }
+body.garrison.g-retro #launch-overlay .g-theme-splash { background: none !important; }
 body.garrison[data-g-theme="wii"] #launch-overlay { background: #fff !important; }
 
 /* Boot: each console's own logo instead of the Xbox sphere. */
