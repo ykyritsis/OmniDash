@@ -480,8 +480,10 @@
   }
 
   // =========================== 3DS: the HOME Menu ===========================
-  // Native 3DS pixels times --k: top screen 400×240, bottom 320×240, stacked to fill the height.
-  let dsFocus = 0, dsTool = -1;
+  // One full-bleed screen after iiSU: three rows of large square icons under the selected app's banner.
+  // Five columns are in view at a time; the rail slides one column at a time instead of being rebuilt.
+  let dsFocus = 0, dsTool = -1, dsArtToken = 0;
+  const DS_ROWS = 3, DS_COLS = 5, DS_PITCH = 300;
   const DS_TOOLS = [['settings', 'System Settings', 'home'], ['library', 'Game Notes', 'notes'], ['g-friends', 'Friend List', 'friends'], ['g-notifications', 'Notifications', 'notes2'], ['toggle-search', 'Internet Browser', 'web'], ['g-account', 'Miiverse', 'miiverse']];
   const DS_SVG = {
     home: '<svg viewBox="0 0 24 24"><path d="M3 12 12 4l9 8h-3v7H6v-7z" fill="#8aa7c7"/><path d="M14 13l5 5-1.6 1.6-5-5z" fill="#6c87a8"/></svg>',
@@ -502,31 +504,58 @@
       { label: 'System Settings', sub: 'Settings', action: 'settings', svg: 'wrench' }, { label: 'Mii Maker', sub: 'Profile', action: 'g-account', svg: 'mii' }, { label: 'Nintendo 3DS Camera', sub: 'Screenshots', action: 'g-retro-captures', svg: 'camera' },
       { label: 'All Software', sub: 'Library', action: 'library', svg: 'library' }];
   }
+  // The rail's offset: the selection keeps two columns of context on either side, and a library too short
+  // to fill five columns is padded so the icons stay centred.
+  function dsRail(list) {
+    const cols = Math.max(1, Math.ceil(list.length / DS_ROWS));
+    const col = Math.floor(dsFocus / DS_ROWS);
+    return { cols, col, start: Math.max(0, Math.min(col - 2, cols - DS_COLS)), pad: Math.max(0, DS_COLS - cols) * DS_PITCH / 2 };
+  }
   function renderDs() {
     const list = dsList();
     dsFocus = Math.max(0, Math.min(dsFocus, list.length - 1));
-    const col = Math.floor(dsFocus / 3);
-    const scroll = Math.max(0, col - 3);
+    const rail = dsRail(list);
     const coins = Math.min(300, 10 + allGames().length);
-    host.innerHTML = `<i class="ds-bg" aria-hidden="true"></i><div class="ds-device"><div class="ds-top"><div class="ds-pattern" aria-hidden="true"></div>
+    host.classList.toggle('ds-still', reducedMotion());
+    host.innerHTML = `<i class="ds-bg" aria-hidden="true"></i>
         <div class="ds-statusbar"><span class="ds-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="ds-pill">Internet</span><span class="ds-coin"><i>P</i>${coins}</span>
           <span class="ds-when">${esc(dayMonth())} (${esc(weekday())})</span><span class="ds-clock">${esc(time()).replace(':', '<b>:</b>')}</span><span class="ds-battery" aria-hidden="true"><i></i></span></div>
-        <div class="ds-banner"><i class="ds-art"></i></div>
-        <div class="ds-plate"><i class="ds-plate-icon"></i><span><strong></strong><small></small></span></div>
-        <div class="ds-foot"><span class="ds-cam"></span><kbd>Y</kbd><span class="ds-gap"></span><span class="ds-cam"></span><kbd>L</kbd>+<kbd>R</kbd></div></div>
-      <div class="ds-bottom"><div class="ds-toolbar">${DS_TOOLS.map(([action, label, svg], i) => `<button class="ds-tool focusable${i === 0 ? ' tab' : ''}${dsTool === i ? ' sel' : ''}" type="button" data-action="${action}" data-ds-tool="${i}" aria-label="${label}">${DS_SVG[svg]}</button>`).join('')}<span class="ds-size" aria-hidden="true"><i></i><i class="grid"></i></span></div>
-        <div class="ds-field"><div class="ds-grid" style="--scroll:${scroll}">${list.map((item, i) => `<button class="ds-icon focusable${i === dsFocus && dsTool < 0 ? ' sel' : ''}" type="button" ${attrs(item)} data-ds-index="${i}" aria-label="${esc(item.label)}" style="--c:${Math.floor(i / 3)};--r:${i % 3}">
-          ${item.game ? `<span class="ds-cover" style="background-image:${url(cover(item.game))}"></span>` : DS_SVG[item.svg] || icon('game')}</button>`).join('')}<span class="ds-cursor" style="--c:${col};--r:${dsFocus % 3}" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></div>
-        <div class="ds-scroll" aria-hidden="true"><i style="--p:${list.length > 18 ? col / Math.max(1, Math.ceil(list.length / 3) - 1) : 0}"></i></div></div></div>`;
+        <div class="ds-banner"><i class="ds-art"></i><div class="ds-plate"><i class="ds-plate-icon"></i><span><em class="ds-kicker"></em><strong></strong><small></small></span></div></div>
+        <div class="ds-field"><div class="ds-grid" style="--start:${rail.start};--pad:${rail.pad}">${list.map((item, i) => `<button class="ds-icon focusable${i === dsFocus && dsTool < 0 ? ' sel' : ''}" type="button" ${attrs(item)} data-ds-index="${i}" aria-label="${esc(item.label)}" style="--c:${Math.floor(i / DS_ROWS)};--r:${i % DS_ROWS}">
+          ${item.game ? `<span class="ds-cover" style="background-image:${url(cover(item.game))}"></span>` : DS_SVG[item.svg] || icon('game')}</button>`).join('')}<span class="ds-cursor" style="--c:${rail.col};--r:${dsFocus % DS_ROWS}" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></div>
+        <div class="ds-bottom"><div class="ds-toolbar">${DS_TOOLS.map(([action, label, svg], i) => `<button class="ds-tool focusable${i === 0 ? ' tab' : ''}${dsTool === i ? ' sel' : ''}" type="button" data-action="${action}" data-ds-tool="${i}" aria-label="${label}">${DS_SVG[svg]}</button>`).join('')}</div>
+          <span class="ds-gap"></span><span class="ds-size" aria-hidden="true"><i></i><i class="grid"></i></span>
+          <div class="ds-foot"><span class="ds-cam"></span><kbd>Y</kbd><span class="ds-cam"></span><kbd>L</kbd>+<kbd>R</kbd></div></div>
+        <div class="ds-scroll" aria-hidden="true"><i style="--p:${rail.cols > DS_COLS ? rail.start / (rail.cols - DS_COLS) : 0}"></i></div>`;
     chrome.innerHTML = '';
+    dsBanner(list[dsFocus]);
+    focusEl(dsTool >= 0 ? host.querySelector(`[data-ds-tool="${dsTool}"]`) : host.querySelector('.ds-icon.sel'));
+  }
+  // Movement retunes classes and the rail offset only, so the grid slides in CSS instead of being rebuilt.
+  function dsUpdate() {
+    const list = dsList();
+    dsFocus = Math.max(0, Math.min(dsFocus, list.length - 1));
+    const rail = dsRail(list);
+    const grid = host.querySelector('.ds-grid');
+    if (!grid) { renderDs(); return; }
+    grid.style.setProperty('--start', rail.start);
+    grid.style.setProperty('--pad', rail.pad);
+    host.querySelectorAll('.ds-icon').forEach((button, i) => button.classList.toggle('sel', i === dsFocus && dsTool < 0));
+    const cursor = host.querySelector('.ds-cursor');
+    if (cursor) { cursor.style.setProperty('--c', rail.col); cursor.style.setProperty('--r', dsFocus % DS_ROWS); }
+    host.querySelectorAll('.ds-tool').forEach((button, i) => button.classList.toggle('sel', i === dsTool));
+    const bar = host.querySelector('.ds-scroll i');
+    if (bar) bar.style.setProperty('--p', rail.cols > DS_COLS ? rail.start / (rail.cols - DS_COLS) : 0);
     dsBanner(list[dsFocus]);
     focusEl(dsTool >= 0 ? host.querySelector(`[data-ds-tool="${dsTool}"]`) : host.querySelector('.ds-icon.sel'));
   }
   function dsBanner(item) {
     const plate = host.querySelector('.ds-plate');
     if (!plate || !item) return;
+    const token = ++dsArtToken;
     plate.querySelector('strong').textContent = item.label;
-    // The 3DS plate carries the software's publisher, and the play time once it has been played.
+    plate.querySelector('.ds-kicker').textContent = item.game ? 'Now Playing' : 'System App';
+    // The plate carries the software's publisher, and the play time once it has been played.
     plate.querySelector('small').textContent = item.game
       ? [item.game.developer || item.game.publisher || (item.game.provider === 'PC' ? '' : item.game.provider), playtime(item.game)].filter(Boolean).join(' · ')
       : item.sub || '';
@@ -534,39 +563,44 @@
     iconEl.innerHTML = item.game ? '' : DS_SVG[item.svg] || '';
     iconEl.style.backgroundImage = item.game ? cssUrl(cover(item.game)) : '';
     const art = host.querySelector('.ds-art');
+    const backdrop = host.querySelector('.ds-bg');
     art.style.backgroundImage = ''; art.innerHTML = '';
     art.parentElement.classList.toggle('system', !item.game);
-    // The wallpaper behind the two screens keeps a game's art even while a system app is selected.
-    const backdrop = host.querySelector('.ds-bg');
-    const backdropGame = item.game || dsList().find(entry => entry.game)?.game || null;
-    if (backdrop && backdropGame && !backdrop.style.backgroundImage && window.gWideArt) {
-      window.gWideArt(backdropGame).then(src => { if (src && backdrop.isConnected) backdrop.style.backgroundImage = cssUrl(src); }).catch(() => {});
+    if (!item.game) {
+      art.innerHTML = DS_SVG[item.svg] || '';
+      // A system app has no wallpaper of its own, so the library's first game stays behind it.
+      const fallback = dsList().find(entry => entry.game)?.game;
+      if (backdrop && !backdrop.style.backgroundImage && fallback && window.gWideArt) {
+        window.gWideArt(fallback).then(src => { if (src && backdrop.isConnected) backdrop.style.backgroundImage = cssUrl(src); }).catch(() => {});
+      }
+      return;
     }
-    if (!item.game) { art.innerHTML = DS_SVG[item.svg] || ''; return; }
-    if (window.gWideArt) window.gWideArt(item.game).then(src => {
-      if (!art.isConnected) return;
+    if (!window.gWideArt) return;
+    window.gWideArt(item.game).then(src => {
+      // A quick move can land this lookup after the next game's; only the latest selection may paint.
+      if (token !== dsArtToken || !art.isConnected) return;
       art.style.backgroundImage = cssUrl(src || cover(item.game));
-      if (backdrop && src) backdrop.style.backgroundImage = cssUrl(src);
+      if (src && backdrop?.isConnected) backdrop.style.backgroundImage = cssUrl(src);
     }).catch(() => {});
   }
   function dsMove(direction) {
     const list = dsList();
     if (dsTool >= 0) {
-      if (direction === 'down') { dsTool = -1; play('navigate'); }
-      else if (direction === 'left' || direction === 'right') { const next = Math.max(0, Math.min(DS_TOOLS.length - 1, dsTool + (direction === 'right' ? 1 : -1))); if (next === dsTool) return; dsTool = next; play('navigate'); }
+      if (direction === 'left' || direction === 'right') { const next = Math.max(0, Math.min(DS_TOOLS.length - 1, dsTool + (direction === 'right' ? 1 : -1))); if (next === dsTool) return; dsTool = next; play('navigate'); }
+      else if (direction === 'up' || direction === 'down') { dsTool = -1; play('navigate'); }
       else return;
-      renderDs(); return;
+      dsUpdate(); return;
     }
-    const row = dsFocus % 3;
+    const row = dsFocus % DS_ROWS;
     let next = dsFocus;
-    if (direction === 'up') { if (row > 0) next -= 1; else { dsTool = Math.min(DS_TOOLS.length - 1, Math.floor(dsFocus / 3) + 1); play('navigate'); renderDs(); return; } }
-    if (direction === 'down' && row < 2) next += 1;
-    if (direction === 'right') next += 3;
-    if (direction === 'left') next -= 3;
-    if (next < 0 || next >= list.length) { if (direction === 'right' && Math.floor(dsFocus / 3) < Math.floor((list.length - 1) / 3)) next = list.length - 1; else return; }
+    if (direction === 'down') { if (row < DS_ROWS - 1) next += 1; else { dsTool = Math.min(DS_TOOLS.length - 1, Math.floor(dsFocus / DS_ROWS)); play('navigate'); dsUpdate(); return; } }
+    if (direction === 'up' && row > 0) next -= 1;
+    if (direction === 'right') next += DS_ROWS;
+    if (direction === 'left') next -= DS_ROWS;
+    if (next < 0 || next >= list.length) { if (direction === 'right' && Math.floor(dsFocus / DS_ROWS) < Math.floor((list.length - 1) / DS_ROWS)) next = list.length - 1; else return; }
     if (next === dsFocus) return;
     dsFocus = next; play('navigate');
-    renderDs();
+    dsUpdate();
   }
 
   // =========================== Rendering, navigation, sounds ===========================
@@ -648,7 +682,7 @@
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
     // A first click on an XMB item, PS4 tile or 3DS icon that isn't selected selects it, as the pointer did.
     if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); play('navigate'); renderXmb(false); return; }
-    if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); renderDs(); return; }
+    if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); dsUpdate(); return; }
     if (theme() === 'ps4' && el.classList.contains('ps4-tile') && !el.classList.contains('sel')) { stop(); ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; play('navigate'); renderPs4(false); return; }
     if (action === 'g-retro-settings') { stop(); play('confirm'); Promise.resolve(typeof openSettings === 'function' ? openSettings() : settingsDialog.showModal()).then(() => { try { showSettingsPage(el.dataset.page); } catch { /* Missing. */ } }); return; }
     if (action === 'g-ps4-overview') { stop(); play('confirm'); if (typeof openGameDetails === 'function') openGameDetails(el.dataset.gameId); return; }
@@ -670,7 +704,7 @@
       if (on() && state.view === 'home') {
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
-        if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; render(); return; }
+        if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
       }
       return back.apply(this, args);
     };
