@@ -410,9 +410,10 @@
   }
 
   // =========================== Wii: the Wii Menu ===========================
-  // Measured from the Wii Menu at 1080p: 4×3 channels of 384×201 from (160, 91), 23px apart; the bottom bar
-  // starts at 777 with a dip to 896 under the clock; Wii and mail buttons centred at 900.
+  // Measured from the Wii Menu at 1080p: 4×3 channels of 384×206 from (160, 91), 18px apart; the bottom bar
+  // starts at 780 and dips to 896 under the clock; the Wii and mail buttons are centred at 908.
   let wiiPage = 0, wiiFocus = 0, wiiPreview = null, wiiBar = -1;
+  let wiiShownPage = -1, wiiPageDir = 0;
   function wiiChannels() {
     const recent = games();
     return [
@@ -442,13 +443,29 @@
     const shown = channels.slice(wiiPage * 12, wiiPage * 12 + 12);
     while (shown.length < 12) shown.push(null);
     wiiFocus = Math.min(wiiFocus, 11);
+    // A page arrives from the side the player moved toward; focus moves within a page never rebuild it.
+    wiiPageDir = wiiShownPage >= 0 && wiiPage !== wiiShownPage ? (wiiPage > wiiShownPage ? 1 : -1) : 0;
+    wiiShownPage = wiiPage;
+    const staticArt = WIII('channel-spritesheet.png');
+    const tile = (ch, i) => !ch
+      ? `<span class="wii-ch empty${staticArt ? ' textured' : ''}" data-wii-index="${i}" style="--i:${i}" aria-hidden="true"></span>`
+      : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" style="--i:${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}><span class="wii-drift" aria-hidden="true">${wiiArt(ch)}</span><span class="wii-balloon">${esc(ch.label)}${ch.game && playtime(ch.game) ? `<em>${esc(playtime(ch.game))}</em>` : ''}</span></button>`;
     host.innerHTML = `<div class="wii-bands" aria-hidden="true">${[0, 1, 2].map(r => `<span style="--row:${r}"></span>`).join('')}</div>
-      <div class="wii-grid">${shown.map((ch, i) => !ch ? `<span class="wii-ch empty" data-wii-index="${i}" aria-hidden="true"></span>` : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}>${wiiArt(ch)}<span class="wii-balloon">${esc(ch.label)}${ch.game && playtime(ch.game) ? `<em>${esc(playtime(ch.game))}</em>` : ''}</span></button>`).join('')}
-        ${[0, 1, 2].map(r => `<span class="wii-ch empty peek" style="--r:${r}" aria-hidden="true"></span>`).join('')}</div>
+      <div class="wii-grid${wiiPageDir ? (wiiPageDir > 0 ? ' wii-next' : ' wii-prev') : ''}"${staticArt ? ` style="--wii-static:${url(staticArt)}"` : ''}>${shown.map(tile).join('')}
+        ${[0, 1, 2].map(r => `<span class="wii-ch empty peek${staticArt ? ' textured' : ''}" style="--i:${12 + r};--r:${r}" aria-hidden="true"></span>`).join('')}</div>
       ${wiiPage > 0 ? '<button class="wii-arrow left focusable" type="button" data-action="g-wii-page" data-dir="-1" aria-label="Previous page"></button>' : ''}${wiiPage < pages - 1 ? '<button class="wii-arrow right focusable" type="button" data-action="g-wii-page" data-dir="1" aria-label="Next page"></button>' : ''}`;
-    chrome.innerHTML = `<div class="wii-bar"><span class="wii-glow" aria-hidden="true"></span><svg class="wii-bar-shape" viewBox="0 0 1920 229" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="wii-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdd0d4"/><stop offset=".16" stop-color="#b9bcc0"/><stop offset=".6" stop-color="#cdd0d4"/><stop offset="1" stop-color="#d8dadd"/></linearGradient></defs>
-        <path d="M0 0 H500 C 560 0, 590 61, 660 61 H1260 C 1330 61, 1360 0, 1420 0 H1920 V229 H0 Z" fill="url(#wii-bar-fill)"/><path d="M0 0 H500 C 560 0, 590 61, 660 61 H1260 C 1330 61, 1360 0, 1420 0 H1920" fill="none" stroke="#39c1ef" stroke-width="3"/></svg>
-      <span class="wii-ring left" aria-hidden="true"></span><span class="wii-ring right" aria-hidden="true"></span>
+    const ring = (side, file) => `<span class="wii-ring ${side}${WIII(file) ? ' art' : ''}" aria-hidden="true"${WIII(file) ? ` style="background-image:${url(WIII(file))}"` : ''}></span>`;
+    chrome.innerHTML = `<div class="wii-bar"><span class="wii-glow" aria-hidden="true"></span><svg class="wii-bar-shape" viewBox="0 0 1920 300" preserveAspectRatio="none" aria-hidden="true"><defs>
+      <linearGradient id="wii-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b4b8bc"/><stop offset=".07" stop-color="#c8cbcf"/><stop offset=".42" stop-color="#d5d7da"/><stop offset=".84" stop-color="#d3d5d9"/><stop offset="1" stop-color="#c9ccd2"/></linearGradient>
+      <radialGradient id="wii-bar-sheen" cx=".5" cy=".04" r=".62"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <pattern id="wii-bar-grain" width="8" height="4" patternUnits="userSpaceOnUse"><rect width="8" height="1" fill="rgba(0,0,0,.028)"/></pattern>
+      <clipPath id="wii-bar-clip"><path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920V300H0Z"/></clipPath></defs>
+      <path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920V300H0Z" fill="url(#wii-bar-fill)"/>
+      <path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920V300H0Z" fill="url(#wii-bar-sheen)"/>
+      <path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920V300H0Z" fill="url(#wii-bar-grain)"/>
+      <g clip-path="url(#wii-bar-clip)"><path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920" fill="none" stroke="#f4fbff" stroke-width="11" transform="translate(0 5)"/></g>
+      <path d="M0 0H360C400 0 470 116 630 116H1290C1450 116 1520 0 1560 0H1920" fill="none" stroke="#38c2ef" stroke-width="4"/></svg>
+      ${ring('left', 'left-button.png')}${ring('right', 'right-button.png')}
       <button class="wii-btn focusable${wiiBar === 0 ? ' sel' : ''}" type="button" data-action="settings" aria-label="Wii Options">${img(WIII('wii-button.png'), '<b>Wii</b>')}</button>
       <span class="wii-sd" aria-hidden="true"></span>
       <span class="wii-clock">${segClock()}</span><span class="wii-date">${esc(weekday())} ${esc(dayMonth())}</span>
@@ -456,25 +473,40 @@
     const target = wiiBar >= 0 ? chrome.querySelector(wiiBar === 0 ? '.wii-btn' : '.wii-mail') : host.querySelector(`.wii-ch[data-wii-index="${wiiFocus}"].focusable`) || host.querySelector('.wii-ch.focusable');
     focusEl(target);
   }
-  // The Wii clock is a seven-segment display.
+  // The Wii clock is a seven-segment display: soft bevelled segments, each digit grouped so the entry can
+  // count them in one at a time.
   const SEGMENTS = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
   const SEG_RECT = { a: [9, 2, 22, 5], b: [32, 8, 5, 26], c: [32, 38, 5, 26], d: [9, 65, 22, 5], e: [3, 38, 5, 26], f: [3, 8, 5, 26], g: [9, 33.5, 22, 5] };
   function segClock() {
     const parts = new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).formatToParts(now());
     const hour = parts.find(p => p.type === 'hour')?.value || '12', minute = parts.find(p => p.type === 'minute')?.value || '00';
     const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
-    const digit = (d, x) => [...(SEGMENTS[d] || '')].map(s => { const [rx, ry, w, h] = SEG_RECT[s]; return `<rect x="${x + rx}" y="${ry}" width="${w}" height="${h}" rx="1.5"/>`; }).join('');
+    const digit = (d, x) => [...(SEGMENTS[d] || '')].map(s => { const [rx, ry, w, h] = SEG_RECT[s]; return `<rect x="${x + rx}" y="${ry}" width="${w}" height="${h}" rx="2"/>`; }).join('');
     const text = hour.padStart(2, ' ') + minute;
-    let x = 0, out = '';
-    [...text].forEach((d, i) => { if (i === 2) { out += `<rect x="${x + 4}" y="20" width="5" height="5" rx="1"/><rect x="${x + 4}" y="46" width="5" height="5" rx="1"/>`; x += 16; } if (d !== ' ') out += digit(d, x); x += 46; });
-    return `<svg viewBox="0 0 ${x} 72" aria-label="${esc(time())}">${out}</svg>${period ? `<em>${esc(period.toUpperCase())}</em>` : ''}`;
+    let x = 0, out = '', step = 0;
+    [...text].forEach((d, i) => {
+      if (i === 2) {
+        out += `<g class="wii-seg" style="--d:${step++};fill:url(#wii-seg-fill)"><rect x="${x + 4}" y="20" width="5" height="5" rx="1"/><rect x="${x + 4}" y="46" width="5" height="5" rx="1"/></g>`;
+        x += 16;
+      }
+      if (d !== ' ') out += `<g class="wii-seg" style="--d:${step++};fill:url(#wii-seg-fill)">${digit(d, x)}</g>`;
+      x += 46;
+    });
+    return `<svg viewBox="0 0 ${x} 72" aria-label="${esc(time())}"><defs><linearGradient id="wii-seg-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c0c0c0"/><stop offset=".55" stop-color="#a4a4a4"/><stop offset="1" stop-color="#8d8d8d"/></linearGradient></defs>${out}</svg>${period ? `<em>${esc(period.toUpperCase())}</em>` : ''}`;
   }
   function renderWiiPreview() {
     const game = findGame(wiiPreview);
     if (!game) { wiiPreview = null; renderWii(); return; }
+    // The preview grows out of the channel that was chosen, so the screen has a sense of place.
+    const source = host.querySelector(`.wii-ch[data-wii-index="${wiiFocus}"].focusable`) || host.querySelector('.wii-ch.focused');
+    const rect = source?.getBoundingClientRect();
+    const calm = document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const from = rect && !calm
+      ? `--wii-from-x:${Math.round(rect.left + rect.width / 2 - innerWidth / 2)}px;--wii-from-y:${Math.round(rect.top + rect.height / 2 - innerHeight / 2)}px;--wii-from-s:${Math.max(.18, Math.min(.42, rect.width / innerWidth)).toFixed(3)}`
+      : '';
     const pill = (label, action, extra = '') => `<button class="wii-pbtn focusable" type="button" data-action="${action}"${extra}>${WIII('btn-texture.png') ? `<i class="cap l" style="background-image:${url(WIII('btn-left.png'))}"></i><i class="mid" style="background-image:${url(WIII('btn-texture.png'))}"></i><i class="cap r" style="background-image:${url(WIII('btn-right.png'))}"></i>` : ''}<span>${label}</span></button>`;
-    host.innerHTML = `<div class="wii-preview"><div class="wii-banner" data-g-wide-art="${esc(game.id)}"><strong>${esc(game.title)}</strong></div>
-      <div class="wii-preview-bar">${pill('Wii Menu', 'g-wii-back')}${pill('Start', 'select-game', ` data-game-id="${esc(game.id)}" data-retro-boot="1" data-start="1"`)}</div></div>`;
+    host.innerHTML = `<div class="wii-preview"${from ? ` style="${from}"` : ''}><div class="wii-banner" data-g-wide-art="${esc(game.id)}"><strong>${esc(game.title)}</strong></div>
+      <div class="wii-preview-bar"><span class="wii-preview-glow" aria-hidden="true"></span>${pill('Wii Menu', 'g-wii-back')}${pill('Start', 'select-game', ` data-game-id="${esc(game.id)}" data-retro-boot="1" data-start="1"`)}</div></div>`;
     chrome.innerHTML = '';
     focusEl(host.querySelector('.wii-pbtn[data-start]'));
   }
