@@ -3,9 +3,11 @@
 
    Sizing: both consoles lay out a fixed 1080p screen and scale it to the TV. The themes do the same with
    --cpx, one console pixel (the screen height / 1080), still following the Interface scale setting
-   (Garrison's --g-scale is 0.9 at 100%). Sizes in the theme files are the console's own pixel sizes. */
+   (Garrison's --g-scale is 0.9 at 100%). Sizes in the theme files are the console's own pixel sizes.
+   A console outputs 16:9, so a screen that isn't 16:9 scales the whole dashboard down to fit its width
+   instead of spreading it edge to edge: on 16:9 both terms are equal and nothing changes. */
 body.garrison[data-g-console] {
-  --cpx: calc(100vh / 1080 * var(--g-scale, .9) / .9);
+  --cpx: min(calc(100vh / 1080 * var(--g-scale, .9) / .9), calc(100vw / 1920 * var(--g-scale, .9) / .9));
   --g-gutter: calc(72 * var(--cpx));
 }
 

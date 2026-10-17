@@ -57,7 +57,17 @@
 
   // An item: { label, sub, action, data, glyph, image, game, boot }
   const attrs = item => `data-action="${esc(item.action)}"${Object.entries(item.data || {}).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('')}${item.boot ? ' data-retro-boot="1"' : ''}`;
-  const gameItem = game => ({ label: game.title, sub: game.installed === false ? 'Not installed' : game.provider === 'PC' ? '' : game.provider, action: 'select-game', data: { 'game-id': game.id }, game, boot: true });
+  // "12 h", "3.5 h", "40 min": the play time each console prints next to a game.
+  const playtime = game => {
+    const minutes = Number(game?.steamPlaytimeMinutes) || 0;
+    if (!minutes) return '';
+    const hours = minutes / 60;
+    return hours >= 10 ? `${Math.round(hours)} h` : hours >= 1 ? `${hours.toFixed(1).replace(/\.0$/, '')} h` : `${Math.round(minutes)} min`;
+  };
+  // The line under a game's name: how much it has been played, then where it came from, as the consoles did.
+  const gameLine = (game, extra = '') => [extra, playtime(game), game?.installed === false ? 'Not installed' : game?.provider === 'PC' ? '' : game?.provider]
+    .filter(Boolean).join(' · ');
+  const gameItem = game => ({ label: game.title, sub: gameLine(game), action: 'select-game', data: { 'game-id': game.id }, game, boot: true });
   const settingsItem = (label, page, file, glyph) => ({ label, action: 'g-retro-settings', data: { page }, file, glyph });
 
   // Achievements for the PS4 content cards and the 3DS banner, cached per game.
@@ -189,7 +199,7 @@
       if (!src || !layer.isConnected) return;
       layer.style.backgroundImage = cssUrl(src);
       host.classList.add('pic-on');
-    }), 900);
+    }).catch(() => {}), 900);
   }
   function xmbMove(direction) {
     const cats = xmbCategories();
@@ -305,7 +315,7 @@
     functions.classList.toggle('open', ps4Area === 'fn');
     host.querySelector('.ps4-home').classList.toggle('away', ps4Area === 'fn');
     host.querySelector('.ps4-under').innerHTML = `<div class="ps4-menu">${sel.game ? ['Overview', 'Recent Activity', 'Related Items'].map((label, i) => `<button class="ps4-sub focusable${ps4Area === 'sub' && ps4Sub === i ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="${i}">${label}</button>`).join('') : ''}</div>
-      <div class="ps4-info"><h2>${esc(sel.label)}</h2><div class="ps4-cards">${sel.game ? `<button class="ps4-card wide focusable${ps4Area === 'sub' && ps4Sub === 3 ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="3" data-g-wide-art="${esc(sel.game.id)}"><b>${esc(sel.game.lastPlayed ? 'Recently played' : 'Overview')}</b><small>${esc(sel.game.title)}</small></button><span class="ps4-ach"></span>` : `<p class="ps4-sub-copy">${esc(sel.sub || '')}</p>`}</div></div>`;
+      <div class="ps4-info"><h2>${esc(sel.label)}${sel.game && playtime(sel.game) ? `<em>${esc(playtime(sel.game))}</em>` : ''}</h2><div class="ps4-cards">${sel.game ? `<button class="ps4-card wide focusable${ps4Area === 'sub' && ps4Sub === 3 ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="3" data-g-wide-art="${esc(sel.game.id)}"><b>${esc(sel.game.lastPlayed ? 'Recently played' : 'Overview')}</b><small>${esc(sel.game.title)}</small></button><span class="ps4-ach"></span>` : `<p class="ps4-sub-copy">${esc(sel.sub || '')}</p>`}</div></div>`;
     // The content row is new text every time, so it comes in rather than swapping under the eye.
     if (!reducedMotion() && ps4LastUnder !== ps4Focus) {
       const under = host.querySelector('.ps4-under');
@@ -352,7 +362,7 @@
       layers[next].classList.add('on');
       layers[ps4ArtFront].classList.remove('on');
       ps4ArtFront = next;
-    });
+    }).catch(() => {});
   }
   function ps4Move(direction) {
     const list = ps4List();
@@ -413,7 +423,7 @@
     while (shown.length < 12) shown.push(null);
     wiiFocus = Math.min(wiiFocus, 11);
     host.innerHTML = `<div class="wii-bands" aria-hidden="true">${[0, 1, 2].map(r => `<span style="--row:${r}"></span>`).join('')}</div>
-      <div class="wii-grid">${shown.map((ch, i) => !ch ? `<span class="wii-ch empty" data-wii-index="${i}" aria-hidden="true"></span>` : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}>${wiiArt(ch)}<span class="wii-balloon">${esc(ch.label)}</span></button>`).join('')}
+      <div class="wii-grid">${shown.map((ch, i) => !ch ? `<span class="wii-ch empty" data-wii-index="${i}" aria-hidden="true"></span>` : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}>${wiiArt(ch)}<span class="wii-balloon">${esc(ch.label)}${ch.game && playtime(ch.game) ? `<em>${esc(playtime(ch.game))}</em>` : ''}</span></button>`).join('')}
         ${[0, 1, 2].map(r => `<span class="wii-ch empty peek" style="--r:${r}" aria-hidden="true"></span>`).join('')}</div>
       ${wiiPage > 0 ? '<button class="wii-arrow left focusable" type="button" data-action="g-wii-page" data-dir="-1" aria-label="Previous page"></button>' : ''}${wiiPage < pages - 1 ? '<button class="wii-arrow right focusable" type="button" data-action="g-wii-page" data-dir="1" aria-label="Next page"></button>' : ''}`;
     chrome.innerHTML = `<div class="wii-bar"><span class="wii-glow" aria-hidden="true"></span><svg class="wii-bar-shape" viewBox="0 0 1920 229" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="wii-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdd0d4"/><stop offset=".16" stop-color="#b9bcc0"/><stop offset=".6" stop-color="#cdd0d4"/><stop offset="1" stop-color="#d8dadd"/></linearGradient></defs>
@@ -516,7 +526,10 @@
     const plate = host.querySelector('.ds-plate');
     if (!plate || !item) return;
     plate.querySelector('strong').textContent = item.label;
-    plate.querySelector('small').textContent = item.game ? (item.game.developer || item.game.publisher || (item.game.provider === 'PC' ? '' : item.game.provider) || '') : item.sub || '';
+    // The 3DS plate carries the software's publisher, and the play time once it has been played.
+    plate.querySelector('small').textContent = item.game
+      ? [item.game.developer || item.game.publisher || (item.game.provider === 'PC' ? '' : item.game.provider), playtime(item.game)].filter(Boolean).join(' · ')
+      : item.sub || '';
     const iconEl = plate.querySelector('.ds-plate-icon');
     iconEl.innerHTML = item.game ? '' : DS_SVG[item.svg] || '';
     iconEl.style.backgroundImage = item.game ? cssUrl(cover(item.game)) : '';
@@ -534,7 +547,7 @@
       if (!art.isConnected) return;
       art.style.backgroundImage = cssUrl(src || cover(item.game));
       if (backdrop && src) backdrop.style.backgroundImage = cssUrl(src);
-    });
+    }).catch(() => {});
   }
   function dsMove(direction) {
     const list = dsList();

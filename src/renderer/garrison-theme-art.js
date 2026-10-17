@@ -43,7 +43,8 @@
     // One's big Home tile is a library card: it gets wide art too, not its square cover.
     const big = document.querySelector('body[data-g-theme="one"] #recent-row > .game-card:first-child');
     if (big && big.dataset.gWideArt !== big.dataset.gameId) { big.dataset.gWideArt = big.dataset.gameId; delete big.dataset.gArtDone; }
-    for (const element of document.querySelectorAll('[data-g-wide-art]:not([data-g-art-done])')) upgrade(element);
+    // A slot whose artwork URL cannot be read just stays as it is; it must not reject into the console.
+    for (const element of document.querySelectorAll('[data-g-wide-art]:not([data-g-art-done])')) upgrade(element).catch(() => {});
   }
   const schedule = () => { if (!queued) { queued = true; requestAnimationFrame(scan); } };
   new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
