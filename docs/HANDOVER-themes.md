@@ -83,7 +83,7 @@ Packs live in `%APPDATA%\xbox-preview-ui\theme-packs\`. They're for the owner's 
 
 The owner said the PS3, PS4, Wii and 3DS themes are "nowhere near close enough". Next steps:
 
-1. Main IPC for the retro packs, like `theme:pack`: return file URLs for a whitelisted set of icons, fonts and sounds per console.
+1. Done: main IPC `theme:retro-pack` and `theme:retro-sound` (src/main.cjs RETRO_PACKS whitelist). The renderer builds file URLs for icons and fonts, and sounds are decoded through WebAudio.
 2. PS3: real XMB layout from `ps3/ref/xmb.jpg`.
    - The category row sits at about 25% height with the selected category left of centre.
    - Items above the selection stack upward, above the row.

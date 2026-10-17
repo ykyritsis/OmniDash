@@ -20,7 +20,11 @@ const SHOW = {
   options: `(() => { openGameOptions(state.games.find(x => !x.isApp).id); })()`,
   store: `showView('store')`,
   halo: `(() => { const t = document.body.dataset.gTheme; localStorage.setItem('g-bg:' + t, 'pack:Halo_4'); gSetTheme('helix'); gSetTheme(t); showView('home'); })()`,
-  onboarding: `(() => { onboardingDialog.showModal(); showOnboardingStep(0); })()`
+  onboarding: `(() => { onboardingDialog.showModal(); showOnboardingStep(0); })()`,
+  // Controller steps on Home, chained in SCREENS (for example home,navR,navR,navU,press).
+  navR: `navigateConsoleHome('right', document.activeElement)`, navL: `navigateConsoleHome('left', document.activeElement)`,
+  navU: `navigateConsoleHome('up', document.activeElement)`, navD: `navigateConsoleHome('down', document.activeElement)`,
+  press: `(() => { const el = document.querySelector('#g-retro .focused, #g-retro-chrome .focused') || document.activeElement; window.__noLaunch = true; if (!el?.dataset?.retroBoot) el?.click(); })()`, back: `navigateBack()`
 };
 app.on('browser-window-created', (_, win) => {
   const errors = []; win.webContents.on('console-message', e => { if (e.level === 'error') errors.push(e.message.slice(0, 200)); });
@@ -31,11 +35,11 @@ app.on('browser-window-created', (_, win) => {
     if (process.env.DEMO_ART !== '0') await win.webContents.executeJavaScript(await fs.readFile(path.join(__dirname, 'theme-demo-art.js'), 'utf8')).catch(e => errors.push('art: ' + e));
     for (const theme of themes) {
       await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); if (window.gSetTheme) gSetTheme(${JSON.stringify(theme)}); else document.body.dataset.gTheme = ${JSON.stringify(theme)}; })()`).catch(e => errors.push(String(e)));
-      for (const screen of screens) {
+      for (const [si, screen] of screens.entries()) {
         const show = screen.startsWith('hub-') ? `(() => { showView('home'); window.gHub && gHub.go(${JSON.stringify(screen.slice(4))}); })()` : SHOW[screen];
         await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); ${show}; })()`).catch(e => errors.push(screen + ': ' + e));
         await new Promise(r => setTimeout(r, screen === 'boot' ? 1100 : screen === 'saver' ? 2600 : screen === 'store' ? 6000 : 1800));
-        await fs.writeFile(path.join(output, `${theme}-${screen}.png`), (await win.webContents.capturePage()).toPNG());
+        await fs.writeFile(path.join(output, `${theme}-${/^(nav[RLUD]|press|back)$/.test(screen) ? si + "-" : ""}${screen}.png`), (await win.webContents.capturePage()).toPNG());
       }
     }
     await fs.writeFile(path.join(output, 'errors.json'), JSON.stringify(errors, null, 2));

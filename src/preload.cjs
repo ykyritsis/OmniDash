@@ -90,6 +90,8 @@ contextBridge.exposeInMainWorld('launcher', {
   getPrefs: () => ipcRenderer.invoke('prefs:get'),
   getThemePack: () => ipcRenderer.invoke('theme:pack'),
   getThemePackSound: (kind) => ipcRenderer.invoke('theme:pack-sound', kind),
+  getRetroPack: () => ipcRenderer.invoke('theme:retro-pack'),
+  getRetroSound: (id, kind) => ipcRenderer.invoke('theme:retro-sound', id, kind),
   setPref: (key, value) => ipcRenderer.invoke('prefs:set', key, value),
   getSteamInstallTargets: (gameId) => ipcRenderer.invoke('steam:install-targets', gameId),
   rememberSteamLibrary: (root) => ipcRenderer.invoke('steam:remember-library', root),

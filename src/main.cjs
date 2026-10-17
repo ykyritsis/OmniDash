@@ -2967,6 +2967,31 @@ function registerIpc() {
     const data = await fs.readFile(path.join(themePackRoot, 'Audio', 'Sounds', file)).catch(() => null);
     return data && data.length < 4e6 ? { type: file.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav', base64: data.toString('base64') } : null;
   });
+  // Optional PlayStation and Nintendo packs (icons, fonts, sounds) the player keeps in the same folder. The
+  // renderer gets file URLs for the folder; sounds come only from this fixed list.
+  const retroRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs');
+  const RETRO_PACKS = {
+    ps3: { check: 'ps3/PS3-Simulator-main/icons/settings.png', sounds: { navigate: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/down.ogg', category: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/up.ogg',
+      confirm: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/ok.ogg', back: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/cancel.ogg',
+      launch: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/launch.ogg', notify: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/notice.ogg' } },
+    ps4: { check: 'ps4/Ps4-UI-master/assets/img/background.png', sounds: { navigate: 'ps4/Ps4-UI-master/assets/js/navigate.mp3', category: 'ps4/Ps4-UI-master/assets/js/navigate.mp3',
+      notify: 'ps4/Ps4-UI-master/assets/js/reward.mp3', startup: 'ps4/Ps4-UI-master/assets/js/startup.mp3' } },
+    wii: { check: 'wii/Wii.JS-gh-pages/assets/images/channel-border.png', sounds: { navigate: 'wii/Wii.JS-gh-pages/assets/audio/button-hover.mp3', category: 'wii/Wii.JS-gh-pages/assets/audio/zip.mp3',
+      confirm: 'wii/Wii.JS-gh-pages/assets/audio/button-select.mp3', back: 'wii/Wii.JS-gh-pages/assets/audio/back.mp3', startup: 'wii/Wii.JS-gh-pages/assets/audio/startup.mp3' } },
+    '3ds': { check: '3ds', sounds: {} }
+  };
+  ipcMain.handle('theme:retro-pack', async () => {
+    const available = {};
+    for (const [id, pack] of Object.entries(RETRO_PACKS)) available[id] = await exists(path.join(retroRoot, pack.check));
+    return { available, base: pathToFileURL(retroRoot + path.sep).href, sounds: Object.fromEntries(Object.entries(RETRO_PACKS).map(([id, pack]) => [id, Object.keys(pack.sounds)])) };
+  });
+  ipcMain.handle('theme:retro-sound', async (_event, id, kind) => {
+    const file = RETRO_PACKS[id]?.sounds?.[kind];
+    if (!file) throw new Error('Unknown sound.');
+    const data = await fs.readFile(path.join(retroRoot, file)).catch(() => null);
+    const type = file.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg';
+    return data && data.length < 4e6 ? { type, base64: data.toString('base64') } : null;
+  });
   ipcMain.handle('prefs:get', async () => {
     const settings = await readSettings();
     return { pauseDownloadsWhilePlaying: settings.pauseDownloadsWhilePlaying !== false, controllerVibration: settings.controllerVibration !== false,
