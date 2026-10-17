@@ -18,8 +18,10 @@ The work is on branch `console-themes`. It hasn't been released yet.
   `Remove-Item Env:ELECTRON_RUN_AS_NODE` first, or the review runs as Node and dies on `app.on`.
 - Review screenshots run in hidden demo windows. Output goes to `.visual-review/themes/<theme>-<screen>.png`.
   - Command: `THEMES=ps3,ps4 SCREENS=home,library node_modules/electron/dist/electron.exe scripts/theme-review.cjs`
-  - Screens: home, library, detail, settings, apps, appearance, boot, toast, saver, options, store, launch, halo, onboarding, and `hub-<id>`. Controller steps (`navR`, `navL`, `navU`, `navD`, `press`, `back`) chain from `home` in the same list.
-  - The window is 1920×1080 at DPR 1.5, so the PNGs are 2880×1620.
+  - Screens: home, library, detail, settings, apps, appearance, boot, toast, saver, options, store, launch, halo, onboarding, keyboard, and `hub-<id>`. Controller steps (`navR`, `navL`, `navU`, `navD`, `press`, `back`) chain from `home` in the same list.
+  - `switchps3`, `switchwii` and `switchback` pick a theme in Settings → Appearance and then close it (the last one with the controller's Back), which is the path that used to leave the focus behind. `probe` logs view/theme/selection to `errors.json`. `manygames` inflates the demo library so paging, grid scrolling and long XMB columns can be seen.
+  - `REVIEW_SIZE=1706,960` matches the owner's display (2560×1440 at 150% DPI, so the page lays out at 1706×960). The default 1920×1080 gives 2880×1620 PNGs.
+  - The script waits for the demo import (`state.libraryInitialShown`) before painting its stand-in artwork, and paints it again for every theme, because the demo library can replace the game list part-way through.
   - The process often stays alive after the last capture. Check the newest PNG, then kill only processes whose path
     matches `*xbox mode 2*node_modules*`.
   - If a run is killed or crashes, the demo profile counts a failed start and later runs come up in **safe mode**
@@ -27,7 +29,8 @@ The work is on branch `console-themes`. It hasn't been released yet.
     `Set-Content .visual-review/themes/profile/startup-state.json '{"failedStarts":0,"pending":false}'`.
 - `scripts/theme-eval.cjs` evaluates `EXPR_FILE` in the same demo window and writes `.visual-review/theme-eval.txt`.
   - `EVAL_SIZE=1920,1080` matches the review window. `DEMO_ART=1` paints the same stand-in artwork the captures use.
-  - Handy for checking computed sizes: the expression can read `getComputedStyle`, `getBoundingClientRect` and `state`.
+  - Handy for checking computed sizes and timings: the expression can read `getComputedStyle`, `getBoundingClientRect`,
+    `state` and `performance.now()`. It must return a value (a promise is awaited).
 - `scripts/launch-hang-check.cjs` checks for a freeze after a game launches.
 - **The owner games on this PC.** Never open visible or focus-taking windows and never play sound.
   - Never touch the installed app while `Xbox Preview UI.exe` is running.
@@ -121,11 +124,23 @@ reference screenshots on 2026-10-17 and now measure up to them. The numbers belo
      icon grid with the cyan corner selector, and the scroll bar.
 6. Shared screens: the library's section list (flex column, counts, storage ring, sort line), Settings named per
    console, and the boot screen showing each console's wordmark instead of the Xbox sphere.
+7. Kept in step with the library: the console screens build their own icons from cover art, so they re-render
+   (coalesced, 300 ms, never over a dialog) when `library:artwork` or `library:initial` arrives. Without this,
+   switching to PS3 while the library was still importing showed empty squares and an empty Game column.
+   A dialog closing on Home re-renders so the focus lands back on the console screen, and a theme screen that
+   throws drops `g-retro` and leaves the launcher's own Home in place instead of a black screen.
+8. Console touches on the launcher's screens: the on-screen keyboard is themed per console, Play and install
+   buttons take the console accent (`--g-xbox-green`) instead of Xbox green, and Wii/3DS keep light text on the
+   dark library and settings screens while setting their own colours on their light Home screens.
+9. The XMB wave draws its crest as three stacked strokes rather than a canvas shadow, and pauses whenever the
+   window is hidden or unfocused; a full XMB rebuild with 8 games measured 6.7 ms.
 
 ## Known gaps
 
 - Not tested on real hardware: controller, sound, boot video, and achievements on return.
 - Avatars are partial: gamerpics only, no full-body avatar.
-- The One theme's Pins wall starts partly off-screen and its selected tile's focus outline only shows on two edges;
+- The One theme's Pins wall starts partly off-screen and its selected tile's focus ring is weak against bright art;
   the Series dashboard fades to the page colour slightly early under the last row. Both are cosmetic and untouched.
+- In demo mode (not the real app) the "Importing your library" screen can stay at 100%: the demo delivers the
+  library through `library:initial` instead of the `scanLibrary` result that normally closes it.
 - Release 0.6.0 is drafted in `docs/release-0.6.0.md` and now lists all eight themes. It hasn't been built or published.
