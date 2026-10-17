@@ -245,14 +245,15 @@ body:not(.g-retro-pack) #g-retro .wii-pbtn { border: calc(4 * var(--cpx)) solid 
 #g-retro .wii-pbtn:is(.focused, :focus-visible) { transform: scale(1.06); filter: drop-shadow(0 0 calc(10 * var(--cpx)) rgba(52, 189, 239, .9)); color: #2a9fd6; }
 
 /* =========================== 3DS =========================== */
-body.garrison[data-g-theme="3ds"] { --r-accent: #2fa7e8; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; --k: calc(2.48 * var(--cpx)); color: #333; }
+/* Native 3DS pixels. Capped so the pair always fits: 400 + 320 native wide plus the gap, and 240 tall. */
+body.garrison[data-g-theme="3ds"] { --r-accent: #2fa7e8; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; --k: min(calc(2.48 * var(--cpx)), calc(96vw / 736), calc(88vh / 240)); color: #333; }
 html:has(body[data-g-theme="3ds"]) { background: #1a1a1a; }
 body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-gradient(ellipse 80% 80% at 50% 40%, #34343a, #0c0c0f 82%); }
 #g-retro .ds-bg { position: absolute; inset: 0; background: center / cover no-repeat; opacity: .46; transition: opacity .7s ease; }
 #g-retro .ds-bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 76% 70% at 50% 48%, rgba(8, 8, 10, .04) 0%, rgba(8, 8, 10, .8) 100%), linear-gradient(180deg, rgba(8, 8, 10, .42), rgba(8, 8, 10, .12) 32%, rgba(8, 8, 10, .5)); }
 /* Two screens on one 16:9 display: stacked they would leave half the frame empty, so they stand side by
    side at the same height, the wide 5:3 top screen first and the 4:3 touch screen beside it. */
-#g-retro .ds-device { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; gap: calc(40 * var(--cpx)); font-family: var(--g-font); }
+#g-retro .ds-device { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; gap: calc(16 * var(--k)); font-family: var(--g-font); }
 #g-retro .ds-top, #g-retro .ds-bottom { position: relative; flex: none; overflow: hidden; box-shadow: 0 0 0 calc(4 * var(--k)) #0a0a0b, 0 0 0 calc(5 * var(--k)) rgba(255, 255, 255, .12), 0 calc(10 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 0, 0, .65); border-radius: calc(6 * var(--k)); }
 #g-retro .ds-top { width: calc(400 * var(--k)); height: calc(240 * var(--k)); background: #f2f2f2; }
 #g-retro .ds-pattern { position: absolute; inset: 0; background: #f0f0f0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='40'%3E%3Crect x='4' y='4' width='36' height='32' rx='9' fill='%23fafafa' stroke='%23e6e6e6' stroke-width='1.5'/%3E%3C/svg%3E") 0 0 / calc(44 * var(--k)) calc(40 * var(--k)); animation: ds-drift 40s linear infinite; }
