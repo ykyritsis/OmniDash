@@ -30,18 +30,24 @@
   window.gThemeBackdrop = game => findBackdrop(game);
   async function findBackdrop(game) {
     if (backdropCache.has(game.id)) return backdropCache.get(game.id);
-    const tried = new Set();
-    const tryAll = async urls => { for (const url of urls) { if (tried.has(url)) continue; tried.add(url); if (await isWallpaper(url)) return url; } return ''; };
-    // Steam's library hero is the console-style key art: 3840 px wide, no logo, made to sit behind a dashboard.
-    const steamHero = game.provider === 'Steam' && /^\d+$/.test(String(game.appId || '')) ? [`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_hero.jpg`] : [];
-    let found = await tryAll([...steamHero, ...list(game.artwork?.hero), ...list(game.artwork?.wide), ...list(game.artwork?.screenshots).slice(0, 4)]);
-    if (!found && typeof loadGamePageDetails === 'function') {
-      const details = await loadGamePageDetails(game).catch(() => null);
-      found = await tryAll(list(details?.screenshots).slice(0, 4));
+    try {
+      const tried = new Set();
+      const tryAll = async urls => { for (const url of urls) { if (tried.has(url)) continue; tried.add(url); if (await isWallpaper(url)) return url; } return ''; };
+      // Steam's library hero is the console-style key art: 3840 px wide, no logo, made to sit behind a dashboard.
+      const steamHero = game.provider === 'Steam' && /^\d+$/.test(String(game.appId || '')) ? [`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_hero.jpg`] : [];
+      let found = await tryAll([...steamHero, ...list(game.artwork?.hero), ...list(game.artwork?.wide), ...list(game.artwork?.screenshots).slice(0, 4)]);
+      if (!found && typeof loadGamePageDetails === 'function') {
+        const details = await loadGamePageDetails(game).catch(() => null);
+        found = await tryAll(list(details?.screenshots).slice(0, 4));
+      }
+      backdropCache.set(game.id, found);
+      while (backdropCache.size > 120) backdropCache.delete(backdropCache.keys().next().value);
+      return found;
+    } catch {
+      // An artwork URL that cannot even be decoded just means no backdrop for this game.
+      backdropCache.set(game.id, '');
+      return '';
     }
-    backdropCache.set(game.id, found);
-    while (backdropCache.size > 120) backdropCache.delete(backdropCache.keys().next().value);
-    return found;
   }
   let backdropToken = 0;
   function seriesBackdrop(game, force = false) {

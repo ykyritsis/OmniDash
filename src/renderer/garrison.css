@@ -3,7 +3,11 @@
 body.garrison {
   --g-scale: .9;
   --g-vp: calc(min(100vw, 188vh) * var(--g-scale));
-  --g-gutter: clamp(24px, calc(3.8 * var(--g-vp) / 100), 96px);
+  /* 1 at 1080p, 1.33 at 1440p, 2 at 4K. Type sizes below are written as clamp(min, viewport, max)
+     where max is a 1080p console size; multiplying that max by this keeps text growing with the
+     screen instead of freezing at its 1080p cap on a big TV (a console scales its whole frame). */
+  --g-type: calc(var(--g-vp) / 1728);
+  --g-gutter: clamp(calc(24px * var(--g-type)), calc(3.8 * var(--g-vp) / 100), calc(96px * var(--g-type)));
   --g-bg: #0f1110;
   --g-surface: rgba(255, 255, 255, .075);
   --g-surface-2: rgba(255, 255, 255, .11);
@@ -36,7 +40,7 @@ body.garrison .focusable:focus-visible { outline: none !important; box-shadow: v
 
 /* ---------- Top bar ---------- */
 body.garrison .topbar {
-  position: absolute; inset: 0 0 auto; z-index: 6; height: clamp(84px, 9.6vh, 150px); max-height: none; min-height: 0;
+  position: absolute; inset: 0 0 auto; z-index: 6; height: clamp(84px, 9.6vh,calc(150px * var(--g-type, 1))); max-height: none; min-height: 0;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px;
   padding: 0 var(--g-gutter); padding-top: 0; background: linear-gradient(#111312 55%, rgba(17, 19, 18, 0)); pointer-events: auto;
 }
@@ -84,15 +88,15 @@ body.garrison #profile-avatar img { object-fit: cover; }
 .g-nav-tip.show { opacity: 1; }
 
 /* ---------- Page frame ---------- */
-body.garrison main { height: 100vh; padding: clamp(84px, 9.6vh, 150px) 0 120px; scroll-padding: clamp(110px, 12vh, 180px) 0 110px; }
+body.garrison main { height: 100vh; padding: clamp(84px, 9.6vh,calc(150px * var(--g-type, 1))) 0 120px; scroll-padding: clamp(110px, 12vh,calc(180px * var(--g-type, 1))) 0 110px; }
 body.garrison.detail-active main { padding-top: 0; }
 body.garrison #home-view .hero-copy, body.garrison #dashboard-features, body.garrison #empty-state .empty-logo { display: none !important; }
 body.garrison h1, body.garrison h2, body.garrison h3 { font-family: var(--g-font); }
 
 /* ---------- Home: Jump back in ---------- */
-body.garrison #home-view { padding-top: clamp(8px, 1.6vh, 30px); }
+body.garrison #home-view { padding-top: clamp(8px, 1.6vh,calc(30px * var(--g-type, 1))); }
 body.garrison .dashboard-recent { margin: 0; padding: 0; }
-body.garrison .dashboard-recent > .section-heading { position: static; width: auto; height: auto; overflow: visible; clip-path: none; display: flex; padding: 0 var(--g-gutter); margin: 0 0 clamp(10px, 1.2vh, 20px); }
+body.garrison .dashboard-recent > .section-heading { position: static; width: auto; height: auto; overflow: visible; clip-path: none; display: flex; padding: 0 var(--g-gutter); margin: 0 0 clamp(10px, 1.2vh,calc(20px * var(--g-type, 1))); }
 body.garrison .dashboard-recent .section-heading h2, body.garrison .collection-band .collection-intro h2 { margin: 0; font: 600 clamp(18px, calc(1.4 * var(--g-vp) / 100), 28px)/1.2 var(--g-font); letter-spacing: 0; }
 body.garrison #jump-logo { display: none !important; }
 body.garrison #recent-row, body.garrison #recent-row.row-focused {
@@ -132,10 +136,10 @@ body.garrison .g-card-text small { color: var(--g-text-2); font: 400 clamp(12px,
 body.garrison .fallback-title { font-family: var(--g-display); font-weight: 700; }
 
 /* ---------- Home rows (collections and charts) ---------- */
-body.garrison .home-collections { margin-top: clamp(18px, 3.4vh, 60px); }
+body.garrison .home-collections { margin-top: clamp(18px, 3.4vh,calc(60px * var(--g-type, 1))); }
 body.garrison .collection-band, body.garrison .collection-band[data-tone] {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: clamp(10px, 1.2vh, 20px) 16px;
-  padding: clamp(14px, 2.4vh, 40px) var(--g-gutter) clamp(4px, .8vh, 12px); margin: 0; border: 0; background: none;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: clamp(10px, 1.2vh,calc(20px * var(--g-type, 1))) 16px;
+  padding: clamp(14px, 2.4vh,calc(40px * var(--g-type, 1))) var(--g-gutter) clamp(4px, .8vh,calc(12px * var(--g-type, 1))); margin: 0; border: 0; background: none;
 }
 body.garrison .collection-band .collection-intro { display: contents; }
 body.garrison .collection-band .collection-intro h2 { grid-column: 1; grid-row: 1; align-self: center; }
@@ -173,8 +177,8 @@ body.garrison.home-active.collections-scrolled .topbar { background: linear-grad
 
 /* ---------- Library ---------- */
 body.garrison .library-view, body.garrison .library-view:not([hidden]) { min-height: 0; padding: 0; background: none; }
-body.garrison .console-library-content { margin: 0; padding: clamp(8px, 1.6vh, 30px) var(--g-gutter) 80px; }
-body.garrison .g-library-tabs-row { display: flex; align-items: center; gap: clamp(14px, calc(2.4 * var(--g-vp) / 100), 46px); margin-bottom: clamp(12px, 2vh, 34px); }
+body.garrison .console-library-content { margin: 0; padding: clamp(8px, 1.6vh,calc(30px * var(--g-type, 1))) var(--g-gutter) 80px; }
+body.garrison .g-library-tabs-row { display: flex; align-items: center; gap: clamp(14px, calc(2.4 * var(--g-vp) / 100), 46px); margin-bottom: clamp(12px, 2vh,calc(34px * var(--g-type, 1))); }
 body.garrison .console-library-nav {
   position: static; float: none; flex: 1; width: auto; height: clamp(54px, calc(5 * var(--g-vp) / 100), 96px); display: flex; flex-direction: row; align-items: center; gap: clamp(4px, calc(.6 * var(--g-vp) / 100), 12px);
   padding: 0 clamp(6px, calc(.55 * var(--g-vp) / 100), 10px); border-radius: 999px; background: var(--g-surface); overflow-x: auto; scrollbar-width: none;
@@ -195,7 +199,7 @@ body.garrison .g-round-add:hover { background: var(--g-surface-2); }
 body.garrison .g-round-add svg { width: clamp(22px, calc(1.6 * var(--g-vp) / 100), 32px); height: clamp(22px, calc(1.6 * var(--g-vp) / 100), 32px); fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 
 body.garrison .g-source-chips {
-  display: flex; align-items: center; gap: clamp(6px, calc(.9 * var(--g-vp) / 100), 16px); margin: 0 calc(-1 * var(--g-gutter)) clamp(14px, 2.4vh, 40px); padding: 10px var(--g-gutter);
+  display: flex; align-items: center; gap: clamp(6px, calc(.9 * var(--g-vp) / 100), 16px); margin: 0 calc(-1 * var(--g-gutter)) clamp(14px, 2.4vh,calc(40px * var(--g-type, 1))); padding: 10px var(--g-gutter);
   overflow-x: auto; scrollbar-width: none; scroll-padding-inline: var(--g-gutter);
 }
 body.garrison .g-source-chips[hidden] { display: none; }
@@ -209,7 +213,7 @@ body.garrison .g-chip.focused, body.garrison .g-chip:focus-visible { color: #fff
 
 body.garrison .library-heading-row { display: none !important; }
 body.garrison #library-filter-summary { display: none !important; }
-body.garrison .g-library-toolbar { display: flex; align-items: center; gap: clamp(10px, calc(1.2 * var(--g-vp) / 100), 24px); margin-bottom: clamp(18px, 3.4vh, 56px); }
+body.garrison .g-library-toolbar { display: flex; align-items: center; gap: clamp(10px, calc(1.2 * var(--g-vp) / 100), 24px); margin-bottom: clamp(18px, 3.4vh,calc(56px * var(--g-type, 1))); }
 body.garrison #library-filter-button {
   position: relative; display: grid; place-items: center; width: clamp(54px, calc(4.3 * var(--g-vp) / 100), 82px); height: clamp(46px, calc(3.8 * var(--g-vp) / 100), 72px); padding: 0; border: 0; border-radius: var(--g-radius);
   background: var(--g-surface-2); color: #fff; cursor: pointer;
@@ -234,7 +238,7 @@ body.garrison .console-library-controls [data-action="add-game"] { display: none
 body.garrison #steam-connection-banner { display: none !important; }
 
 body.garrison .library-grid, body.garrison .library-grid.dense-results {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(130px, calc(13 * var(--g-vp) / 100), 280px), 1fr)); gap: clamp(18px, 2.4vh, 40px) var(--g-gap);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(130px, calc(13 * var(--g-vp) / 100), 280px), 1fr)); gap: clamp(18px, 2.4vh,calc(40px * var(--g-type, 1))) var(--g-gap);
 }
 body.garrison .library-grid .game-card, body.garrison .library-grid.dense-results .game-card { width: 100%; height: auto; aspect-ratio: auto; display: flex; flex-direction: column; padding: 0; }
 body.garrison .library-grid .app-list-card { border-radius: var(--g-radius); background: var(--g-surface); border: 0; }
@@ -244,11 +248,11 @@ body.garrison .console-library-empty { grid-column: 1 / -1; padding: 60px 20px; 
 body.garrison #library-view.show-groups #library-grid { display: flex; flex-direction: column; gap: 0; margin: 0 calc(-1 * var(--g-gutter)); }
 
 /* ---------- Store and Game Pass ---------- */
-body.garrison #store-view, body.garrison .console-store-view { padding: clamp(8px, 1.6vh, 30px) var(--g-gutter) 80px; background: none; }
-body.garrison .console-page-heading { display: flex; align-items: center; gap: 16px; margin: 0 0 clamp(14px, 2.2vh, 36px); }
+body.garrison #store-view, body.garrison .console-store-view { padding: clamp(8px, 1.6vh,calc(30px * var(--g-type, 1))) var(--g-gutter) 80px; background: none; }
+body.garrison .console-page-heading { display: flex; align-items: center; gap: 16px; margin: 0 0 clamp(14px, 2.2vh,calc(36px * var(--g-type, 1))); }
 body.garrison .console-page-heading > span { display: none; }
 body.garrison .console-page-heading h1 { margin: 0; flex: 1; font: 600 clamp(24px, calc(2 * var(--g-vp) / 100), 40px)/1.15 var(--g-font); }
-body.garrison .console-store-tabs { display: inline-flex; gap: 6px; padding: 8px; margin-bottom: clamp(16px, 2.6vh, 44px); border-radius: 999px; background: var(--g-surface); }
+body.garrison .console-store-tabs { display: inline-flex; gap: 6px; padding: 8px; margin-bottom: clamp(16px, 2.6vh,calc(44px * var(--g-type, 1))); border-radius: 999px; background: var(--g-surface); }
 body.garrison .console-store-tabs button { height: clamp(40px, calc(3.6 * var(--g-vp) / 100), 70px); padding: 0 clamp(16px, calc(1.6 * var(--g-vp) / 100), 30px); border: 0; border-radius: 999px; background: transparent; color: var(--g-text-2); font: 600 clamp(15px, calc(1.3 * var(--g-vp) / 100), 26px)/1 var(--g-font); }
 body.garrison .console-store-tabs button.active { color: #fff; background: var(--g-surface-2); }
 body.garrison #browse-steam-shop { height: clamp(40px, calc(3.2 * var(--g-vp) / 100), 60px); padding: 0 24px; border: 0; border-radius: var(--g-radius); background: var(--g-surface-2); color: #fff; font: 600 clamp(14px, calc(1 * var(--g-vp) / 100), 20px)/1 var(--g-font); }
@@ -264,8 +268,8 @@ body.garrison .detail-global-art-stack::after {
 }
 body.garrison .detail-hero-shade { display: none; }
 body.garrison .detail-hero-content {
-  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: clamp(8px, 1.2vh, 18px);
-  min-height: 0; padding: clamp(130px, 18vh, 250px) var(--g-gutter) 0; max-width: none; background: none;
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: clamp(8px, 1.2vh,calc(18px * var(--g-type, 1)));
+  min-height: 0; padding: clamp(130px, 18vh,calc(250px * var(--g-type, 1))) var(--g-gutter) 0; max-width: none; background: none;
 }
 body.garrison #detail-provider, body.garrison #detail-description, body.garrison #detail-logo-frame, body.garrison #detail-logo { display: none !important; }
 body.garrison #detail-title, body.garrison #detail-title[hidden] {
@@ -279,8 +283,8 @@ body.garrison .g-own-pill svg, body.garrison .g-via svg { width: clamp(16px, cal
 body.garrison .g-via { display: inline-flex; align-items: center; gap: 10px; }
 body.garrison .detail-play-with { display: inline-flex; align-items: center; gap: 8px; color: var(--g-text-2); font-weight: 400; }
 body.garrison .detail-play-with img { width: clamp(20px, calc(1.4 * var(--g-vp) / 100), 28px); filter: brightness(10); opacity: .85; }
-body.garrison #detail-rating { order: 9; margin-top: clamp(8px, 1.4vh, 20px); color: var(--g-text-2); font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.5 var(--g-font); }
-body.garrison .detail-actions { display: flex; align-items: center; gap: clamp(10px, calc(1 * var(--g-vp) / 100), 20px); margin-top: clamp(10px, 1.8vh, 30px); }
+body.garrison #detail-rating { order: 9; margin-top: clamp(8px, 1.4vh,calc(20px * var(--g-type, 1))); color: var(--g-text-2); font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.5 var(--g-font); }
+body.garrison .detail-actions { display: flex; align-items: center; gap: clamp(10px, calc(1 * var(--g-vp) / 100), 20px); margin-top: clamp(10px, 1.8vh,calc(30px * var(--g-type, 1))); }
 body.garrison #detail-play {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: clamp(170px, calc(12 * var(--g-vp) / 100), 240px); height: clamp(52px, calc(4 * var(--g-vp) / 100), 78px); padding: 0 28px;
   border: 0; border-radius: var(--g-radius); background: var(--g-green); color: #fff; font: 600 clamp(16px, calc(1.25 * var(--g-vp) / 100), 25px)/1 var(--g-font); cursor: pointer;
@@ -300,12 +304,12 @@ body.garrison #detail-options-button strong, body.garrison #detail-options-butto
 body.garrison #g-detail-favorite.active svg { fill: #fff; }
 body.garrison #g-detail-favorite[hidden], body.garrison #detail-options-button[hidden] { display: none; }
 body.garrison #detail-tabs { display: none !important; }
-body.garrison .detail-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: clamp(24px, 4vh, 64px); padding: clamp(36px, 6vh, 90px) var(--g-gutter) 120px; background: none; }
+body.garrison .detail-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: clamp(24px, 4vh,calc(64px * var(--g-type, 1))); padding: clamp(36px, 6vh,calc(90px * var(--g-type, 1))) var(--g-gutter) 120px; background: none; }
 body.garrison .detail-content > section, body.garrison .detail-content > section[data-detail-visible="false"] { display: block !important; margin: 0; padding: 0; border: 0; background: none; }
 body.garrison .detail-content > section#news-shelf[hidden] { display: none !important; }
 body.garrison .detail-content > section[aria-labelledby="gallery-heading"] { order: -2; }
 body.garrison .detail-content > .detail-overview { order: -1; }
-body.garrison .detail-content h2, body.garrison .detail-section-heading h2 { margin: 0 0 clamp(12px, 1.6vh, 24px); font: 600 clamp(22px, calc(1.85 * var(--g-vp) / 100), 36px)/1.2 var(--g-font); letter-spacing: 0; }
+body.garrison .detail-content h2, body.garrison .detail-section-heading h2 { margin: 0 0 clamp(12px, 1.6vh,calc(24px * var(--g-type, 1))); font: 600 clamp(22px, calc(1.85 * var(--g-vp) / 100), 36px)/1.2 var(--g-font); letter-spacing: 0; }
 body.garrison .detail-content .eyebrow, body.garrison .detail-metadata-source { display: none; }
 body.garrison .detail-gallery { display: flex; gap: var(--g-gap); overflow-x: auto; padding: 6px 6px 14px; margin: -6px; scrollbar-width: none; }
 body.garrison .detail-gallery > * { flex: 0 0 clamp(240px, calc(18.4 * var(--g-vp) / 100), 380px); aspect-ratio: 16 / 9; border-radius: var(--g-radius); overflow: hidden; border: 0; }
@@ -320,7 +324,7 @@ body.garrison dialog#settings-dialog {
   width: min(1240px, 90vw); max-width: none; height: min(760px, 84vh); max-height: none; margin: auto; padding: 0; overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; background: #232524; box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
 }
-body.garrison #settings-form { display: grid; height: 100%; grid-template-columns: clamp(220px, 21%, 300px) minmax(0, 1fr); }
+body.garrison #settings-form { display: grid; height: 100%; grid-template-columns: clamp(220px, 21%,calc(300px * var(--g-type, 1))) minmax(0, 1fr); }
 body.garrison .settings-sidebar { display: flex; flex-direction: column; gap: 4px; padding: clamp(18px, calc(2.2 * var(--g-vp) / 100), 34px) 14px 20px; border: 0; background: #1c1e1d; overflow-y: auto; }
 body.garrison .settings-sidebar-brand { display: block; margin: 0 8px 14px; }
 body.garrison .settings-sidebar-brand strong { font: 600 clamp(20px, calc(1.5 * var(--g-vp) / 100), 30px)/1.2 var(--g-font); }
@@ -361,12 +365,12 @@ body.garrison .dialog-actions .secondary { border-radius: 8px; background: var(-
   background: #262827; color: #fff; box-shadow: 0 22px 60px rgba(0, 0, 0, .6); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 }
 .g-flyout::backdrop { background: transparent; }
-.g-account-flyout { inset: clamp(76px, 8.6vh, 136px) var(--g-gutter, 4vw) auto auto; width: min(340px, 92vw); padding: 12px; }
+.g-account-flyout { inset: clamp(76px, 8.6vh,calc(136px * var(--g-type, 1))) var(--g-gutter, 4vw) auto auto; width: min(340px, 92vw); padding: 12px; }
 .g-account-flyout .g-menu-item { min-height: 48px; }
 .g-account-score-status { margin: 0 12px 16px; color: rgba(255,255,255,.6); font-size: 12px; line-height: 1.5; }
 .g-account-flyout .g-account-head small::after { content: 'PC Gamerscore'; font-size: 12px; color: rgba(255,255,255,.6); }
 body.garrison #profile-score-status { display: block; margin-top: 8px; color: rgba(255,255,255,.65); }
-.g-notifications-flyout { inset: clamp(76px, 8.6vh, 136px) auto auto var(--g-gutter, 4vw); width: min(420px, 92vw); }
+.g-notifications-flyout { inset: clamp(76px, 8.6vh,calc(136px * var(--g-type, 1))) auto auto var(--g-gutter, 4vw); width: min(420px, 92vw); }
 .g-account-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 14px; }
 .g-account-head strong { display: block; font: 600 17px/1.2 inherit; }
 .g-account-head small { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; color: rgba(255, 255, 255, .72); font-size: 14px; }
@@ -387,7 +391,7 @@ body.garrison #profile-score-status { display: block; margin-top: 8px; color: rg
 
 /* ---------- Controller hints: floating pills, bottom right ---------- */
 body.garrison #controller-prompts, body.garrison.home-active.collections-scrolled #controller-prompts {
-  position: fixed; right: var(--g-gutter); bottom: clamp(16px, 2.6vh, 40px); left: auto; z-index: 7; display: flex; gap: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; backdrop-filter: none;
+  position: fixed; right: var(--g-gutter); bottom: clamp(16px, 2.6vh,calc(40px * var(--g-type, 1))); left: auto; z-index: 7; display: flex; gap: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; backdrop-filter: none;
 }
 body.garrison #controller-prompts[hidden] { display: none; }
 body.garrison #controller-prompts #prompt-a, body.garrison #controller-prompts #prompt-b, body.garrison #controller-prompts #prompt-x { display: none !important; }

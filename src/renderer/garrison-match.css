@@ -33,7 +33,7 @@ body.garrison #library-view[data-g-tab="recent"] .library-grid:not(.g-list) .g-s
 body.garrison #library-view[data-g-tab="installed"] .library-grid:not(.g-list) .g-size,
 body.garrison #library-view[data-g-tab="recent"] .library-grid:not(.g-list) .g-size { display: block; }
 body.garrison #library-view[data-g-tab="games"] .game-card:not(.not-installed) .g-status { visibility: hidden; }
-body.garrison .g-library-tabs-row { margin-bottom: clamp(18px, 3vh, 48px); }
+body.garrison .g-library-tabs-row { margin-bottom: clamp(18px, 3vh,calc(48px * var(--g-type, 1))); }
 body.garrison .g-library-toolbar[hidden] { display: none; }
 body.garrison #library-filter-button .g-glyph, body.garrison .g-sort-pill .g-glyph, body.garrison .g-view-button .g-glyph { font-size: clamp(16px, calc(1.2 * var(--g-vp) / 100), 24px); }
 body.garrison .g-sort-pill .g-glyph { position: absolute; pointer-events: none; }
@@ -114,7 +114,7 @@ body.garrison .library-grid.g-list .g-col { display: block; color: var(--g-text-
 .g-input { flex: 0 1 62%; }
 .g-textarea::placeholder, .g-input::placeholder { color: rgba(255, 255, 255, .62); }
 .g-counter { justify-self: end; color: rgba(255, 255, 255, .7); font-size: clamp(12px, calc(.85 * var(--g-vp) / 100), 16px); }
-.g-close-hint { position: fixed; right: clamp(20px, calc(3.4 * var(--g-vp) / 100), 70px); bottom: clamp(16px, 3vh, 46px); display: inline-flex; align-items: center; gap: 10px; height: clamp(38px, calc(2.7 * var(--g-vp) / 100), 52px); padding: 0 18px 0 10px; border-radius: 999px; background: rgba(28, 29, 29, .95); color: #fff; font: 400 clamp(14px, calc(.98 * var(--g-vp) / 100), 19px)/1 "Segoe UI", system-ui, sans-serif; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); }
+.g-close-hint { position: fixed; right: clamp(20px, calc(3.4 * var(--g-vp) / 100), 70px); bottom: clamp(16px, 3vh,calc(46px * var(--g-type, 1))); display: inline-flex; align-items: center; gap: 10px; height: clamp(38px, calc(2.7 * var(--g-vp) / 100), 52px); padding: 0 18px 0 10px; border-radius: 999px; background: rgba(28, 29, 29, .95); color: #fff; font: 400 clamp(14px, calc(.98 * var(--g-vp) / 100), 19px)/1 "Segoe UI", system-ui, sans-serif; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); }
 .g-close-hint kbd { display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid #e5484d; border-radius: 50%; background: none; color: #e5484d; font: 600 12px/1 "Segoe UI", system-ui, sans-serif; }
 body:not(.controller-input) .g-close-hint { display: none; }
 
@@ -162,7 +162,7 @@ body:not(.controller-input) .g-close-hint { display: none; }
 
 /* Settings: the Xbox app's centred panel */
 body.garrison dialog#settings-dialog { width: min(1340px, 74vw); height: min(780px, 72vh); border-radius: 12px; background: #262727; }
-body.garrison #settings-form { grid-template-columns: clamp(240px, 24%, 330px) minmax(0, 1fr); }
+body.garrison #settings-form { grid-template-columns: clamp(240px, 24%,calc(330px * var(--g-type, 1))) minmax(0, 1fr); }
 body.garrison .settings-sidebar { gap: 2px; padding: clamp(18px, calc(1.8 * var(--g-vp) / 100), 32px) clamp(10px, calc(.9 * var(--g-vp) / 100), 16px) 20px; background: #2d2e2e; }
 body.garrison .settings-sidebar-brand { margin: 0 10px 18px; }
 body.garrison .settings-sidebar-brand strong { font: 600 clamp(19px, calc(1.45 * var(--g-vp) / 100), 28px)/1.2 var(--g-font); }
@@ -233,7 +233,7 @@ body.garrison #detail-play { min-width: clamp(190px, calc(17 * var(--g-vp) / 100
 body.garrison #detail-play:hover { background: #559c4f; }
 body.garrison .g-square-action, body.garrison #detail-options-button { width: clamp(54px, calc(4.4 * var(--g-vp) / 100), 86px); height: clamp(54px, calc(4.4 * var(--g-vp) / 100), 86px); border-radius: 6px; background: rgba(60, 62, 62, .82); border: 1px solid rgba(255, 255, 255, .08); }
 body.garrison .g-square-action .g-glyph { font-size: clamp(16px, calc(1.15 * var(--g-vp) / 100), 22px); }
-body.garrison .g-detail-rating { display: flex; align-items: flex-start; gap: clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); margin-top: clamp(10px, 1.6vh, 26px); color: #fff; font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.5 var(--g-font); }
+body.garrison .g-detail-rating { display: flex; align-items: flex-start; gap: clamp(14px, calc(1.3 * var(--g-vp) / 100), 26px); margin-top: clamp(10px, 1.6vh,calc(26px * var(--g-type, 1))); color: #fff; font: 400 clamp(13px, calc(.95 * var(--g-vp) / 100), 19px)/1.5 var(--g-font); }
 body.garrison .g-detail-rating:empty { display: none; }
 body.garrison .g-detail-rating > div { display: grid; gap: 4px; }
 body.garrison .g-detail-rating strong { font-weight: 400; color: #a6dba0; text-decoration: underline; text-underline-offset: 3px; justify-self: start; }

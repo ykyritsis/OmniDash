@@ -36,7 +36,7 @@ body.garrison #console-search-results .g-search-head { grid-column: 1 / -1; marg
 /* Home shelves are 20% larger, including My games. Other views keep their scale. */
 body.garrison #home-view { --g-home-row-scale: 1.2; --g-tile: calc(clamp(130px, calc(14 * var(--g-vp) / 100), 300px) * var(--g-home-row-scale)); }
 /* dashboard.css's :not(#recent-row) gives collection cards a different base width. */
-body.garrison #home-view .collection-band .game-row .game-card { flex-basis: calc(clamp(180px, 15vw, 300px) * var(--g-home-row-scale)); width: calc(clamp(180px, 15vw, 300px) * var(--g-home-row-scale)); min-width: 0; }
+body.garrison #home-view .collection-band .game-row .game-card { flex-basis: calc(clamp(180px, 15vw,calc(300px * var(--g-type, 1))) * var(--g-home-row-scale)); width: calc(clamp(180px, 15vw,calc(300px * var(--g-type, 1))) * var(--g-home-row-scale)); min-width: 0; }
 /* Artwork and title are enough; omit the redundant action and installed-game metadata. */
 body.garrison #home-view .collection-band .game-card .g-card-text::after { content: none; }
 body.garrison #home-view #g-home-rows .game-card .g-card-text > :not(strong) { display: none; }
