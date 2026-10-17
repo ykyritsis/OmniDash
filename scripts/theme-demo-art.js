@@ -25,5 +25,8 @@
     game.artwork = index % 2 ? { ...(game.artwork || {}), tile: square, grid: square, hero: square, wide: square, screenshots: [wide] } : { ...(game.artwork || {}), tile: square, grid: paint(game.title, hue, 400, 600), hero: wide, wide: paint(game.title, hue, 920, 430, true) };
   });
   renderLibrary();
+  // The app repaints the dashboard whenever a batch of artwork lands; do the same here so console themes
+  // (which draw their own covers) pick the art up exactly as they would from library:artwork.
+  renderRecentGames();
   if (state.selectedGameId) selectGame(state.selectedGameId, false);
 })();

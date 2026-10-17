@@ -173,8 +173,10 @@
     }
     renderXmb();
   }
-  // The wave: translucent ribbons with a bright crest and drifting sparkles, drawn at 30fps on a small canvas.
-  // It stops whenever the window is hidden or unfocused, or the XMB isn't showing.
+  // The wave: translucent ribbons with a bright crest and drifting sparkles, drawn at 30fps on half-size
+  // canvas. The crest glow is a wide faint stroke under a thin bright one rather than a canvas shadow, which
+  // costs a fraction of the time on integrated graphics. It stops whenever the window is hidden or unfocused,
+  // or the XMB isn't showing.
   const xmbWave = (() => {
     let raf = 0, last = 0, t = 0;
     const sparks = Array.from({ length: 54 }, () => ({ x: Math.random(), y: .28 + Math.random() * .55, s: .4 + Math.random() * 1.5, p: Math.random() * 6.28, v: .003 + Math.random() * .009 }));
@@ -193,19 +195,22 @@
       g.clearRect(0, 0, w, h);
       for (const [base, amp, freq, speed, alpha, thick, slope] of ribbons) {
         const y = (x, k) => h * (base + slope * (x / w) + amp * Math.sin((x / w) * freq * Math.PI + t * speed + k) + .011 * Math.sin((x / w) * 4.3 - t * speed * 1.9 + k));
-        g.beginPath();
-        for (let x = 0; x <= w; x += 8) g.lineTo(x, y(x, 0));
-        for (let x = w; x >= 0; x -= 8) g.lineTo(x, y(x, 1.1) + h * thick);
-        g.closePath();
+        const body = new Path2D(), crest = new Path2D();
+        for (let x = 0; x <= w; x += 8) crest.lineTo(x, y(x, 0));
+        body.addPath(crest);
+        for (let x = w; x >= 0; x -= 8) body.lineTo(x, y(x, 1.1) + h * thick);
+        body.closePath();
         const fill = g.createLinearGradient(0, h * (base - .05), 0, h * (base + thick + .03));
         fill.addColorStop(0, 'rgba(255,255,255,0)');
         fill.addColorStop(.14, `rgba(255,255,255,${alpha})`);
         fill.addColorStop(.46, `rgba(255,255,255,${alpha * .46})`);
         fill.addColorStop(1, 'rgba(255,255,255,0)');
-        g.fillStyle = fill; g.fill();
-        g.beginPath();
-        for (let x = 0; x <= w; x += 8) g.lineTo(x, y(x, 0));
-        g.strokeStyle = `rgba(255,255,255,${Math.min(.95, alpha * 2.6)})`; g.lineWidth = 1.6; g.shadowColor = 'rgba(255,255,255,.95)'; g.shadowBlur = 9; g.stroke(); g.shadowBlur = 0;
+        g.fillStyle = fill; g.fill(body);
+        const bright = Math.min(.95, alpha * 2.6);
+        g.lineCap = 'round';
+        g.strokeStyle = `rgba(255,255,255,${bright * .18})`; g.lineWidth = 7; g.stroke(crest);
+        g.strokeStyle = `rgba(255,255,255,${bright * .34})`; g.lineWidth = 3; g.stroke(crest);
+        g.strokeStyle = `rgba(255,255,255,${bright})`; g.lineWidth = 1.4; g.stroke(crest);
       }
       for (const spark of sparks) {
         spark.x = (spark.x + spark.v * .05) % 1;
@@ -474,9 +479,39 @@
   function render() {
     document.body.classList.toggle('g-retro', on());
     if (!on()) { host.innerHTML = ''; chrome.innerHTML = ''; return; }
-    ({ ps3: renderXmb, ps4: renderPs4, wii: renderWii, '3ds': renderDs })[theme()]();
+    try {
+      ({ ps3: renderXmb, ps4: renderPs4, wii: renderWii, '3ds': renderDs })[theme()]();
+    } catch (error) {
+      // A console screen that cannot be built must never leave the dashboard hidden behind an empty
+      // overlay: drop back to the launcher's own Home and say so in the console.
+      console.error('Theme screen failed to build:', error);
+      document.body.classList.remove('g-retro');
+      host.innerHTML = '';
+      chrome.innerHTML = '';
+      return;
+    }
     try { refreshFocusables(); } catch { /* Not ready. */ }
   }
+  // Covers, names and counts arrive after the first paint, and the Game column is built from what is on
+  // disk, so refresh once the library or its artwork changes instead of showing empty squares until the
+  // player presses a direction. Batches are coalesced and never stolen from a dialog.
+  let refreshTimer = 0;
+  function scheduleRefresh(delay = 300) {
+    if (!on() || refreshTimer) return;
+    refreshTimer = setTimeout(() => {
+      refreshTimer = 0;
+      if (!on() || state.view !== 'home' || document.querySelector('dialog[open]')) return;
+      render();
+    }, delay);
+  }
+  window.launcher?.onLibraryArtwork?.(() => scheduleRefresh());
+  window.launcher?.onLibraryInitial?.(() => scheduleRefresh(600));
+  // Closing Settings after picking a theme leaves the focus on the closed dialog's own controls; put it back
+  // on the console screen so the first press does something.
+  document.addEventListener('close', event => {
+    if (!on() || state.view !== 'home' || !event.target?.matches?.('dialog')) return;
+    requestAnimationFrame(() => { if (on() && state.view === 'home') render(); });
+  }, true);
   const firstFocus = () => host.querySelector('.xmb-item.on, .ps4-tile.sel, .wii-pbtn[data-start], .wii-ch.focusable, .ds-icon.sel');
   if (typeof navigateConsoleHome === 'function') {
     const base = navigateConsoleHome;
