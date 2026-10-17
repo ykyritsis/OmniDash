@@ -60,8 +60,11 @@ app.on('browser-window-created', (_, win) => {
       // the artwork) at any point, so do it per theme rather than once at start-up.
       if (demoArt) await win.webContents.executeJavaScript(demoArt).catch(e => errors.push('art: ' + e));
       for (const [si, screen] of screens.entries()) {
-        const show = screen.startsWith('hub-') ? `(() => { showView('home'); window.gHub && gHub.go(${JSON.stringify(screen.slice(4))}); })()` : SHOW[screen];
-        await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); ${show}; })()`).catch(e => errors.push(screen + ': ' + e));
+        // hub-<id> opens a pivot hub; page-<settings page id> opens Settings on that page.
+        const show = screen.startsWith('hub-') ? `(() => { showView('home'); window.gHub && gHub.go(${JSON.stringify(screen.slice(4))}); })()`
+          : screen.startsWith('page-') ? `(() => { settingsDialog.showModal(); showSettingsPage(${JSON.stringify(screen.slice(5))}); })()`
+          : SHOW[screen];
+        await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); ${show || `showView('home')`}; })()`).catch(e => errors.push(screen + ': ' + e));
         await new Promise(r => setTimeout(r, screen === 'boot' ? 1100 : screen === 'saver' ? 2600 : screen === 'store' ? 6000 : 1800));
         await fs.writeFile(path.join(output, `${theme}-${/^(nav[RLUD]|press|back)$/.test(screen) ? si + "-" : ""}${screen}.png`), (await win.webContents.capturePage()).toPNG());
       }
