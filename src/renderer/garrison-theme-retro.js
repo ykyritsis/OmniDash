@@ -480,6 +480,9 @@
   // =========================== Rendering, navigation, sounds ===========================
   function render() {
     document.body.classList.toggle('g-retro', on());
+    // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
+    // the theme changes while the launcher is already sitting on Home.
+    document.body.classList.toggle('home-active', state.view === 'home');
     if (!on()) { host.innerHTML = ''; chrome.innerHTML = ''; return; }
     try {
       ({ ps3: renderXmb, ps4: renderPs4, wii: renderWii, '3ds': renderDs })[theme()]();

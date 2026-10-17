@@ -65,6 +65,10 @@ The latest backup is `backup-0.6.0-test13` (it holds the build installed before 
 ## Theme system
 
 - `body[data-g-theme]` is one of `helix | series | one | x360 | ps3 | ps4 | wii | 3ds`. `body[data-g-console]` is set for every theme except Helix.
+- `body.home-active` marks the Home view, and every console dashboard's visibility (and the Series backdrop) is
+  keyed on it. `showView()` is what sets it, but the app opens on Home *before* any `showView()` call, so `app.js`
+  adds the class at start-up and the retro renderer keeps it in step. Without that the first frame shows the
+  launcher's own Home with the console's background and chrome hidden — a stuck, half-drawn screen.
 - The setting is pref `theme`:
   - It's whitelisted in `PREF_KEYS` in `src/main.cjs`.
   - It's mirrored to `localStorage['g-theme']`.

@@ -3179,6 +3179,11 @@ window.addEventListener('gamepaddisconnected', (event) => {
   setTimeout(refreshControllerStatus, 80);
 });
 
+// The page opens on Home before any showView() call, and showView() is what marks it. Console themes key
+// their whole dashboard (and their wallpapers) on .home-active, so without this the first frame is the
+// launcher's own Home with the console's background and chrome hidden: a stuck, half-drawn screen.
+document.body.classList.add('home-active');
+
 window.launcher.getSettings().then(async (settings) => {
   applyPersonalization(settings);
   document.querySelector('#fullscreen-toggle').checked = Boolean(settings.fullscreen);
