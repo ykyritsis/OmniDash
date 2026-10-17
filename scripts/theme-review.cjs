@@ -25,6 +25,8 @@ const SHOW = {
   onboarding: `(() => { onboardingDialog.showModal(); showOnboardingStep(0); })()`,
   // The console on-screen keyboard, opened on a throwaway field.
   keyboard: `(() => { showView('home'); let f = document.querySelector('#review-osk-field'); if (!f) { f = document.createElement('input'); f.id = 'review-osk-field'; f.type = 'text'; document.body.append(f); } f.value = 'Forza'; openNativeKeyboard(f); })()`,
+  // A library the size of a real one, for paging and long lists.
+  manygames: `(() => { if (state.__many) return; state.__many = true; const base = state.games.filter(g => !g.isApp); for (let i = 0; i < 9; i++) for (const g of base.slice(0, 6)) state.games.push({ ...g, id: g.id + '-x' + i, title: g.title + ' ' + (i + 2), installed: true }); renderRecentGames(); renderLibrary(); })()`,
   // Switch theme the way the picker does, then close the dialog a moment later: the real switch path.
   switchps3: `(() => { settingsDialog.showModal(); showSettingsPage('personalization'); document.querySelector('[data-g-theme-pick="ps3"]').click(); setTimeout(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); }, 1200); })()`,
   switchwii: `(() => { settingsDialog.showModal(); showSettingsPage('personalization'); document.querySelector('[data-g-theme-pick="wii"]').click(); setTimeout(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); }, 1200); })()`,
