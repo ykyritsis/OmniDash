@@ -3031,6 +3031,18 @@ function scheduleGamepadPoll() {
   });
 }
 
+// Settings registry: PlayStation's Enter Button (✕ or ○) and Nintendo's A/B layout swap confirm and back, so
+// the face button the console prints is the one that confirms. Xbox themes keep the standard layout.
+function swapsConfirmBack() {
+  try {
+    const settings = window.gSettings;
+    if (!settings) return false;
+    const theme = document.body.dataset.gTheme;
+    if (theme === 'ps3' || theme === 'ps4') return settings.cached('enterButton') === 'o';
+    if (theme === 'wii' || theme === '3ds') return settings.cached('nintendoLayout') === true;
+  } catch { /* The registry may not be ready on the first frames. */ }
+  return false;
+}
 function pollGamepad() {
   try {
   if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
@@ -3050,15 +3062,17 @@ function pollGamepad() {
     if (state.gamepadIndex !== gamepad.index) focusForGamepad(gamepad);
     const pressed = gamepad.buttons.map((button) => Boolean(button.pressed || button.value > .55));
     const justPressed = (index) => pressed[index] && !state.previousButtons[index];
-    if (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen() && justPressed(1)) cancelLaunchWait();
+    const swapped = swapsConfirmBack();
+    const confirmButton = swapped ? 1 : 0, backButton = swapped ? 0 : 1;
+    if (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen() && justPressed(backButton)) cancelLaunchWait();
     if (state.fullScreenImport || (!launchOverlay.hidden && !window.steamLaunchUI?.isOpen())) { state.previousButtons = pressed; return; }
-    if (justPressed(0)) {
+    if (justPressed(confirmButton)) {
       if (document.activeElement instanceof HTMLSelectElement) openConsoleChoice(document.activeElement);
       else if (isTextEntry(document.activeElement)) openNativeKeyboard(document.activeElement);
       else { state.controllerClick = true; document.activeElement?.click(); state.controllerClick = false; }
     }
     let modalBackHandled = false;
-    if (justPressed(1)) {
+    if (justPressed(backButton)) {
       modalBackHandled = true;
       navigateBack();
     }

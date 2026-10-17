@@ -11,6 +11,8 @@
   const theme = () => document.body.dataset.gTheme || 'helix';
   const isConsole = () => theme() !== 'helix';
   const toast = message => { if (typeof showToast === 'function') showToast(message); };
+  // Notification toggles from the settings registry. A missing/loading registry keeps today's behaviour (on).
+  const notifyOn = id => window.gSettings?.cached?.(id) !== false;
   const read = key => { try { return localStorage.getItem(key) || ''; } catch { return ''; } };
   const write = (key, value) => { try { value ? localStorage.setItem(key, value) : localStorage.removeItem(key); } catch { /* Storage unavailable. */ } };
 
@@ -62,7 +64,7 @@
   let known = null, lastFriendToast = 0;
   function friendsChanged() {
     const online = new Map((state.gFriends?.friends || []).filter(friend => friend.state !== 'offline' && friend.state !== 'unknown').map(friend => [friend.id, friend]));
-    if (known && isConsole() && Date.now() - lastFriendToast > 20000) {
+    if (known && isConsole() && notifyOn('notifyFriends') && Date.now() - lastFriendToast > 20000) {
       const arrived = [...online.values()].filter(friend => !known.has(friend.id));
       if (arrived.length === 1) { toast(`${arrived[0].name || 'A friend'} is online`); lastFriendToast = Date.now(); }
       else if (arrived.length > 1) { toast(`${arrived.length} friends came online`); lastFriendToast = Date.now(); }
@@ -83,8 +85,8 @@
     if (!Array.isArray(list)) return;
     window.gDownloads = list;
     const now = new Map(list.map(item => [String(item.appId), item]));
-    for (const [id, item] of now) if (!previous.has(id) && item.state === 'downloading' && previous.size + now.size > 0 && pollDownloads.started) toast(`Downloading · ${item.title}`);
-    for (const [id, item] of previous) if (!now.has(id) && item.state !== 'queued') toast(`Ready to play · ${item.title}`);
+    for (const [id, item] of now) if (!previous.has(id) && item.state === 'downloading' && previous.size + now.size > 0 && pollDownloads.started) { if (notifyOn('notifyDownloads')) toast(`Downloading · ${item.title}`); }
+    for (const [id, item] of previous) if (!now.has(id) && item.state !== 'queued') { if (notifyOn('notifyDownloads')) toast(`Ready to play · ${item.title}`); }
     previous = now;
     pollDownloads.started = true;
     document.dispatchEvent(new CustomEvent('g-downloads'));
@@ -112,8 +114,8 @@
       if (ended.before) {
         const after = await achievementCount(ended.gameId);
         const fresh = after ? after.items.filter(item => !ended.before.items.some(old => old.id === item.id)) : [];
-        fresh.slice(0, 3).forEach((item, index) => setTimeout(() => toast(`Achievement unlocked · ${item.title}`), 4200 + index * 3200));
-        if (fresh.length > 3) setTimeout(() => toast(`${fresh.length - 3} more achievements unlocked`), 4200 + 3 * 3200);
+        fresh.slice(0, 3).forEach((item, index) => { if (notifyOn('notifyAchievements')) setTimeout(() => toast(`Achievement unlocked · ${item.title}`), 4200 + index * 3200); });
+        if (fresh.length > 3 && notifyOn('notifyAchievements')) setTimeout(() => toast(`${fresh.length - 3} more achievements unlocked`), 4200 + 3 * 3200);
       }
     }
   }, 5000);

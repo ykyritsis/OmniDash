@@ -109,7 +109,10 @@ const BACKUP_FIELDS = ['hiddenGameIds', 'favoriteGameIds', 'customCollections', 
   'profileAvatarCustomized', 'uiScale', 'uiScaleCustomized', 'textScale', 'reducedMotion', 'theme', 'highContrastFocus', 'steamInstallLibrary',
   'duplicateMode', 'duplicatePreferredProvider', 'duplicatePreferences', 'showUninstalledSteam', 'showUninstalledEpic',
   'showUninstalledUbisoft', 'showUninstalledEA', 'showUninstalledBattleNet', 'showUninstalledGog', 'showUninstalledAmazon',
-  'includeSteamFamily', 'steamFamilyAccountId'];
+  'includeSteamFamily', 'steamFamilyAccountId',
+  // Console settings added with the settings registry.
+  'clockFormat', 'dateOrder', 'enterButton', 'nintendoLayout', 'menuMusic', 'menuMusicVolume', 'screensaverDelay',
+  'notifyFriends', 'notifyDownloads', 'notifyAchievements', 'screenLayout3ds', 'ps3ThemeColour'];
 const KEY_FIELDS = ['steamApiKey', 'steamGridDbKey'];
 const BACKUP_FORMAT = 'xbox-preview-ui-backup';
 

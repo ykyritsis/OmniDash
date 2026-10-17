@@ -7,7 +7,15 @@
 //  - Notifications: toasts get the console's icon tab (styled in garrison-themes.css).
 (() => {
   const theme = () => document.body.dataset.gTheme || 'helix';
-  const IDLE_MS = 4 * 60 * 1000;
+  // The screen saver delay is a registry setting now ({ id: 'screensaverDelay' }, in minutes); 4 minutes is the
+  // value this screen used before the setting existed.
+  const idleMs = () => {
+    const minutes = Number(window.gSettings?.cached?.('screensaverDelay'));
+    return (Number.isFinite(minutes) && minutes > 0 ? minutes : 4) * 60 * 1000;
+  };
+  const clockText = () => window.gSettings?.formatClock
+    ? window.gSettings.formatClock(new Date())
+    : new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   // ---------- Screen dimming ----------
   const saver = document.createElement('div');
@@ -47,13 +55,13 @@
       lastPad = now;
       lastInput = Date.now();
     }
-    if (theme() === 'helix' || busy()) { lastInput = Math.max(lastInput, Date.now() - IDLE_MS + 30000); return; }
-    if (saver.hidden && Date.now() - lastInput > IDLE_MS) {
-      clock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (theme() === 'helix' || busy()) { lastInput = Math.max(lastInput, Date.now() - idleMs() + 30000); return; }
+    if (saver.hidden && Date.now() - lastInput > idleMs()) {
+      clock.textContent = clockText();
       saver.hidden = false;
       requestAnimationFrame(() => saver.classList.add('on'));
     }
-    if (!saver.hidden) clock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (!saver.hidden) clock.textContent = clockText();
   }, 1000);
   window.gThemeSaver = { show: () => { lastInput = 0; }, wake };
 

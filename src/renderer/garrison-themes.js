@@ -74,7 +74,7 @@
   clock.id = 'g-one-clock';
   clock.setAttribute('aria-hidden', 'true');
   document.body.append(clock);
-  const tick = () => { clock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  const tick = () => { clock.textContent = window.gSettings?.formatClock ? window.gSettings.formatClock(new Date()) : new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   tick(); setInterval(tick, 15000);
 
   // Picker cards, shared by onboarding and Settings. Each preview is a tiny drawing of that dashboard.

@@ -144,7 +144,20 @@ const SETTINGS_DEFAULTS = {
   highContrastFocus: false,
   reducedMotion: false,
   useRandomScreenshotBackground: true,
-  shuffleHomeScreenshots: true
+  shuffleHomeScreenshots: true,
+  // Console settings added with the settings registry (docs/NEXT-LEVEL-PLAN.md §1.1 and §2.1).
+  clockFormat: '12h',
+  dateOrder: 'locale',
+  enterButton: 'x',
+  nintendoLayout: false,
+  menuMusic: true,
+  menuMusicVolume: 60,
+  screensaverDelay: 4,
+  notifyFriends: true,
+  notifyDownloads: true,
+  notifyAchievements: true,
+  screenLayout3ds: 'stacked',
+  ps3ThemeColour: 'month'
 };
 
 let settingsWriteQueue = Promise.resolve();
@@ -2937,8 +2950,32 @@ function registerIpc() {
     return true;
   });
   // Settings the player can switch from the launcher. Only these keys can be changed this way.
-  // Each key lists the values it accepts: true for a switch, or the allowed names.
-  const PREF_KEYS = { pauseDownloadsWhilePlaying: true, controllerVibration: true, theme: ['helix', 'series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'] };
+  // Each key describes the values it accepts: true for a switch, an array of names for a choice, or a numeric
+  // range for a slider. The settings registry (garrison-settings-registry.js) is the only writer.
+  const PREF_KEYS = {
+    pauseDownloadsWhilePlaying: true,
+    controllerVibration: true,
+    theme: ['helix', 'series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'],
+    clockFormat: ['12h', '24h'],
+    dateOrder: ['locale', 'dmy', 'mdy'],
+    enterButton: ['x', 'o'],
+    nintendoLayout: true,
+    menuMusic: true,
+    menuMusicVolume: { min: 0, max: 100, step: 5 },
+    screensaverDelay: { min: 1, max: 60, step: 1 },
+    notifyFriends: true,
+    notifyDownloads: true,
+    notifyAchievements: true,
+    screenLayout3ds: ['stacked', 'side-by-side', 'large-top'],
+    ps3ThemeColour: ['month', '#3d8fd6', '#6c9d2f', '#8d4fb3', '#b8302d', '#c9a227']
+  };
+  function prefValueAllowed(allowed, value) {
+    if (allowed === true) return typeof value === 'boolean';
+    if (Array.isArray(allowed)) return allowed.includes(value);
+    const number = Number(value);
+    return Number.isFinite(number) && number >= allowed.min && number <= allowed.max
+      && (!allowed.step || Math.abs(number / allowed.step - Math.round(number / allowed.step)) < 1e-9);
+  }
   // Optional theme pack: DashX360's Xbox 360 assets (sounds, boot video, dashboard themes), installed by the
   // player into their own app data folder. It is never part of the launcher's files or releases.
   const themePackRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs', 'dashx360');
@@ -2994,12 +3031,21 @@ function registerIpc() {
   });
   ipcMain.handle('prefs:get', async () => {
     const settings = await readSettings();
-    return { pauseDownloadsWhilePlaying: settings.pauseDownloadsWhilePlaying !== false, controllerVibration: settings.controllerVibration !== false,
-      theme: PREF_KEYS.theme.includes(settings.theme) ? settings.theme : 'helix' };
+    const prefs = {};
+    for (const [key, allowed] of Object.entries(PREF_KEYS)) {
+      const value = settings[key];
+      if (allowed === true) prefs[key] = value !== false;
+      else if (Array.isArray(allowed)) prefs[key] = allowed.includes(value) ? value : allowed[0];
+      else {
+        const number = Number(value);
+        prefs[key] = Number.isFinite(number) && number >= allowed.min && number <= allowed.max ? number : SETTINGS_DEFAULTS[key];
+      }
+    }
+    return prefs;
   });
   ipcMain.handle('prefs:set', async (_event, key, value) => {
     const allowed = PREF_KEYS[key];
-    if (!allowed || (allowed === true ? typeof value !== 'boolean' : !allowed.includes(value))) throw new Error('Unknown setting.');
+    if (!allowed || !prefValueAllowed(allowed, value)) throw new Error('Unknown setting.');
     await writeSettings({ [key]: value });
     return true;
   });

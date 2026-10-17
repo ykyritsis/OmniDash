@@ -18,8 +18,10 @@
   const name = () => state.displayName || document.querySelector('#dashboard-player-name')?.textContent || 'Player';
   const avatar = () => document.querySelector('#profile-avatar')?.innerHTML || '';
   const now = () => new Date();
-  const time = () => now().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const dayMonth = () => now().toLocaleDateString([], { day: 'numeric', month: 'numeric' });
+  // Every console clock reads the registry's clock/date settings (Clock format, Date format), so changing one
+  // changes the XMB, PS4, Wii and 3DS clocks together.
+  const time = () => window.gSettings?.formatClock ? window.gSettings.formatClock(now()) : now().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const dayMonth = () => window.gSettings?.formatDate ? window.gSettings.formatDate(now()) : now().toLocaleDateString([], { day: 'numeric', month: 'numeric' });
   const weekday = () => now().toLocaleDateString([], { weekday: 'short' });
   const focusEl = el => { if (el) setFocusedElement(el, { scroll: false }); };
   const findGame = id => (state.games || []).find(item => item.id === id);
@@ -99,6 +101,17 @@
   // 292px down, the selected column at 560 with 224px between icons; items above the selection stack to the
   // top of the screen, the selection sits at 468, the rest from 650 and step by 118.
   const MONTH = ['#a7adb5', '#c9a227', '#6c9d2f', '#d780a9', '#3e8e41', '#8d4fb3', '#2a9d97', '#3d8fd6', '#2f62c9', '#7a43b8', '#9a6230', '#b8302d'];
+  // Theme Settings → Theme Colour: the month's own XMB tint, or one fixed colour from the registry.
+  const xmbTint = () => {
+    const fixed = window.gSettings?.cached?.('ps3ThemeColour');
+    return typeof fixed === 'string' && /^#[\da-f]{6}$/i.test(fixed) ? fixed : MONTH[now().getMonth()];
+  };
+  document.addEventListener('g-setting-change', event => {
+    if (event.detail?.id === 'ps3ThemeColour' && theme() === 'ps3') document.body.style.setProperty('--xmb-tint', xmbTint());
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() === 'ps3') document.body.style.setProperty('--xmb-tint', xmbTint());
+  });
   let xmbCat = 6, xmbItem = {};
   const xmbCategories = () => {
     const friends = (state.gFriends?.friends || []).filter(f => f.state !== 'offline' && f.state !== 'unknown');
@@ -139,7 +152,7 @@
     const cat = cats[xmbCat], items = cat.items;
     if (xmbItem[cat.id] == null) xmbItem[cat.id] = Math.min(cat.start || 0, items.length - 1);
     const sel = xmbItem[cat.id] = Math.max(0, Math.min(xmbItem[cat.id], items.length - 1));
-    document.body.style.setProperty('--xmb-tint', MONTH[now().getMonth()]);
+    document.body.style.setProperty('--xmb-tint', xmbTint());
     const hour = now().getHours();
     document.body.style.setProperty('--xmb-night', String(hour >= 21 || hour < 5 ? .42 : hour >= 18 || hour < 7 ? .22 : 0));
     // Vertical positions: the selection, the items under it, and the ones above that climb over the row.
@@ -478,13 +491,13 @@
   const SEGMENTS = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
   const SEG_RECT = { a: [9, 2, 22, 5], b: [32, 8, 5, 26], c: [32, 38, 5, 26], d: [9, 65, 22, 5], e: [3, 38, 5, 26], f: [3, 8, 5, 26], g: [9, 33.5, 22, 5] };
   function segClock() {
-    const parts = new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).formatToParts(now());
-    const hour = parts.find(p => p.type === 'hour')?.value || '12', minute = parts.find(p => p.type === 'minute')?.value || '00';
-    const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
+    // Read the chosen clock format through the registry instead of the locale's own 12/24-hour choice.
+    const text = window.gSettings?.formatClock ? window.gSettings.formatClock(now()) : new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).format(now());
+    const [, hour = '12', minute = '00', period = ''] = /(\d{1,2})[:.](\d{2})\s*([AP]M)?/i.exec(text) || [];
     const digit = (d, x) => [...(SEGMENTS[d] || '')].map(s => { const [rx, ry, w, h] = SEG_RECT[s]; return `<rect x="${x + rx}" y="${ry}" width="${w}" height="${h}" rx="2"/>`; }).join('');
-    const text = hour.padStart(2, ' ') + minute;
+    const clockText = hour.padStart(2, ' ') + minute;
     let x = 0, out = '', step = 0;
-    [...text].forEach((d, i) => {
+    [...clockText].forEach((d, i) => {
       if (i === 2) {
         out += `<g class="wii-seg" style="--d:${step++};fill:url(#wii-seg-fill)"><rect x="${x + 4}" y="20" width="5" height="5" rx="1"/><rect x="${x + 4}" y="46" width="5" height="5" rx="1"/></g>`;
         x += 16;
