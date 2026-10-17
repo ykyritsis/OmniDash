@@ -283,11 +283,14 @@ The app is now a multi-console, multi-theme launcher for PC. The name "Xbox Prev
 "xbox-cloud-preview-on-pc" no longer fit. Keep platform trademarks out of the product name; say "inspired by"
 in the description.
 
-**Name candidates.** The owner chooses; do nothing until they pick.
+**Name: chosen. The product is now OmniDash.** The owner picked it on 2026-10-18, so R1 to R3 are
+unblocked. Before the public rename, check it against existing apps on GitHub, Steam and the Microsoft Store
+(there may be an unrelated "OmniDash" — if so, keep the name but make the repo description and the app's
+first-run text distinct, e.g. "OmniDash — a multi-theme PC game launcher").
 
 | Name | Why |
 |---|---|
-| **OmniDash** (recommended) | Short, says "every dashboard". No platform trademark. |
+| **OmniDash** (chosen) | Short, says "every dashboard". No platform trademark. |
 | Console Shell | Plain and descriptive. Pairs with "Xbox mode" or shell-replacement features. |
 | Couchside | Living-room feel. Neutral. |
 | Homescreen | Simple; may be hard to search for. |
