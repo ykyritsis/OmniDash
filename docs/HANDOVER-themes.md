@@ -1,5 +1,9 @@
 # Handover: console themes (0.6.0 work in progress)
 
+> **2026-10-18, Claude: the work queue is now `docs/NEXT-LEVEL-PLAN.md`** (parity review, settings registry,
+> per-console specs, rename and GitHub relaunch, ordered prompts). Start with its Phase 1 (real settings).
+> Correction to the art rule below: **PS3 game icons are wide ICON0 (320:176)**, not square slots.
+
 > **2026-10-18 handover to Claude — read this first.** Branch `console-themes`, HEAD `6525c36`.
 > The installed copy at `%LOCALAPPDATA%\Programs\Xbox Preview UI` is current (`backup-0.6.0-test22` is the
 > previous build). Install with
