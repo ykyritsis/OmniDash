@@ -71,6 +71,27 @@ body.garrison[data-g-theme="x360"] #power-dialog :is(h2, strong, .power-footer) 
 body.garrison[data-g-theme="x360"] #power-dialog .power-choice-icon { background: var(--x-lime) !important; }
 body.garrison[data-g-theme="x360"] #power-dialog .power-choice:is(.focused, :focus-visible) { background: rgba(108, 179, 68, .25) !important; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--x-lime) !important; }
 
+/* ---------- PS3, PS4, Wii and 3DS: settings, profile, achievements, search and power menu ---------- */
+/* The dialogs stay dark on every console (their contents are built for a dark panel) but each family gets
+   its own font, panel tint and selection colour. */
+body.garrison.g-retro :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { font-family: var(--g-font); }
+body[data-g-theme="ps3"] :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { background: #07080a !important; }
+body[data-g-theme="ps3"] #settings-dialog .settings-sidebar { background: #0d0f12 !important; }
+body[data-g-theme="ps3"] .settings-tab, body[data-g-theme="ps3"] #settings-dialog :is(h1, h2, h3) { font-family: var(--g-font); font-weight: 400; }
+body[data-g-theme="ps3"] :is(.settings-tab.active, #power-dialog .power-choice:is(.focused, :focus-visible)) { background: linear-gradient(90deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .04)) !important; box-shadow: inset calc(4 * var(--cpx)) 0 #fff !important; }
+body[data-g-theme="ps4"] :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { background: #0a1226 !important; }
+body[data-g-theme="ps4"] #settings-dialog .settings-sidebar { background: #060d1c !important; }
+body[data-g-theme="ps4"] .settings-tab, body[data-g-theme="ps4"] #settings-dialog :is(h1, h2, h3) { font-family: var(--g-font); font-weight: 300; }
+body[data-g-theme="ps4"] :is(.settings-tab.active, #power-dialog .power-choice:is(.focused, :focus-visible)) { background: #1d4f9e !important; box-shadow: none !important; }
+body[data-g-theme="wii"] :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { background: #2b2f33 !important; box-shadow: 0 0 0 calc(5 * var(--cpx)) #39c1ef, 0 calc(14 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 0, 0, .5) !important; }
+body[data-g-theme="wii"] #settings-dialog .settings-sidebar { background: #23272b !important; }
+body[data-g-theme="wii"] .settings-tab, body[data-g-theme="wii"] #settings-dialog :is(h1, h2, h3) { font-family: var(--g-font); font-weight: 400; }
+body[data-g-theme="wii"] :is(.settings-tab.active, #power-dialog .power-choice:is(.focused, :focus-visible)) { background: #fff !important; color: #2b2f33 !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #39c1ef !important; }
+body[data-g-theme="3ds"] :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { background: #202225 !important; border-radius: calc(10 * var(--cpx)) !important; }
+body[data-g-theme="3ds"] #settings-dialog .settings-sidebar { background: #191b1d !important; }
+body[data-g-theme="3ds"] .settings-tab, body[data-g-theme="3ds"] #settings-dialog :is(h1, h2, h3) { font-family: var(--g-font); font-weight: 400; }
+body[data-g-theme="3ds"] :is(.settings-tab.active, #power-dialog .power-choice:is(.focused, :focus-visible)) { background: #2f3438 !important; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; }
+
 /* ---------- 360 screensaver: the dashboard dims and the wallpaper drifts ---------- */
 body[data-g-theme="x360"] #g-theme-saver { background: rgba(0, 0, 0, .6); }
 body[data-g-theme="x360"] #g-theme-saver .g-saver-drift { display: none; }

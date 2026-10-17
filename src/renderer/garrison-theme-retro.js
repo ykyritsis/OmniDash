@@ -114,7 +114,7 @@
     ];
   };
   function xmbIcon(item, big) {
-    if (item.game) return `<span class="xmb-icon game" data-g-wide-art="${esc(item.game.id)}"></span>`;
+    if (item.game) return `<span class="xmb-icon game${big ? ' big' : ''}"${cover(item.game) ? ` style="--cover:${url(cover(item.game))}"` : ''}></span>`;
     if (item.image) return `<span class="xmb-icon pic" style="background-image:${url(item.image)}"></span>`;
     return `<span class="xmb-icon${big ? ' big' : ''}">${img(item.file && PS3I(item.file), icon(item.glyph))}</span>`;
   }
@@ -128,15 +128,15 @@
     const hour = now().getHours();
     document.body.style.setProperty('--xmb-night', String(hour >= 21 || hour < 5 ? .42 : hour >= 18 || hour < 7 ? .22 : 0));
     // Vertical positions: the selection, the items under it, and the ones above that climb over the row.
-    const step = item => (item.game ? 104 : 82);
-    let below = 640;
+    const step = 94;
+    let below = 604;
     const pos = items.map((item, index) => {
-      if (index === sel) return 479;
-      if (index > sel) { const y = below + step(item) / 2; below += step(item); return y; }
-      return 117 - (sel - 1 - index) * 83;
+      if (index === sel) return 468;
+      if (index > sel) { const y = below; below += step; return y; }
+      return 124 - (sel - 1 - index) * 82;
     });
-    host.innerHTML = `<canvas class="xmb-wave" aria-hidden="true"></canvas><i class="xmb-pic" aria-hidden="true"></i>
-      <div class="xmb-bar">${cats.map((c, i) => `<span class="xmb-cat${i === xmbCat ? ' on' : ''}" style="--x:${559 + (i - xmbCat) * 205}">${img(PS3I(c.file), icon(c.glyph))}<b>${esc(c.label)}</b></span>`).join('')}</div>
+    host.innerHTML = `<i class="xmb-pic" aria-hidden="true"></i><canvas class="xmb-wave" aria-hidden="true"></canvas>
+      <div class="xmb-bar">${cats.map((c, i) => `<span class="xmb-cat${i === xmbCat ? ' on' : ''}" style="--x:${560 + (i - xmbCat) * 210}">${img(PS3I(c.file), icon(c.glyph))}<b>${esc(c.label)}</b></span>`).join('')}</div>
       <div class="xmb-list">${items.map((item, index) => `<button class="xmb-item focusable${index === sel ? ' on' : index < sel ? ' above' : ''}${item.game ? ' is-game' : ''}" type="button" ${attrs(item)} data-xmb-index="${index}" style="--y:${pos[index]}" aria-label="${esc(item.label)}">
         ${xmbIcon(item, index === sel)}<span class="xmb-copy"><strong>${esc(item.label)}</strong>${item.sub ? `<small>${esc(item.sub)}</small>` : ''}</span></button>`).join('')}</div>`;
     chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>`;
@@ -177,8 +177,9 @@
   // It stops whenever the window is hidden or unfocused, or the XMB isn't showing.
   const xmbWave = (() => {
     let raf = 0, last = 0, t = 0;
-    const sparks = Array.from({ length: 46 }, (_, i) => ({ x: Math.random(), y: .3 + Math.random() * .5, s: .4 + Math.random() * 1.4, p: Math.random() * 6.28, v: .004 + Math.random() * .01 }));
-    const ribbons = [[.62, .08, 1.3, .00055, .11], [.6, .065, 1.8, .0007, .07], [.57, .1, 1.1, .00045, .05], [.64, .05, 2.4, .0009, .06]];
+    const sparks = Array.from({ length: 54 }, () => ({ x: Math.random(), y: .28 + Math.random() * .55, s: .4 + Math.random() * 1.5, p: Math.random() * 6.28, v: .003 + Math.random() * .009 }));
+    // base height, amplitude, wavelength, drift, opacity, band thickness, slope (all fractions of the canvas)
+    const ribbons = [[.515, .02, 1.1, .0003, .3, .2, -.05], [.6, .013, 1.65, .00042, .14, .14, -.08], [.66, .01, .92, .00025, .085, .11, -.115]];
     function frame(stamp) {
       const canvas = host.querySelector('canvas.xmb-wave');
       if (!canvas || theme() !== 'ps3' || state.view !== 'home') { raf = 0; return; }
@@ -190,22 +191,25 @@
       const w = canvas.width = Math.round(innerWidth / 2), h = canvas.height = Math.round(innerHeight / 2);
       const g = canvas.getContext('2d');
       g.clearRect(0, 0, w, h);
-      for (const [base, amp, freq, speed, alpha] of ribbons) {
-        const y = (x, k) => h * (base - .12 * (x / w) + amp * Math.sin((x / w) * freq * Math.PI + t * speed + k) + .03 * Math.sin((x / w) * 5 - t * speed * 1.7 + k));
+      for (const [base, amp, freq, speed, alpha, thick, slope] of ribbons) {
+        const y = (x, k) => h * (base + slope * (x / w) + amp * Math.sin((x / w) * freq * Math.PI + t * speed + k) + .011 * Math.sin((x / w) * 4.3 - t * speed * 1.9 + k));
         g.beginPath();
         for (let x = 0; x <= w; x += 8) g.lineTo(x, y(x, 0));
-        for (let x = w; x >= 0; x -= 8) g.lineTo(x, y(x, 1.1) + h * .09);
+        for (let x = w; x >= 0; x -= 8) g.lineTo(x, y(x, 1.1) + h * thick);
         g.closePath();
-        const fill = g.createLinearGradient(0, h * (base - .2), 0, h * (base + .2));
-        fill.addColorStop(0, `rgba(255,255,255,${alpha * 1.6})`); fill.addColorStop(.5, `rgba(255,255,255,${alpha * .5})`); fill.addColorStop(1, 'rgba(255,255,255,0)');
+        const fill = g.createLinearGradient(0, h * (base - .05), 0, h * (base + thick + .03));
+        fill.addColorStop(0, 'rgba(255,255,255,0)');
+        fill.addColorStop(.14, `rgba(255,255,255,${alpha})`);
+        fill.addColorStop(.46, `rgba(255,255,255,${alpha * .46})`);
+        fill.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = fill; g.fill();
         g.beginPath();
         for (let x = 0; x <= w; x += 8) g.lineTo(x, y(x, 0));
-        g.strokeStyle = `rgba(255,255,255,${Math.min(.8, alpha * 5)})`; g.lineWidth = 1; g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 6; g.stroke(); g.shadowBlur = 0;
+        g.strokeStyle = `rgba(255,255,255,${Math.min(.95, alpha * 2.6)})`; g.lineWidth = 1.6; g.shadowColor = 'rgba(255,255,255,.95)'; g.shadowBlur = 9; g.stroke(); g.shadowBlur = 0;
       }
       for (const spark of sparks) {
         spark.x = (spark.x + spark.v * .05) % 1;
-        const a = .25 + .35 * Math.sin(t * .002 + spark.p);
+        const a = .22 + .3 * Math.sin(t * .002 + spark.p);
         g.fillStyle = `rgba(255,255,255,${Math.max(0, a)})`;
         g.beginPath(); g.arc(spark.x * w, (spark.y + .02 * Math.sin(t * .001 + spark.p)) * h, spark.s, 0, 6.28); g.fill();
       }
@@ -232,7 +236,7 @@
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
     const tile = (item, i) => `<button class="ps4-tile focusable${item.system ? ' system' : ''}${item.store ? ' store' : ''}${item.glass ? ' glass' : ''}${item.library ? ' library' : ''}${i === ps4Focus ? ' sel' : ''}" type="button" ${attrs(item)} data-ps4-index="${i}" aria-label="${esc(item.label)}"
-      style="--x:${i === ps4Focus ? 330 : i < ps4Focus ? 330 - (ps4Focus - i) * 229 : 700 + (i - ps4Focus - 1) * 229}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? img(PS4I('new'), icon('friends')) : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}${i === ps4Focus ? '<em>Start</em>' : ''}</button>`;
+      style="--x:${i === ps4Focus ? 337 : i < ps4Focus ? 337 - (ps4Focus - i) * 260 : 730 + (i - ps4Focus - 1) * 260}${item.game ? `;--cover:${url(cover(item.game))}` : ''}">${item.game ? '' : item.store ? img(PS4I('ps'), icon('shop'), 'bag') : item.glass ? img(PS4I('new'), icon('friends')) : item.library ? '<span class="ps4-lib" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(item.glyph)}${i === ps4Focus ? '<em>Start</em>' : ''}</button>`;
     host.innerHTML = `<i class="ps4-art" aria-hidden="true"></i>
       <div class="ps4-functions${ps4Area === 'fn' ? ' open' : ''}" aria-label="Function area">${PS4_FUNCTIONS.map(([action, glyph, label, file], i) => `<button class="ps4-fn focusable${ps4Area === 'fn' && i === ps4Fn ? ' sel' : ''}" type="button" data-action="${action}" data-ps4-fn="${i}" aria-label="${label}">${img(PS4I(file), icon(glyph))}<span>${label}</span></button>`).join('')}</div>
       <div class="ps4-home${ps4Area === 'fn' ? ' away' : ''}"><div class="ps4-row" role="list">${list.map(tile).join('')}</div>
@@ -240,8 +244,9 @@
         <div class="ps4-info"><h2>${esc(sel.label)}</h2><div class="ps4-cards">${sel.game ? `<button class="ps4-card wide focusable${ps4Area === 'sub' && ps4Sub === 3 ? ' sel' : ''}" type="button" data-action="g-ps4-overview" data-game-id="${esc(sel.game.id)}" data-ps4-sub="3" data-g-wide-art="${esc(sel.game.id)}"><b>${esc(sel.game.lastPlayed ? 'Recently played' : 'Overview')}</b><small>${esc(sel.game.title)}</small></button><span class="ps4-ach"></span>` : `<p class="ps4-sub-copy">${esc(sel.sub || '')}</p>`}</div></div></div></div>
       <div class="ps4-hints"><span><i class="ps4-x"></i>Enter</span>${sel.game ? '<span><i class="ps4-opt">OPTIONS</i></span>' : ''}</div>`;
     const online = state.gFriends?.online || 0;
+    const alerts = online + (window.gDownloads?.active?.length || 0);
     const note = window.gDownloads?.active?.[0] ? `Downloading ${window.gDownloads.active[0].title}` : online ? `${online} friend${online === 1 ? ' is' : 's are'} online` : 'Welcome back';
-    chrome.innerHTML = `<div class="ps4-status"><span class="ps4-s store">${img(PS4I('ps'), icon('shop'))}</span><span class="ps4-s note">${img(PS4I('info'), icon('bell'))}<em>${esc(note)}</em></span>
+    chrome.innerHTML = `<div class="ps4-status"><span class="ps4-s store">${img(PS4I('ps'), icon('shop'))}</span><span class="ps4-s note">${img(PS4I('info'), icon('bell'))}${alerts ? `<b>${alerts}</b>` : ''}<em>${esc(note)}</em></span>
       <span class="ps4-s friends">${img(PS4I('friends'), icon('friends'))}${online ? `<sup>${online}</sup>` : ''}</span><span class="ps4-s party"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H5a1 1 0 0 1-1-1zm16 0h-3v6h2a1 1 0 0 0 1-1z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
       <span class="ps4-s me"><i>${avatar()}</i>${esc(name())}</span><span class="ps4-s trophy">${img(PS4I('trophy'), icon('trophy'))}<em>${esc(document.querySelector('#dashboard-gamerscore, .g-gamerscore')?.textContent?.replace(/\D/g, '') || '')}</em></span><span class="ps4-s clock">${esc(time())}</span></div>`;
     ps4Background(sel);
@@ -321,10 +326,12 @@
     const shown = channels.slice(wiiPage * 12, wiiPage * 12 + 12);
     while (shown.length < 12) shown.push(null);
     wiiFocus = Math.min(wiiFocus, 11);
-    host.innerHTML = `<div class="wii-grid">${shown.map((ch, i) => !ch ? `<span class="wii-ch empty" data-wii-index="${i}" aria-hidden="true"></span>` : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}>${wiiArt(ch)}<span class="wii-balloon">${esc(ch.label)}</span></button>`).join('')}</div>
+    host.innerHTML = `<div class="wii-bands" aria-hidden="true">${[0, 1, 2].map(r => `<span style="--row:${r}"></span>`).join('')}</div>
+      <div class="wii-grid">${shown.map((ch, i) => !ch ? `<span class="wii-ch empty" data-wii-index="${i}" aria-hidden="true"></span>` : `<button class="wii-ch focusable ${ch.kind}" type="button" ${attrs(ch)} data-wii-index="${i}" aria-label="${esc(ch.label)}"${ch.kind === 'game' ? ` data-g-wide-art="${esc(ch.game.id)}"` : ''}>${wiiArt(ch)}<span class="wii-balloon">${esc(ch.label)}</span></button>`).join('')}
+        ${[0, 1, 2].map(r => `<span class="wii-ch empty peek" style="--r:${r}" aria-hidden="true"></span>`).join('')}</div>
       ${wiiPage > 0 ? '<button class="wii-arrow left focusable" type="button" data-action="g-wii-page" data-dir="-1" aria-label="Previous page"></button>' : ''}${wiiPage < pages - 1 ? '<button class="wii-arrow right focusable" type="button" data-action="g-wii-page" data-dir="1" aria-label="Next page"></button>' : ''}`;
-    chrome.innerHTML = `<div class="wii-bar"><svg class="wii-bar-shape" viewBox="0 0 1920 303" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="wii-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dbdf"/><stop offset=".45" stop-color="#c9cbcf"/><stop offset="1" stop-color="#d6d8dc"/></linearGradient></defs>
-        <path d="M0 0 H343 C 470 0, 520 119, 663 119 H1257 C 1400 119, 1450 0, 1577 0 H1920 V303 H0 Z" fill="url(#wii-bar-fill)"/><path d="M0 0 H343 C 470 0, 520 119, 663 119 H1257 C 1400 119, 1450 0, 1577 0 H1920" fill="none" stroke="#34bdef" stroke-width="4"/></svg>
+    chrome.innerHTML = `<div class="wii-bar"><span class="wii-glow" aria-hidden="true"></span><svg class="wii-bar-shape" viewBox="0 0 1920 229" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="wii-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdd0d4"/><stop offset=".16" stop-color="#b9bcc0"/><stop offset=".6" stop-color="#cdd0d4"/><stop offset="1" stop-color="#d8dadd"/></linearGradient></defs>
+        <path d="M0 0 H500 C 560 0, 590 61, 660 61 H1260 C 1330 61, 1360 0, 1420 0 H1920 V229 H0 Z" fill="url(#wii-bar-fill)"/><path d="M0 0 H500 C 560 0, 590 61, 660 61 H1260 C 1330 61, 1360 0, 1420 0 H1920" fill="none" stroke="#39c1ef" stroke-width="3"/></svg>
       <span class="wii-ring left" aria-hidden="true"></span><span class="wii-ring right" aria-hidden="true"></span>
       <button class="wii-btn focusable${wiiBar === 0 ? ' sel' : ''}" type="button" data-action="settings" aria-label="Wii Options">${img(WIII('wii-button.png'), '<b>Wii</b>')}</button>
       <span class="wii-sd" aria-hidden="true"></span>
@@ -405,7 +412,7 @@
     const col = Math.floor(dsFocus / 3);
     const scroll = Math.max(0, col - 3);
     const coins = Math.min(300, 10 + allGames().length);
-    host.innerHTML = `<div class="ds-device"><div class="ds-top"><div class="ds-pattern" aria-hidden="true"></div>
+    host.innerHTML = `<i class="ds-bg" aria-hidden="true"></i><div class="ds-device"><div class="ds-top"><div class="ds-pattern" aria-hidden="true"></div>
         <div class="ds-statusbar"><span class="ds-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="ds-pill">Internet</span><span class="ds-coin"><i>P</i>${coins}</span>
           <span class="ds-when">${esc(dayMonth())} (${esc(weekday())})</span><span class="ds-clock">${esc(time()).replace(':', '<b>:</b>')}</span><span class="ds-battery" aria-hidden="true"><i></i></span></div>
         <div class="ds-banner"><i class="ds-art"></i></div>
@@ -430,8 +437,18 @@
     const art = host.querySelector('.ds-art');
     art.style.backgroundImage = ''; art.innerHTML = '';
     art.parentElement.classList.toggle('system', !item.game);
+    // The wallpaper behind the two screens keeps a game's art even while a system app is selected.
+    const backdrop = host.querySelector('.ds-bg');
+    const backdropGame = item.game || dsList().find(entry => entry.game)?.game || null;
+    if (backdrop && backdropGame && !backdrop.style.backgroundImage && window.gWideArt) {
+      window.gWideArt(backdropGame).then(src => { if (src && backdrop.isConnected) backdrop.style.backgroundImage = cssUrl(src); }).catch(() => {});
+    }
     if (!item.game) { art.innerHTML = DS_SVG[item.svg] || ''; return; }
-    if (window.gWideArt) window.gWideArt(item.game).then(src => { if (art.isConnected) art.style.backgroundImage = cssUrl(src || cover(item.game)); });
+    if (window.gWideArt) window.gWideArt(item.game).then(src => {
+      if (!art.isConnected) return;
+      art.style.backgroundImage = cssUrl(src || cover(item.game));
+      if (backdrop && src) backdrop.style.backgroundImage = cssUrl(src);
+    });
   }
   function dsMove(direction) {
     const list = dsList();

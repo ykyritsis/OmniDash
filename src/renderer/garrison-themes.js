@@ -27,7 +27,7 @@
     { id: 'ps3', name: 'PS3', era: 'PlayStation 3 XMB', blurb: 'The XrossMediaBar: a glowing wave over the month\'s colour, categories across and items down.' },
     { id: 'ps4', name: 'PS4', era: 'PlayStation 4', blurb: 'The deep-blue home: a function row, then a row of square tiles with the game\'s art behind.' },
     { id: 'wii', name: 'Wii', era: 'Wii Menu', blurb: 'The channel grid, the Wii button and clock bar, and the channel preview with Start.' },
-    { id: '3ds', name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Two screens: the game\'s banner on top, your icons on the touch screen below.' },
+    { id: '3ds', name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Both screens side by side on one display: the game\'s banner and status bar, and your icons on the touch screen.' },
     { id: 'x360', name: '360', era: 'Xbox 360 Metro, 2011', blurb: 'The lime-green Metro dashboard: lowercase pivots, a featured tile and the grey studio. With DashX360 assets by ZivvoZ when installed.' }
   ];
   const valid = id => THEMES.some(theme => theme.id === id);

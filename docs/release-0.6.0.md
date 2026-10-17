@@ -32,6 +32,12 @@ This release also carries the 0.5.1 audit pass ([notes](release-0.5.1.md)): the 
   - **Helix:** the full-screen Xbox PC look this launcher started with.
   - **Series:** the Xbox Series X|S dashboard. The selected game's art fills Home behind a low row of square tiles, with the green swirl behind. The icon bar names the active item.
   - **One:** the 2013 Xbox One dashboard. Panorama headings across the top, a Pins wall, a big last-played tile with recent games around it, a planet-horizon wallpaper, and square corners everywhere.
+  - **360:** the 2011 Xbox 360 Metro dashboard. Lowercase pivots, a featured tile, the gamercard and the grey studio, with DashX360 dashboard art and its boot screen by ZivvoZ when installed.
+  - **PS3:** the XrossMediaBar. Categories across the middle over the month's colour, the selected category's items stacked above and below it, the glowing wave over the selected game's art, and the clock panel at the top right. Uses the real XMB icons, the SCE font and the original menu sounds when the pack is installed.
+  - **PS4:** the deep-blue home. A function row along the top, square tiles with the selected one grown to show Start, the game's name and content cards below it, and the dark hint bar.
+  - **Wii:** the Wii Menu. Four-by-three channels on white trays, the grey bar with its curved dip, the seven-segment clock and the date, the Wii and Message Board buttons, and a channel preview with Wii Menu and Start. Real channel frames, cursor and sounds from the pack.
+  - **3DS:** the 3DS HOME Menu fitted to one display. The two screens stand side by side: the status bar, the selected software's banner and its name plate on the wide screen, and the toolbar, icon grid and cyan corner selector on the touch screen.
+- **Screens beyond Home follow the console.** The library's section list takes each console's font and accent, Settings is named and grouped the way that console named it (the XMB's Settings column, the three Wii Settings pages, 3DS System Settings), and each console boots to its own logo rather than the Xbox sphere.
 
 ## Not included
 
