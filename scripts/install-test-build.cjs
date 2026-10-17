@@ -15,6 +15,10 @@ const path = require('node:path');
 const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 
+// Electron-as-node patches fs so anything ending in ".asar" is read as an archive: stat() on app.asar then
+// reports a 0-byte virtual root and access() says ENOENT. This script copies archive *files*, so turn that off.
+process.noAsar = true;
+
 const repo = path.resolve(__dirname, '..');
 const resources = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Xbox Preview UI', 'resources');
 const UNPACK_DIR = 'src/xbox-mode-bridge';
