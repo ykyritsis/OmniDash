@@ -1,0 +1,109 @@
+/* One look for every dialog: the flyout surface (charcoal, 10px corners, hairline border), Segoe UI Variable,
+   and the Xbox green only on the primary action. Loaded last so it wins over the older per-screen styles. */
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #news-preview-dialog, #power-dialog, #controller-status-dialog, #console-choice-dialog, #console-file-dialog, #install-dialog,
+  #g-update-dialog, #empty-state) {
+  background: #2b2c2c; border: 1px solid rgba(255, 255, 255, .08); border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .55); color: #fff;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #news-preview-dialog, #power-dialog, #controller-status-dialog, #console-choice-dialog, #console-file-dialog, #install-dialog,
+  #g-update-dialog)::backdrop { background: rgba(0, 0, 0, .6); }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #news-preview-dialog, #power-dialog, #controller-status-dialog, #console-choice-dialog, #console-file-dialog, #install-dialog,
+  #g-update-dialog, #empty-state) :is(h1, h2, h3) { font-family: inherit; font-weight: 600; letter-spacing: 0; text-transform: none; }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #news-preview-dialog, #power-dialog, #controller-status-dialog, #console-choice-dialog, #console-file-dialog, #install-dialog,
+  #g-update-dialog, #empty-state) .eyebrow { display: none; }
+/* Buttons: one shape, green only for the primary. */
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #controller-status-dialog, #console-choice-dialog, #install-dialog, #g-update-dialog, #empty-state) :is(button.primary, button.secondary) {
+  border-radius: 10px; font: 600 15px/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; letter-spacing: 0; text-transform: none; border: 0;
+}
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #controller-status-dialog, #console-choice-dialog, #install-dialog, #g-update-dialog, #empty-state) button.primary { background: #4c9a44; color: #fff; }
+body.garrison :is(#game-options-dialog, #collections-dialog, #steam-launch-dialog, #steam-game-launch-dialog, #achievement-dialog,
+  #controller-status-dialog, #console-choice-dialog, #install-dialog, #g-update-dialog, #empty-state) button.secondary { background: rgba(255, 255, 255, .11); color: #fff; }
+body.garrison #game-options-dialog .option-play { background: #4c9a44; color: #fff; }
+
+/* Power menu: a compact list like the other flyouts. */
+body.garrison #power-dialog { width: min(420px, 92vw); padding: 8px; }
+body.garrison #power-dialog .power-header { padding: 6px 10px 8px; }
+body.garrison #power-dialog .power-header h2 { margin: 0; font-size: 19px; }
+body.garrison #power-dialog .power-header p { display: none; }
+body.garrison #power-dialog .power-choices { display: flex; flex-direction: column; gap: 2px; padding: 0; }
+body.garrison #power-dialog .power-choice, body.garrison #power-dialog .power-choice:last-child {
+  min-height: 0; padding: 10px 12px; gap: 14px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; grid-column: auto;
+}
+body.garrison #power-dialog .power-choice:hover { background: rgba(255, 255, 255, .11); transform: none; }
+body.garrison #power-dialog .power-choice-icon { flex: 0 0 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, .1); color: #fff; }
+body.garrison #power-dialog .power-choice strong { font-size: 16px; font-weight: 600; }
+body.garrison #power-dialog .power-choice small { display: none; }
+body.garrison #power-dialog .power-footer { padding: 8px 10px 4px; font-size: 12px; color: #a6aeb0; }
+
+/* Import screen: neutral, no lime. */
+body.garrison #importing-screen { background: #0f1110; color: #fff; }
+body.garrison #importing-screen .importing-orbit { border-color: rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .06); box-shadow: none; }
+body.garrison #importing-screen .importing-orbit::before, body.garrison #importing-screen .importing-orbit::after { border-color: rgba(255, 255, 255, .3); }
+body.garrison #importing-screen > .eyebrow { color: #a6aeb0; }
+body.garrison #importing-screen :is(.importing-progress span, .importing-dots i) { background: #fff; box-shadow: none; }
+
+/* Status text on settings cards stays neutral. */
+body.garrison #settings-dialog .service-status { color: #a6aeb0; }
+body.garrison #g-update-dialog { border-radius: 10px; }
+body.garrison #game-options-dialog { border-radius: 10px 0 0 10px; }
+body.garrison #game-options-dialog .option-play { background: #4c9a44 !important; }
+
+/* Apps: square tiles with the icon centred and the name beneath, like the console's Apps row. */
+body.garrison .library-grid.apps-grid { grid-template-columns: repeat(auto-fill, minmax(clamp(140px, calc(16 * var(--g-vp) / 100), 200px), 1fr)); gap: 14px; }
+body.garrison .library-grid.apps-grid .app-list-card {
+  flex-direction: column; align-items: stretch; gap: 10px; min-height: 0; padding: 0; background: transparent; border-radius: 10px; text-align: center;
+}
+body.garrison .library-grid.apps-grid .app-list-icon {
+  flex: none; width: 100%; height: auto; aspect-ratio: 1; padding: 22%; border-radius: 10px; background: var(--g-surface-2, rgba(255, 255, 255, .11));
+  transition: transform .16s ease, background .16s ease;
+}
+body.garrison .library-grid.apps-grid .app-list-card:hover .app-list-icon,
+body.garrison .library-grid.apps-grid .app-list-card:focus-visible .app-list-icon,
+body.garrison .library-grid.apps-grid .app-list-card.focused .app-list-icon { background: rgba(255, 255, 255, .18); transform: scale(1.04); }
+body.garrison .library-grid.apps-grid .app-list-card:hover { background: transparent; transform: none; }
+body.garrison .library-grid.apps-grid .app-list-copy strong { font-size: 15px; text-align: center; }
+body.garrison .library-grid.apps-grid .app-list-copy small { margin-top: 2px; text-align: center; }
+body.garrison .library-grid.apps-grid .app-list-chevron { display: none; }
+
+/* Console behaviour: no text selection, and the pointer hides once it has been still for a moment. */
+body.garrison { -webkit-user-select: none; user-select: none; }
+body.garrison :is(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
+body.garrison img { -webkit-user-drag: none; }
+body.garrison.g-pointer-idle, body.garrison.g-pointer-idle * { cursor: none !important; }
+/* Power menu, console style. */
+body.garrison #power-dialog.g-power { width: min(440px, 92vw); padding: 10px; }
+body.garrison #power-dialog .power-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 6px 10px 12px; }
+body.garrison #power-dialog .power-header > div { min-width: 0; }
+body.garrison #power-dialog .power-close {
+  display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .1); color: #fff;
+}
+body.garrison #power-dialog .power-close .g-glyph { width: 18px; height: 18px; }
+body.garrison #power-dialog .power-choice, body.garrison #power-dialog .power-choice:last-child { display: grid; grid-template-columns: 40px minmax(0, 1fr) 20px; align-items: center; width: 100%; padding: 8px 10px; }
+body.garrison #power-dialog .power-choice > span:nth-child(2) { text-align: left; }
+body.garrison #power-dialog .power-choice-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; background: #107c10; color: #fff; }
+body.garrison #power-dialog .power-choice[data-power="restart"] .power-choice-icon { background: #0e6fbf; }
+body.garrison #power-dialog .power-choice[data-power="shutdown"] .power-choice-icon { background: #c42b1c; }
+body.garrison #power-dialog .power-choice[data-power="exit"] .power-choice-icon { background: rgba(255, 255, 255, .16); }
+body.garrison #power-dialog .power-choice-icon .g-glyph { width: 20px; height: 20px; }
+body.garrison #power-dialog .power-choice b { display: grid; place-items: center; color: #a6aeb0; }
+body.garrison #power-dialog .power-choice b .g-glyph { width: 16px; height: 16px; }
+body.garrison #power-dialog .power-confirm { display: grid; justify-items: center; gap: 8px; padding: 14px 16px 6px; text-align: center; }
+body.garrison #power-dialog .power-confirm[hidden] { display: none; }
+body.garrison #power-dialog .power-confirm-mark { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #107c10; color: #fff; font-size: 0; }
+body.garrison #power-dialog .power-confirm-mark .g-glyph { width: 26px; height: 26px; }
+body.garrison #power-dialog .power-confirm h3 { margin: 6px 0 0; font-size: 19px; }
+body.garrison #power-dialog .power-confirm p { margin: 0; color: #c8cdcc; font-size: 14px; line-height: 1.4; }
+body.garrison #power-dialog .power-confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 12px; }
+body.garrison #power-dialog .power-confirm-actions button { min-height: 44px; border: 0; border-radius: 10px; font: 600 15px/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: #fff; }
+body.garrison #power-dialog .power-confirm-actions .secondary { background: rgba(255, 255, 255, .11); }
+body.garrison #power-dialog .power-confirm-actions .primary { background: #107c10; }
+body.garrison #power-dialog .power-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 4px; font-size: 12px; color: #a6aeb0; }
+body.garrison #power-dialog .power-footer > span:last-child { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

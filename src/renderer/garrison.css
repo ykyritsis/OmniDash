@@ -100,7 +100,7 @@ body.garrison #recent-row, body.garrison #recent-row.row-focused {
 }
 body.garrison #recent-row > .game-card, body.garrison #recent-row > .game-card.selected,
 body.garrison #recent-row:not(.row-focused) > .game-card, body.garrison #recent-row:not(.row-focused) > .game-card.selected {
-  flex: 0 0 var(--g-tile); width: var(--g-tile); height: var(--g-tile); aspect-ratio: 1; border-radius: var(--g-radius);
+  flex: 0 0 var(--g-tile); width: var(--g-tile); height: var(--g-tile); aspect-ratio: 1; border-radius: var(--tile-radius, var(--g-radius));
   outline: none; box-shadow: none; transform: none !important; background: var(--g-surface);
 }
 body.garrison #recent-row > .game-card .console-game-label, body.garrison #recent-row > .game-card .install-state { display: none !important; }
@@ -110,13 +110,13 @@ body.garrison #recent-row > .game-card .g-card-text {
 }
 body.garrison #recent-row > .game-card.focused .g-card-text, body.garrison #recent-row > .game-card:hover .g-card-text { display: flex; }
 
-/* ---------- Cards ---------- */
+/* Tiles follow the Settings "Tile corners" value; --g-radius stays the fallback for the rest. */
 body.garrison .game-card {
-  overflow: visible; border: 0; border-radius: var(--g-radius); background: transparent; box-shadow: none; animation: none; content-visibility: visible;
+  overflow: visible; border: 0; border-radius: var(--tile-radius, var(--g-radius)); background: transparent; box-shadow: none; animation: none; content-visibility: visible;
   transition: none; filter: none;
 }
 body.garrison .game-card > img, body.garrison .game-card > .art-fallback {
-  position: relative; inset: auto; display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: var(--g-radius);
+  position: relative; inset: auto; display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: max(0px, calc(var(--tile-radius, var(--g-radius)) - 3px));
   transform: none !important; overflow: hidden;
 }
 body.garrison .game-card > img { background: var(--g-surface); }
@@ -153,9 +153,9 @@ body.garrison .collection-band .game-row.collection-covers {
 }
 body.garrison .collection-band .game-row .game-card, body.garrison .collection-band .steam-discovery-card {
   flex: 0 0 var(--g-tile); width: var(--g-tile); height: auto; aspect-ratio: auto; display: flex; flex-direction: column; padding: clamp(6px, calc(.45 * var(--g-vp) / 100), 9px);
-  border-radius: var(--g-radius); background: var(--g-surface); overflow: hidden;
+  border-radius: var(--tile-radius, var(--g-radius)); background: var(--g-surface); overflow: hidden;
 }
-body.garrison .collection-band .game-row .game-card > img, body.garrison .collection-band .game-row .game-card > .art-fallback { border-radius: calc(var(--g-radius) - 3px); }
+body.garrison .collection-band .game-row .game-card > img, body.garrison .collection-band .game-row .game-card > .art-fallback { border-radius: max(0px, calc(var(--tile-radius, var(--g-radius)) - 3px)); }
 body.garrison .collection-band .game-card .g-card-text { padding: 10px 4px 6px; }
 body.garrison .collection-band .game-card .g-card-text strong { font-size: clamp(13px, calc(.98 * var(--g-vp) / 100), 20px); -webkit-line-clamp: 2; }
 body.garrison .collection-band .game-card .g-card-text small { font-size: clamp(12px, calc(.88 * var(--g-vp) / 100), 18px); }
@@ -238,6 +238,8 @@ body.garrison .library-grid, body.garrison .library-grid.dense-results {
 }
 body.garrison .library-grid .game-card, body.garrison .library-grid.dense-results .game-card { width: 100%; height: auto; aspect-ratio: auto; display: flex; flex-direction: column; padding: 0; }
 body.garrison .library-grid .app-list-card { border-radius: var(--g-radius); background: var(--g-surface); border: 0; }
+/* The library grid is the main surface the "Tile corners" slider is meant to change. */
+body.garrison .library-grid > .game-card, body.garrison .library-grid.dense-results > .game-card { border-radius: var(--tile-radius, var(--g-radius)); }
 body.garrison .console-library-empty { grid-column: 1 / -1; padding: 60px 20px; border: 0; border-radius: var(--g-radius); background: var(--g-surface); text-align: center; }
 body.garrison #library-view.show-groups #library-grid { display: flex; flex-direction: column; gap: 0; margin: 0 calc(-1 * var(--g-gutter)); }
 

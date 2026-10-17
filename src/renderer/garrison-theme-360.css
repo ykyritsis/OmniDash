@@ -1,0 +1,176 @@
+/* 360: the Xbox 360 Metro dashboard. Sizes are 1080p console pixels (--cpx), taken from 720p captures x1.5.
+   Pivots: 45 px light lowercase, centred on y 230, the current one white. The tile band: 450 px tall, centred,
+   6 px gaps: a 231 px lime column, a 597 x 450 featured tile, 294 px columns. Selection: a 3 px white frame. */
+body.garrison[data-g-theme="x360"] {
+  --g-bg: #2a2a2a;
+  --g-green: #6cb344;
+  --g-green-hover: #7cc355;
+  --g-radius: 0px;
+  --tile-radius: 0px !important;
+  --g-ring: 0 0 0 calc(3 * var(--cpx)) #fff;
+  --g-font: "Convection", "Segoe UI", system-ui, sans-serif;
+  --g-display: "Convection", "Segoe UI Light", "Segoe UI", system-ui, sans-serif;
+  --g-lib-side: calc(420 * var(--cpx));
+  --x-lime: #6cb344;
+  --x-gap: calc(6 * var(--cpx));
+  --x-band: calc(450 * var(--cpx));
+}
+html:has(body[data-g-theme="x360"]) { background: #1c1c1c; }
+.g-360-only, #g-360-home, #g-360-status, #g-360-hints, .g-360-peek { display: none; }
+body.garrison[data-g-theme="x360"] :is(button, input, select, dialog, img, [class*="pill"], [class*="card"], [class*="tile"], [class*="chip"], [class*="tabs"], [class*="search"], .g-flyout):not(.xb-button) { border-radius: 0 !important; }
+
+/* ---------- The grey studio (or a dashboard theme) ---------- */
+body.garrison[data-g-theme="x360"] #g-theme-wall { display: block;
+  background:
+    radial-gradient(ellipse 70% 12% at 50% 79%, rgba(0, 0, 0, .35), transparent 70%),
+    radial-gradient(ellipse 85% 70% at 50% 42%, #7a7a7a 0%, #575757 38%, #2e2e2e 75%, #161616 100%);
+}
+body.garrison[data-g-theme="x360"] #g-theme-wall::after { content: ""; position: absolute; inset: 72% 0 0; background: linear-gradient(180deg, rgba(255, 255, 255, .06), transparent 30%); }
+
+/* ---------- Top: status right, pivots ---------- */
+body.garrison[data-g-theme="x360"] .topbar { height: calc(150 * var(--cpx)); padding: 0 calc(156 * var(--cpx)); background: none; }
+body.garrison[data-g-theme="x360"] :is(.g-top-left, .top-actions) { display: none !important; }
+body.garrison[data-g-theme="x360"] #g-360-status {
+  position: absolute; right: calc(156 * var(--cpx)); top: calc(88 * var(--cpx)); display: flex; align-items: center; gap: calc(26 * var(--cpx));
+  color: #fff; font: 400 calc(25 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+}
+body.garrison[data-g-theme="x360"] #g-360-status > span { display: inline-flex; align-items: center; gap: calc(8 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] #g-360-status .g-glyph { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] #g-360-status .g-360-score i { display: inline-grid; place-items: center; width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); border-radius: 50%; background: #fff; color: #333; font: 700 calc(15 * var(--cpx))/1 var(--g-font); font-style: normal; }
+body.garrison[data-g-theme="x360"] #g-360-status .g-360-pic { width: calc(48 * var(--cpx)); height: calc(48 * var(--cpx)); overflow: hidden; background: #fff; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .8); }
+body.garrison[data-g-theme="x360"] #g-360-status .g-360-pic :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
+body.garrison[data-g-theme="x360"] .top-center-nav { position: absolute; left: calc(282 * var(--cpx)); top: calc(196 * var(--cpx)); transform: none; display: flex; gap: calc(56 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-only { display: block; }
+body.garrison[data-g-theme="x360"] .top-nav-button { width: auto; height: auto; padding: 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .5); }
+body.garrison[data-g-theme="x360"] .top-nav-button > :is(svg, .gamepass-glyph, span) { display: none; }
+body.garrison[data-g-theme="x360"] .top-nav-button::after {
+  content: attr(data-g360); display: block !important; position: static; transform: none; opacity: 1; padding: 0; background: none; color: inherit;
+  font: 300 calc(45 * var(--cpx))/1.1 var(--g-display); text-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+body.garrison[data-g-theme="x360"] .top-nav-button[data-action="toggle-search"] { order: -2; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-action="home"] { order: -1; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-g360="social"] { order: 0; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-action="library"] { order: 1; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-action="dashboard-gamepass"] { order: 2; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-action="dashboard-store"] { order: 3; }
+body.garrison[data-g-theme="x360"] .top-nav-button[data-g360="settings"] { order: 4; }
+body.garrison[data-g-theme="x360"] .top-nav-button.active { color: #fff; }
+body.garrison[data-g-theme="x360"] .top-nav-button.focused { color: #fff; outline: calc(3 * var(--cpx)) solid #fff; outline-offset: calc(6 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] main { padding-top: calc(300 * var(--cpx)); }
+body.garrison[data-g-theme="x360"].detail-active main { padding-top: 0; }
+
+/* ---------- Home: one centred band ---------- */
+body.garrison[data-g-theme="x360"] #home-view > :not(#g-360-home):not(#g-hub-host) { display: none !important; }
+body.garrison[data-g-theme="x360"] #g-360-home {
+  display: flex; align-items: flex-start; justify-content: center; gap: var(--x-gap); height: calc(var(--x-band) + 60 * var(--cpx)); margin-top: calc(33 * var(--cpx));
+}
+body.garrison[data-g-theme="x360"] .g-360-col { display: grid; grid-template-rows: 1fr 1fr; gap: var(--x-gap); width: calc(231 * var(--cpx)); height: var(--x-band); position: relative; }
+body.garrison[data-g-theme="x360"] .g-360-col.wide { width: calc(294 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-feature { position: relative; width: calc(597 * var(--cpx)); height: var(--x-band); }
+body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big) {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; width: 100%; height: 100%; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); overflow: hidden; border: 0;
+  background: var(--g-art, var(--x-lime)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer;
+}
+body.garrison[data-g-theme="x360"] .g-360-tile.lime { background: var(--x-lime); justify-content: space-between; }
+body.garrison[data-g-theme="x360"] .g-360-tile.lime .g-glyph { align-self: center; width: calc(72 * var(--cpx)); height: calc(72 * var(--cpx)); margin-top: calc(26 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-tile span, body.garrison[data-g-theme="x360"] .g-360-tile em { position: relative; font: 400 calc(30 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+body.garrison[data-g-theme="x360"] .g-360-tile em { font-style: normal; font-size: calc(21 * var(--cpx)); opacity: .9; }
+body.garrison[data-g-theme="x360"] .g-360-tile.art::before, body.garrison[data-g-theme="x360"] .g-360-big::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0, 0, 0, .65)); }
+body.garrison[data-g-theme="x360"] .g-360-tile.ad { background: linear-gradient(135deg, #2f9d2f, #0f5a0f 70%); justify-content: center; }
+body.garrison[data-g-theme="x360"] .g-360-caption { position: relative; display: grid; gap: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-caption strong { font: 400 calc(33 * var(--cpx))/1.1 var(--g-font); }
+body.garrison[data-g-theme="x360"] .g-360-caption small { font: 400 calc(27 * var(--cpx))/1.1 var(--g-font); color: rgba(255, 255, 255, .92); }
+body.garrison[data-g-theme="x360"] :is(.g-360-tile, .g-360-big):is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; z-index: 2; }
+body.garrison[data-g-theme="x360"] .g-360-big.g-360-turn { animation: g-360-turn .26s ease-in both; }
+body.garrison[data-g-theme="x360"] .g-360-big { animation: g-360-arrive .4s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-360-turn { to { opacity: 0; transform: translateX(calc(-30 * var(--cpx))); } }
+@keyframes g-360-arrive { from { opacity: 0; transform: translateX(calc(40 * var(--cpx))); } to { opacity: 1; transform: none; } }
+body.garrison[data-g-theme="x360"] .g-360-dots { position: absolute; left: 0; top: calc(100% + 16 * var(--cpx)); display: flex; gap: calc(8 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-dots i { width: calc(7 * var(--cpx)); height: calc(7 * var(--cpx)); border-radius: 50%; background: rgba(255, 255, 255, .55); }
+body.garrison[data-g-theme="x360"] .g-360-dots i.on { background: #fff; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .35); }
+body.garrison[data-g-theme="x360"] .g-360-adlabel { position: absolute; left: 0; top: calc(100% + 14 * var(--cpx)); color: rgba(255, 255, 255, .8); font: 400 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; }
+/* The neighbouring pivots peek in at the edges, dimmed. */
+body.garrison[data-g-theme="x360"].home-active .g-360-peek { display: grid; position: fixed; top: calc(382 * var(--cpx)); width: calc(108 * var(--cpx)); gap: var(--x-gap); opacity: .36; pointer-events: none; z-index: 1; }
+body.garrison[data-g-theme="x360"] .g-360-peek i { display: block; height: calc(175 * var(--cpx)); background: var(--x-lime); }
+body.garrison[data-g-theme="x360"] #g-360-peek-left { left: 0; }
+body.garrison[data-g-theme="x360"] #g-360-peek-left i.avatar { background: linear-gradient(160deg, #36c0e8, #1a7fb8); }
+body.garrison[data-g-theme="x360"] #g-360-peek-right { right: 0; }
+/* A Select / Y Search, bottom left. */
+body.garrison[data-g-theme="x360"] #g-360-hints {
+  display: flex; position: fixed; left: calc(210 * var(--cpx)); bottom: calc(82 * var(--cpx)); gap: calc(36 * var(--cpx)); z-index: 5; color: #fff; font: 400 calc(27 * var(--cpx))/1 var(--g-font); pointer-events: none;
+}
+body.garrison[data-g-theme="x360"] #g-360-hints span { display: inline-flex; align-items: center; gap: calc(10 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] #g-360-hints kbd { display: inline-grid; place-items: center; width: calc(33 * var(--cpx)); height: calc(33 * var(--cpx)); border-radius: 50%; color: #fff; font: 700 calc(19 * var(--cpx))/1 var(--g-font); }
+body.garrison[data-g-theme="x360"] #g-360-hints kbd.a { background: radial-gradient(circle at 40% 35%, #8be05a, #3c9a1c); }
+body.garrison[data-g-theme="x360"] #g-360-hints kbd.y { background: radial-gradient(circle at 40% 35%, #ffd84a, #c9930a); }
+body.garrison[data-g-theme="x360"].library-active #g-360-hints { display: none; }
+
+/* ---------- My Games (the console's games library): grey, lime selection ---------- */
+body.garrison[data-g-theme="x360"] #library-view:not([hidden]) { background: rgba(30, 30, 30, .9); }
+body.garrison[data-g-theme="x360"] #g-lib-side { padding: calc(64 * var(--cpx)) calc(24 * var(--cpx)) calc(36 * var(--cpx)) calc(56 * var(--cpx)); background: rgba(0, 0, 0, .25); }
+body.garrison[data-g-theme="x360"] #g-lib-side h2 { margin: 0 0 calc(34 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); font: 300 calc(42 * var(--cpx))/1.15 var(--g-display); text-transform: lowercase; }
+body.garrison[data-g-theme="x360"] .g-lib-nav { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-lib-item { display: flex; align-items: center; height: calc(58 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; background: transparent; color: #fff; font: 300 calc(28 * var(--cpx))/1 var(--g-display); text-align: left; }
+body.garrison[data-g-theme="x360"] .g-lib-item em { margin-left: auto; font-style: normal; font-size: calc(20 * var(--cpx)); color: rgba(255, 255, 255, .6); }
+body.garrison[data-g-theme="x360"] .g-lib-item.active { background: var(--x-lime); }
+body.garrison[data-g-theme="x360"] .g-lib-item:is(.focused, :focus-visible), body.garrison[data-g-theme="x360"] .g-lib-sort:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="x360"] .g-lib-sort { margin-top: calc(30 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); border: 0; background: transparent; color: rgba(255, 255, 255, .7); font: 300 calc(22 * var(--cpx))/1.2 var(--g-display); text-align: left; }
+body.garrison[data-g-theme="x360"] .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); font: 300 calc(18 * var(--cpx))/1.3 var(--g-display); }
+body.garrison[data-g-theme="x360"] .g-lib-ring { display: block; width: calc(56 * var(--cpx)); height: calc(10 * var(--cpx)); background: linear-gradient(90deg, var(--x-lime) calc(var(--used) * 1%), rgba(255, 255, 255, .2) 0); }
+body.garrison[data-g-theme="x360"] .g-lib-ring b { display: none; }
+body.garrison[data-g-theme="x360"] .console-library-content { padding: calc(64 * var(--cpx)) calc(120 * var(--cpx)) calc(120 * var(--cpx)) calc(36 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] #g-lib-title h1 { margin: 0 0 calc(26 * var(--cpx)); font: 300 calc(42 * var(--cpx))/1.15 var(--g-display); text-transform: lowercase; }
+body.garrison[data-g-theme="x360"] #g-lib-title small { font: 300 calc(22 * var(--cpx))/1 var(--g-display); color: rgba(255, 255, 255, .6); }
+body.garrison[data-g-theme="x360"] .g-library-toolbar { display: none !important; }
+body.garrison[data-g-theme="x360"] .library-grid, body.garrison[data-g-theme="x360"] .library-grid.dense-results { grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--cpx)), 1fr)) !important; gap: var(--x-gap) !important; }
+body.garrison[data-g-theme="x360"] .library-grid .game-card { position: relative; background: #3a3a3a; }
+body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text { position: absolute; inset: auto 0 0; display: flex !important; flex-direction: column; padding: calc(24 * var(--cpx)) calc(10 * var(--cpx)) calc(8 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .78)); }
+body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text :is(em, small, .g-size, .g-status) { display: none !important; }
+body.garrison[data-g-theme="x360"] .library-grid .game-card .g-card-text strong { font: 400 calc(18 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="x360"] .game-card:is(.focused, :focus-visible) { box-shadow: var(--g-ring), 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; }
+
+/* ---------- Game page, Store, menus ---------- */
+body.garrison[data-g-theme="x360"] #detail-title { font: 300 calc(68 * var(--cpx))/1.05 var(--g-display); }
+body.garrison[data-g-theme="x360"] :is(#detail-play, .g-control-button.primary, button.primary, .option-play, #g-store-hero b) { background: var(--x-lime) !important; color: #fff; }
+body.garrison[data-g-theme="x360"] #game-detail-view h2, body.garrison[data-g-theme="x360"] #store-view h2 { font-family: var(--g-display) !important; font-weight: 300 !important; text-transform: lowercase; }
+body.garrison[data-g-theme="x360"] .console-store-tabs button { background: transparent !important; color: rgba(255, 255, 255, .5); font: 300 calc(32 * var(--cpx))/1.1 var(--g-display); text-transform: lowercase; margin-right: calc(30 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .console-store-tabs button.active { color: #fff; }
+body.garrison[data-g-theme="x360"] .console-store-tabs { background: transparent !important; }
+body.garrison[data-g-theme="x360"] :is(dialog, .g-flyout) { background-color: #2b2b2b !important; }
+body.garrison[data-g-theme="x360"] #settings-dialog .settings-sidebar .settings-tab { font: 300 calc(26 * var(--cpx))/1.2 var(--g-display); text-transform: lowercase; }
+body.garrison[data-g-theme="x360"] #settings-dialog .settings-sidebar .settings-tab.active { background: var(--x-lime) !important; color: #fff; }
+
+/* ---------- Launch, boot, notifications ---------- */
+body.garrison[data-g-theme="x360"] #launch-overlay { background: #000 !important; }
+body.garrison[data-g-theme="x360"] #launch-overlay :is(#launch-art, .launch-vignette, .launch-brand) { display: none !important; }
+body.garrison[data-g-theme="x360"] #launch-overlay .g-theme-cover { width: calc(320 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] #launch-overlay .g-launch-ring {
+  left: auto; right: calc(110 * var(--cpx)); top: auto; bottom: calc(90 * var(--cpx)); width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx));
+  border: calc(5 * var(--cpx)) solid rgba(108, 179, 68, .25); border-top-color: var(--x-lime); border-radius: 50%; animation: g-series-spin 1s linear infinite;
+}
+@keyframes g-series-spin { to { transform: rotate(360deg); } }
+#g-360-boot { position: fixed; inset: 0; z-index: 200; background: #000; transition: opacity .6s ease; }
+#g-360-boot video { width: 100%; height: 100%; object-fit: cover; }
+#g-360-boot.done { opacity: 0; }
+body.garrison[data-g-theme="x360"] #toast {
+  border-radius: calc(8 * var(--cpx)) !important; background-color: rgba(40, 40, 40, .96) !important; border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .2) !important;
+  box-shadow: 0 calc(8 * var(--cpx)) calc(24 * var(--cpx)) rgba(0, 0, 0, .5);
+}
+body.garrison[data-g-theme="x360"] #toast::before { background-color: var(--x-lime); }
+body.garrison[data-g-theme="x360"] #toast.g-toast-in { animation: g-360-toast .4s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-360-toast { from { opacity: 0; clip-path: inset(0 50% 0 50%); } to { opacity: 1; clip-path: inset(0); } }
+
+/* ---------- Motion: pivots slide ---------- */
+body.garrison[data-g-theme="x360"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-360-page .38s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-360-page { from { opacity: 0; transform: translateX(calc(90 * var(--cpx))); } to { opacity: 1; transform: none; } }
+
+/* ---------- Theme picker preview ---------- */
+.g-tp-360 { display: grid; grid-template-columns: 1fr 2.6fr 1.3fr; grid-template-rows: 18% 1fr 1fr; gap: 4%; padding: 8% 10% 12%;
+  background: radial-gradient(ellipse at 50% 40%, #7a7a7a, #2e2e2e 80%); }
+.g-tp-360 .p { grid-row: 1; height: 55%; align-self: center; background: rgba(255, 255, 255, .45); }
+.g-tp-360 .p.on { background: #fff; }
+.g-tp-360 .p:nth-child(1) { grid-column: 1; } .g-tp-360 .p:nth-child(2) { grid-column: 2; width: 40%; } .g-tp-360 .p:nth-child(3) { grid-column: 2; width: 40%; justify-self: end; } .g-tp-360 .p:nth-child(4) { grid-column: 3; }
+.g-tp-360 i { background: #6cb344; }
+.g-tp-360 i.g:nth-of-type(1) { grid-column: 1; grid-row: 2; } .g-tp-360 i.g:nth-of-type(2) { grid-column: 1; grid-row: 3; }
+.g-tp-360 i.big { grid-column: 2; grid-row: 2 / span 2; background: linear-gradient(135deg, #b0b8c0, #4b5560); box-shadow: inset 0 0 0 2px #fff; }
+.g-tp-360 i.ad { grid-column: 3; background: linear-gradient(135deg, #2f9d2f, #0f5a0f); }

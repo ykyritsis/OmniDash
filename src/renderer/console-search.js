@@ -11,9 +11,18 @@ function buildConsoleSearch() {
   dialog.addEventListener('close', () => { searchPopover.hidden = true; });
 }
 
+// Lower-cased titles are cached per game object, so typing does not re-normalise the whole library
+// on every keystroke. A WeakMap keeps the cache bounded as libraries are replaced.
+const searchTitleCache = new WeakMap();
+function searchableTitle(game) {
+  let value = searchTitleCache.get(game);
+  if (value === undefined) { value = String(game.title || '').toLocaleLowerCase(); searchTitleCache.set(game, value); }
+  return value;
+}
+
 function renderConsoleSearch() {
   const query = librarySearch.value.trim().toLocaleLowerCase();
-  const matches = displayedLibraryGames().filter(game => !query || game.title.toLocaleLowerCase().includes(query));
+  const matches = displayedLibraryGames().filter(game => !query || searchableTitle(game).includes(query));
   const games = matches.slice(0, 60);
   document.querySelector('#console-search-count').textContent = query
     ? `${matches.length} result${matches.length === 1 ? '' : 's'}${matches.length > games.length ? ' · first 60 shown' : ''}`
@@ -22,6 +31,14 @@ function renderConsoleSearch() {
     ? games.map(game => `<button class="console-search-game focusable" data-action="console-search-game" data-game-id="${escapeHtml(game.id)}"><span class="console-search-art">${gameArt(game)}</span><span class="console-search-game-copy"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.provider)}${game.installed === false ? ' · Not installed' : ''}</small></span></button>`).join('')
     : `<div class="console-search-empty">${consoleIcon('search')}<h3>${query ? 'No matching games or apps' : 'Your library is empty'}</h3><p>${query ? 'Try another name or a shorter search.' : 'Add your games from My games & apps to find them here.'}</p></div>`;
   refreshFocusables();
+}
+
+// Typing used to rebuild the result list on every keystroke, and each rebuild re-collapsed duplicates
+// across the whole library and replaced up to 60 cards. Input stays responsive; the list catches up.
+let consoleSearchTimer = 0;
+function scheduleConsoleSearch() {
+  clearTimeout(consoleSearchTimer);
+  consoleSearchTimer = setTimeout(() => { consoleSearchTimer = 0; renderConsoleSearch(); }, 140);
 }
 
 function openConsoleSearch(selectedGameId = '') {

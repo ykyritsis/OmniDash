@@ -52,9 +52,19 @@ class StreamGamepad {
             while(clock.ElapsedMilliseconds<5000){
                 Pump(id);
                 if(clock.ElapsedMilliseconds>800&&!focusSent){
-                    focusAvailable=GetForegroundWindow()!=IntPtr.Zero;
+                    // The focus assertions below only make sense when this fixture actually owns the
+                    // keyboard focus. Checking merely that some foreground window exists is not enough:
+                    // with another application in the foreground (a game, or a full screen app on the
+                    // same desktop) GetForegroundWindow() is non-zero but our SDL window has no
+                    // keyboard focus, so the check failed for an environmental reason instead of a
+                    // real one. Require the foreground window to be ours as well.
+                    var foreground=GetForegroundWindow();
+                    // SDL's own handle is an SDL_Window*, so compare against the Win32 handle found by
+                    // title instead of the pointer.
+                    var ours=FindWindow(null,"Input fixture - StreamLight");
+                    focusAvailable=ours!=IntPtr.Zero&&foreground==ours&&(SDL_GetWindowFlags(window)&0x200)!=0;
                     if(focusAvailable){Check((SDL_GetWindowFlags(window)&0x200)!=0,"Owned SDL must hold keyboard focus while playing");SDL_JoystickSetVirtualButton(joystick,0,1);}
-                    else {Console.WriteLine("INPUT_FOCUS_UNAVAILABLE no interactive Windows foreground on this test desktop");Console.Out.Flush();}
+                    else {Console.WriteLine("INPUT_FOCUS_UNAVAILABLE the test desktop is in use by another foreground window, so the keyboard focus checks are skipped");Console.Out.Flush();}
                     focusSent=true;
                 }
                 if(clock.ElapsedMilliseconds>1200&&!focusChecked){

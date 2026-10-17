@@ -43,7 +43,7 @@ function createInstallSizeLookup({ fetch: fetcher = global.fetch, now = Date.now
     }
     return infoCache.get(key).promise;
   }
-  return async function lookup(appId) {
+  async function lookup(appId) {
     if (!/^\d+$/.test(String(appId))) throw new Error('Invalid Steam app.');
     if (cache.has(String(appId)) && now() - cache.get(String(appId)).at < 30 * 60 * 1000) return cache.get(String(appId)).value;
     if (pending.has(String(appId))) return pending.get(String(appId));
@@ -63,6 +63,15 @@ function createInstallSizeLookup({ fetch: fetcher = global.fetch, now = Date.now
     })().finally(() => pending.delete(String(appId)));
     pending.set(String(appId), work);
     return work;
+  }
+  // The raw depot lists (and the apps they share files with), for sizing DLC and language packs.
+  lookup.depotInfo = async appId => {
+    if (!/^\d+$/.test(String(appId))) throw new Error('Invalid Steam app.');
+    const info = await appInfo(appId), shared = {};
+    const sharedIds = [...new Set(Object.values(info?.depots || {}).map(depot => depot?.depotfromapp).filter(id => /^\d+$/.test(String(id))))].slice(0, 8);
+    await Promise.all(sharedIds.map(async id => { shared[id] = await appInfo(id); }));
+    return { info, shared };
   };
+  return lookup;
 }
 module.exports = { requirementBytes, depotSizes, createInstallSizeLookup };

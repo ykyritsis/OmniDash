@@ -1,0 +1,230 @@
+/* Console themes: what Series and One share. Each theme's own look is in garrison-theme-series.css and
+   garrison-theme-one.css; Helix is the base Garrison look and needs nothing.
+
+   Sizing: both consoles lay out a fixed 1080p screen and scale it to the TV. The themes do the same with
+   --cpx, one console pixel (the screen height / 1080), still following the Interface scale setting
+   (Garrison's --g-scale is 0.9 at 100%). Sizes in the theme files are the console's own pixel sizes. */
+body.garrison[data-g-console] {
+  --cpx: calc(100vh / 1080 * var(--g-scale, .9) / .9);
+  --g-gutter: calc(72 * var(--cpx));
+}
+
+/* ---------- Pieces the theme scripts add: hidden unless a theme shows them ---------- */
+#g-theme-wall { position: fixed; inset: 0; z-index: -1; pointer-events: none; display: none; overflow: hidden; }
+#g-theme-wall > * { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+#g-one-pins, #g-one-clock, #g-lib-side, #g-lib-title, #g-series-cards, #g-one-spotlight, #g-series-me, .g-theme-splash, .g-one-dots { display: none; }
+body.g-theme-switching main, body.g-theme-switching .topbar { animation: g-theme-in .42s ease; }
+@keyframes g-theme-in { from { opacity: .35; } to { opacity: 1; } }
+
+/* ---------- Theme picker (onboarding and Settings > Appearance) ---------- */
+.g-theme-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.g-theme-card {
+  display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 10px 10px 14px; border: 0; border-radius: 10px;
+  background: rgba(255, 255, 255, .07); color: #fff; text-align: left; cursor: pointer; font: inherit;
+}
+.g-theme-card:hover { background: rgba(255, 255, 255, .11); }
+.g-theme-card.on { background: rgba(76, 154, 68, .22); box-shadow: inset 0 0 0 2px #4c9a44; }
+.g-theme-copy { display: grid; gap: 3px; padding: 0 4px; }
+.g-theme-copy strong { font-size: 17px; font-weight: 600; }
+.g-theme-copy em { font-style: normal; font-size: 12px; color: #9bd38f; letter-spacing: .02em; }
+.g-theme-copy small { font-size: 13px; line-height: 1.35; color: rgba(255, 255, 255, .72); }
+.g-theme-onboard { width: min(1080px, 90vw); margin: 22px auto 26px; text-align: left; }
+.g-theme-onboard > strong { display: block; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, .85); }
+.g-theme-onboard .g-theme-copy small { display: none; }
+.g-tp { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; }
+.g-tp i, .g-tp b { display: block; }
+.g-tp-helix { background: radial-gradient(circle at 50% -20%, #2a3a2c, #0f1110 70%); padding: 8% 7%; }
+.g-tp-helix .bar { width: 36%; height: 7%; margin: 0 auto 9%; border-radius: 9px; background: rgba(255, 255, 255, .22); }
+.g-tp-helix .row { display: flex; gap: 4%; height: 36%; }
+.g-tp-helix .row i { flex: 1; border-radius: 4px; background: rgba(255, 255, 255, .14); }
+.g-tp-helix .row i.on { box-shadow: 0 0 0 2px #fff, 0 0 8px 2px rgba(255, 255, 255, .6); }
+.g-tp-helix .row.low { height: 22%; margin-top: 8%; width: 70%; }
+.g-tp-series { background: linear-gradient(160deg, #33251d, #0a1a0a 55%, #135c13 100%); padding: 0 6%; }
+.g-tp-series::before { content: ""; position: absolute; inset: 40% -10% -30% -20%; background: radial-gradient(ellipse at 70% 60%, rgba(93, 194, 30, .55), transparent 60%); transform: rotate(-8deg); }
+.g-tp-series .bar { position: relative; width: 44%; height: 6%; margin: 5% auto 0; border-radius: 4px; background: rgba(255, 255, 255, .25); }
+.g-tp-series .row { position: relative; display: flex; gap: 3%; height: 22%; margin-top: 26%; }
+.g-tp-series .row i { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, .2); }
+.g-tp-series .row i.on { box-shadow: 0 0 0 2px #fff; background: rgba(255, 255, 255, .35); }
+.g-tp-series .wide { position: relative; display: flex; gap: 3%; height: 15%; margin-top: 4%; }
+.g-tp-series .wide i { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, .12); }
+.g-tp-one { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: 14% repeat(2, 1fr); gap: 4%; padding: 7% 6% 9%;
+  background: radial-gradient(circle at 15% 120%, #2f6aa8 0 34%, #0b1f3a 35%, transparent 36%), radial-gradient(circle at 80% 10%, #10233d, #04070d 70%); }
+.g-tp-one .h { grid-row: 1; height: 70%; background: #fff; }
+.g-tp-one .h.dim { background: rgba(255, 255, 255, .35); }
+.g-tp-one .h:nth-child(1) { grid-column: 1; } .g-tp-one .h:nth-child(2) { grid-column: 2; } .g-tp-one .h:nth-child(3) { grid-column: 3; }
+.g-tp-one i { background: #107c10; }
+.g-tp-one i.blue { background: #1a8ad4; }
+.g-tp-one i.big { grid-row: 2 / span 2; grid-column: 1 / span 2; background: #4a6a3a; box-shadow: inset 0 0 0 2px #fff; }
+
+/* ---------- Shared console behaviour ---------- */
+/* Neither dashboard shows controller hints; the time sits in the bar (Garrison hides extra bar items by id). */
+body.garrison[data-g-console] #controller-prompts { display: none !important; }
+body.garrison[data-g-console] .top-actions > #dashboard-clock { display: inline-flex !important; align-items: center; }
+/* Console tiles carry art only: no input or store badges. */
+body.garrison[data-g-console] .game-card :is(.control-badge, .provider-mark, .remote-cloud-badge, .family-shared-mark, .g-input-badge, .console-game-label) { display: none !important; }
+/* Both consoles show My games & apps as its own full-screen app: side panel, then the tiles. */
+body.garrison[data-g-console].library-active .topbar { display: none; }
+body.garrison[data-g-console].library-active main { padding-top: 0 !important; }
+body.garrison[data-g-console] #library-view:not([hidden]) {
+  display: grid; grid-template-columns: var(--g-lib-side) minmax(0, 1fr); min-height: 100vh; padding: 0;
+}
+body.garrison[data-g-console] #g-lib-side { display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+body.garrison[data-g-console] #g-lib-title { display: flex; align-items: baseline; gap: calc(16 * var(--cpx)); }
+body.garrison[data-g-console] :is(.g-library-tabs-row, #g-source-chips, #g-view-button) { display: none !important; }
+body.garrison[data-g-console] .console-library-content { min-width: 0; }
+body.garrison[data-g-console] .library-grid .game-card > :is(img, .art-fallback) { aspect-ratio: 1; }
+/* Settings take the whole screen, like the console's Settings app. */
+body.garrison[data-g-console] #settings-dialog {
+  inset: 0 !important; width: 100vw !important; max-width: none !important; height: 100vh !important; max-height: none !important; margin: 0 !important;
+  border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+}
+
+/* ---------- Launch splash (garrison-theme-motion.js) ---------- */
+body.garrison[data-g-console] #launch-overlay .g-theme-splash { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; pointer-events: none; }
+body.garrison[data-g-console] #launch-overlay .launch-copy { display: none; }
+body.garrison[data-g-console] #launch-overlay:not(.g-no-cover) :is(#launch-game-logo, #launching-title, #launching-game) { display: none !important; }
+body.garrison[data-g-console] #launch-overlay.g-no-cover .g-theme-cover { display: none; }
+body.garrison[data-g-console] #launch-overlay.g-no-cover .launch-copy { display: grid; }
+.g-theme-cover { display: block; aspect-ratio: 1; background: var(--g-theme-cover) center / cover no-repeat; }
+
+/* ---------- Notifications ---------- */
+body.garrison[data-g-console] #toast {
+  left: 50% !important; right: auto !important; bottom: calc(64 * var(--cpx)) !important; top: auto !important; transform: translate(-50%, calc(24 * var(--cpx))) !important;
+  display: flex; align-items: center; gap: calc(16 * var(--cpx)); min-height: calc(64 * var(--cpx)); padding: 0 calc(26 * var(--cpx)) 0 0 !important; overflow: hidden; opacity: 0;
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .2s ease !important; font: 400 calc(19 * var(--cpx))/1.3 var(--g-font);
+}
+body.garrison[data-g-console] #toast.show { opacity: 1; transform: translate(-50%, 0) !important; }
+body.garrison[data-g-console] #toast::before {
+  content: ""; flex: none; align-self: stretch; width: calc(64 * var(--cpx)); background: #107c10 url("assets/xbox.svg") center / calc(30 * var(--cpx)) no-repeat;
+}
+
+/* ---------- Screen dimming (garrison-theme-life.js) ---------- */
+#g-theme-saver { position: fixed; inset: 0; z-index: 80; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; background: #000; }
+#g-theme-saver.on { opacity: 1; pointer-events: auto; cursor: none; }
+#g-theme-saver .g-saver-clock { position: absolute; right: 5vw; bottom: 7vh; color: rgba(255, 255, 255, .7); font: 300 clamp(28px, 3vw, 54px)/1 "Segoe UI Light", "Segoe UI", sans-serif; }
+#g-theme-saver .g-saver-drift { position: absolute; left: 0; top: 0; width: 9vmin; height: 9vmin; opacity: .5; animation: g-saver-drift 60s linear infinite alternate; }
+#g-theme-saver .g-saver-drift img { width: 100%; height: 100%; filter: brightness(10); }
+@keyframes g-saver-drift { 0% { transform: translate(12vw, 14vh); } 25% { transform: translate(72vw, 32vh); } 50% { transform: translate(40vw, 70vh); } 75% { transform: translate(8vw, 52vh); } 100% { transform: translate(80vw, 10vh); } }
+
+/* ---------- Reduced motion ---------- */
+html.reduce-motion body.garrison[data-g-console] :is(#home-view, #library-view, #game-detail-view, #store-view, .g-one-pin, .g-one-spot, .game-card, .g-series-card, .g-theme-cover, .g-one-dots i, .g-launch-ring, .g-swirl-ribbons) { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.garrison[data-g-console] :is(#home-view, #library-view, #game-detail-view, #store-view, .g-one-pin, .g-one-spot, .game-card, .g-series-card, .g-theme-cover, .g-swirl-ribbons) { animation: none !important; }
+}
+
+/* ---------- Logos instead of type: the consoles show a game's own logo, never its name in a system font ---------- */
+body.garrison[data-g-console] #detail-logo-frame:not([hidden]) { display: block !important; margin: 0 0 calc(18 * var(--cpx)); }
+body.garrison[data-g-console] #detail-logo:not([hidden]) {
+  display: block !important; width: auto; height: auto; max-width: calc(620 * var(--cpx)); max-height: calc(220 * var(--cpx)); object-fit: contain; object-position: left bottom;
+  filter: drop-shadow(0 calc(4 * var(--cpx)) calc(18 * var(--cpx)) rgba(0, 0, 0, .55));
+}
+body.garrison[data-g-console] #detail-title[hidden] { display: none !important; }
+.g-theme-logo { display: none; }
+body.garrison[data-g-console] #launch-overlay.g-has-logo .g-theme-logo:not([hidden]) {
+  display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: calc(720 * var(--cpx)); max-height: calc(300 * var(--cpx));
+  object-fit: contain; filter: drop-shadow(0 calc(6 * var(--cpx)) calc(28 * var(--cpx)) rgba(0, 0, 0, .5)); animation: g-logo-in .7s cubic-bezier(.2, .8, .2, 1) both;
+}
+body.garrison[data-g-console] #launch-overlay.g-has-logo .g-theme-cover { display: none; }
+@keyframes g-logo-in { from { opacity: 0; transform: translate(-50%, -46%) scale(.94); } to { opacity: 1; transform: translate(-50%, -50%); } }
+
+/* ---------- No PC tells: no scrollbars anywhere ---------- */
+body.garrison[data-g-console] * { scrollbar-width: none; }
+body.garrison[data-g-console] *::-webkit-scrollbar { display: none; }
+@keyframes g-toast-text { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Store and Game Pass (garrison-theme-store.js adds the featured banner) ---------- */
+#g-store-hero { display: none; }
+body.garrison[data-g-console] #g-store-hero:not([hidden]) {
+  position: relative; display: block; width: 100%; height: calc(400 * var(--cpx)); margin: 0 0 calc(30 * var(--cpx)); padding: 0; overflow: hidden; border: 0;
+  color: #fff; text-align: left; cursor: pointer; background: #111;
+}
+#g-store-hero .g-hero-back { position: absolute; inset: -10%; background: var(--g-hero-art) center / cover no-repeat; filter: blur(34px) brightness(.55) saturate(1.3); transform: scale(1.1); }
+#g-store-hero .g-hero-cover {
+  position: absolute; top: 50%; right: calc(80 * var(--cpx)); width: calc(300 * var(--cpx)); aspect-ratio: 1; transform: translateY(-50%);
+  background: var(--g-hero-art) center / cover no-repeat; box-shadow: 0 calc(20 * var(--cpx)) calc(50 * var(--cpx)) rgba(0, 0, 0, .55);
+}
+#g-store-hero .g-hero-copy { position: absolute; left: calc(56 * var(--cpx)); bottom: calc(48 * var(--cpx)); display: grid; gap: calc(8 * var(--cpx)); max-width: 55%; }
+#g-store-hero em { font-style: normal; font-size: calc(17 * var(--cpx)); letter-spacing: .04em; color: rgba(255, 255, 255, .78); }
+#g-store-hero strong { font-size: calc(48 * var(--cpx)); line-height: 1.05; }
+#g-store-hero small { font-size: calc(22 * var(--cpx)); color: rgba(255, 255, 255, .85); }
+#g-store-hero b { justify-self: start; margin-top: calc(12 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(26 * var(--cpx)); background: #107c10; font-size: calc(19 * var(--cpx)); font-weight: 600; }
+body.garrison[data-g-console] #g-store-hero:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; }
+body.garrison[data-g-console] #store-view:not([hidden]) #g-store-hero:not([hidden]) .g-hero-back { animation: g-hero-drift 24s ease-in-out infinite alternate; }
+@keyframes g-hero-drift { from { transform: scale(1.1); } to { transform: scale(1.2) translate(-2%, -1%); } }
+/* The grid: console boxart tiles with name and price beneath. */
+body.garrison[data-g-console] #store-view { padding: 0 var(--g-gutter) calc(120 * var(--cpx)); }
+body.garrison[data-g-console] #console-store-grid { grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--cpx)), 1fr)) !important; gap: calc(14 * var(--cpx)) var(--g-gap) !important; }
+body.garrison[data-g-console] .g-store-card .g-card-text strong { font-size: calc(18 * var(--cpx)); }
+body.garrison[data-g-console] .g-store-card .g-card-text small { font-size: calc(16 * var(--cpx)); }
+body.garrison[data-g-console] .console-store-tabs { margin: 0 0 calc(24 * var(--cpx)); }
+body.garrison[data-g-console] .g-store-toolbar { margin: 0 0 calc(22 * var(--cpx)); }
+body.garrison[data-g-console] #store-view :is(.console-store-tabs, .g-store-toolbar, .console-page-heading) { position: static !important; top: auto !important; }
+body.garrison[data-g-theme="series"] main { scroll-padding-top: calc(180 * var(--cpx)); }
+body.garrison[data-g-theme="one"] main { scroll-padding-top: calc(230 * var(--cpx)); }
+
+/* ---------- Backgrounds (garrison-theme-backgrounds.js) ---------- */
+#g-theme-wall .g-wall-image { position: absolute; inset: 0; display: none; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 1; transition: opacity .5s ease; }
+body[data-g-bg] #g-theme-wall .g-wall-image { display: block; }
+body[data-g-bg] #g-theme-wall .g-wall-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .3), rgba(0, 0, 0, .05) 35%, rgba(0, 0, 0, .35)); }
+body.garrison[data-g-theme="series"][data-g-bg].home-active :is(#ambient, #ambient-next).ambient-layer { visibility: hidden !important; opacity: 0 !important; }
+.g-bg-section[hidden] { display: none; }
+.g-bg-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+.g-bg-option { display: grid; gap: 8px; padding: 8px 8px 10px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, .07); color: #fff; text-align: left; font: inherit; font-size: 14px; cursor: pointer; }
+.g-bg-option.on { background: rgba(76, 154, 68, .22); box-shadow: inset 0 0 0 2px #4c9a44; }
+.g-bg-thumb { display: block; aspect-ratio: 16 / 9; border-radius: 4px; background: #333 center / cover no-repeat; }
+.g-bg-thumb[data-kind="default"] { background: radial-gradient(ellipse at 50% 40%, #666, #222); }
+.g-bg-thumb[data-kind="game"] { background: linear-gradient(135deg, #3c5b8a, #1e2a3b); }
+.g-bg-thumb[data-kind="game"]::after { content: "Game art"; display: grid; place-items: center; height: 100%; color: rgba(255, 255, 255, .8); font-size: 12px; }
+.g-bg-thumb[data-kind="custom"]:not([style]) { background: repeating-linear-gradient(45deg, #2a2a2a 0 10px, #333 10px 20px); }
+
+/* ---------- Era-correct icons: Segoe MDL2 Assets on One and 360, Fluent elsewhere ---------- */
+.g-mdl2 { display: none; font-family: "Segoe MDL2 Assets"; font-style: normal; font-weight: normal; line-height: 1; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]) :is(.g-one-pin, .g-one-spot, .g-hub-tile, .g-360-tile, .g-360-big) svg.g-glyph:has(+ .g-mdl2) { display: none !important; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]) :is(.g-one-pin, .g-one-spot, .g-hub-tile, .g-360-tile, .g-360-big) .g-mdl2 { display: block; }
+body.garrison[data-g-theme="one"] .g-one-pin .g-mdl2 { align-self: center; margin-top: calc(24 * var(--cpx)); font-size: calc(52 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .g-one-spot .g-mdl2 { position: absolute; top: calc(14 * var(--cpx)); left: calc(14 * var(--cpx)); font-size: calc(36 * var(--cpx)); }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]) .g-hub-tile > .g-mdl2 { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: calc(68 * var(--cpx)); }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]) .g-hub-tile:has(.g-hub-img) > .g-mdl2 { display: none; }
+body.garrison[data-g-theme="x360"] .g-360-tile.lime .g-mdl2 { align-self: center; margin-top: calc(26 * var(--cpx)); font-size: calc(70 * var(--cpx)); }
+
+/* ---------- The art rule (garrison-theme-art.js): a cover never fills a wide slot ---------- */
+.g-cover-fallback { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.g-cover-fallback::before { content: ""; position: absolute; inset: -20%; background: var(--g-cover) center / cover no-repeat; filter: blur(28px) brightness(.5) saturate(1.2); }
+.g-cover-fallback i { position: absolute; top: 8%; bottom: 8%; left: 50%; aspect-ratio: 1; transform: translateX(-50%); background: var(--g-cover) center / cover no-repeat; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+.g-art-cover { background-image: none !important; }
+.g-art-cover > :not(.g-cover-fallback) { position: relative; z-index: 1; }
+body.garrison[data-g-console] .g-series-card[data-g-wide-art] { background-image: var(--g-art, linear-gradient(135deg, #1b5e1b, #0d2b0d)) !important; }
+body.garrison[data-g-theme="one"] #recent-row > .game-card[data-g-wide-art]:first-child { background: var(--g-art, #1e3a1e) center / cover no-repeat !important; }
+body.garrison[data-g-theme="one"] #recent-row > .game-card[data-g-wide-art]:first-child:is([style*="--g-art"], .g-art-cover) > :is(img, .art-fallback) { visibility: hidden; }
+
+/* ---------- Accent colour ---------- */
+.g-accent-section[hidden] { display: none; }
+.g-accent-options { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.g-accent-option { width: 52px; height: 52px; border: 0; border-radius: 6px; background: var(--swatch); cursor: pointer; }
+.g-accent-option.on { box-shadow: 0 0 0 3px #fff; }
+body.garrison[data-g-theme="x360"][data-g-accent] { --x-lime: var(--g-accent); --h-lime: var(--g-accent); --g-green: var(--g-accent); }
+body.garrison[data-g-theme="one"][data-g-accent] { --h-lime: var(--g-accent); --g-green: var(--g-accent); }
+body.garrison[data-g-theme="one"][data-g-accent] :is(.g-one-pin:not(.blue), .g-one-spot.green, .g-lib-item.active, #detail-play, .g-control-button.primary, button.primary, #toast::before, .console-store-tabs button.active) { background-color: var(--g-accent) !important; }
+body.garrison[data-g-theme="series"][data-g-accent] { --s-green: var(--g-accent); --g-green: var(--g-accent); }
+body.garrison[data-g-theme="series"][data-g-accent] :is(.g-lib-item.active, #detail-play, .g-control-button.primary, button.primary, .console-store-tabs button.active, #g-store-hero b, #settings-dialog .settings-sidebar .settings-tab.active) { background-color: var(--g-accent) !important; }
+
+/* ---------- Controller disconnected ---------- */
+#g-controller-lost { position: fixed; inset: 0; z-index: 150; display: grid; place-items: center; background: rgba(0, 0, 0, .78); opacity: 0; transition: opacity .3s ease; }
+#g-controller-lost.on { opacity: 1; }
+#g-controller-lost[hidden] { display: none; }
+#g-controller-lost .g-lost-card { display: grid; justify-items: center; gap: 14px; max-width: 640px; padding: 40px 48px; text-align: center; color: #fff; }
+#g-controller-lost img { width: 140px; filter: brightness(10); opacity: .9; }
+#g-controller-lost strong { font: 400 34px/1.2 "Segoe UI", sans-serif; }
+#g-controller-lost p { margin: 0; font: 300 20px/1.4 "Segoe UI Light", "Segoe UI", sans-serif; color: rgba(255, 255, 255, .85); }
+#g-controller-lost small { margin-top: 10px; font-size: 15px; color: rgba(255, 255, 255, .6); }
+body[data-g-theme="x360"] #g-controller-lost .g-lost-card { background: linear-gradient(#f2f2f2, #cfcfcf); color: #333; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+body[data-g-theme="x360"] #g-controller-lost img { filter: none; }
+body[data-g-theme="x360"] #g-controller-lost p, body[data-g-theme="x360"] #g-controller-lost small { color: #444; }
+body[data-g-theme="one"] #g-controller-lost .g-lost-card { background: #107c10; }
+body[data-g-theme="series"] #g-controller-lost .g-lost-card { background: #1f1f1f; border-radius: 8px; }
+
+/* ---------- Quick Resume (Series) ---------- */
+body.garrison[data-g-theme="series"] .game-card.g-quick-resume::before {
+  content: "Quick Resume"; position: absolute; left: calc(8 * var(--cpx)); top: calc(8 * var(--cpx)); z-index: 3; padding: calc(4 * var(--cpx)) calc(10 * var(--cpx));
+  border-radius: calc(4 * var(--cpx)); background: rgba(0, 0, 0, .7); color: #fff; font: 600 calc(13 * var(--cpx))/1.2 var(--g-font);
+}

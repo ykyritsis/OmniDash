@@ -503,7 +503,10 @@ input[type="password"], input[type="search"], #steam-id64 { width: 100%; margin-
 .launch-overlay.active { opacity: 1; }
 .launch-art { position: absolute; inset: -2%; background-position: center; background-size: cover; filter: saturate(.85) brightness(.74); transform: scale(1.045); transition: transform 5s cubic-bezier(.16,.84,.22,1); }
 .launch-overlay.active .launch-art { transform: scale(1); }
-.launch-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, transparent 25%, rgba(4,7,10,.2) 58%, rgba(4,7,10,.86) 100%), linear-gradient(180deg, rgba(4,7,10,.2), transparent 45%, rgba(4,7,10,.77)); backdrop-filter: blur(1.4px); }
+/* No backdrop-filter here: it sits above .launch-art, which runs a 14-second scale animation, so the
+   compositor had to re-read and re-blur the whole viewport every frame for a 1.4px effect the two
+   gradients already provide. */
+.launch-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, transparent 25%, rgba(4,7,10,.2) 58%, rgba(4,7,10,.86) 100%), linear-gradient(180deg, rgba(4,7,10,.2), transparent 45%, rgba(4,7,10,.77)); }
 .launch-brand { position: absolute; top: 3.5vh; left: 2.5vw; width: clamp(44px, 3.8vw, 68px); height: clamp(44px, 3.8vw, 68px); padding: 10px; border-radius: 12px; background: rgba(21,42,38,.62); box-shadow: 0 0 18px rgba(255,255,255,.72), 0 0 0 2px rgba(255,255,255,.85); }
 .launch-copy { position: absolute; left: 50%; bottom: 10.5vh; transform: translateX(-50%); display: grid; gap: 7px; min-width: 320px; text-align: center; text-shadow: 0 3px 18px #000; }
 .launch-copy strong { font-size: clamp(28px, 2.7vw, 46px); }
@@ -515,11 +518,9 @@ input[type="password"], input[type="search"], #steam-id64 { width: 100%; margin-
 .launch-progress { position: absolute; left: 2vw; right: 2vw; bottom: 2vh; height: 13px; overflow: hidden; border-radius: 8px; background: rgba(255,255,255,.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
 .launch-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #d8dcdf, white); box-shadow: 0 0 16px white; }
 .launch-overlay.active .launch-progress span { animation: launch-progress 2.1s cubic-bezier(.12,.72,.2,1) forwards; }
-.toast { position: fixed; z-index: 20; left: 50%; bottom: 34px; transform: translate(-50%, 20px); padding: 11px 18px; background: #f3f5f6; color: #101214; font-weight: 650; opacity: 0; pointer-events: none; transition: 180ms ease; }
+.toast { position: fixed; z-index: 20; left: 50%; bottom: 34px; transform: translate(-50%, 20px); padding: 11px 18px; background: #f3f5f6; color: #101214; font-weight: 650; opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-.loading-card { animation: pulse 1.4s ease-in-out infinite; background: linear-gradient(105deg, #121a20 25%, #25313a 40%, #121a20 55%); background-size: 300% 100%; }
-@keyframes pulse { to { background-position: -100% 0; } }
 @keyframes tile-enter { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes shelf-enter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes view-enter { from { opacity: 0; transform: translateY(13px) scale(.995); filter: blur(2px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }

@@ -1,0 +1,244 @@
+/* SERIES: the Xbox Series X|S dashboard (2020 onward). Sizes are 1080p console pixels (--cpx).
+   Reference layout: profile top left, a centred row of round icons with the current one ringed in green and
+   named beneath, the time top right; the selected game's art fills the screen; a low row of square tiles
+   (176 px, 12 px apart) with a thick white focus ring and a slight lift; wide cards beneath. */
+body.garrison[data-g-theme="series"] {
+  --g-bg: #050c05;
+  --g-surface: rgba(255, 255, 255, .1);
+  --g-surface-2: rgba(255, 255, 255, .16);
+  --g-surface-3: rgba(255, 255, 255, .22);
+  --g-green: #107c10;
+  --g-green-hover: #1a8f1a;
+  --g-radius: calc(4 * var(--cpx));
+  --tile-radius: calc(4 * var(--cpx)) !important;
+  --g-tile: calc(176 * var(--cpx));
+  --g-gap: calc(12 * var(--cpx));
+  --g-ring: 0 0 0 calc(4 * var(--cpx)) #fff, 0 calc(8 * var(--cpx)) calc(22 * var(--cpx)) rgba(0, 0, 0, .55);
+  --g-font: "Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
+  --g-lib-side: calc(420 * var(--cpx));
+  --s-green: #3fbf3f;
+}
+html:has(body[data-g-theme="series"]) { background: #050c05; }
+
+/* ---------- Wallpaper: the green swirl, and the selected game's art over it on Home ---------- */
+body.garrison[data-g-theme="series"] #g-theme-wall, body.garrison[data-g-theme="series"] #g-theme-wall .g-wall-series { display: block; }
+body.garrison[data-g-theme="series"] .g-swirl-ribbons { transform-origin: 50% 80%; animation: g-swirl 38s ease-in-out infinite alternate; }
+@keyframes g-swirl { from { transform: translate(-2%, 0) scale(1.02); } to { transform: translate(2%, -2%) scale(1.06) rotate(-1deg); } }
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer {
+  visibility: visible !important; z-index: 0; background-size: cover !important; background-position: center 30% !important; transition: opacity .7s ease !important;
+}
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { opacity: 1 !important; }
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .55) 0, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 42%, rgba(2, 8, 2, .78) 66%, #020802 88%);
+}
+
+/* ---------- Top bar ---------- */
+body.garrison[data-g-theme="series"] .topbar {
+  height: calc(132 * var(--cpx)); padding: 0 var(--g-gutter); background: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent);
+}
+body.garrison[data-g-theme="series"] .g-xbox-pill { height: calc(52 * var(--cpx)); min-height: 0; min-width: 0; padding: 0 calc(14 * var(--cpx)) 0 calc(4 * var(--cpx)); gap: calc(6 * var(--cpx)); border: 0; background: rgba(0, 0, 0, .3); }
+body.garrison[data-g-theme="series"] .g-xbox-action { min-height: 0; padding: 0 calc(8 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-xbox-mark { width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .top-center-nav { gap: calc(36 * var(--cpx)); }
+body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) { position: relative; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); border-radius: 50%; }
+body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) > svg { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .top-nav-button .gamepass-glyph { transform: scale(.8); }
+body.garrison[data-g-theme="series"] .top-nav-button.active { background: transparent; color: #fff; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green); }
+body.garrison[data-g-theme="series"] .top-nav-button.focused { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; background: rgba(255, 255, 255, .12); }
+body.garrison[data-g-theme="series"] .top-nav-button:is(.active, .focused)::after {
+  content: attr(data-g-label); display: block !important; opacity: 1; padding: 0; background: none; position: absolute; top: calc(100% + 10 * var(--cpx)); left: 50%;
+  transform: translateX(-50%); white-space: nowrap; color: #fff; font: 600 calc(16 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px 4px rgba(0, 0, 0, .8); pointer-events: none;
+}
+body.garrison[data-g-theme="series"] .dashboard-clock { margin-left: calc(14 * var(--cpx)); font: 600 calc(22 * var(--cpx))/1 var(--g-font); color: #fff; }
+body.garrison[data-g-theme="series"] .topbar #profile-button { display: none !important; }
+body.garrison[data-g-theme="series"] #g-series-me {
+  display: flex; align-items: center; gap: calc(12 * var(--cpx)); margin-right: calc(18 * var(--cpx)); padding: calc(4 * var(--cpx)) calc(16 * var(--cpx)) calc(4 * var(--cpx)) calc(4 * var(--cpx));
+  border: 0; border-radius: calc(32 * var(--cpx)); background: transparent; color: #fff; text-align: left;
+}
+body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar { display: grid; place-items: center; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); overflow: hidden; border-radius: 50%; background: #2a2b2b; }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-copy { display: grid; gap: calc(2 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-series-me strong { font: 600 calc(20 * var(--cpx))/1.15 var(--g-font); }
+body.garrison[data-g-theme="series"] #g-series-me small { font: 400 calc(15 * var(--cpx))/1.2 var(--g-font); color: rgba(255, 255, 255, .7); }
+body.garrison[data-g-theme="series"] #g-series-me:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+
+/* ---------- Home ---------- */
+body.garrison[data-g-theme="series"] main { padding-top: 0; }
+body.garrison[data-g-theme="series"] #home-view { --g-tile: calc(176 * var(--cpx)); padding-top: calc(560 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .dashboard-recent > .section-heading { display: none !important; }
+body.garrison[data-g-theme="series"] #recent-row, body.garrison[data-g-theme="series"] #recent-row.row-focused {
+  gap: var(--g-gap); padding: calc(10 * var(--cpx)) var(--g-gutter) calc(52 * var(--cpx)); margin: 0 !important;
+}
+body.garrison[data-g-theme="series"] #recent-row > :is(.game-card, .g-library-tile),
+body.garrison[data-g-theme="series"] #recent-row:not(.row-focused) > :is(.game-card, .g-library-tile) {
+  flex: 0 0 var(--g-tile); width: var(--g-tile); height: var(--g-tile); border-radius: var(--tile-radius); transition: transform .14s ease, box-shadow .14s ease !important;
+}
+body.garrison[data-g-theme="series"] #recent-row > .game-card:is(.focused, :focus-visible) { transform: scale(1.08) !important; z-index: 2; }
+body.garrison[data-g-theme="series"] #recent-row > .game-card .g-card-text { display: none !important; }
+body.garrison[data-g-theme="series"] #recent-row > .game-card.focused::after {
+  content: attr(aria-label); position: absolute; left: 0; top: calc(100% + 12 * var(--cpx)); max-width: calc(var(--g-tile) * 3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: #fff; font: 600 calc(18 * var(--cpx))/1.2 var(--g-font); text-shadow: 0 1px 6px rgba(0, 0, 0, .9); transform: scale(.926); transform-origin: 0 0;
+}
+body.garrison[data-g-theme="series"] #g-series-cards { display: flex; gap: var(--g-gap); padding: 0 var(--g-gutter) calc(40 * var(--cpx)); overflow-x: auto; scrollbar-width: none; }
+body.garrison[data-g-theme="series"] .g-series-card {
+  position: relative; flex: 0 0 calc(420 * var(--cpx)); height: calc(150 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: var(--tile-radius);
+  background: var(--g-card-art, linear-gradient(135deg, #1b5e1b, #0d2b0d)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer; transition: transform .14s ease;
+}
+body.garrison[data-g-theme="series"] .g-series-card[data-action="dashboard-gamepass"] { background: radial-gradient(circle at 80% 20%, #46c946, #107c10 45%, #0a3f0a); }
+body.garrison[data-g-theme="series"] .g-series-card[data-action="dashboard-store"] { background: linear-gradient(120deg, #2b1050, #6b1f8f 55%, #d1418c); }
+body.garrison[data-g-theme="series"] .g-series-card[data-action="g-friends"] { background: linear-gradient(135deg, #1d2a36, #0e1620); }
+body.garrison[data-g-theme="series"] .g-series-card > span {
+  position: absolute; inset: auto 0 0; display: flex !important; flex-direction: column; align-items: flex-start; gap: calc(4 * var(--cpx));
+  padding: calc(30 * var(--cpx)) calc(18 * var(--cpx)) calc(14 * var(--cpx)); background: linear-gradient(transparent, rgba(0, 0, 0, .75));
+}
+body.garrison[data-g-theme="series"] .g-series-card > span > :is(strong, small) { display: block; position: static; margin: 0; white-space: normal; }
+body.garrison[data-g-theme="series"] .g-series-card strong { font: 600 calc(20 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="series"] .g-series-card small { font: 400 calc(16 * var(--cpx))/1.3 var(--g-font); color: rgba(255, 255, 255, .8); }
+body.garrison[data-g-theme="series"] .g-series-card:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; transform: scale(1.04); z-index: 2; }
+/* The rows further down keep the same tile language. */
+body.garrison[data-g-theme="series"] :is(.collection-band, #g-home-rows > *) { background: transparent; }
+body.garrison[data-g-theme="series"] .collection-band .collection-intro h2 { font: 600 calc(24 * var(--cpx))/1.2 var(--g-font) !important; }
+body.garrison[data-g-theme="series"] .collection-band .game-row .game-card { --tile-radius: calc(4 * var(--cpx)); }
+
+/* ---------- My games & apps ---------- */
+body.garrison[data-g-theme="series"] #library-view:not([hidden]) { background: #1c1d1d; }
+body.garrison[data-g-theme="series"] #g-lib-side { gap: calc(6 * var(--cpx)); padding: calc(40 * var(--cpx)) calc(24 * var(--cpx)); background: #141515; }
+body.garrison[data-g-theme="series"] .g-lib-player { display: flex; align-items: center; gap: calc(14 * var(--cpx)); padding: 0 calc(10 * var(--cpx)) calc(22 * var(--cpx)); font: 600 calc(20 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="series"] .g-lib-avatar { display: grid; place-items: center; width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); overflow: hidden; border-radius: 50%; background: #2a2b2b; }
+body.garrison[data-g-theme="series"] .g-lib-avatar :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
+body.garrison[data-g-theme="series"] .g-lib-search {
+  display: flex; align-items: center; gap: calc(12 * var(--cpx)); height: calc(52 * var(--cpx)); margin: 0 0 calc(18 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border: 0;
+  border-radius: calc(26 * var(--cpx)); background: #2a2b2b; color: rgba(255, 255, 255, .78); font: 400 calc(19 * var(--cpx))/1 var(--g-font);
+}
+body.garrison[data-g-theme="series"] .g-lib-search .g-glyph { width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-lib-search:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) var(--s-green) !important; color: #fff; }
+body.garrison[data-g-theme="series"] .g-lib-nav { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-lib-nav hr { width: 100%; margin: calc(14 * var(--cpx)) 0; border: 0; border-top: 1px solid rgba(255, 255, 255, .1); }
+body.garrison[data-g-theme="series"] .g-lib-item {
+  display: flex; align-items: center; gap: calc(16 * var(--cpx)); height: calc(56 * var(--cpx)); padding: 0 calc(16 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx));
+  background: transparent; color: #fff; font: 400 calc(21 * var(--cpx))/1 var(--g-font); text-align: left;
+}
+body.garrison[data-g-theme="series"] .g-lib-item .g-lib-icon { display: grid; place-items: center; width: calc(26 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-lib-item .g-glyph { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-lib-item em { margin-left: auto; font-style: normal; font-size: calc(18 * var(--cpx)); color: rgba(255, 255, 255, .6); }
+body.garrison[data-g-theme="series"] .g-lib-item.active { background: #107c10; }
+body.garrison[data-g-theme="series"] .g-lib-item.active em { color: #fff; }
+body.garrison[data-g-theme="series"] .g-lib-item:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+body.garrison[data-g-theme="series"] .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(14 * var(--cpx)) calc(10 * var(--cpx)); font: 400 calc(16 * var(--cpx))/1.3 var(--g-font); }
+body.garrison[data-g-theme="series"] .g-lib-storage strong { display: block; font-weight: 600; }
+body.garrison[data-g-theme="series"] .g-lib-storage small { color: rgba(255, 255, 255, .65); }
+body.garrison[data-g-theme="series"] .g-lib-ring { display: grid; place-items: center; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); border-radius: 50%; background: conic-gradient(var(--s-green) calc(var(--used) * 1%), rgba(255, 255, 255, .14) 0); }
+body.garrison[data-g-theme="series"] .g-lib-ring b { display: grid; place-items: center; width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); border-radius: 50%; background: #141515; font-size: calc(12 * var(--cpx)); font-weight: 600; }
+body.garrison[data-g-theme="series"] .console-library-content { padding: calc(44 * var(--cpx)) var(--g-gutter) calc(120 * var(--cpx)) calc(44 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-lib-title h1 { margin: 0 0 calc(20 * var(--cpx)); font: 600 calc(34 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="series"] #g-lib-title small { display: none; }
+body.garrison[data-g-theme="series"] .g-library-toolbar { display: flex; align-items: center; gap: calc(12 * var(--cpx)); min-height: calc(48 * var(--cpx)); margin: 0 0 calc(22 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-library-toolbar > * { flex: none; }
+body.garrison[data-g-theme="series"] .g-library-toolbar .g-toolbar-spacer { flex: 1; }
+body.garrison[data-g-theme="series"] .g-library-toolbar #library-filter-button { width: calc(64 * var(--cpx)); height: calc(46 * var(--cpx)); border-radius: calc(23 * var(--cpx)); background: #2a2b2b; }
+body.garrison[data-g-theme="series"] .g-library-toolbar #g-sort-button { height: auto; padding: 0; background: none; }
+body.garrison[data-g-theme="series"] .g-library-toolbar .g-sort-pill { height: calc(46 * var(--cpx)); min-height: 0; padding: 0 calc(20 * var(--cpx)); border-radius: calc(23 * var(--cpx)); background: #2a2b2b; font-size: calc(18 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #library-count { font-size: calc(18 * var(--cpx)); color: rgba(255, 255, 255, .6); }
+body.garrison[data-g-theme="series"] .library-grid, body.garrison[data-g-theme="series"] .library-grid.dense-results {
+  grid-template-columns: repeat(auto-fill, minmax(calc(196 * var(--cpx)), 1fr)) !important; gap: var(--g-gap) !important;
+}
+body.garrison[data-g-theme="series"] .library-grid .game-card .g-card-text { display: none !important; }
+body.garrison[data-g-theme="series"] .library-grid .game-card > :is(img, .art-fallback) { border-radius: var(--tile-radius); }
+body.garrison[data-g-theme="series"] .library-grid .game-card { transition: transform .12s ease !important; }
+body.garrison[data-g-theme="series"] .library-grid .game-card.focused { transform: scale(1.06) !important; z-index: 2; }
+body.garrison[data-g-theme="series"] .library-grid.apps-grid .app-list-icon { border-radius: var(--tile-radius); background: #2a2b2b; }
+
+/* ---------- Game page ---------- */
+body.garrison[data-g-theme="series"] #detail-title { font: 600 calc(64 * var(--cpx))/1.05 var(--g-font); letter-spacing: -.01em; }
+body.garrison[data-g-theme="series"] #game-detail-view :is(.detail-byline, .detail-description) { font-size: calc(20 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .detail-actions > button { min-height: calc(60 * var(--cpx)); border-radius: calc(4 * var(--cpx)) !important; }
+body.garrison[data-g-theme="series"] #detail-play { min-width: calc(260 * var(--cpx)); background: #107c10 !important; font: 600 calc(22 * var(--cpx))/1 var(--g-font) !important; }
+body.garrison[data-g-theme="series"] .detail-actions > button:not(#detail-play) { min-width: calc(60 * var(--cpx)); background: rgba(32, 34, 32, .8) !important; }
+body.garrison[data-g-theme="series"] #game-detail-view .detail-section h2 { font: 600 calc(26 * var(--cpx))/1.2 var(--g-font); }
+body.garrison[data-g-theme="series"] #game-detail-view .detail-tabs button.active { box-shadow: inset 0 calc(-3 * var(--cpx)) 0 var(--s-green); }
+
+/* ---------- Menus, dialogs, Settings ---------- */
+body.garrison[data-g-theme="series"] :is(dialog, .g-flyout) { border-radius: calc(6 * var(--cpx)) !important; background-color: rgba(28, 31, 28, .97) !important; }
+body.garrison[data-g-theme="series"] :is(.g-control-button.primary, button.primary, .option-play) { background: #107c10 !important; border-radius: calc(4 * var(--cpx)) !important; }
+body.garrison[data-g-theme="series"] :is(.g-menu-item, .g-control-button, .g-button) { border-radius: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #settings-dialog { background-color: #1c1d1d !important; }
+body.garrison[data-g-theme="series"] #settings-dialog .settings-sidebar { background: #141515; }
+body.garrison[data-g-theme="series"] #settings-dialog .settings-sidebar .settings-tab { border-radius: calc(4 * var(--cpx)); font-size: calc(21 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #settings-dialog .settings-sidebar .settings-tab.active { background: #107c10 !important; color: #fff; }
+body.garrison[data-g-theme="series"] #settings-dialog :is(.g-menu-item, .g-setting-row, .toggle-row) { border-radius: calc(4 * var(--cpx)) !important; }
+body.garrison[data-g-theme="series"] #game-options-dialog { border-radius: 0 !important; background-color: #1c1d1d !important; }
+body.garrison[data-g-theme="series"] #game-options-dialog :is(.options-tabs button[aria-selected="true"], .options-tabs .active) { background: #107c10 !important; color: #fff; border-radius: calc(4 * var(--cpx)); }
+
+/* ---------- Launch, boot, notifications, dimming ---------- */
+body.garrison[data-g-theme="series"] #launch-overlay #launch-art { filter: blur(42px) brightness(.42) saturate(1.2) !important; transform: scale(1.18) !important; }
+body.garrison[data-g-theme="series"] #launch-overlay .g-theme-cover {
+  width: calc(400 * var(--cpx)); border-radius: calc(6 * var(--cpx)); box-shadow: 0 calc(24 * var(--cpx)) calc(60 * var(--cpx)) rgba(0, 0, 0, .6);
+  animation: g-series-cover .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes g-series-cover { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+body.garrison[data-g-theme="series"] #launch-overlay .g-launch-ring {
+  left: 50%; top: calc(50% + 250 * var(--cpx)); right: auto; bottom: auto; width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); margin-left: calc(-20 * var(--cpx));
+  border: calc(4 * var(--cpx)) solid rgba(255, 255, 255, .18); border-top-color: #fff; border-radius: 50%; animation: g-series-spin .9s linear infinite;
+}
+@keyframes g-series-spin { to { transform: rotate(360deg); } }
+body.garrison[data-g-theme="series"] #startup-screen { background: #000; }
+body.garrison[data-g-theme="series"] #startup-screen .g-boot-bloom { background: radial-gradient(circle, rgba(16, 124, 16, .55), rgba(16, 124, 16, .12) 32%, transparent 60%); }
+body.garrison[data-g-theme="series"] #startup-screen .g-boot-ring { display: none; }
+body.garrison[data-g-theme="series"] #toast { border-radius: calc(34 * var(--cpx)) !important; background-color: rgba(28, 30, 28, .97) !important; border: 0 !important; box-shadow: 0 calc(10 * var(--cpx)) calc(30 * var(--cpx)) rgba(0, 0, 0, .5); }
+body.garrison[data-g-theme="series"] #toast::before { width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); align-self: center; margin-left: calc(6 * var(--cpx)); border-radius: 50%; }
+body[data-g-theme="series"] #g-theme-saver { background: rgba(0, 0, 0, .55); }
+body[data-g-theme="series"] #g-theme-saver .g-saver-drift { display: none; }
+body[data-g-theme="series"]:has(#g-theme-saver.on) :is(main, .topbar) { opacity: 0; transition: opacity 1.2s ease; }
+body[data-g-theme="series"]:has(#g-theme-saver.on) #g-theme-wall { z-index: 79; }
+
+/* ---------- Motion ---------- */
+body.garrison[data-g-theme="series"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-series-page .32s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-series-page { from { opacity: 0; transform: translateY(calc(16 * var(--cpx))); } to { opacity: 1; transform: none; } }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) :is(#recent-row > *, .g-series-card) { animation: g-series-tile .4s cubic-bezier(.2, .8, .2, 1) both; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(2) { animation-delay: .03s; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(3) { animation-delay: .06s; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(4) { animation-delay: .09s; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) #recent-row > :nth-child(n+5) { animation-delay: .12s; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) .g-series-card { animation-delay: .16s; }
+@keyframes g-series-tile { from { opacity: 0; transform: translateY(calc(20 * var(--cpx))) scale(.96); } to { opacity: 1; transform: none; } }
+body.garrison[data-g-theme="series"] .g-series-card > span, body.garrison[data-g-theme="series"] .g-series-card > span > * { text-align: left; }
+body.garrison[data-g-theme="series"] .g-library-toolbar .g-sort-pill :is(span, select, button, strong) { font-size: inherit; }
+
+/* ---------- Life ---------- */
+/* The backdrop drifts and slowly pushes in while you rest on a game. */
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { animation: g-series-drift 26s ease-in-out infinite alternate; }
+@keyframes g-series-drift { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.1) translate(-1.6%, -1%); } }
+/* Focus springs with a short overshoot, like the dashboard tiles. */
+body.garrison[data-g-theme="series"] :is(#recent-row > .game-card, .library-grid .game-card, .g-series-card, .collection-band .game-card) { transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s ease !important; }
+/* Your Gamerscore under your name. */
+body.garrison[data-g-theme="series"] #g-series-me .g-me-g {
+  display: inline-grid; place-items: center; width: calc(17 * var(--cpx)); height: calc(17 * var(--cpx)); margin-right: calc(2 * var(--cpx)); border-radius: 50%;
+  background: #fff; color: #111; font: 700 calc(11 * var(--cpx))/1 var(--g-font); vertical-align: calc(1 * var(--cpx));
+}
+/* The launch splash: the key art, sharp, with the logo in the middle. */
+body.garrison[data-g-theme="series"] #launch-overlay.g-has-logo #launch-art { filter: brightness(.62) saturate(1.1) !important; transform: scale(1.04) !important; }
+body.garrison[data-g-theme="series"] #launch-overlay.g-has-logo .g-launch-ring { top: auto; bottom: calc(110 * var(--cpx)); }
+/* Notifications: the green circle arrives first, then opens into the pill. */
+body.garrison[data-g-theme="series"] #toast.g-toast-in { animation: g-series-toast .62s cubic-bezier(.2, .8, .2, 1) both; }
+body.garrison[data-g-theme="series"] #toast.g-toast-in > * { animation: g-toast-text .5s .28s both; }
+body.garrison[data-g-theme="series"] #toast.g-toast-in::before { animation: g-series-badge .4s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes g-series-toast {
+  0%, 35% { clip-path: inset(0 calc(100% - 64 * var(--cpx)) 0 0 round calc(34 * var(--cpx))); }
+  100% { clip-path: inset(0 0 0 0 round calc(34 * var(--cpx))); }
+}
+@keyframes g-series-badge { from { transform: scale(.4); } to { transform: none; } }
+/* SERIES-STORE */
+body.garrison[data-g-theme="series"] #g-store-hero { border-radius: calc(6 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-store-hero .g-hero-cover { border-radius: calc(6 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-store-hero b { border-radius: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-store-hero strong { font-weight: 600; }
+body.garrison[data-g-theme="series"] .console-store-tabs button { height: calc(46 * var(--cpx)); padding: 0 calc(22 * var(--cpx)); border-radius: calc(23 * var(--cpx)); font: 600 calc(18 * var(--cpx))/1 var(--g-font); }
+body.garrison[data-g-theme="series"] .console-store-tabs button.active { background: #107c10 !important; color: #fff; }
+body.garrison[data-g-theme="series"] .g-store-card .g-store-art img { border-radius: calc(4 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-store-card { transition: transform .28s cubic-bezier(.34, 1.56, .64, 1) !important; }
+body.garrison[data-g-theme="series"] .g-store-card.focused { transform: scale(1.05); z-index: 2; }
+/* Every page but Home and the full-bleed game page starts below the bar. */
+body.garrison[data-g-theme="series"]:not(.home-active):not(.detail-active):not(.library-active) main { padding-top: calc(160 * var(--cpx)); }
+/* The Series bar has only your profile on the left; the Xbox button on the controller still opens Game Bar. */
+body.garrison[data-g-theme="series"] .g-top-left > :not(#g-series-me) { display: none !important; }

@@ -105,8 +105,8 @@ function buildDiagnostics({ version, packaged, portable, electronVersion, platfo
 
 // Backup: the settings a player would hate to rebuild. API keys are left out unless the player explicitly includes them.
 const BACKUP_FIELDS = ['hiddenGameIds', 'favoriteGameIds', 'customCollections', 'artwork', 'playHistory', 'playCounts', 'customGames',
-  'gameLaunchOptions', 'gameCategoryOverrides', 'achievementReferenceAppIds', 'displayName', 'avatarId', 'profileNameMode',
-  'profileAvatarCustomized', 'uiScale', 'uiScaleCustomized', 'textScale', 'reducedMotion', 'highContrastFocus', 'steamInstallLibrary',
+  'gameLaunchOptions', 'installChoices', 'gameCategoryOverrides', 'achievementReferenceAppIds', 'displayName', 'avatarId', 'profileNameMode',
+  'profileAvatarCustomized', 'uiScale', 'uiScaleCustomized', 'textScale', 'reducedMotion', 'theme', 'highContrastFocus', 'steamInstallLibrary',
   'duplicateMode', 'duplicatePreferredProvider', 'duplicatePreferences', 'showUninstalledSteam', 'showUninstalledEpic',
   'showUninstalledUbisoft', 'showUninstalledEA', 'showUninstalledBattleNet', 'showUninstalledGog', 'showUninstalledAmazon',
   'includeSteamFamily', 'steamFamilyAccountId'];
@@ -125,7 +125,7 @@ function parseBackup(text) {
   let file;
   try { file = JSON.parse(String(text || '')); } catch { throw new Error('That file is not a settings backup.'); }
   if (!file || file.format !== BACKUP_FORMAT || file.formatVersion !== 1 || typeof file.data !== 'object') throw new Error('That file is not a settings backup from Xbox Preview UI.');
-  const shape = { hiddenGameIds: 'array', favoriteGameIds: 'array', customCollections: 'array', customGames: 'array', playHistory: 'array', artwork: 'object', playCounts: 'object', gameLaunchOptions: 'object', gameCategoryOverrides: 'object', achievementReferenceAppIds: 'object', duplicatePreferences: 'object' };
+  const shape = { hiddenGameIds: 'array', favoriteGameIds: 'array', customCollections: 'array', customGames: 'array', playHistory: 'array', artwork: 'object', playCounts: 'object', gameLaunchOptions: 'object', installChoices: 'object', gameCategoryOverrides: 'object', achievementReferenceAppIds: 'object', duplicatePreferences: 'object' };
   const data = {};
   for (const field of [...BACKUP_FIELDS, ...KEY_FIELDS]) {
     const value = file.data[field];

@@ -5,6 +5,7 @@ function gFilterOptions() {
   const present = new Set(state.games.filter(game => !game.isApp).map(game => game.provider));
   const launchers = gSources.filter(([provider]) => present.has(provider));
   const collections = [['all', 'All collections'], ['favorites', 'Favorites'], ['controller', 'Great with a controller'], ['multiplayer', 'Play together'],
+    ...(window.gSmartCollections || []),
     ...state.customCollections.map(group => [`custom:${group.id}`, group.name])];
   return [
     ['install', 'Show', [['all', 'All games'], ['installed', 'Installed'], ['not-installed', 'Not installed']], state.installFilter === 'all' ? 'all' : state.installFilter === 'installed' ? 'installed' : 'not-installed'],

@@ -40,3 +40,31 @@ body.garrison .steam-launch-choices button { width: 100%; min-height: 54px; heig
 body.garrison .steam-license-scroll { display: flex; gap: 12px; margin-bottom: 16px; }
 body.garrison #steam-launch-detail { margin: 0; max-width: 75vw; overflow-wrap: anywhere; text-align: center; color: #d2ddd6; }
 body.garrison #steam-launch-progress { width: min(420px, 70vw); height: 8px; accent-color: #99ceac; }
+
+/* ---- Launch screen, console style (see garrison-launch-feel.js) ---- */
+/* A splash, not a loading screen: static art on a dark base from the art's colours, no slow zoom. */
+body.garrison .launch-overlay { background: var(--g-launch-base, #050606); transition: opacity .38s ease, background-color .5s ease; }
+body.garrison .launch-overlay .launch-art { inset: 0 !important; transform: none; filter: saturate(1.05) brightness(.72) !important; }
+body.garrison .launch-overlay.active .launch-art { animation: none !important; }
+body.garrison .launch-overlay .launch-vignette { background: radial-gradient(125% 100% at 50% 45%, rgba(0, 0, 0, 0) 30%, color-mix(in srgb, var(--g-launch-base, #050606) 55%, #000) 100%), linear-gradient(180deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .42)) !important; }
+/* No Xbox mark, and no status, hint or Cancel until they are needed. */
+body.garrison .launch-overlay .launch-brand { display: none !important; }
+body.garrison .launch-overlay .g-launch-dots { display: none; }
+body.garrison .launch-overlay[data-g-splash] .g-launch-status, body.garrison .launch-overlay[data-g-splash] .g-launch-hint { opacity: 0; pointer-events: none; transition: opacity .45s ease; }
+body.garrison .launch-overlay[data-g-splash].g-revealed .g-launch-status, body.garrison .launch-overlay[data-g-splash].g-revealed .g-launch-hint { opacity: 1; pointer-events: auto; }
+/* One small ring, after a couple of seconds. */
+body.garrison .g-launch-ring { position: absolute; z-index: 1; left: 50%; bottom: 6.5vh; width: calc(2.2 * var(--p)); height: calc(2.2 * var(--p)); margin-left: calc(-1.1 * var(--p)); border: 2px solid rgba(255, 255, 255, .16); border-top-color: rgba(255, 255, 255, .7); border-radius: 50%; opacity: 0; animation: g-ring-in .5s 2s ease forwards, g-ring-spin .95s linear infinite; }
+@keyframes g-ring-in { to { opacity: 1; } }
+@keyframes g-ring-spin { to { transform: rotate(360deg); } }
+html.reduce-motion body.garrison .g-launch-ring { animation-name: g-ring-in !important; }
+/* It grows out of the tile you pressed: the window opens and the art scales into place. */
+body.garrison .launch-overlay.g-from-tile { animation: g-launch-expand .52s cubic-bezier(.2, .8, .2, 1) both; }
+body.garrison .launch-overlay.g-opening { opacity: 1 !important; transition: none; }
+body.garrison .launch-overlay.g-from-tile .launch-art { animation: g-launch-art .52s cubic-bezier(.2, .8, .2, 1) both !important; }
+body.garrison .launch-overlay.g-from-tile .launch-game-logo { animation-delay: .34s !important; }
+@keyframes g-launch-expand { from { clip-path: inset(var(--g-lt, 20vh) var(--g-lr, 30vw) var(--g-lb, 20vh) var(--g-ll, 30vw) round calc(1.1 * var(--p))); } to { clip-path: inset(0 0 0 0 round 0); } }
+@keyframes g-launch-art { from { transform: translate(var(--g-dx, 0), var(--g-dy, 0)) scale(var(--g-sx, .6)); } to { transform: none; } }
+/* The interface dims behind the growing screen and comes back as it fades. */
+#g-launch-scrim { position: fixed; inset: 0; z-index: 8999; background: rgba(0, 0, 0, .6); opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+#g-launch-scrim.on { opacity: 1; }
+body.garrison .launch-overlay.g-cancelling .g-launch-cancel, body.garrison .launch-overlay.g-cancelling .g-launch-hint { visibility: hidden; }

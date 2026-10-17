@@ -90,3 +90,71 @@ body.garrison .g-xbox-pill { gap: 2px; padding: 3px; min-height: 54px; cursor: d
 body.garrison .g-xbox-pill:hover { background: rgba(255, 255, 255, .04); }
 body.garrison .g-xbox-action { display: inline-flex; align-items: center; justify-content: center; align-self: stretch; min-width: 44px; min-height: 44px; padding: 0 calc(8 * var(--u)); border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 body.garrison .g-xbox-action:hover { background: var(--g-surface-2); }
+
+/* Install sheet: what to install (add-ons and language) above where. The sheet scrolls when it gets tall. */
+body.garrison .g-install-to { max-height: 90vh; overflow-y: auto; scrollbar-width: thin; }
+body.garrison .g-addons { margin: calc(1.2 * var(--p)) 0; padding: calc(1.2 * var(--p)) calc(1.4 * var(--p)); border-radius: calc(.9 * var(--p)); background: rgba(255, 255, 255, .05); }
+body.garrison .g-addons h3 { margin: 0 0 calc(.8 * var(--p)); font: 600 calc(1.5 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-addons h4 { margin: calc(1.1 * var(--p)) 0 calc(.5 * var(--p)); font: 600 calc(1.1 * var(--p)) / 1.2 var(--g-font); letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .55); }
+body.garrison .g-addons-base { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding: calc(.7 * var(--p)) calc(.9 * var(--p)); border-radius: calc(.6 * var(--p)); background: rgba(255, 255, 255, .04); }
+body.garrison .g-addons-base small { color: rgba(255, 255, 255, .55); }
+body.garrison .g-addon-list { display: grid; gap: calc(.5 * var(--p)); max-height: 30vh; overflow-y: auto; scrollbar-width: thin; }
+body.garrison .g-addon { display: flex; align-items: center; gap: calc(1 * var(--p)); width: 100%; padding: calc(.7 * var(--p)) calc(.9 * var(--p)); border: 0; border-radius: calc(.6 * var(--p)); background: rgba(255, 255, 255, .05); color: #fff; text-align: left; }
+body.garrison .g-addon.focused, body.garrison .g-addon:hover { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-addon.locked { opacity: .55; }
+body.garrison .g-addon-box { display: grid; place-items: center; flex: none; width: calc(2.2 * var(--p)); height: calc(2.2 * var(--p)); border: 2px solid rgba(255, 255, 255, .5); border-radius: calc(.4 * var(--p)); }
+body.garrison .g-addon.on .g-addon-box { background: #107c10; border-color: #107c10; }
+body.garrison .g-addon-box .g-glyph { width: calc(1.4 * var(--p)); height: calc(1.4 * var(--p)); }
+body.garrison .g-addon-copy { display: flex; flex-direction: column; min-width: 0; }
+body.garrison .g-addon-copy strong { font: 600 calc(1.3 * var(--p)) / 1.25 var(--g-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.garrison .g-addon-copy small { color: rgba(255, 255, 255, .6); font-size: calc(1.05 * var(--p)); }
+body.garrison .g-addon.big .g-addon-copy small { color: #ffd36b; }
+body.garrison .g-addon-bulk { display: flex; gap: calc(1.4 * var(--p)); margin-top: calc(.7 * var(--p)); }
+body.garrison .g-addon-link { padding: calc(.4 * var(--p)) calc(.8 * var(--p)); border: 0; border-radius: 999px; background: none; color: rgba(255, 255, 255, .8); font: 500 calc(1.15 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-addon-link.focused, body.garrison .g-addon-link:hover { background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-addon-languages { display: flex; flex-wrap: wrap; gap: calc(.6 * var(--p)); }
+body.garrison .g-addon-language { display: inline-flex; align-items: baseline; gap: calc(.6 * var(--p)); padding: calc(.55 * var(--p)) calc(1.1 * var(--p)); border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px; background: none; color: #fff; font: 500 calc(1.2 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-addon-language small { color: rgba(255, 255, 255, .55); font-size: calc(1 * var(--p)); }
+body.garrison .g-addon-language.on { background: #107c10; border-color: #107c10; }
+body.garrison .g-addon-language.focused, body.garrison .g-addon-language:hover { box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-addons-note { margin: calc(.8 * var(--p)) 0 0; color: rgba(255, 255, 255, .6); font-size: calc(1.1 * var(--p)); }
+body.garrison .g-addons-total { margin: calc(1 * var(--p)) 0 0; font: 500 calc(1.25 * var(--p)) / 1.3 var(--g-font); }
+body.garrison .g-pref-state { margin-left: auto; padding-left: calc(1.4 * var(--p)); font: 600 calc(1.25 * var(--p)) / 1 var(--g-font); color: rgba(255, 255, 255, .85); }
+body.garrison [aria-checked="false"] > .g-pref-state { color: rgba(255, 255, 255, .45); }
+
+/* Quick settings panel. */
+body.garrison .g-quick-flyout { width: calc(34 * var(--p)); padding: calc(1 * var(--p)); }
+body.garrison .g-quick-flyout header h2 { margin: calc(.4 * var(--p)) calc(.6 * var(--p)) calc(.8 * var(--p)); font: 600 calc(1.5 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-quick-rows { display: grid; gap: calc(.5 * var(--p)); }
+body.garrison .g-quick-row { display: flex; align-items: center; justify-content: space-between; gap: calc(1.2 * var(--p)); padding: calc(.9 * var(--p)) calc(1.1 * var(--p)); border-radius: calc(.8 * var(--p)); background: rgba(255, 255, 255, .05); }
+body.garrison .g-quick-copy { display: flex; flex-direction: column; min-width: 0; }
+body.garrison .g-quick-copy strong { font: 600 calc(1.3 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-quick-copy small { color: rgba(255, 255, 255, .65); font-size: calc(1.15 * var(--p)); }
+body.garrison .g-quick-controls { display: flex; gap: calc(.6 * var(--p)); }
+body.garrison .g-quick-step { min-width: calc(3.6 * var(--p)); height: calc(3.6 * var(--p)); padding: 0 calc(1 * var(--p)); border: 0; border-radius: 999px; background: rgba(255, 255, 255, .12); color: #fff; font: 600 calc(1.6 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-quick-step.wide { font-size: calc(1.15 * var(--p)); }
+body.garrison .g-quick-step.focused, body.garrison .g-quick-step:hover, body.garrison .g-quick-plan.focused, body.garrison .g-quick-plan:hover { background: rgba(255, 255, 255, .22); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-quick-flyout h3 { margin: calc(1.2 * var(--p)) calc(.6 * var(--p)) calc(.5 * var(--p)); font: 600 calc(1.1 * var(--p)) / 1.2 var(--g-font); letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .55); }
+body.garrison .g-quick-plans { display: grid; gap: calc(.5 * var(--p)); }
+body.garrison .g-quick-plan { padding: calc(.9 * var(--p)) calc(1.1 * var(--p)); border: 0; border-radius: calc(.8 * var(--p)); background: rgba(255, 255, 255, .05); color: #fff; text-align: left; font: 500 calc(1.25 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-quick-plan.on { background: #107c10; }
+body.garrison .g-quick-note { margin: calc(.6 * var(--p)); color: rgba(255, 255, 255, .65); font-size: calc(1.2 * var(--p)); }
+
+/* Game page extras: friends playing now, and your captures. */
+body.garrison .g-game-extras { padding: 0 var(--g-gutter, 4vw); }
+body.garrison .g-extras-block { margin: calc(2.4 * var(--p)) 0; }
+body.garrison .g-extras-block h3 { margin: 0 0 calc(1 * var(--p)); font: 600 calc(1.9 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-extras-friends { display: flex; flex-wrap: wrap; gap: calc(.8 * var(--p)); }
+body.garrison .g-extras-friend { display: flex; align-items: center; gap: calc(.9 * var(--p)); padding: calc(.7 * var(--p)) calc(1.3 * var(--p)) calc(.7 * var(--p)) calc(.8 * var(--p)); border: 0; border-radius: 999px; background: rgba(255, 255, 255, .07); color: #fff; text-align: left; }
+body.garrison .g-extras-friend span { display: flex; flex-direction: column; }
+body.garrison .g-extras-friend strong { font: 600 calc(1.25 * var(--p)) / 1.2 var(--g-font); }
+body.garrison .g-extras-friend small { color: rgba(255, 255, 255, .65); font-size: calc(1.05 * var(--p)); }
+body.garrison .g-extras-friend.focused, body.garrison .g-extras-friend:hover { background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 2px #fff; }
+body.garrison .g-captures { display: flex; gap: calc(1 * var(--p)); overflow-x: auto; padding: 4px 4px calc(1 * var(--p)); scrollbar-width: none; scroll-behavior: auto; }
+body.garrison .g-capture { position: relative; flex: none; width: calc(24 * var(--p)); aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: calc(.8 * var(--p)); overflow: hidden; background: rgba(255, 255, 255, .06); }
+body.garrison .g-capture img { width: 100%; height: 100%; object-fit: cover; display: block; }
+body.garrison .g-capture-blank { display: grid; place-items: center; width: 100%; height: 100%; color: rgba(255, 255, 255, .5); }
+body.garrison .g-capture-blank .g-glyph { width: calc(3 * var(--p)); height: calc(3 * var(--p)); }
+body.garrison .g-capture-badge { position: absolute; left: calc(.7 * var(--p)); bottom: calc(.6 * var(--p)); display: inline-flex; align-items: center; gap: calc(.4 * var(--p)); padding: calc(.3 * var(--p)) calc(.8 * var(--p)); border-radius: 999px; background: rgba(0, 0, 0, .65); color: #fff; font: 500 calc(1 * var(--p)) / 1 var(--g-font); }
+body.garrison .g-capture-badge .g-glyph { width: calc(1.1 * var(--p)); height: calc(1.1 * var(--p)); }
+body.garrison .g-capture.focused, body.garrison .g-capture:hover { box-shadow: 0 0 0 3px #fff; }

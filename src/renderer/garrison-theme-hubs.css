@@ -1,0 +1,88 @@
+/* Pivot hubs (garrison-theme-hubs.js) for One and 360: the headings and LB/RB slide between bands of tiles
+   inside the dashboard. Sizes are 1080p console pixels. */
+#g-pivots, #g-hub-host { display: none; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]) .top-center-nav { display: none !important; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]):not(.home-active) #g-pivots { display: none !important; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"]).home-active #g-pivots { display: flex; position: absolute; z-index: 3; }
+.g-pivot { padding: 0; border: 0; background: transparent; cursor: pointer; white-space: nowrap; }
+
+/* Which part of Home shows. */
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"])[data-g-hub]:not([data-g-hub="home"]) #home-view > :not(#g-hub-host) { display: none !important; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"])[data-g-hub]:not([data-g-hub="home"]) #g-hub-host { display: block; }
+body.garrison:is([data-g-theme="one"], [data-g-theme="x360"])[data-g-hub]:not([data-g-hub="home"]) .g-360-peek { display: none !important; }
+#home-view.g-hub-in-right { animation: g-hub-in-right .36s cubic-bezier(.2, .8, .2, 1) both; }
+#home-view.g-hub-in-left { animation: g-hub-in-left .36s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-hub-in-right { from { opacity: 0; transform: translateX(calc(140 * var(--cpx, 1px))); } to { opacity: 1; transform: none; } }
+@keyframes g-hub-in-left { from { opacity: 0; transform: translateX(calc(-140 * var(--cpx, 1px))); } to { opacity: 1; transform: none; } }
+html.reduce-motion #home-view:is(.g-hub-in-right, .g-hub-in-left) { animation: none; }
+
+/* The band: columns of full- or half-height tiles. */
+.g-hub-band { display: flex; align-items: flex-start; gap: var(--h-gap); }
+.g-hub-col { position: relative; display: grid; grid-auto-rows: 1fr; gap: var(--h-gap); height: var(--h-band); }
+.g-hub-tile {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); overflow: hidden; border: 0;
+  background: var(--g-art, var(--h-lime)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer;
+}
+.g-hub-tile.full { grid-row: span 2; }
+.g-hub-tile.art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0, 0, 0, .65)); }
+.g-hub-tile.lime { background-color: var(--h-lime); }
+.g-hub-tile.blue { background: #1a8ad4; }
+.g-hub-tile.gold { background: linear-gradient(135deg, #d9a400, #8a6400); }
+.g-hub-tile.dark { background-color: rgba(0, 0, 0, .45); }
+.g-hub-tile.ad { background: linear-gradient(135deg, #2f9d2f, #0f5a0f 70%); }
+.g-hub-tile .g-hub-label { position: relative; display: grid; gap: calc(3 * var(--cpx)); }
+.g-hub-tile .g-hub-img { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); max-width: 62%; max-height: 52%; object-fit: contain; }
+.g-hub-tile.dark .g-hub-img { left: calc(14 * var(--cpx)); top: calc(14 * var(--cpx)); transform: none; width: calc(84 * var(--cpx)); height: calc(84 * var(--cpx)); max-width: none; max-height: none; object-fit: cover; }
+.g-hub-tile.full .g-hub-img { max-width: 70%; max-height: 62%; }
+.g-hub-tile > .g-glyph { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: calc(72 * var(--cpx)); height: calc(72 * var(--cpx)); }
+.g-hub-tile:has(.g-hub-img) > .g-glyph { display: none; }
+.g-hub-tile:is(.focused, :focus-visible) { z-index: 2; }
+.g-hub-adlabel { position: absolute; left: 0; top: calc(100% + 14 * var(--cpx)); color: rgba(255, 255, 255, .8); font: 400 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; }
+
+/* ---------- 360 ---------- */
+body.garrison[data-g-theme="x360"] { --h-gap: calc(6 * var(--cpx)); --h-band: calc(450 * var(--cpx)); --h-lime: #6cb344; }
+body.garrison[data-g-theme="x360"].home-active #g-pivots { left: calc(282 * var(--cpx)); top: calc(196 * var(--cpx)); gap: calc(56 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-pivot { color: rgba(255, 255, 255, .5); font: 300 calc(45 * var(--cpx))/1.1 var(--g-display); text-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+body.garrison[data-g-theme="x360"] .g-pivot.active { color: #fff; }
+body.garrison[data-g-theme="x360"] .g-pivot:is(.focused, :focus-visible) { color: #fff; outline: calc(3 * var(--cpx)) solid #fff; outline-offset: calc(6 * var(--cpx)); box-shadow: none !important; }
+body.garrison[data-g-theme="x360"] #g-hub-host { padding-top: calc(33 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-band { justify-content: center; }
+body.garrison[data-g-theme="x360"] .g-hub-col.w231 { width: calc(231 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-col.w294 { width: calc(294 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-col.w597 { width: calc(597 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-tile strong { font: 400 calc(30 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+body.garrison[data-g-theme="x360"] .g-hub-tile.full strong { font-size: calc(33 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-tile small { font: 400 calc(22 * var(--cpx))/1.15 var(--g-font); opacity: .92; }
+body.garrison[data-g-theme="x360"] .g-hub-tile.full small { font-size: calc(27 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-tile:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .35) !important; }
+body.garrison[data-g-theme="x360"] .g-hub-tile.dark .g-hub-label { margin-left: calc(96 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-hub-band[data-hub="settings"] .g-hub-tile .g-hub-img { max-width: 46%; max-height: 46%; filter: brightness(10); }
+
+/* ---------- One ---------- */
+body.garrison[data-g-theme="one"] { --h-gap: calc(6 * var(--cpx)); --h-band: calc(608 * var(--cpx)); --h-lime: #107c10; }
+body.garrison[data-g-theme="one"].home-active #g-pivots { left: var(--g-gutter); top: calc(92 * var(--cpx)); gap: calc(52 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .g-pivot { color: rgba(255, 255, 255, .42); font: 300 calc(48 * var(--cpx))/1.1 var(--g-display); letter-spacing: -.01em; }
+body.garrison[data-g-theme="one"] .g-pivot.active { color: #fff; }
+body.garrison[data-g-theme="one"] .g-pivot:is(.focused, :focus-visible) { color: #fff; outline: calc(3 * var(--cpx)) solid #fff; outline-offset: calc(6 * var(--cpx)); box-shadow: none !important; }
+body.garrison[data-g-theme="one"] #g-hub-host { padding: calc(6 * var(--cpx)) var(--g-gutter) 0; }
+body.garrison[data-g-theme="one"] .g-hub-col.w170 { width: calc(170 * var(--cpx)); grid-auto-rows: calc((608 - 6) / 2 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .g-hub-col.w346 { width: calc(346 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .g-hub-col.w522 { width: calc(522 * var(--cpx)); }
+body.garrison[data-g-theme="one"] .g-hub-tile strong { font: 400 calc(20 * var(--cpx))/1.15 var(--g-font); }
+body.garrison[data-g-theme="one"] .g-hub-tile.full strong { font: 300 calc(34 * var(--cpx))/1.1 var(--g-display); }
+body.garrison[data-g-theme="one"] .g-hub-tile small { font: 300 calc(16 * var(--cpx))/1.2 var(--g-display); opacity: .9; }
+body.garrison[data-g-theme="one"] .g-hub-tile:is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; }
+body.garrison[data-g-theme="one"] .g-hub-tile.dark { background-color: rgba(255, 255, 255, .12); }
+body.garrison[data-g-theme="one"] .g-hub-tile.dark .g-hub-img { width: 100%; height: 100%; left: 0; top: 0; }
+body.garrison[data-g-theme="one"] .g-hub-tile.dark::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(transparent 50%, rgba(0, 0, 0, .75)); }
+body.garrison[data-g-theme="one"] .g-hub-tile.dark .g-hub-label { z-index: 2; }
+body.garrison[data-g-theme="one"] #home-view.g-hub-in-right, body.garrison[data-g-theme="one"] #home-view.g-hub-in-left { transform-origin: 0 50%; }
+
+/* Disc tray (360 Home), favourites on the One's Pins, and the live Queue tile. */
+body.garrison[data-g-theme="x360"] .g-360-tray-img { align-self: center; width: calc(110 * var(--cpx)); margin-top: calc(14 * var(--cpx)); }
+body.garrison[data-g-theme="x360"] .g-360-tray:has(.g-360-tray-img) .g-mdl2 { display: none !important; }
+body.garrison[data-g-theme="one"] #g-one-pins { grid-template-rows: repeat(3, var(--o-u)); grid-auto-flow: column dense; grid-auto-columns: var(--o-u); grid-template-columns: none; }
+body.garrison[data-g-theme="one"] .g-one-pin.g-one-fav { justify-content: flex-end; background: #2c4a2c var(--g-art) center / cover no-repeat; }
+body.garrison[data-g-theme="one"] .g-one-pin.g-one-fav::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0, 0, 0, .7)); }
+body.garrison[data-g-theme="one"] .g-one-pin.g-one-fav span { position: relative; font-size: calc(15 * var(--cpx)); }
+.g-hub-tile[data-progress]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(6 * var(--cpx)); background: linear-gradient(90deg, var(--h-lime) calc(var(--p, 0) * 1%), rgba(255, 255, 255, .2) 0); }

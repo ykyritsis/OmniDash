@@ -31,6 +31,15 @@ Unofficial community project. Images show beta 25 with a sample library; availab
 
 Device images are illustrative mockups based on app captures, not photographs of a hardware test.
 
+## 0.6.0
+
+- Choose what to install: DLC and language packs are listed with sizes before a Steam install starts.
+- Cancelling a launch really cancels, and says honestly what happened. The launch screen now grows out of the tile like a console.
+- Handheld quick settings (volume, brightness, Wi-Fi, power plan), pause downloads while playing, and controller vibration.
+- Smart collections, friends playing now and your captures on game pages.
+- Every dialog now shares one Xbox look; Apps are icon tiles; the Xbox button falls back to Windows' own Game Bar link.
+- Includes the 0.5.1 audit fixes. [0.6.0 notes](docs/release-0.6.0.md)
+
 ## 0.5.0
 
 - Faster friends shelves preserve artwork, scrolling and focus. Hidden-page responses and stale artwork prefetch stop doing unnecessary UI work.
@@ -81,7 +90,7 @@ Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Ch
 
 1. Install or unpack your downloaded build, then choose a profile.
 2. Connect your libraries. Installed games are discovered from local launchers and manifests.
-3. Optionally add a **SteamGridDB key** in **Settings → Manage games → Artwork** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
+3. Optionally add a **SteamGridDB key** in **Settings → Library → Artwork services** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
 4. Enable **Steam download controls** from the Queue to pause and resume Steam downloads. The connection stays on this PC (`127.0.0.1`).
 
 Installed Steam games, recorded local playtime and Steam's hidden-game list need no API key. A Steam Web API key enables additional account data, including uninstalled games, personal achievement progress and verified friend presence, subject to your Steam privacy settings.
@@ -93,7 +102,7 @@ Installed Steam games, recorded local playtime and Steam's hidden-game list need
 
 - Jump back in, Recently added, favourites, custom collections, controller-friendly games and multiplayer shelves.
 - Steam friend activity shows verified friends who are currently in a game.
-- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and grid/list layouts.
+- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and layouts.
 - Launcher discovery for Steam, Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon where installed locally.
 - Artwork-led game pages with descriptions, screenshots, trailers where available, input support and achievements.
 - Manage artwork, files, shortcuts, collections, favourites, hiding and uninstalling from game options.
@@ -142,13 +151,15 @@ Installed Steam games, recorded local playtime and Steam's hidden-game list need
 
 ## Run or build from source
 
-Install Node.js 20 or newer, then:
+Install Node.js 22.5 or newer (the test suite uses `node:sqlite`), then:
 
 ```powershell
 npm install
 npm run prepare:streaming
 npm start
 ```
+
+Run the test suites with `npm test`, or `npm run test:unit` for the suites that need no Electron runtime.
 
 Create Windows builds:
 

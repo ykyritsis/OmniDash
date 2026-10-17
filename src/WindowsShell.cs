@@ -48,6 +48,39 @@ static class WindowsShell {
         },IntPtr.Zero);
         return visible;
     }
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr window, int index);
+    [StructLayout(LayoutKind.Sequential)] struct Rect { public int left, top, right, bottom; }
+    [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr OpenProcess(uint access, bool inherit, uint id);
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode)] static extern bool QueryFullProcessImageName(IntPtr process, uint flags, System.Text.StringBuilder name, ref uint size);
+    static string ProcessPath(uint id) {
+        var handle=OpenProcess(0x1000,false,id);
+        if(handle==IntPtr.Zero)return "";
+        try { var name=new System.Text.StringBuilder(1024);uint size=1024;return QueryFullProcessImageName(handle,0,name,ref size)?name.ToString():""; }
+        finally { CloseHandle(handle); }
+    }
+    // The game's own window: visible, not cloaked, not a tool window, a real size, and owned by a program inside
+    // the game's folder. Returns zero when the game hasn't drawn a window yet.
+    static IntPtr FindGameWindow(string folder) {
+        var prefix=folder.TrimEnd(System.IO.Path.DirectorySeparatorChar)+System.IO.Path.DirectorySeparatorChar;
+        uint self=(uint)Process.GetCurrentProcess().Id;
+        IntPtr found=IntPtr.Zero;
+        EnumWindows((window,parameter)=>{
+            if(!IsWindowVisible(window)||GetAncestor(window,2)!=window)return true;
+            int cloaked;if(DwmGetWindowAttribute(window,14,out cloaked,4)==0&&cloaked!=0)return true;
+            if((GetWindowLong(window,-20)&0x80)!=0)return true;
+            Rect rect;if(!GetWindowRect(window,out rect)||rect.right-rect.left<320||rect.bottom-rect.top<200)return true;
+            uint owner;GetWindowThreadProcessId(window,out owner);
+            if(owner==self)return true;
+            if(!ProcessPath(owner).StartsWith(prefix,StringComparison.OrdinalIgnoreCase))return true;
+            found=window;return false;
+        },IntPtr.Zero);
+        return found;
+    }
     static bool KeysHeld() {
         foreach(int key in new[]{0x10,0x11,0x12,0x5B,0x5C,0x47}) if((GetAsyncKeyState(key)&0x8000)!=0)return true;
         return false;
@@ -55,13 +88,31 @@ static class WindowsShell {
     [STAThread] static int Main(string[] args) {
         try {
             if(args.Length==1&&args[0]=="--probe") { Console.WriteLine(Marshal.SizeOf(typeof(Input))); return 0; }
+            // --focus-game <folder>: bring the game's window in front of the launcher. Windows lets a program the
+            // foreground app started take the foreground, which the game itself (started by Steam) can't.
+            if(args.Length==2&&args[0]=="--focus-game") {
+                var game=FindGameWindow(args[1]);
+                if(game==IntPtr.Zero)return 3;
+                if(IsIconic(game))ShowWindow(game,9);
+                SetForegroundWindow(game);
+                Thread.Sleep(150);
+                return GetAncestor(GetForegroundWindow(),2)==game?0:4;
+            }
             if(args.Length!=2||args[0]!="--game-bar") throw new Exception("Unknown shell action.");
             if(GameBarVisible()) return 0;
             var window=new IntPtr(long.Parse(args[1]));
             if(window==IntPtr.Zero||!IsWindow(window))throw new Exception("The launcher window is unavailable.");
-            try { ActivateGameBar(); } catch { }
-            Thread.Sleep(250);
-            if(GameBarVisible())return 0;
+            // Game Bar takes a moment to draw after activation. Sending Win+G while it is still appearing toggles
+            // it straight back off, so wait for it, and only fall back to the shortcut if activation itself failed
+            // or nothing took the screen.
+            bool activated=false;
+            try { ActivateGameBar(); activated=true; } catch { }
+            var appear=Stopwatch.StartNew();
+            while(appear.ElapsedMilliseconds<(activated?2500:250)){
+                if(GameBarVisible())return 0;
+                Thread.Sleep(50);
+            }
+            if(activated&&GetAncestor(GetForegroundWindow(),2)!=GetAncestor(window,2))return 0;
             // Wait for a keyboard activation key to be released. Never disturb
             // physically held modifiers or send the shortcut to another app.
             var clock=Stopwatch.StartNew();

@@ -83,7 +83,8 @@ const interfaceAudio = (() => {
     } catch { /* Audio is optional, including in remote desktop sessions. */ }
   }
   window.addEventListener('blur', () => context?.suspend().catch(() => {}));
-  return { load, play };
+  // How many custom sounds are loaded: themes only use their own sounds when there are none.
+  return { load, play, customCount: () => Object.keys(buffers).length };
 })();
 window.launcher.getSoundPack().then(pack => interfaceAudio.load(pack)).then(count => {
   if (count) document.querySelector('#sound-pack-status').textContent = `${count} custom sounds ready. Stored on this PC only.`;

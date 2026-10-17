@@ -1,9 +1,9 @@
-const { app, BrowserWindow, clipboard, dialog, ipcMain, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, safeStorage } = require('electron');
 const support = require('./support.cjs');
 support.installLogCapture();
 const fs = require('fs/promises');
 const path = require('path');
-const { fileURLToPath } = require('url');
+const { fileURLToPath, pathToFileURL } = require('url');
 const { spawn, execFile } = require('child_process');
 const { createArtworkCache } = require('./artwork-cache.cjs');
 const { createConsoleServices } = require('./console-services.cjs');
@@ -21,6 +21,11 @@ const { readGogOwned, readAmazonOwned } = require('./local-owned-libraries.cjs')
 const { normalizeTitle, titleMatchScore, titleNeedsRecheck } = require('./title-match.cjs');
 const { libraryKey, installLibrariesByDrive } = require('./steam-install-libraries.cjs');
 const { createInstallSizeLookup } = require('./steam-install-size.cjs');
+const installAddons = require('./steam-install-addons.cjs');
+const { createDownloadGovernor } = require('./download-governor.cjs');
+const { createQuickSettings } = require('./quick-settings.cjs');
+const { listCaptures } = require('./captures.cjs');
+const { createLaunchStopper } = require('./launch-stopper.cjs');
 const { storageOverview } = require('./storage-overview.cjs');
 const { createRemotePlay } = require('./remote-play.cjs');
 const { createRemoteArtwork } = require('./remote-artwork.cjs');
@@ -34,6 +39,16 @@ const { runPowerAction } = require('./power-actions.cjs');
 const { createNativeKeyboard } = require('./native-keyboard.cjs');
 const showNativeKeyboard = createNativeKeyboard({ demo: process.env.NEBULA_DEMO === '1' });
 const { parseSteamCommunityAchievements, safeSteamIcon } = require('./steam-public-achievements.cjs');
+
+// Last-resort reporting. The main process does asynchronous file, network and process work, so a
+// rejected promise that nobody awaited would otherwise end the session with nothing in the log.
+// The diagnostics report reads this log, so a crash leaves evidence behind (see support.cjs).
+process.on('unhandledRejection', reason => {
+  try { console.error('[unhandledRejection]', reason instanceof Error ? reason.stack || reason.message : reason); } catch { /* Logging must never throw. */ }
+});
+process.on('uncaughtException', error => {
+  try { console.error('[uncaughtException]', error instanceof Error ? error.stack || error.message : error); } catch { /* Logging must never throw. */ }
+});
 
 if (process.env.NEBULA_DEMO === '1') {
   app.setPath('userData', process.env.NEBULA_DEMO_USER_DATA || path.join(app.getPath('temp'), 'xbox-preview-ui-demo'));
@@ -64,10 +79,13 @@ const publicSteamAchievementCache = new Map();
 let activeGameSession = null;
 // The last game launched from here, for diagnostics: what was started and whether it got going.
 let lastLaunch = null;
+let downloadGovernor = null;
 let safeMode = false;
 let startupGuard = null;
 let rendererRecoveries = 0;
 const installRequests = new Map();
+// In-flight library scan, so overlapping renderer requests share one run instead of racing.
+let libraryScanPromise = null;
 let publisherLocalStatus = { ubisoftStatus:'not-scanned', ubisoftCount:0 };
 
 // Games just hidden or unhidden through Steam, until Steam writes the change to its collection file.
@@ -216,17 +234,34 @@ function writeLibrarySnapshot(result, scanEpoch) {
 // cost them: saves go to a temporary file that replaces the old one in a single step, the previous good
 // copy is kept as settings.json.bak, and a damaged file is read from that backup instead.
 async function readSettingsFile() {
+  let fallback = null;
   for (const file of [settingsPath(), `${settingsPath()}.bak`]) {
-    try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { /* Missing or damaged; try the backup. */ }
+    try {
+      const parsed = JSON.parse(await fs.readFile(file, 'utf8'));
+      if (file === settingsPath()) return parsed;
+      // The backup is the previous save, so it can still hold a key the player has since cleared:
+      // "Disconnect Steam" and "Reset launcher data" write an empty key, and the old value is copied
+      // into .bak first. Credentials never come back from the backup copy.
+      fallback = { ...parsed, steamApiKey: '', steamGridDbKey: '' };
+    } catch { /* Missing or damaged; try the backup. */ }
   }
+  if (fallback) return fallback;
   throw new Error('No readable settings.');
+}
+// Removes the backup so a cleared key cannot survive in it.
+async function dropSettingsBackup() {
+  await fs.rm(`${settingsPath()}.bak`, { force: true }).catch(() => {});
 }
 async function writeSettingsFile(text) {
   const target = settingsPath(), temp = `${target}.tmp`;
   await fs.writeFile(temp, text, 'utf8');
   try { JSON.parse(await fs.readFile(temp, 'utf8')); } catch { throw new Error('Settings could not be saved.'); }
-  // Keep the last good copy before replacing it.
-  try { const current = await fs.readFile(target, 'utf8'); JSON.parse(current); await fs.writeFile(`${target}.bak`, current, 'utf8'); } catch { /* No good copy to keep. */ }
+  // Keep the last good copy before replacing it. Credentials are stripped from the backup: the copy
+  // exists for crash recovery, not to keep a key the player has already cleared (see readSettingsFile).
+  try {
+    const current = JSON.parse(await fs.readFile(target, 'utf8'));
+    await fs.writeFile(`${target}.bak`, JSON.stringify({ ...current, steamApiKey: '', steamGridDbKey: '' }), 'utf8');
+  } catch { /* No good copy to keep. */ }
   for (let attempt = 0; ; attempt++) {
     try { await fs.rename(temp, target); return; }
     catch (error) {
@@ -1479,14 +1514,18 @@ async function measureFolderSize(folder, { files = 400000, until = Date.now() + 
     const current = stack.pop();
     let entries = [];
     try { entries = await fs.readdir(current, { withFileTypes: true }); } catch { continue; }
-    const sizes = await Promise.all(entries.map(async (entry) => {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) { stack.push(full); return 0; }
-      if (!entry.isFile()) return 0;
-      seen++;
-      try { return (await fs.stat(full)).size; } catch { return 0; }
-    }));
-    for (const size of sizes) total += size;
+    // One fs.stat promise per entry would queue a whole directory in a single turn of the event loop.
+    // Game folders routinely hold six figures of files, so this walks in small batches instead.
+    for (let index = 0; index < entries.length; index += 32) {
+      const sizes = await Promise.all(entries.slice(index, index + 32).map(async (entry) => {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) { stack.push(full); return 0; }
+        if (!entry.isFile()) return 0;
+        seen++;
+        try { return (await fs.stat(full)).size; } catch { return 0; }
+      }));
+      for (const size of sizes) total += size;
+    }
   }
   return { bytes: total, complete: !stack.length };
 }
@@ -1503,15 +1542,22 @@ async function measureInstallSizes() {
   try {
     const cache = await readInstallSizes();
     const pending = currentLibrary.filter((game) => needsMeasuredSize(game) || (game.provider !== 'Steam' && game.installPath && cache[game.installPath] && Date.now() - cache[game.installPath].at > 7 * 24 * 60 * 60 * 1000));
+    let dirty = false;
     for (const game of pending) {
       if (!await exists(game.installPath)) continue;
       const measured = await measureFolderSize(game.installPath);
-      if (!measured.bytes) continue;
+      // measureFolderSize gives up at 400,000 files or 60 seconds and reports complete: false. A
+      // partial total must not become the cached size for the next week, or the library grid and
+      // Settings > Storage disagree with each other. game:storage already checks this flag.
+      if (!measured.complete || !(measured.bytes > 0)) continue;
       cache[game.installPath] = { bytes: measured.bytes, at: Date.now() };
       game.sizeOnDisk = measured.bytes;
+      dirty = true;
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:sizes', { [game.id]: measured.bytes });
-      await fs.writeFile(installSizeFile(), JSON.stringify(cache)).catch(() => {});
     }
+    // Written once per run rather than once per game: each measurement can take up to a minute, so
+    // rewriting the whole file inside the loop was quadratic work for a large library.
+    if (dirty) await fs.writeFile(installSizeFile(), JSON.stringify(cache)).catch(() => {});
   } finally { installSizeRunning = false; }
 }
 
@@ -1880,7 +1926,17 @@ function registerIpc() {
     }));
     return { appId, assets: available.filter(Boolean) };
   });
-  ipcMain.handle('library:scan', (_event, options) => scanLibrary(options));
+  ipcMain.handle('library:scan', (event, options) => {
+    assertLauncherSender(event);
+    // The renderer asks for a scan from a dozen places (refresh, connections, family, onboarding,
+    // startup), and a scan can be slow. Overlapping runs repeated the whole walk and the network
+    // artwork loop, and an older run finishing last could overwrite the newer library. Concurrent
+    // callers now share one run.
+    if (!libraryScanPromise) {
+      libraryScanPromise = scanLibrary(options).finally(() => { libraryScanPromise = null; });
+    }
+    return libraryScanPromise;
+  });
   ipcMain.handle('accounts:cancel-connect', () => accountLibraries.cancelConnect());
   ipcMain.handle('steam:family-cancel-connect', () => steamFamily.cancelConnect());
   ipcMain.handle('library:cached', () => readLibrarySnapshot());
@@ -2044,7 +2100,7 @@ function registerIpc() {
       win.loadURL('https://steamcommunity.com/dev/apikey').catch(() => finish({ status: 'unavailable' }));
     });
   });
-  ipcMain.handle('steam:disconnect-account',async()=>{await writeSettings({steamApiKey:'',showUninstalledSteam:false});return true;});
+  ipcMain.handle('steam:disconnect-account',async()=>{await writeSettings({steamApiKey:'',showUninstalledSteam:false});await dropSettingsBackup();return true;});
   ipcMain.handle('steam:family-status',async()=>{
     const settings=await readSettings();
     return {...await steamFamily.status(settings.steamFamilyAccountId || settings.steamId64 || await detectSteamId64()),enabled:settings.includeSteamFamily};
@@ -2131,7 +2187,8 @@ function registerIpc() {
     if (!Object.hasOwn(SUPPORT_LINKS, destination)) throw new Error('Unknown support destination.');
     await shell.openExternal(SUPPORT_LINKS[destination]); return true;
   });
-  ipcMain.handle('settings:save', async (_event, incoming) => {
+  ipcMain.handle('settings:save', async (event, incoming) => {
+    assertLauncherSender(event);
     const existing = await readSettings();
     const allowed = {};
     if ('region' in incoming) {
@@ -2233,7 +2290,8 @@ function registerIpc() {
     clearGameDetails();
     return Object.keys(settings.artwork || {}).length - Object.keys(artwork).length;
   });
-  ipcMain.handle('settings:reset-all', async () => {
+  ipcMain.handle('settings:reset-all', async event => {
+    assertLauncherSender(event);
     artworkScanEpoch++;
     clearGameDetails();
     await artworkCacheTask.catch(() => {});
@@ -2248,6 +2306,8 @@ function registerIpc() {
     if (path.dirname(cacheDirectory) !== path.resolve(path.dirname(settingsPath()))) throw new Error('Invalid artwork cache path.');
     await fs.rm(cacheDirectory, { recursive: true, force: true });
     await replaceSettings({ ...SETTINGS_DEFAULTS });
+    // Resetting everything must also leave no key behind in the previous-save copy.
+    await dropSettingsBackup();
     currentLibrary = [];
     activeGameSession = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -2287,7 +2347,8 @@ function registerIpc() {
     return prepareSteamLaunch(game);
   });
   ipcMain.handle('game:launch-respond', (_event, gameId, requestId, value) => steamLaunch.respond(gameId, requestId, value));
-  ipcMain.handle('game:launch', async (_event, gameId, launchOptions, launchIndex) => {
+  ipcMain.handle('game:launch', async (event, gameId, launchOptions, launchIndex) => {
+    assertLauncherSender(event);
     if (remotePlay.active()) throw new Error('Disconnect remote play before launching a local game.');
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) throw new Error('Game is not in the current library.');
@@ -2297,19 +2358,21 @@ function registerIpc() {
     if (optionText.length > 512 || /[\r\n\0]/.test(optionText)) throw new Error('Steam launch options must be a single line under 512 characters.');
     const parsedOptions = optionText.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((arg) => arg.replace(/^"|"$/g, '')) || [];
     let directProcessId = null;
+    // Cancelled before anything was started: nothing to undo.
+    if (launchWaitCancel.delete(gameId)) throw new Error('Launch cancelled.');
     if (game.accountLibrary === 'battlenet' && game.internalId && /^[a-z0-9]+$/i.test(game.providerId)) {
       const launcher = currentLibrary.find(item => item.isLauncher && item.provider === 'Battle.net');
       if (!launcher?.executable || !await exists(launcher.executable)) throw Error('Battle.net client was not found. Scan your library after installing it.');
       await launchExecutable(launcher.executable, [`--exec=launch ${game.providerId}`], path.dirname(launcher.executable));
     } else if (game.provider === 'Steam' && /^\d+$/.test(String(game.appId)) && process.env.NEBULA_DEMO !== '1') {
-      if (launchWaitCancel.has(gameId)) throw new Error('Launch cancelled.');
+      if (launchWaitCancel.delete(gameId)) throw new Error('Launch cancelled.');
       const prepared = await prepareSteamLaunch(game);
       if (prepared.setupRequired) throw new Error('Enable Steam controls to launch games inside the app.');
       const index = launchIndex ?? (prepared.choices.length === 1 ? prepared.choices[0].index : undefined);
-      if (launchWaitCancel.has(gameId)) throw new Error('Launch cancelled.');
+      if (launchWaitCancel.delete(gameId)) throw new Error('Launch cancelled.');
       launchStatus(gameId, `Starting ${game.title}`);
       await steamLaunch.start(game, index, optionText);
-      if (launchWaitCancel.has(gameId)) { await steamLaunch.cancel(gameId); throw new Error('Launch cancelled.'); }
+      if (launchWaitCancel.delete(gameId)) { await stopLaunch(gameId); throw new Error('Launch cancelled.'); }
     } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
         await launchExecutable(game.steamExecutable, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(game.steamExecutable));
@@ -2329,6 +2392,8 @@ function registerIpc() {
     }
     else if (game.executable && await exists(game.executable)) directProcessId = await launchExecutable(game.executable, game.args);
     else throw new Error('The game executable could not be found.');
+    // Cancelled while it was being started: close what was started, wait until it's gone, then report it.
+    if (!steamLaunch.has(gameId) && launchWaitCancel.delete(gameId)) { await stopLaunch(gameId, directProcessId); throw new Error('Launch cancelled.'); }
     const settings = await readSettings();
     const playHistory = [gameId, ...(settings.playHistory || []).filter((id) => id !== gameId)].slice(0, 40);
     const playCounts = { ...(settings.playCounts || {}), [gameId]: Number(settings.playCounts?.[gameId] || 0) + 1 };
@@ -2353,6 +2418,25 @@ function registerIpc() {
   }));
   // Tells the launch screen what it's waiting for, so a long wait never looks stuck.
   const launchStatus = (gameId, text, extra = {}) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('launch:status', { gameId, text, ...extra }); };
+  // Really cancelling a launch (see launch-stopper.cjs): Steam's cancel, then closing a game that is running or
+  // about to start, and confirming nothing is left.
+  const launchStopper = createLaunchStopper({
+    runningSteamApp: steamRunningAppId,
+    terminateSteamApp: appId => steamClientEval(`SteamClient.Apps.TerminateApp(${JSON.stringify(String(appId))}, false)`, 4000),
+    isAlive: pid => { try { process.kill(pid, 0); return true; } catch { return false; } },
+    killProcessTree: pid => new Promise(resolve => execFile('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, timeout: 6000 }, () => resolve())),
+    log: message => console.log(message)
+  });
+  const stopLaunch = (gameId, pid) => {
+    const game = currentLibrary.find(item => item.id === gameId);
+    if (!game) return Promise.resolve({ stopped: true, wasRunning: false, stillRunning: false, method: 'none' });
+    return launchStopper.stop({ gameId, provider: game.provider, appId: game.appId, pid: pid ?? (activeGameSession?.gameId === gameId ? activeGameSession.pid : null), cancelSteamLaunch: () => steamLaunch.cancel(gameId) })
+      .then(result => {
+        if (activeGameSession?.gameId === gameId && result.stopped) activeGameSession = null;
+        if (lastLaunch?.gameId === gameId) lastLaunch.result = result.stopped ? 'cancelled' : `cancelled; ${result.method} launch could not be stopped`;
+        return result;
+      });
+  };
   // Steam's install folder, found on the drives it's installed to.
   const steamExecutableFile = async () => {
     for (const root of await findSteamRoots()) if (await exists(path.join(root, 'steam.exe'))) return path.join(root, 'steam.exe');
@@ -2363,6 +2447,41 @@ function registerIpc() {
     const hex = !error && String(stdout).match(/ActiveUser\s+REG_DWORD\s+0x([0-9a-f]+)/i)?.[1];
     resolve(Boolean(hex && parseInt(hex, 16)));
   }));
+  // Steam says a game has started as soon as its process exists; the window comes later, and Windows won't let
+  // a game Steam started take the screen from the launcher. So the launch screen stays until the game's own
+  // window is in front: the helper brings it forward, or the game takes focus itself. A game without a window
+  // in its folder (store launchers, anti-cheat bootstrappers) hands over after a minute anyway.
+  async function handOver(game, gameId) {
+    const started = await waitForGameWindow(game, gameId);
+    // Hold the launch screen a little longer behind the game, so nothing of the launcher flashes while the game
+    // finishes taking over the screen.
+    if (started.started) await new Promise(resolve => setTimeout(resolve, 5000));
+    return started;
+  }
+  async function waitForGameWindow(game, gameId) {
+    const deadline = Date.now() + 60000;
+    let awaySince = 0, steamGone = 0;
+    launchStatus(gameId, `Starting ${game.title}`);
+    while (Date.now() < deadline) {
+      if (launchWaitCancel.delete(gameId)) {
+        const stop = await stopLaunch(gameId);
+        return { started: false, cancelled: true, stopped: stop.stopped, wasRunning: stop.wasRunning, stillRunning: stop.stillRunning, method: stop.method };
+      }
+      const focused = mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused();
+      if (!focused) { awaySince ||= Date.now(); if (Date.now() - awaySince > 1500) return { started: true, via: 'window' }; }
+      else {
+        awaySince = 0;
+        if (game.installPath && await windowsShell.focusGame(game.installPath) === 'focused') return { started: true, via: 'window' };
+      }
+      // The game closed before it showed a window.
+      if (game.provider === 'Steam' && game.appId) {
+        if (await steamRunningAppId() !== String(game.appId)) { steamGone ||= Date.now(); if (Date.now() - steamGone > 8000) return { started: false, exited: true }; }
+        else steamGone = 0;
+      }
+      await new Promise(resolve => setTimeout(resolve, 700));
+    }
+    return { started: true, via: 'timeout' };
+  }
   ipcMain.handle('game:wait-started', async (_event, gameId, timeoutMs = 90000) => {
     const game = currentLibrary.find((item) => item.id === gameId);
     if (!game) return { started: false };
@@ -2373,9 +2492,9 @@ function registerIpc() {
       try {
         while (Date.now() < deadline) {
           if (launchWaitCancel.has(gameId)) {
-            await steamLaunch.cancel(gameId);
+            const stop = await stopLaunch(gameId);
             if (activeGameSession?.gameId === gameId) activeGameSession = null;
-            return { started: false, cancelled: true };
+            return { started: false, cancelled: true, stopped: stop.stopped, wasRunning: stop.wasRunning, stillRunning: stop.stillRunning, method: stop.method };
           }
           const snapshot = await steamLaunch.poll(gameId);
           launchStatus(gameId, snapshot.status.text, snapshot.status);
@@ -2388,6 +2507,7 @@ function registerIpc() {
             }
             if (lastLaunch?.gameId === gameId) lastLaunch.result = snapshot.task;
             if (!started && snapshot.task !== 'Cancelled' && !snapshot.handoff) throw new Error('Steam could not finish starting this game. Please try again.');
+            if (started) return handOver(game, gameId);
             return { started, cancelled: snapshot.task === 'Cancelled', handoff: Boolean(snapshot.handoff) };
           }
           await new Promise(resolve => setTimeout(resolve, 600));
@@ -2407,11 +2527,14 @@ function registerIpc() {
     mainWindow?.on('blur', onBlur);
     try {
       while (Date.now() < deadline) {
-        if (launchWaitCancel.delete(gameId)) { if (lastLaunch?.gameId === gameId) lastLaunch.result = 'cancelled'; return { started: false, cancelled: true }; }
+        if (launchWaitCancel.delete(gameId)) {
+          const stop = await stopLaunch(gameId);
+          return { started: false, cancelled: true, stopped: stop.stopped, wasRunning: stop.wasRunning, stillRunning: stop.stillRunning, method: stop.method };
+        }
         if (game.provider === 'Steam' && game.appId && await steamRunningAppId() === String(game.appId)) {
           if (activeGameSession?.gameId === gameId) activeGameSession.seenRunning = true;
           if (lastLaunch?.gameId === gameId) lastLaunch.result = 'running (Steam)';
-          return { started: true, via: 'steam' };
+          return handOver(game, gameId);
         }
         // Losing focus is not proof that a game is running: Steam and other launchers take focus while the game
         // is still loading. Steam games are judged only by Steam's running-game value above, and anything else
@@ -2419,14 +2542,14 @@ function registerIpc() {
         const away = blurredAt && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused() && Date.now() - blurredAt > 4000;
         if (away && game.provider !== 'Steam') return { started: true, via: 'window' };
         if (activeGameSession?.gameId === gameId && activeGameSession.pid && Date.now() - started > 4000) {
-          try { process.kill(activeGameSession.pid, 0); return { started: true, via: 'process' }; } catch { /* Exited or handed off. */ }
+          try { process.kill(activeGameSession.pid, 0); return handOver(game, gameId); } catch { /* Exited or handed off. */ }
         }
         await new Promise(resolve => setTimeout(resolve, 600));
       }
       return { started: false };
     } finally { clearTimeout(slowNote); mainWindow?.removeListener('blur', onBlur); }
   });
-  ipcMain.handle('game:wait-cancel', async (_event, gameId) => { launchWaitCancel.add(String(gameId)); await steamLaunch.cancel(gameId); return true; });
+  ipcMain.handle('game:wait-cancel', async (_event, gameId) => { launchWaitCancel.add(String(gameId)); stopLaunch(String(gameId)).catch(() => {}); return true; });
   ipcMain.handle('game:active-session', async () => {
     const remote = remotePlay.active();
     if (remote) return { gameId: `remote:${remote.hostId}:${remote.appId}`, verified: remote.phase === 'playing', remote: true };
@@ -2609,7 +2732,8 @@ function registerIpc() {
     const result = await powershell(`(Get-AppxPackage -Name '${XBOX_MODE_PACKAGE}' | Select-Object -First 1).InstallLocation`);
     return { supported: true, registered: Boolean(result.stdout), developerMode: await developerMode() };
   });
-  ipcMain.handle('xbox-mode:register', async () => {
+  ipcMain.handle('xbox-mode:register', async event => {
+    assertLauncherSender(event);
     if (process.platform !== 'win32') throw new Error('Xbox mode is a Windows feature.');
     if (!await developerMode()) return { status: 'needs-developer-mode' };
     const source = path.join(__dirname, 'xbox-mode-bridge').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
@@ -2634,7 +2758,8 @@ function registerIpc() {
   // Native Steam installs: no Steam dialog. A manifest flagged "update required" is written to the
   // Steam library with the most free space, and Steam is restarted silently so it starts the download.
   const steamRunning = () => new Promise((resolve) => execFile('tasklist.exe', ['/FI', 'IMAGENAME eq steam.exe', '/NH'], { windowsHide: true, timeout: 4000 }, (error, stdout) => resolve(!error && /steam\.exe/i.test(stdout))));
-  ipcMain.handle('steam:native-install', async (_event, gameId, chosenLibrary = '') => {
+  ipcMain.handle('steam:native-install', async (event, gameId, chosenLibrary = '') => {
+    assertLauncherSender(event);
     const game = currentLibrary.find((item) => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
     if (!game) throw new Error('This Steam game is not in your library.');
     if (game.installed !== false) return { status: 'installed' };
@@ -2643,7 +2768,7 @@ function registerIpc() {
     const roots = await findSteamRoots();
     const steamExe = roots.map((root) => path.join(root, 'steam.exe')).find((file) => require('fs').existsSync(file));
     if (!steamExe) throw new Error('Steam was not found on this PC.');
-    for (const root of roots) if (await exists(path.join(root, 'steamapps', `appmanifest_${game.appId}.acf`))) return { status: 'queued', library: root };
+    for (const root of roots) if (await exists(path.join(root, 'steamapps', `appmanifest_${game.appId}.acf`))) { scheduleInstallChoices(game.appId); return { status: 'queued', library: root }; }
     let info = null;
     try {
       const response = await fetch(`https://api.steamcmd.net/v1/info/${game.appId}`, { signal: AbortSignal.timeout(10000) });
@@ -2678,6 +2803,7 @@ function registerIpc() {
       for (let waited = 0; waited < 40000 && await steamRunning(); waited += 1000) await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    scheduleInstallChoices(game.appId);
     return { status: 'started', library: target, free: libraries.find(item => item.root === target)?.free || null };
   });
   // "Install to": every Steam library folder with its drive, free space and the game's listed size.
@@ -2698,6 +2824,174 @@ function registerIpc() {
     const preferred = destinations.find(item => libraryKey(item.root) === libraryKey(settings.steamInstallLibrary || ''))?.root
       || [...destinations].sort((a, b) => (b.free || 0) - (a.free || 0))[0]?.root || '';
     return { libraries: destinations, needed: size.requiredBytes, ...size, preferred };
+  });
+  // What to install: DLC that ships files and language packs, sized from Steam's public depot data, with Steam's own
+  // DLC list (through its local port) saying which add-ons you own and have switched on.
+  ipcMain.handle('steam:install-addons', async (_event, gameId) => {
+    const game = currentLibrary.find((item) => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
+    if (!game) throw new Error('This Steam game is not in your library.');
+    if (process.env.NEBULA_DEMO === '1') {
+      const groups = { dlc: new Map([['5001', { installBytes: 7e9, downloadBytes: 5.9e9, depotCount: 2 }], ['5002', { installBytes: 150e6, downloadBytes: 120e6, depotCount: 1 }]]), languages: new Map([['english', { installBytes: 340e6, downloadBytes: 300e6 }], ['french', { installBytes: 325e6, downloadBytes: 290e6 }]]) };
+      return { ...installAddons.buildAddons({ groups, listedDlcIds: ['5001', '5002', '5003'], store: new Map([['5001', { title: 'Zombies Chronicles', price: '' }], ['5002', { title: 'Weapon Pack', price: '' }]]), steamDlc: new Map([['5001', { name: 'Zombies Chronicles', enabled: true, owned: true }], ['5002', { name: 'Weapon Pack', enabled: true, owned: true }], ['5003', { name: 'Not owned pack', enabled: false, owned: false }]]) }), source: 'demo', ownershipKnown: true };
+    }
+    const { info, shared } = await installSizeLookup.depotInfo(game.appId);
+    const groups = installAddons.groupDepots(info, shared);
+    const listedDlcIds = String(info?.extended?.listofdlc || '').split(',').map(id => id.trim()).filter(id => /^\d+$/.test(id));
+    const ids = [...new Set([...groups.dlc.keys(), ...listedDlcIds])].slice(0, 100);
+    const store = new Map((await steamStoreItems(ids).catch(() => [])).map(item => [item.appId, { title: item.title, price: item.price?.formatted || '' }]));
+    // Steam's own list: only DLC you own, with the same on/off switch as its Properties > DLC tab.
+    let steamDlc = null;
+    try {
+      const raw = await steamClientEval(`(async () => { const store = window.appDetailsStore; await store.RequestAppDetails(${Number(game.appId)}); const details = store.GetAppDetails(${Number(game.appId)}); return JSON.stringify((details?.vecDLC || []).map(item => ({ id: item.unAppID, name: item.strName, enabled: item.bEnabled, owned: Number(item.rtPurchaseDate) > 0 || item.strState === 'installed' }))); })()`, 8000);
+      steamDlc = new Map(JSON.parse(raw).map(item => [String(item.id), { name: item.name, enabled: item.enabled, owned: item.owned }]));
+    } catch { /* Steam's local port is off or Steam is closed: ownership stays unknown and every add-on is listed. */ }
+    const settings = await readSettings();
+    return { ...installAddons.buildAddons({ groups, listedDlcIds, store, steamDlc, saved: settings.installChoices?.[game.appId] || null }), source: steamDlc ? 'steam' : 'public', ownershipKnown: Boolean(steamDlc), dlcHidden: !steamDlc && groups.dlc.size > 0 };
+  });
+  // The player's choices are kept for next time and carried out when the install starts.
+  const pendingInstallChoices = new Map();
+  ipcMain.handle('steam:install-choices', async (_event, gameId, choices) => {
+    const game = currentLibrary.find((item) => item.id === gameId && item.provider === 'Steam' && /^\d+$/.test(String(item.appId)));
+    if (!game) throw new Error('This Steam game is not in your library.');
+    const clean = { dlc: {}, language: typeof choices?.language === 'string' && /^[a-z]{2,20}$/.test(choices.language) ? choices.language : '' };
+    for (const [id, enabled] of Object.entries(choices?.dlc || {})) if (/^\d{1,10}$/.test(id) && typeof enabled === 'boolean') clean.dlc[id] = enabled;
+    pendingInstallChoices.set(String(game.appId), { ...clean, at: Date.now() });
+    const settings = await readSettings();
+    await writeSettings({ installChoices: { ...(settings.installChoices || {}), [game.appId]: clean } });
+    return true;
+  });
+  // Steam restarts to read a new download, so its local port may take a while: try for about two minutes.
+  function scheduleInstallChoices(appId) {
+    const choice = pendingInstallChoices.get(String(appId));
+    if (!choice || process.env.NEBULA_DEMO === '1') return;
+    pendingInstallChoices.delete(String(appId));
+    (async () => {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, attempt ? 3000 : 6000));
+        try {
+          const { info, shared } = await installSizeLookup.depotInfo(appId);
+          const groups = installAddons.groupDepots(info, shared);
+          const addons = installAddons.buildAddons({ groups, store: new Map(), steamDlc: null });
+          const calls = installAddons.planCalls(appId, choice, addons);
+          if (!calls.length) return;
+          const script = calls.map(call => call.type === 'dlc' ? `SteamClient.Apps.SetDLCEnabled(${call.appId}, ${call.dlcAppId}, ${call.enabled});` : `SteamClient.Apps.SetAppCurrentLanguage(${call.appId}, ${JSON.stringify(call.code)});`).join(' ');
+          await steamClientEval(`(() => { ${script} return true; })()`, 6000);
+          console.log(`Install choices applied for ${appId}: ${calls.length} change(s)`);
+          return;
+        } catch { /* Steam isn't ready yet. */ }
+      }
+      console.warn(`Could not apply install choices for ${appId}; Steam will install everything it owns.`);
+    })();
+  }
+  // A game's own screenshots and clips (Steam's screenshot folder and Game Bar captures), with small thumbnails.
+  // Only files listed here can be opened, so the page never hands the main process a path.
+  const capturesByGame = new Map();
+  const thumbnailCache = new Map();
+  async function captureThumbnail(item) {
+    const key = `${item.path}:${item.at}`;
+    if (thumbnailCache.has(key)) return thumbnailCache.get(key);
+    let thumb = '';
+    try {
+      const image = typeof nativeImage.createThumbnailFromPath === 'function'
+        ? await nativeImage.createThumbnailFromPath(item.path, { width: 320, height: 180 })
+        : nativeImage.createFromPath(item.path).resize({ width: 320 });
+      if (!image.isEmpty()) thumb = image.toDataURL();
+    } catch { /* No preview for this file; the page shows a plain tile. */ }
+    if (thumbnailCache.size > 120) thumbnailCache.delete(thumbnailCache.keys().next().value);
+    thumbnailCache.set(key, thumb);
+    return thumb;
+  }
+  ipcMain.handle('captures:list', async (_event, gameId) => {
+    const game = currentLibrary.find(item => item.id === gameId);
+    if (!game || process.env.NEBULA_DEMO === '1') return [];
+    const items = await listCaptures({ title: game.title, appId: game.provider === 'Steam' ? game.appId : '', steamRoots: await findSteamRoots(), captureDirs: [path.join(app.getPath('videos'), 'Captures')], limit: 12 });
+    capturesByGame.set(gameId, items);
+    if (capturesByGame.size > 30) capturesByGame.delete(capturesByGame.keys().next().value);
+    const out = [];
+    for (let start = 0; start < items.length; start += 4) out.push(...await Promise.all(items.slice(start, start + 4).map(async (item, offset) => ({ index: start + offset, name: item.name, kind: item.kind, source: item.source, at: item.at, thumb: await captureThumbnail(item) }))));
+    return out;
+  });
+  ipcMain.handle('captures:open', async (event, gameId, index) => {
+    assertLauncherSender(event);
+    const item = capturesByGame.get(gameId)?.[Number(index)];
+    if (!item) throw new Error('That capture is no longer in the list.');
+    const error = await shell.openPath(item.path);
+    if (error) throw new Error(error);
+    return true;
+  });
+  // Quick settings for handhelds: battery, Wi-Fi, volume, brightness and power plan. In demo and review runs
+  // nothing is read from or written to the machine.
+  const quickSettings = createQuickSettings();
+  ipcMain.handle('quick:get', async (event, options) => {
+    assertLauncherSender(event);
+    if (process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1') {
+      return { battery: { percent: 64, charging: false }, wifi: { connected: true, ssid: 'Home network', signal: 82 }, brightness: 70, volume: { level: 45, muted: false },
+        plans: [{ guid: '381b4222-f694-41f0-9685-ff5bb260df2e', name: 'Balanced', active: true }, { guid: '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', name: 'High performance', active: false }, { guid: 'a1841308-3541-4fab-bc81-f71556f20b4a', name: 'Power saver', active: false }] };
+    }
+    return quickSettings.get({ volume: options?.volume !== false });
+  });
+  ipcMain.handle('quick:set', async (event, kind, value) => {
+    assertLauncherSender(event);
+    if (process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1') return true;
+    await quickSettings.set(String(kind), value);
+    return true;
+  });
+  // Settings the player can switch from the launcher. Only these keys can be changed this way.
+  // Each key lists the values it accepts: true for a switch, or the allowed names.
+  const PREF_KEYS = { pauseDownloadsWhilePlaying: true, controllerVibration: true, theme: ['helix', 'series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'] };
+  // Optional theme pack: DashX360's Xbox 360 assets (sounds, boot video, dashboard themes), installed by the
+  // player into their own app data folder. It is never part of the launcher's files or releases.
+  const themePackRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs', 'dashx360');
+  const PACK_SOUNDS = { navigate: 'tile-hover.wav', confirm: '10. Select A.mp3', back: '14. Back.mp3', pageLeft: '08. Page Left.mp3', pageRight: '09. Page Right.mp3',
+    notify: 'notify-popup.wav', launch: 'select-into-menu.wav', startup: '02. Startup (2010).mp3' };
+  ipcMain.handle('theme:pack', async () => {
+    if (!await exists(themePackRoot)) return { available: false };
+    const themesDir = path.join(themePackRoot, 'Custom Files', 'Themes');
+    const themes = [];
+    for (const entry of await fs.readdir(themesDir, { withFileTypes: true }).catch(() => [])) {
+      if (!entry.isDirectory()) continue;
+      try {
+        const manifest = JSON.parse(await fs.readFile(path.join(themesDir, entry.name, 'theme.json'), 'utf8'));
+        const image = name => typeof name === 'string' && /^[\w .-]+\.(png|jpe?g)$/i.test(name) ? pathToFileURL(path.join(themesDir, entry.name, name)).href : '';
+        themes.push({ id: entry.name, name: String(manifest.Name || entry.name.replace(/_/g, ' ')).slice(0, 40),
+          home: image(manifest.HomeImage), games: image(manifest.GamesImage), apps: image(manifest.AppsImage), settings: image(manifest.SettingsImage) });
+      } catch { /* A theme without a readable manifest is skipped. */ }
+    }
+    const boot = path.join(themePackRoot, 'Boot', 'Boot Screen.mp4');
+    return { available: true, credit: 'DashX360 by ZivvoZ', base: pathToFileURL(themePackRoot + path.sep).href, themes,
+      boot: await exists(boot) ? pathToFileURL(boot).href : '', sounds: Object.keys(PACK_SOUNDS) };
+  });
+  ipcMain.handle('theme:pack-sound', async (_event, kind) => {
+    const file = PACK_SOUNDS[kind];
+    if (!file) throw new Error('Unknown sound.');
+    const data = await fs.readFile(path.join(themePackRoot, 'Audio', 'Sounds', file)).catch(() => null);
+    return data && data.length < 4e6 ? { type: file.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav', base64: data.toString('base64') } : null;
+  });
+  ipcMain.handle('prefs:get', async () => {
+    const settings = await readSettings();
+    return { pauseDownloadsWhilePlaying: settings.pauseDownloadsWhilePlaying !== false, controllerVibration: settings.controllerVibration !== false,
+      theme: PREF_KEYS.theme.includes(settings.theme) ? settings.theme : 'helix' };
+  });
+  ipcMain.handle('prefs:set', async (_event, key, value) => {
+    const allowed = PREF_KEYS[key];
+    if (!allowed || (allowed === true ? typeof value !== 'boolean' : !allowed.includes(value))) throw new Error('Unknown setting.');
+    await writeSettings({ [key]: value });
+    return true;
+  });
+  // Downloads wait while a game runs and come back when it closes (see download-governor.cjs).
+  downloadGovernor = createDownloadGovernor({
+    enabled: async () => (await readSettings()).pauseDownloadsWhilePlaying !== false,
+    // Steam reports "no game" as 0. A direct launch is judged by its process.
+    gameRunning: async () => {
+      const id = await steamRunningAppId();
+      if (id !== '' && id !== '0') return true;
+      const pid = activeGameSession?.pid;
+      if (!pid) return false;
+      try { process.kill(pid, 0); return true; } catch { return false; }
+    },
+    downloadsActive: async () => { const overview = (await steamClientDownloads())?.overview; return Boolean(overview && Number(overview.update_appid) > 0 && !overview.paused); },
+    setPaused: async paused => { await steamClientEval(`SteamClient.Downloads.EnableAllDownloads(${!paused}, "0")`, 4000); clientDownloadsCache.at = 0; },
+    log: message => console.log(message)
   });
   ipcMain.handle('steam:remember-library', async (_event, root) => {
     if (typeof root === 'string' && (await findSteamRoots()).includes(root)) await writeSettings({ steamInstallLibrary: root });
@@ -2873,7 +3167,8 @@ function registerIpc() {
     if (enabled) try { live = await steamClientEval('typeof SteamClient?.Downloads?.PauseAppUpdate === "function"') === true; } catch { /* Steam is starting or closed. */ }
     return { enabled, live };
   });
-  ipcMain.handle('steam:set-download-controls', async (_event, enabled) => {
+  ipcMain.handle('steam:set-download-controls', async (event, enabled) => {
+    assertLauncherSender(event);
     const flag = await steamControlFlag();
     if (!path.isAbsolute(flag)) throw new Error('Steam was not found on this PC.');
     if (enabled) await fs.writeFile(flag, '', 'utf8'); else await fs.rm(flag, { force: true });
@@ -3200,7 +3495,7 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle('app:browse-files', (_event, directory, kind) => consoleServices.browseFiles(String(directory || ''), kind));
-  ipcMain.handle('app:read-gamerpic', (_event, filename) => consoleServices.readGamerpic(String(filename || '')));
+  ipcMain.handle('app:read-gamerpic', (event, filename) => { assertLauncherSender(event); return consoleServices.readGamerpic(String(filename || '')); });
   ipcMain.handle('app:get-sound-pack', () => soundPack.get());
   ipcMain.handle('shop:offers', (event, appId) => {
     if(event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame)throw Error('Untrusted Store request');
@@ -3308,7 +3603,8 @@ function registerIpc() {
     startMenuCache = { at: Date.now(), list };
     return list;
   });
-  ipcMain.handle('game:add', async (_event, selectedPath) => {
+  ipcMain.handle('game:add', async (event, selectedPath) => {
+    assertLauncherSender(event);
     if (!selectedPath) return null;
     const executable = String(selectedPath);
     if (!path.isAbsolute(executable) || !/\.(exe|bat|cmd)$/i.test(executable) || !(await fs.stat(executable)).isFile()) throw Error('Choose an existing game or app');
@@ -3361,7 +3657,8 @@ function registerIpc() {
     await writeSettings({ customGames });
     return { added, scanned: visited, truncated: queue.length > 0 || candidates.size >= 300 };
   });
-  ipcMain.handle('game:custom:save', async (_event, incoming) => {
+  ipcMain.handle('game:custom:save', async (event, incoming) => {
+    assertLauncherSender(event);
     const title = String(incoming?.title || '').trim();
     if (!title || title.length > 160 || /[\r\n\0]/.test(title)) throw new Error('Enter a game name under 160 characters.');
     const executable = String(incoming?.executable || '');
@@ -3394,8 +3691,17 @@ function registerIpc() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
     return true;
   });
-  ipcMain.handle('app:power', (_event, action) => runPowerAction(action, { demo: process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1' }));
-  ipcMain.handle('app:quit', () => app.quit());
+  // Only the bundled launcher page may use the privileged bridge. window.launcher is attached to the
+  // main window's webContents, so this also covers a navigation or injected script reaching a handler
+  // it should not. The Store and Steam sign-in windows have their own partitions and preloads and
+  // never receive this bridge, so they are unaffected.
+  const assertLauncherSender = event => {
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) {
+      throw new Error('Untrusted launcher request');
+    }
+  };
+  ipcMain.handle('app:power', (event, action) => { assertLauncherSender(event); return runPowerAction(action, { demo: process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1' }); });
+  ipcMain.handle('app:quit', event => { assertLauncherSender(event); app.quit(); });
   ipcMain.handle('updater:status', () => updater.status());
   ipcMain.handle('app:safe-mode', () => safeMode);
   ipcMain.handle('diagnostics:copy', async () => {
@@ -3457,6 +3763,27 @@ async function createWindow() {
     }
   });
   mainWindow.setMenu(null);
+  // This window owns the privileged preload (window.launcher: launch games, change settings, power
+  // actions), so it must never leave the bundled page. Without these guards a drag-and-dropped link
+  // or any accidental navigation would load a remote origin with the whole bridge still attached.
+  // Anything that needs a real web page uses the sandboxed Steam/Store views instead.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const isLocal = url.startsWith('file://') && url.includes('/src/renderer/');
+    if (!isLocal) { console.warn('Blocked navigation of the launcher window to', url); event.preventDefault(); }
+  });
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Links that genuinely belong outside the app open in the user's browser instead of a new window.
+    if (/^https:/i.test(url)) shell.openExternal(url).catch(() => {});
+    return { action: 'deny' };
+  });
+  // The launcher page needs media playback for remote play and pointer lock while streaming.
+  // Everything else (camera, microphone, notifications, geolocation, ...) is refused silently.
+  // The Store and Steam sign-in windows use their own partitions and are unaffected.
+  const allowedPermissions = new Set(['media', 'fullscreen', 'pointerLock']);
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents, permission, callback) => {
+    if (!allowedPermissions.has(permission)) console.warn('Denied renderer permission request:', permission);
+    callback(allowedPermissions.has(permission));
+  });
   steamShop = createSteamShop(mainWindow, { WebContentsView:require('electron').WebContentsView, ipcMain });
   // A healthy start means the window loaded and stayed up. Two starts in a row that never got there make the
   // next start run in safe mode (see support.cjs).
@@ -3528,6 +3855,8 @@ const updater = createUpdater({
 });
 app.on('before-quit', event => updater.applyOnQuit(event));
 app.on('before-quit', event => { if (!event.defaultPrevented) remotePlay.dispose(); });
+// Downloads this launcher paused go back to running when it closes.
+app.on('before-quit', event => { if (!event.defaultPrevented) downloadGovernor?.dispose(); });
 
 app.whenReady().then(async () => {
   windowsHomeCountry = await detectWindowsHomeCountry();
@@ -3542,6 +3871,7 @@ app.whenReady().then(async () => {
   }
   await createWindow();
   if (!safeMode) updater.start();
+  if (!safeMode && process.env.NEBULA_DEMO !== '1') downloadGovernor?.start();
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());
 });
 

@@ -209,31 +209,48 @@ async function gPollDownloads() {
 }
 function gRefreshQueue(focusSelector = '') {
   const focused = document.activeElement;
+  // Containment has to be read before the rows are replaced: afterwards the old node is detached and
+  // this test can only ever be false, which used to leave focus pointing at a removed button.
+  const inside = Boolean(focused && libraryGrid.contains(focused));
   const key = focusSelector || (focused?.dataset?.appId ? `[data-action="${focused.dataset.action}"][data-app-id="${CSS.escape(focused.dataset.appId)}"]` : focused?.dataset?.gameId ? `.g-queue-main[data-game-id="${CSS.escape(focused.dataset.gameId)}"]` : focused?.dataset?.action === 'g-queue-all' ? '[data-action="g-queue-all"]' : '');
   renderGarrisonQueue();
   refreshFocusables();
-  if (key && libraryGrid.contains(focused) || focusSelector) setFocusedElement(libraryGrid.querySelector(key), { scroll: false });
+  if (key && (inside || focusSelector)) {
+    const next = libraryGrid.querySelector(key);
+    if (next) setFocusedElement(next, { scroll: false });
+  }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) gPollDownloads(); });
-// Pause and resume use Steam's own download controls. They're turned on once, with the player's OK.
+// Controls are checked once and remembered, so each press goes straight to Steam.
+let gDownloadControlsLive = 0;
+let gEnablingDownloadControls = false;
 async function gEnsureDownloadControls() {
+  // A second press while Steam is restarting used to start a second 45-second wait.
+  if (gEnablingDownloadControls) { showToast('Still turning on download controls…'); return false; }
   const status = await window.launcher.getSteamDownloadControls().catch(() => ({}));
   if (status.live) return true;
   if (status.enabled) { showToast('Steam is starting. Try again in a moment.'); return false; }
   const choice = await gChoice('Pause and resume here', 'To pause and resume Steam downloads from here, Steam needs its download controls turned on. Steam restarts quietly in the background to apply it.<br><br>The controls only accept connections from this PC, but while they\'re on, other apps on this PC could also control Steam. You can turn them off in Settings › Manage games.', [['on', 'Turn on', true], ['', 'Not now']]);
   if (choice !== 'on') return false;
   if (state.activeGameSession) { showToast('Close your game first. Steam has to restart to turn this on.'); return false; }
-  showToast('Turning on download controls…');
-  await window.launcher.setSteamDownloadControls(true);
-  for (let attempt = 0; attempt < 30; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if ((await window.launcher.getSteamDownloadControls().catch(() => ({}))).live) { showToast('Download controls are on'); return true; }
+  // Failures here used to reject into the click dispatcher, leaving the toast up for 45 s with no error.
+  gEnablingDownloadControls = true;
+  try {
+    showToast('Turning on download controls…');
+    await window.launcher.setSteamDownloadControls(true);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      if ((await window.launcher.getSteamDownloadControls().catch(() => ({}))).live) { showToast('Download controls are on'); return true; }
+    }
+    showToast('Steam is still starting. Try again in a moment.');
+    return false;
+  } catch (error) {
+    showToast(error?.message || 'Steam could not be turned on.');
+    return false;
+  } finally {
+    gEnablingDownloadControls = false;
   }
-  showToast('Steam is still starting. Try again in a moment.');
-  return false;
 }
-// Controls are checked once and remembered, so each press goes straight to Steam.
-let gDownloadControlsLive = 0;
 async function gQueueAction(appId, action) {
   if (Date.now() - gDownloadControlsLive > 60000) {
     if (!await gEnsureDownloadControls()) return;
@@ -306,34 +323,43 @@ function gMenu(anchor, items) {
 // "Install to": pick a Steam library drive before the download starts.
 function gInstallTo(game) {
   return new Promise(resolve => {
-    let targets, selected = '', finished = false;
+    let targets, addons = null, selected = '', finished = false;
     const opener = document.activeElement;
     const dialog = document.createElement('dialog');
     dialog.className = 'g-flyout g-install-to g-managed-dialog';
     dialog.setAttribute('aria-labelledby', 'g-install-title');
     const render = () => {
+      // The add-ons you tick add to the space the game needs.
+      const needed = targets.needed ? targets.needed + (addons?.extraBytes() || 0) : 0;
       dialog.innerHTML = `<header><h2 id="g-install-title">Install ${escapeHtml(game.title)}</h2></header>
         <div class="g-install-sizes" aria-label="Download and storage estimates">
           <div><small>Download</small><strong>${targets.downloadBytes ? `About ${escapeHtml(formatBytes(targets.downloadBytes))}` : 'Size unavailable'}</strong></div>
           <div><small>Installed game</small><strong>${targets.installBytes ? `About ${escapeHtml(formatBytes(targets.installBytes))}` : 'Size unavailable'}</strong></div>
-          <div><small>Space needed</small><strong>${targets.needed ? `About ${escapeHtml(formatBytes(targets.needed))}` : 'Steam will confirm'}</strong></div>
-        </div><p>Choose where to install it. Sizes can change with language packs, DLC and updates.</p>
+          <div><small>Space needed</small><strong>${needed ? `About ${escapeHtml(formatBytes(needed))}` : 'Steam will confirm'}</strong></div>
+        </div>${addons ? addons.markup() : ''}<p>${addons ? 'Choose where to install it.' : 'Choose where to install it. Sizes can change with language packs, DLC and updates.'}</p>
         <div class="g-drives" role="radiogroup" aria-label="Install location">${targets.libraries.map(item => {
           const used = item.total ? Math.round((1 - item.free / item.total) * 100) : 0;
-          const low = targets.needed && item.free !== null && item.free < targets.needed;
+          const low = needed && item.free !== null && item.free < needed;
           return `<button class="g-drive focusable${item.root === selected ? ' selected' : ''}${low ? ' low' : ''}" type="button" role="radio" aria-checked="${item.root === selected}" data-root="${escapeHtml(item.root)}">
             ${gIcon('drive', 'g-drive-icon')}<span class="g-drive-copy"><strong>${escapeHtml(item.drive)}</strong><small>${escapeHtml(item.root)}</small>
-            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small class="g-drive-space">${item.free === null ? 'Free space unavailable' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : targets.needed && item.free !== null ? ` · About ${escapeHtml(formatBytes(item.free - targets.needed))} left after install` : ''}</small></span>
+            <span class="g-drive-bar"><i style="width:${used}%"></i></span><small class="g-drive-space">${item.free === null ? 'Free space unavailable' : `${escapeHtml(formatBytes(item.free))} free${item.total ? ` of ${escapeHtml(formatBytes(item.total))}` : ''}`}${low ? ' · Not enough space' : needed && item.free !== null ? ` · About ${escapeHtml(formatBytes(item.free - needed))} left after install` : ''}</small></span>
             <i class="g-drive-check">${gIcon('check')}</i></button>`;
         }).join('')}</div>
-        <div class="g-choice-actions"><button class="g-control-button primary focusable" type="button" data-install-confirm ${targets.needed && targets.libraries.some(item => item.root === selected && item.free !== null && item.free < targets.needed) ? 'disabled' : ''}>Install</button><button class="g-control-button focusable" type="button" data-install-cancel>Cancel</button></div>`;
+        <div class="g-choice-actions"><button class="g-control-button primary focusable" type="button" data-install-confirm ${needed && targets.libraries.some(item => item.root === selected && item.free !== null && item.free < needed) ? 'disabled' : ''}>Install</button><button class="g-control-button focusable" type="button" data-install-cancel>Cancel</button></div>`;
       refreshFocusables();
     };
     const done = value => { if (finished) return; finished = true; dialog.close(); dialog.remove(); refreshFocusables(); if (opener?.isConnected) setFocusedElement(opener, { scroll: false }); resolve(value); };
     dialog.addEventListener('click', event => {
+      const addonControl = addons && event.target.closest('[data-addon-toggle], [data-addon-language], [data-addon-all]');
+      if (addonControl) {
+        const keep = addons.handle(addonControl);
+        render();
+        setFocusedElement(dialog.querySelector(keep) || dialog.querySelector('.g-addons .focusable'), { scroll: false });
+        return;
+      }
       const drive = event.target.closest('[data-root]');
       if (drive) { selected = drive.dataset.root; render(); setFocusedElement(dialog.querySelector(`[data-root="${CSS.escape(selected)}"]`), { scroll: false }); return; }
-      if (event.target.closest('[data-install-confirm]:not(:disabled)')) { window.launcher.rememberSteamLibrary(selected).catch(() => {}); done(selected); }
+      if (event.target.closest('[data-install-confirm]:not(:disabled)')) { window.launcher.rememberSteamLibrary(selected).catch(() => {}); addons?.save().catch(() => {}); done(selected); }
       if (event.target.closest('[data-install-cancel]')) done(null);
     });
     dialog.addEventListener('cancel', () => done(null));
@@ -345,7 +371,8 @@ function gInstallTo(game) {
     setFocusedElement(dialog.querySelector('[data-install-cancel]'), { scroll: false });
     (async () => {
       try {
-        targets = await window.launcher.getSteamInstallTargets(game.id);
+        // Add-ons load alongside the drives; if they can't, the sheet is the plain drive picker.
+        [targets, addons] = await Promise.all([window.launcher.getSteamInstallTargets(game.id), gLoadInstallAddons(game).catch(() => null)]);
         if (finished) return;
         if (!targets.libraries.length) throw new Error('No available Steam library drives were found. Connect a drive and try again.');
         selected = targets.preferred || targets.libraries[0].root;
@@ -375,7 +402,10 @@ applyLibraryResult = function (result, ...rest) {
 
 const gRenderLibraryView = renderLibraryView;
 renderLibraryView = function () {
-  const tab = state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
+  // The hidden-games view is its own grid, so it takes precedence over the Installed tab. Without
+  // this the top-bar Library button (which selects Installed) kept tab at 'installed' and the
+  // filter's "Show hidden games" switch appeared to do nothing.
+  const tab = state.gHiddenView ? 'games' : state.libraryQueue ? 'queue' : state.libraryTab === 'play-history' ? 'recent'
     : state.installFilter === 'installed' && !state.consoleLibraryGroups && state.libraryCategory !== 'apps' ? 'installed' : 'games';
   libraryView.dataset.gTab = tab;
   gRenderLibraryView();
@@ -1107,7 +1137,9 @@ async function garrisonAction(action, source) {
   }
   if (action === 'g-source') {
     const value = source.dataset.source;
-    state.gHiddenView = value === 'hidden';
+    // No chip ever carries data-source="hidden" (the switch is 'hide'/'show' in the filter sheet),
+    // so this must not claim to enable the hidden view.
+    state.gHiddenView = false;
     state.consoleLibraryGroups = value === 'groups';
     state.libraryCategory = value === 'apps' ? 'apps' : 'games';
     state.collectionFilter = value === 'favorites' ? 'favorites' : 'all';
