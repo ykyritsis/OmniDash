@@ -38,11 +38,29 @@ The work is on branch `console-themes`. It hasn't been released yet.
 
 ## Installing a test build into the owner's copy
 
-1. Copy the installed `%LOCALAPPDATA%\Programs\Xbox Preview UI\resources\app.asar` and `app.asar.unpacked` to `resources\backup-<name>`.
-2. Extract the asar, overlay `src/`, set the version, and repack. Use `@electron/asar` from `node_modules/.pnpm/@electron+asar@3.4.1`.
-3. Copy `app.asar` and `app.asar.unpacked` back.
+**The owner wants the latest working tree installed every time, so this is part of finishing a change, not an
+optional extra.** Run the script (it does the whole procedure, including the backup and the unpacked bridge):
 
-The latest backup is `backup-0.6.0-test11`.
+```
+cd "C:\Users\ykyri\OneDrive\Documents\ChatGPT\xbox mode 2"
+node_modules\electron\dist\electron.exe scripts\install-test-build.cjs
+```
+
+- It refuses while `Xbox Preview UI.exe` is running, so ask the owner to close it (or wait) instead of forcing it.
+- It copies the current `resources\app.asar` and `app.asar.unpacked` to `resources\backup-<version>-test<N>` first
+  and picks the next number itself.
+- It extracts the installed asar, overlays this repo's `src/` and `build/` icons, keeps the stripped packaged
+  `package.json` (so the version stays the release version), repacks with `src/xbox-mode-bridge` unpacked, and
+  copies the result back.
+- `@electron/asar` is resolved from `node_modules/.pnpm/@electron+asar@*`; the bridge files must stay in
+  `app.asar.unpacked` because the home-app helper is launched by path.
+
+To check an install, extract the asar and look for the change, or start the app hidden in demo mode:
+`NEBULA_DEMO=1 NEBULA_REVIEW=1 NEBULA_DEMO_USER_DATA=<temp> "…\Xbox Preview UI.exe"` (shells here set
+`ELECTRON_RUN_AS_NODE=1`, which starts Electron as node and exits at once — remove it first). Kill the whole tree
+when done: `taskkill /IM "Xbox Preview UI.exe" /T /F`.
+
+The latest backup is `backup-0.6.0-test13` (it holds the build installed before the 2026-10-17 evening theme work).
 
 ## Theme system
 
