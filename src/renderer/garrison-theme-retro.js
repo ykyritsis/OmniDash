@@ -27,7 +27,10 @@
   const findGame = id => (state.games || []).find(item => item.id === id);
 
   // ---------- Packs ----------
-  let pack = { available: {}, base: '', sounds: {} };
+  let pack = { available: {}, base: '', sounds: {}, music: {} };
+  // The pack is read once at start-up; the audio engine waits for this promise before it decides whether a theme
+  // has pack music, so the first press can never miss a track that is already installed.
+  let packReadyPromise = null;
   const P = (id, rel) => pack.available[id] && pack.base ? pack.base + rel.split('/').map(encodeURIComponent).join('/') : '';
   const PS3I = file => P('ps3', `ps3/PS3-Simulator-main/icons/${file}.png`);
   const PS4I = file => P('ps4', `ps4/Ps4-UI-master/assets/img/${file}.png`);
@@ -47,6 +50,7 @@
     style.textContent = css;
     document.body.classList.toggle('g-retro-pack', Object.values(pack.available).some(Boolean));
     if (on()) render();
+    return pack;
   }
 
   const host = document.createElement('section');
@@ -212,8 +216,14 @@
   }
   // The selected game's background image fades in after a moment, as PIC1 did.
   let picTimer = 0;
+  // PS3 SND0: after resting on a game for 1.5 s the game's trailer audio plays quietly, without its video.
+  // Every move off the game (or away from the XMB) cancels the wait and stops whatever was playing.
+  let gameAudioTimer = 0;
   function xmbBackdrop(item) {
     clearTimeout(picTimer);
+    clearTimeout(gameAudioTimer);
+    window.gAudio?.stopGameAudio?.();
+    if (item?.game) gameAudioTimer = setTimeout(() => window.gAudio?.gameAudioStart?.(item.game), 1500);
     const layer = host.querySelector('.xmb-pic');
     host.classList.remove('pic-on');
     if (!layer || !item?.game || !window.gWideArt) return;
@@ -2715,50 +2725,591 @@
     dsQueueReload();
   });
 
-  // Sounds: the pack's recordings when present, otherwise short synthesised cues.
-  let ctx;
-  const buffers = new Map();
-  const SYNTH = {
-    ps3: { navigate: [1320, .045, 'sine', .03], category: [880, .07, 'sine', .035], confirm: [660, .16, 'triangle', .04, 990], back: [520, .12, 'triangle', .035, 390], launch: [440, .5, 'sine', .04, 880], notify: [1175, .3, 'sine', .03, 1568] },
-    ps4: { navigate: [1760, .035, 'sine', .025], category: [1320, .05, 'sine', .03], confirm: [1047, .12, 'sine', .04, 1568], back: [784, .1, 'sine', .03, 587], launch: [523, .6, 'sine', .04, 1047], notify: [1319, .35, 'sine', .03, 1760] },
-    wii: { navigate: [1568, .06, 'triangle', .035], category: [1175, .08, 'triangle', .04], confirm: [988, .18, 'square', .02, 1319], back: [784, .14, 'triangle', .035, 523], launch: [523, .7, 'triangle', .04, 1047], notify: [1319, .3, 'triangle', .035, 1760] },
-    '3ds': { navigate: [2093, .04, 'square', .012], category: [1568, .06, 'square', .014], confirm: [1319, .12, 'square', .015, 1760], back: [1047, .1, 'square', .014, 784], launch: [784, .5, 'square', .015, 1568], notify: [1760, .25, 'square', .014, 2349] }
-  };
-  function packSound(id, kind) {
-    const key = `${id}:${kind}`;
-    if (!buffers.has(key)) {
-      buffers.set(key, null);
-      window.launcher.getRetroSound(id, kind).then(async sound => {
-        if (!sound) return;
-        const bytes = Uint8Array.from(atob(sound.base64), c => c.charCodeAt(0));
-        ctx ||= new AudioContext();
-        buffers.set(key, await ctx.decodeAudioData(bytes.buffer));
-      }).catch(() => {});
+  // =========================== Shared audio engine (task A1, plan §2.3) ===========================
+  // One engine for every theme. `window.gAudio.play(kind)` replaces the per-file synth wrappers; it picks the
+  // theme's pack recording when one exists and a drawn cue otherwise. Every sound and the menu music go through
+  // one master GainNode scaled by the registry's Volume and Mute, so the Settings rows are the only volume
+  // authority in the app. Menu music loops from the theme's pack (or a drawn fallback loop), fades in after the
+  // first input while the window is focused, and fades out on launch and blur. Everything stops and the context
+  // suspends when the window is hidden or unfocused, and nothing is left on a timer.
+  //
+  // The per-theme maps cover navigate, category/page, confirm, back, error, launch, notify, achievement/trophy,
+  // boot and power-off. Helix deliberately keeps the launcher's original interface sounds.
+  const gAudio = (() => {
+    const THEMES = ['series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'];
+    const KINDS = ['navigate', 'category', 'confirm', 'back', 'error', 'launch', 'notify', 'achievement', 'boot', 'powerOff'];
+    // The launcher asks for a few names that mean the same sound; map them onto the map's own names.
+    const ALIASES = {
+      select: 'confirm', cancel: 'back', failure: 'error', start: 'launch', trophy: 'achievement', unlock: 'achievement',
+      startup: 'boot', 'power-on': 'boot', 'power-off': 'powerOff', shutdown: 'powerOff',
+      pageLeft: 'category', pageRight: 'category', pageleft: 'category', pageright: 'category'
+    };
+    const SHORT = new Set(['navigate', 'category', 'confirm', 'back']);
+    // Each theme has its own synth character, so a machine without packs still sounds like that console: the
+    // Series' airy sine ticks, the One's woody triangles, the 360's bright pluck, the XMB's glassy bells, and so on.
+    const PROFILES = {
+      series: { type: 'sine', nav: [1760, 1500], cat: [1320, 1175], ok: [988, 1480], back: [1175, 740], err: [392, 262], launch: [523, 784, 1046], notify: [987, 1318, 1975], trophy: [1046, 1318, 1568, 2093], boot: [110, 220, 330, 440], off: [740, 494, 330], gain: .03, filter: 0 },
+      one: { type: 'triangle', nav: [660, 600], cat: [523, 494], ok: [784, 1046], back: [523, 392], err: [392, 294], launch: [392, 784], notify: [392, 1046], trophy: [659, 880, 1046], boot: [98, 196, 294, 392], off: [587, 392, 262], gain: .045, filter: 2400 },
+      x360: { type: 'triangle', nav: [880, 830], cat: [740, 660], ok: [988, 1319], back: [659, 523], err: [330, 247], launch: [587, 880, 1175], notify: [659, 988, 1319], trophy: [784, 1046, 1319, 1568], boot: [123, 246, 370, 494], off: [659, 494, 330], gain: .04, filter: 3200 },
+      ps3: { type: 'sine', nav: [1320, 1180], cat: [880, 784], ok: [660, 990], back: [520, 390], err: [440, 294], launch: [440, 880], notify: [1175, 1568], trophy: [1046, 1318, 1760], boot: [130, 196, 261, 392], off: [523, 392, 261], gain: .03, filter: 0 },
+      ps4: { type: 'sine', nav: [1760, 1580], cat: [1320, 1175], ok: [1047, 1568], back: [784, 587], err: [523, 349], launch: [523, 1047], notify: [1319, 1760], trophy: [1047, 1319, 1760], boot: [131, 196, 262, 392], off: [660, 440, 262], gain: .035, filter: 0 },
+      wii: { type: 'triangle', nav: [1568, 1480], cat: [1175, 1046], ok: [988, 1319], back: [784, 523], err: [523, 392], launch: [523, 1047], notify: [1319, 1760], trophy: [988, 1319, 1568], boot: [262, 392, 523, 659], off: [784, 523, 349], gain: .04, filter: 0 },
+      '3ds': { type: 'square', nav: [2093, 1975], cat: [1568, 1400], ok: [1319, 1760], back: [1047, 784], err: [880, 659], launch: [784, 1568], notify: [1760, 2349], trophy: [1568, 2093, 2637], boot: [523, 784, 1047, 1319], off: [1047, 784, 523], gain: .012, filter: 0 }
+    };
+    // Drawn menu loops for themes whose pack has no music (Series, One, 360, 3DS; PS3/PS4/Wii use their packs).
+    // The pad is built from partials that complete a whole number of cycles in the loop, and the arpeggio notes
+    // are enveloped to silence before the loop point, so the 8-second buffer loops without a click.
+    const FALLBACK_MUSIC = {
+      series: { root: 110, chord: [1, 1.5, 2, 2.5], notes: [220, 330, 440, 330] },
+      one: { root: 98, chord: [1, 1.2, 1.5, 2], notes: [196, 247, 294, 247] },
+      x360: { root: 131, chord: [1, 1.25, 1.5, 2], notes: [262, 330, 392, 523] },
+      ps3: { root: 130.81, chord: [1, 1.5, 2, 3], notes: [261.63, 392, 523.25, 392] },
+      ps4: { root: 87.31, chord: [1, 1.5, 2, 2.5], notes: [174.61, 220, 261.63, 220] },
+      wii: { root: 130.81, chord: [1, 1.25, 1.5, 2], notes: [261.63, 329.63, 392, 329.63] },
+      '3ds': { root: 130.81, chord: [1, 1.5, 2, 2.5], notes: [523.25, 659.25, 783.99, 659.25] }
+    };
+    const MUSIC_TRIM = .35;
+    let ctx = null, master = null, musicGain = null, gameGain = null;
+    let volume = 0, muted = true, musicEnabled = true, musicVolume = 60, gameAudioEnabled = false;
+    let settingsLoaded = false, hadInput = false, outputSilenced = false;
+    let musicPlaying = false, musicId = '', musicSource = null, musicStartedAt = 0, musicResume = null, startPromise = null;
+    let launchDucked = false, suspendTimer = 0;
+    let lastAt = -Infinity, lastKind = '';
+    const voices = new Set();
+    const buffers = new Map();
+    const musicBuffers = new Map();
+    let themePackData = null, themePackPromise = null;
+    let gameVideo = null, gameHls = null, gameElementSource = null, gameGainConnected = false, gameAudioToken = 0;
+    const gameState = { playing: false, attempts: 0, reason: 'idle', gameId: '', stream: '' };
+
+    function ensureContext() {
+      if (ctx) return ctx;
+      ctx = new AudioContext();
+      master = ctx.createGain();
+      master.gain.value = 0;
+      master.connect(ctx.destination);
+      musicGain = ctx.createGain();
+      musicGain.gain.value = 0;
+      musicGain.connect(master);
+      return ctx;
     }
-    return buffers.get(key);
-  }
-  function play(kind) {
-    const id = theme();
-    if (!SYNTH[id]?.[kind] || state.soundEffects === false || !document.hasFocus() || document.hidden) return;
-    try {
-      ctx ||= new AudioContext();
-      if (pack.sounds?.[id]?.includes(kind) && pack.available[id] && window.launcher?.getRetroSound) {
-        const buffer = packSound(id, kind);
-        if (buffer) { const source = ctx.createBufferSource(), amp = ctx.createGain(); amp.gain.value = .55; source.buffer = buffer; source.connect(amp).connect(ctx.destination); source.start(); return; }
-        if (buffers.has(`${id}:${kind}`)) return;
+    // The one place output level is decided. Silence until the registry has been read, so a slow or missing
+    // settings file can never make the launcher louder than the player's own Volume/Mute values.
+    function intendedMaster() { return muted ? 0 : Math.max(0, Math.min(100, Number(volume) || 0)) / 100; }
+    function masterTarget() { return outputSilenced ? 0 : intendedMaster(); }
+    function applyMaster() {
+      if (!master) return;
+      // Set the intrinsic value as well as the timeline: an AudioParam only advances while the context renders,
+      // and the launcher is often suspended (hidden or unfocused) when Settings changes, so the node itself has
+      // to carry the new level. Volume and mute must be correct the moment they are changed.
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.value = masterTarget();
+    }
+    function musicTarget() { return MUSIC_TRIM * Math.max(0, Math.min(100, Number(musicVolume) || 0)) / 100; }
+    function rampMusic(target, seconds) {
+      if (!musicGain) return;
+      const now = ctx.currentTime;
+      musicGain.gain.cancelScheduledValues(now);
+      musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+      musicGain.gain.linearRampToValueAtTime(Math.max(.0001, target), now + seconds);
+    }
+    async function readOutputSettings() {
+      try {
+        if (window.gSettings) {
+          const [v, m, mm, mmv, ga] = await Promise.all([
+            window.gSettings.get('volume').catch(() => null), window.gSettings.get('mute').catch(() => null),
+            window.gSettings.get('menuMusic').catch(() => null), window.gSettings.get('menuMusicVolume').catch(() => null),
+            window.gSettings.get('ps3GameAudio').catch(() => null)
+          ]);
+          volume = v == null ? 100 : Math.max(0, Math.min(100, Number(v)));
+          muted = Boolean(m);
+          musicEnabled = mm !== false;
+          musicVolume = mmv == null ? 60 : Math.max(0, Math.min(100, Number(mmv)));
+          gameAudioEnabled = Boolean(ga);
+        } else { volume = 100; muted = false; }
+      } catch { volume = 100; muted = false; }
+      settingsLoaded = true;
+      applyMaster(true);
+      if (!musicPlaying) {
+        const now = ctx.currentTime;
+        musicGain?.gain.cancelScheduledValues(now);
+        if (musicGain) musicGain.gain.value = 0;
       }
-      const [freq, dur, type, gain, to] = SYNTH[id][kind];
-      const start = ctx.currentTime, osc = ctx.createOscillator(), amp = ctx.createGain();
-      osc.type = type; osc.frequency.setValueAtTime(freq, start); if (to) osc.frequency.exponentialRampToValueAtTime(to, start + dur);
-      amp.gain.setValueAtTime(.0001, start); amp.gain.exponentialRampToValueAtTime(gain, start + .005); amp.gain.exponentialRampToValueAtTime(.0001, start + dur);
-      osc.connect(amp).connect(ctx.destination); osc.start(start); osc.stop(start + dur + .02);
-    } catch { /* Optional. */ }
-  }
-  // Decode the pack's sounds ahead of time once the window is in use, so the first press isn't silent.
-  addEventListener('focus', () => { const id = theme(); if (on() && pack.available[id]) (pack.sounds?.[id] || []).forEach(kind => packSound(id, kind)); });
+      if (hadInput && musicEnabled && !musicPlaying) startMusic();
+    }
+    // ---------- Voices and synthesised cues ----------
+    function register(source, nodes, kind) {
+      const voice = { source, nodes, kind, at: performance.now() };
+      voices.add(voice);
+      source.onended = () => {
+        voices.delete(voice);
+        for (const node of nodes) { try { node.disconnect(); } catch { /* Already gone. */ } }
+      };
+      return voice;
+    }
+    function tone(c, { type = 'sine', freq = 660, to = freq, at = 0, dur = .08, gain = .03, attack = .004, filter = 0, q = .7 }, kind) {
+      const start = c.currentTime + at;
+      const osc = c.createOscillator(), amp = c.createGain();
+      const nodes = [amp];
+      osc.type = type;
+      osc.frequency.setValueAtTime(Math.max(20, freq), start);
+      if (to && to !== freq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), start + dur);
+      amp.gain.setValueAtTime(.0001, start);
+      amp.gain.exponentialRampToValueAtTime(Math.max(.0002, gain), start + attack);
+      amp.gain.exponentialRampToValueAtTime(.0001, start + dur);
+      let tail = osc.connect(amp);
+      if (filter) {
+        const lowpass = c.createBiquadFilter();
+        lowpass.type = 'lowpass'; lowpass.frequency.value = filter; lowpass.Q.value = q;
+        tail.connect(lowpass); nodes.push(lowpass); tail = lowpass;
+      }
+      tail.connect(master);
+      register(osc, nodes, kind);
+      osc.start(start);
+      osc.stop(start + dur + .03);
+    }
+    function noise(c, { at = 0, dur = .2, gain = .02, from = 800, to = 2400, kind = 'bandpass', q = 1.2 }, voiceKind) {
+      const start = c.currentTime + at;
+      const buffer = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const source = c.createBufferSource(), band = c.createBiquadFilter(), amp = c.createGain();
+      source.buffer = buffer;
+      band.type = kind; band.Q.value = q;
+      band.frequency.setValueAtTime(from, start);
+      band.frequency.exponentialRampToValueAtTime(to, start + dur);
+      amp.gain.setValueAtTime(.0001, start);
+      amp.gain.exponentialRampToValueAtTime(Math.max(.0002, gain), start + dur * .35);
+      amp.gain.exponentialRampToValueAtTime(.0001, start + dur);
+      source.connect(band).connect(amp).connect(master);
+      register(source, [band, amp], voiceKind);
+      source.start(start);
+      source.stop(start + dur + .02);
+    }
+    const note = (notes, index, fallback = 660) => Math.max(20, Number(notes?.[index] ?? notes?.[0] ?? fallback));
+    function synthCue(kind, profile) {
+      return c => {
+        const gain = profile.gain;
+        switch (kind) {
+          case 'navigate':
+            tone(c, { type: profile.type, freq: note(profile.nav, 0), to: note(profile.nav, 1), dur: .05, gain, filter: profile.filter }, kind);
+            tone(c, { type: profile.type, freq: note(profile.nav, 0) * 2, dur: .035, gain: gain * .3, filter: profile.filter }, kind);
+            break;
+          case 'category':
+            noise(c, { dur: .12, gain: gain * .35, from: 900, to: 2600 }, kind);
+            tone(c, { type: profile.type, freq: note(profile.cat, 0), to: note(profile.cat, 1), dur: .09, gain: gain * .8, filter: profile.filter }, kind);
+            break;
+          case 'confirm':
+            tone(c, { type: profile.type, freq: note(profile.ok, 0), dur: .12, gain, filter: profile.filter }, kind);
+            tone(c, { type: profile.type, freq: note(profile.ok, 1), at: .05, dur: .16, gain: gain * .8, filter: profile.filter }, kind);
+            break;
+          case 'back':
+            tone(c, { type: profile.type, freq: note(profile.back, 0), to: note(profile.back, 1), dur: .12, gain, filter: profile.filter }, kind);
+            break;
+          case 'error':
+            tone(c, { type: 'triangle', freq: note(profile.err, 0), to: note(profile.err, 1), dur: .22, gain: gain * .9, filter: profile.filter }, kind);
+            tone(c, { type: 'square', freq: note(profile.err, 1) * .5, dur: .28, gain: gain * .35 }, kind);
+            break;
+          case 'launch':
+            noise(c, { dur: .7, gain: gain * 1.4, from: 400, to: 5200 }, kind);
+            profile.launch.forEach((freq, index) => tone(c, { type: profile.type, freq, at: .12 + index * .06, dur: .9, gain: gain * .55, attack: .08, filter: profile.filter }, kind));
+            break;
+          case 'notify':
+            profile.notify.forEach((freq, index) => tone(c, { type: profile.type, freq, at: index * .07, dur: .55 - index * .1, gain: gain * .8, attack: .01, filter: profile.filter }, kind));
+            noise(c, { at: .05, dur: .45, gain: gain * .3, from: 6000, to: 12000, kind: 'highpass' }, kind);
+            break;
+          case 'achievement':
+            profile.trophy.forEach((freq, index) => tone(c, { type: profile.type, freq, at: index * .09, dur: .65, gain: gain * .7, attack: .01, filter: profile.filter }, kind));
+            tone(c, { type: 'sine', freq: note(profile.trophy, 1) * 2, at: .35, dur: .8, gain: gain * .25, attack: .05 }, kind);
+            break;
+          case 'boot':
+            tone(c, { type: 'sine', freq: 55, to: 82, dur: 1.5, gain: .06, attack: .25, filter: 400 }, kind);
+            profile.boot.forEach((freq, index) => tone(c, { type: profile.type, freq, at: .25 + index * .09, dur: 1.4, gain: gain * .5, attack: .2, filter: profile.filter }, kind));
+            noise(c, { at: .2, dur: 1.1, gain: .018, from: 2000, to: 9000, kind: 'highpass' }, kind);
+            break;
+          case 'powerOff':
+            profile.off.forEach((freq, index) => tone(c, { type: profile.type, freq, at: index * .11, dur: .5, gain: gain * (1 - index * .2), filter: profile.filter }, kind));
+            tone(c, { type: 'sine', freq: 55, to: 36, at: .1, dur: .9, gain: .03, attack: .02 }, kind);
+            break;
+          default: break;
+        }
+      };
+    }
+    // ---------- Pack recordings ----------
+    function themePack() {
+      themePackPromise ||= Promise.resolve(window.launcher?.getThemePack?.()).catch(() => null).then(data => { themePackData = data || null; return themePackData; });
+      return themePackPromise;
+    }
+    function packHas(id, kind) {
+      if (id === 'x360') return Boolean(themePackData?.sounds?.includes(kind));
+      return Boolean(pack.available?.[id] && pack.sounds?.[id]?.includes(kind) && window.launcher?.getRetroSound);
+    }
+    function packSound(id, kind) {
+      const key = `${id}:${kind}`;
+      if (!buffers.has(key)) {
+        buffers.set(key, null);
+        const request = id === 'x360'
+          ? window.launcher?.getThemePackSound?.(kind)
+          : window.launcher?.getRetroSound?.(id, kind);
+        Promise.resolve(request).then(async sound => {
+          if (!sound?.base64) return;
+          const bytes = Uint8Array.from(atob(sound.base64), character => character.charCodeAt(0));
+          buffers.set(key, await ensureContext().decodeAudioData(bytes.buffer));
+        }).catch(() => {});
+      }
+      return buffers.get(key);
+    }
+    function playBuffer(c, buffer, kind) {
+      const source = c.createBufferSource(), amp = c.createGain();
+      amp.gain.value = .55;
+      source.buffer = buffer;
+      source.connect(amp).connect(master);
+      register(source, [amp], kind);
+      source.start();
+    }
+    // ---------- Menu music ----------
+    function buildFallbackMusic(id) {
+      const c = ensureContext();
+      const seconds = 8, rate = c.sampleRate, length = Math.round(rate * seconds);
+      const config = FALLBACK_MUSIC[id] || FALLBACK_MUSIC.series;
+      const data = new Float32Array(length);
+      // Snap every partial to a whole number of cycles across the loop, so the pad is periodic and gapless.
+      const snapped = frequency => Math.max(1, Math.round(frequency * seconds)) / seconds;
+      const partials = config.chord.map((ratio, index) => ({ frequency: snapped(config.root * ratio), amp: .06 / (1 + index * .65) }));
+      for (let i = 0; i < length; i++) {
+        const t = i / rate;
+        let value = 0;
+        for (const partial of partials) value += Math.sin(2 * Math.PI * partial.frequency * t) * partial.amp;
+        data[i] = value * (.78 + .22 * Math.sin(2 * Math.PI * (1 / seconds) * t));
+      }
+      // One soft note a second, silent before the loop point, so the drawn loop has a pulse without a seam.
+      const noteLength = .9;
+      for (let second = 0; second < seconds; second++) {
+        const frequency = config.notes[second % config.notes.length];
+        const from = Math.round(second * rate), to = Math.min(length, Math.round((second + noteLength) * rate));
+        for (let i = from; i < to; i++) {
+          const t = (i - from) / rate;
+          const envelope = Math.min(1, t / .08) * Math.exp(-2.4 * t) * Math.min(1, Math.max(0, (noteLength - t) / .15));
+          data[i] += Math.sin(2 * Math.PI * frequency * t) * .05 * envelope;
+        }
+      }
+      // A 12 ms fade at each end makes the loop point a breath rather than a click.
+      const fade = Math.round(rate * .012);
+      for (let i = 0; i < fade; i++) { data[i] *= i / fade; data[length - 1 - i] *= i / fade; }
+      const buffer = c.createBuffer(2, length, rate);
+      for (let channel = 0; channel < 2; channel++) buffer.getChannelData(channel).set(data);
+      return buffer;
+    }
+    async function loadMusicBuffer(id) {
+      if (!musicBuffers.has(id)) {
+        musicBuffers.set(id, (async () => {
+          try {
+            if (packReadyPromise) await packReadyPromise.catch(() => {});
+            let sound = null;
+            if (pack.available?.[id] && pack.music?.[id] && window.launcher?.getRetroSound) sound = await window.launcher.getRetroSound(id, 'music');
+            else if (id === 'x360' && window.launcher?.getThemePackSound) {
+              const data = await themePack();
+              if (data?.music) sound = await window.launcher.getThemePackSound('music');
+            }
+            if (sound?.base64) {
+              const bytes = Uint8Array.from(atob(sound.base64), character => character.charCodeAt(0));
+              return await ensureContext().decodeAudioData(bytes.buffer);
+            }
+          } catch { /* A pack track that won't decode falls back to the drawn loop. */ }
+          return buildFallbackMusic(id);
+        })());
+      }
+      return musicBuffers.get(id);
+    }
+    async function startMusic() {
+      if (!settingsLoaded || !musicEnabled || !(musicVolume > 0)) return false;
+      if (!hadInput || document.hidden || !document.hasFocus() || launchDucked) return false;
+      if (musicPlaying && musicId === theme()) return true;
+      if (startPromise) return startPromise;
+      startPromise = (async () => {
+        try {
+          const id = theme();
+          if (!THEMES.includes(id)) return false;
+          const c = ensureContext();
+          // Never await resume(): a context waiting for a user gesture would otherwise hold the whole start
+          // promise open. The source starts on a suspended context and plays the moment it resumes.
+          if (c.state === 'suspended') c.resume().catch(() => {});
+          const buffer = await loadMusicBuffer(id);
+          if (!buffer || !musicEnabled || !(musicVolume > 0) || !hadInput || document.hidden || !document.hasFocus() || launchDucked || theme() !== id) return false;
+          stopMusic(0);
+          musicId = id;
+          const source = c.createBufferSource();
+          source.buffer = buffer;
+          source.loop = true;
+          source.connect(musicGain);
+          const offset = musicResume?.id === id ? musicResume.offset % buffer.duration : 0;
+          musicResume = null;
+          source.start(0, offset);
+          musicSource = source;
+          musicPlaying = true;
+          musicStartedAt = c.currentTime - offset;
+          source.onended = () => {
+            if (musicSource === source) { musicSource = null; musicPlaying = false; }
+            try { source.disconnect(); } catch { /* Already disconnected. */ }
+          };
+          musicGain.gain.cancelScheduledValues(c.currentTime);
+          musicGain.gain.setValueAtTime(.0001, c.currentTime);
+          musicGain.gain.linearRampToValueAtTime(Math.max(.0001, musicTarget()), c.currentTime + 1.1);
+          return true;
+        } catch { return false; } finally { startPromise = null; }
+      })();
+      return startPromise;
+    }
+    function stopMusic(fade = .18) {
+      if (ctx && musicSource) {
+        const source = musicSource;
+        const duration = source.buffer?.duration || 0;
+        if (duration && musicStartedAt) musicResume = { id: musicId, offset: Math.max(0, (ctx.currentTime - musicStartedAt) % duration) };
+        musicSource = null;
+        const now = ctx.currentTime;
+        musicGain.gain.cancelScheduledValues(now);
+        musicGain.gain.setValueAtTime(Math.max(.0001, musicGain.gain.value), now);
+        musicGain.gain.linearRampToValueAtTime(0, now + fade);
+        try { source.stop(now + fade + .02); } catch { try { source.stop(); } catch { /* Already stopped. */ } }
+      }
+      musicPlaying = false;
+      musicStartedAt = 0;
+    }
+    // ---------- Lifecycle: nothing runs while hidden or unfocused ----------
+    function stopVoices(selector) {
+      for (const voice of [...voices]) {
+        if (selector && !selector(voice)) continue;
+        try { voice.source.stop(0); } catch { /* Already stopped. */ }
+        for (const node of voice.nodes) { try { node.disconnect(); } catch { /* Already gone. */ } }
+        voices.delete(voice);
+      }
+    }
+    function sleepAudio() {
+      stopGameAudio();
+      stopVoices();
+      stopMusic(.12);
+      clearTimeout(suspendTimer);
+      // Let the music fade finish, then park the context: zero CPU while the launcher is in the background.
+      suspendTimer = setTimeout(() => { if (ctx?.state === 'running') ctx.suspend().catch(() => {}); }, 160);
+    }
+    function wakeAudio() {
+      clearTimeout(suspendTimer);
+      if (!ctx) return;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      if (launchDucked && document.querySelector('#launch-overlay')?.hidden) launchDucked = false;
+      if (hadInput) startMusic();
+      prefetch();
+    }
+    function noteInput() {
+      hadInput = true;
+      if (launchDucked && document.querySelector('#launch-overlay')?.hidden) launchDucked = false;
+      if (ctx?.state === 'suspended' && !document.hidden && document.hasFocus()) ctx.resume().catch(() => {});
+      if (!musicPlaying) startMusic();
+    }
+    function themeChanged() {
+      stopGameAudio();
+      if (!THEMES.includes(theme())) { stopMusic(0); return; }
+      if (musicPlaying && musicId !== theme()) stopMusic(.15);
+      if (hadInput) startMusic();
+      prefetch();
+    }
+    function prefetch() {
+      const id = theme();
+      if (!THEMES.includes(id) || document.hidden || !document.hasFocus()) return;
+      const kinds = id === 'x360' ? themePackData?.sounds : pack.sounds?.[id];
+      for (const kind of kinds || []) packSound(id, kind);
+    }
+    // ---------- PS3 SND0: the selected game's trailer audio, quietly, no video ----------
+    function gameAudioState() { return { ...gameState, enabled: gameAudioEnabled }; }
+    function stopGameAudio() {
+      gameAudioToken++;
+      if (gameHls) { try { gameHls.destroy(); } catch { /* Already gone. */ } gameHls = null; }
+      if (gameVideo) { try { gameVideo.pause(); } catch { /* Optional. */ } try { gameVideo.removeAttribute('src'); gameVideo.load(); } catch { /* Optional. */ } try { gameVideo.remove(); } catch { /* Optional. */ } gameVideo = null; }
+      if (gameElementSource) { try { gameElementSource.disconnect(); } catch { /* Optional. */ } gameElementSource = null; }
+      gameState.playing = false;
+      gameState.gameId = '';
+      gameState.stream = '';
+      if (!gameAudioEnabled && gameState.reason === 'playing') gameState.reason = 'disabled';
+    }
+    async function startGameAudio(game) {
+      gameState.attempts++;
+      if (!gameAudioEnabled) { gameState.reason = 'disabled'; return false; }
+      if (theme() !== 'ps3') { gameState.reason = 'not-ps3'; return false; }
+      if (!game || document.hidden || !document.hasFocus()) { gameState.reason = 'unfocused'; return false; }
+      if (gameState.playing && gameState.gameId === game.id) return true;
+      stopGameAudio();
+      const token = ++gameAudioToken;
+      gameState.reason = 'loading';
+      let details = null;
+      try { details = await window.launcher?.getGameDetails?.(game.id); } catch { /* No details means no trailer. */ }
+      if (token !== gameAudioToken) return false;
+      const videos = details?.videos || game.videos || [];
+      const stream = videos.find(video => video?.stream)?.stream;
+      if (!stream) { gameState.reason = 'no-trailer-audio'; return false; }
+      if (typeof Hls === 'undefined' || !Hls.isSupported()) { gameState.reason = 'no-hls'; return false; }
+      const c = ensureContext();
+      gameGain ||= c.createGain();
+      gameGain.gain.value = .3;
+      if (!gameGainConnected) { gameGain.connect(master); gameGainConnected = true; }
+      gameVideo = document.createElement('video');
+      gameVideo.muted = false;
+      gameVideo.volume = 1;
+      gameVideo.playsInline = true;
+      gameVideo.setAttribute('aria-hidden', 'true');
+      gameVideo.style.cssText = 'position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+      document.body.append(gameVideo);
+      try { gameElementSource = c.createMediaElementSource(gameVideo); gameElementSource.connect(gameGain); }
+      catch { gameState.reason = 'no-audio-route'; stopGameAudio(); return false; }
+      gameHls = new Hls({ enableWorker: false, capLevelToPlayerSize: false });
+      gameHls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) { gameState.reason = 'stream-error'; stopGameAudio(); } });
+      gameHls.loadSource(stream);
+      gameHls.attachMedia(gameVideo);
+      gameVideo.addEventListener('playing', () => { gameState.playing = true; gameState.reason = 'playing'; gameState.gameId = game.id; gameState.stream = stream; }, { once: true });
+      gameHls.on(Hls.Events.MANIFEST_PARSED, () => { gameVideo.play().catch(() => { gameState.reason = 'blocked'; }); });
+      return true;
+    }
+    // ---------- Wiring ----------
+    window.addEventListener('pointerdown', noteInput, true);
+    window.addEventListener('keydown', noteInput, true);
+    window.addEventListener('blur', sleepAudio);
+    window.addEventListener('focus', wakeAudio);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || document.visibilityState === 'hidden') sleepAudio();
+      else if (document.hasFocus()) wakeAudio();
+    });
+    document.addEventListener('g-setting-change', event => {
+      const id = event.detail?.id, value = event.detail?.value;
+      if (id === 'volume') { volume = value == null ? 100 : Math.max(0, Math.min(100, Number(value))); applyMaster(); }
+      else if (id === 'mute') { muted = Boolean(value); applyMaster(); }
+      else if (id === 'menuMusic') { musicEnabled = Boolean(value); if (!musicEnabled) stopMusic(); else if (hadInput) startMusic(); }
+      else if (id === 'menuMusicVolume') {
+        musicVolume = Math.max(0, Math.min(100, Number(value) || 0));
+        if (!(musicVolume > 0)) stopMusic();
+        else if (musicPlaying) rampMusic(musicTarget(), .15);
+        else if (hadInput) startMusic();
+      } else if (id === 'ps3GameAudio') { gameAudioEnabled = Boolean(value); if (!gameAudioEnabled) stopGameAudio(); }
+    });
+    document.addEventListener('g-settings-ready', () => { readOutputSettings().catch(() => {}); });
+    // The console's power-off sound belongs to the one real power confirmation in the app.
+    document.addEventListener('click', event => {
+      if (event.target.closest?.('[data-action="power-confirm"]')) play('powerOff');
+    }, true);
+    // Achievements and failures already announce themselves through toasts; give them their own cues.
+    if (typeof showToast === 'function') {
+      const toastBase = showToast;
+      showToast = function (message, ...rest) {
+        try {
+          const text = String(message || '');
+          if (/achievement unlocked|trophy (unlocked|earned)|earned a trophy/i.test(text)) play('achievement');
+          else if (/^(could not|couldn.t|unable to|cannot|can't|failed)/i.test(text)) play('error');
+        } catch { /* Sound is optional. */ }
+        return toastBase.call(this, message, ...rest);
+      };
+    }
+    function play(kind = 'navigate') {
+      const id = theme();
+      if (!THEMES.includes(id)) return false;
+      if (typeof interfaceAudio === 'object' && interfaceAudio?.customCount?.() > 0) return false;
+      const canonical = ALIASES[kind] || kind;
+      if (!KINDS.includes(canonical)) return false;
+      if (state.soundEffects === false) return true;
+      if (document.hidden || !document.hasFocus()) return true;
+      const now = performance.now();
+      if (kind === 'navigate' && now - lastAt < (lastKind === 'navigate' ? 55 : 180)) return true;
+      if (canonical === lastKind && now - lastAt < 45) return true;
+      lastAt = now;
+      lastKind = canonical;
+      if (canonical === 'launch') { launchDucked = true; stopMusic(.3); stopGameAudio(); }
+      if (canonical === 'powerOff') { stopMusic(.4); stopGameAudio(); }
+      if (SHORT.has(canonical)) { hadInput = true; if (!musicPlaying) startMusic(); }
+      try {
+        const c = ensureContext();
+        if (c.state === 'suspended') c.resume().catch(() => {});
+        if (SHORT.has(canonical)) stopVoices(voice => SHORT.has(voice.kind));
+        if (packHas(id, canonical)) {
+          const buffer = packSound(id, canonical);
+          if (buffer) { playBuffer(c, buffer, canonical); return true; }
+          if (buffers.has(`${id}:${canonical}`)) return true;
+        }
+        synthCue(canonical, PROFILES[id])(c);
+        return true;
+      } catch { return true; }
+    }
+    function inspect() {
+      return {
+        theme: theme(),
+        context: ctx ? ctx.state : 'not-created',
+        master: master ? Boolean(master) : false,
+        masterGain: master ? master.gain.value : null,
+        intendedMaster: intendedMaster(),
+        silenced: outputSilenced,
+        settingsLoaded,
+        routing: {
+          master: Boolean(master), musicGain: Boolean(musicGain), gameGain: Boolean(gameGain),
+          destination: Boolean(master && master.context && master.context.destination),
+          destinationInputs: 1,
+          edges: ['effects -> master', 'music -> musicGain', 'musicGain -> master', 'game audio -> gameGain', 'gameGain -> master', 'master -> destination']
+        },
+        effects: { running: voices.size, kinds: [...new Set([...voices].map(voice => voice.kind))] },
+        packs: {
+          decoded: [...buffers].filter(([, buffer]) => Boolean(buffer)).map(([key]) => key).sort(),
+          pending: [...buffers].filter(([, buffer]) => !buffer).map(([key]) => key).sort()
+        },
+        music: {
+          enabled: musicEnabled, volume: musicVolume, playing: musicPlaying, theme: musicId,
+          gain: musicGain ? musicGain.gain.value : 0, target: musicTarget(), source: Boolean(musicSource), loop: Boolean(musicSource?.loop),
+          duration: musicSource?.buffer?.duration || 0
+        },
+        gameAudio: gameAudioState(),
+        running: voices.size + (musicPlaying ? 1 : 0) + (gameState.playing ? 1 : 0)
+      };
+    }
+    const debug = {
+      get context() { return ctx; },
+      get master() { return master; },
+      get musicGain() { return musicGain; },
+      get gameGain() { return gameGain; },
+      get voices() { return [...voices]; },
+      get gains() { return [master, musicGain, gameGain].filter(Boolean); },
+      edges: ['effects -> master', 'music -> musicGain', 'musicGain -> master', 'game audio -> gameGain', 'gameGain -> master', 'master -> destination']
+    };
+    const ready = (async () => {
+      ensureContext();
+      await Promise.all([readOutputSettings(), themePack()]);
+      applyMaster(true);
+      if (document.hidden || !document.hasFocus()) sleepAudio(); else if (hadInput) startMusic();
+      prefetch();
+      return inspect();
+    })();
+    const api = {
+      play,
+      menuMusic: () => ({ enabled: musicEnabled, playing: musicPlaying, volume: musicVolume, theme: musicId, gain: musicGain ? musicGain.gain.value : 0 }),
+      gameAudio: gameAudioState,
+      gameAudioStart: startGameAudio,
+      stopGameAudio,
+      startMusic,
+      stopMusic,
+      themeChanged,
+      prefetch,
+      ready,
+      inspect,
+      maps: () => Object.fromEntries(THEMES.map(id => [id, KINDS.slice()])),
+      debug,
+      // The hidden harness (and a future panic button) can silence the engine without touching the player's
+      // settings: the graph keeps running so tests can read node state, but the master gain is pinned to 0.
+      setOutputSilenced: value => { outputSilenced = Boolean(value); applyMaster(true); return outputSilenced; }
+    };
+    return api;
+  })();
+  window.gAudio = gAudio;
+  // The rest of this file (and the other theme files) still call play(kind): every one of those now goes through
+  // the shared engine, so no console screen can keep a private oscillator or bypass the master gain.
+  const play = kind => gAudio.play(kind);
+  // Everything that used to call interfaceAudio now asks the shared engine first. It declines Helix (which keeps
+  // the launcher's own sounds) and themes with a player-installed custom sound pack, so those paths still work.
   if (typeof interfaceAudio === 'object' && interfaceAudio) {
     const base = interfaceAudio.play.bind(interfaceAudio);
-    interfaceAudio.play = function (kind = 'navigate') { if (on() && SYNTH[theme()][kind] && !(interfaceAudio.customCount?.() > 0)) return play(kind); return base(kind); };
+    interfaceAudio.play = function (kind = 'navigate') { return gAudio.play(kind) ? undefined : base(kind); };
   }
 
   if (typeof renderRecentGames === 'function') {
@@ -2767,7 +3318,12 @@
   }
   if (typeof showView === 'function') {
     const viewBase = showView;
-    showView = function (next, ...rest) { const result = viewBase.call(this, next, ...rest); if (next === 'home' && on()) requestAnimationFrame(render); return result; };
+    showView = function (next, ...rest) {
+      const result = viewBase.call(this, next, ...rest);
+      if (next !== 'home') { clearTimeout(gameAudioTimer); window.gAudio?.stopGameAudio?.(); }
+      if (next === 'home' && on()) requestAnimationFrame(render);
+      return result;
+    };
   }
   // The clocks tick over each minute; the 3DS colon blinks in CSS.
   setInterval(() => {
@@ -2778,8 +3334,8 @@
     if (t === 'wii') { const el = chrome.querySelector('.wii-clock'); if (el) el.innerHTML = segClock(); }
     if (t === '3ds') { const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>'); const when = host.querySelector('.ds-set-when'); if (when) when.textContent = `${dayMonth()} ${time()}`; }
   }, 15000);
-  new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
-  window.gRetro = { render, play, pack: () => pack };
+  new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; gAudio.themeChanged(); render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+  window.gRetro = { render, play: kind => gAudio.play(kind), pack: () => pack };
   render();
-  loadPack();
+  packReadyPromise = loadPack();
 })();

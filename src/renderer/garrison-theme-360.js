@@ -191,6 +191,8 @@
     if (!pack?.available) return;
     window.gThemePack = pack;
     document.dispatchEvent(new CustomEvent('g-theme-pack', { detail: pack }));
+    // The shared audio engine reads the pack's own sounds and music and routes them through its master gain.
+    if (window.gAudio) { packSounds.context = null; return; }
     let context;
     for (const kind of pack.sounds || []) {
       const sound = await window.launcher.getThemePackSound(kind).catch(() => null);
@@ -208,6 +210,8 @@
     const play = interfaceAudio.play.bind(interfaceAudio);
     let lastAt = 0, voice = null;
     interfaceAudio.play = function (kind = 'navigate') {
+      // The shared audio engine handles 360's pack sounds when it is loaded; this is the fallback path.
+      if (window.gAudio?.play?.(kind)) return;
       if (!on() || !packSounds[kind] || interfaceAudio.customCount?.() > 0) return play(kind);
       if (document.hidden || !document.hasFocus()) return;
       if (kind === 'startup' && document.querySelector('#g-360-boot')) return;

@@ -32,11 +32,12 @@
   'use strict';
   const root = typeof window !== 'undefined' ? window : globalThis;
 
-  // Prefs this file adds, with the same defaults as src/main.cjs SETTINGS_DEFAULTS. A few are only consumed by
-  // later tasks (menu music by A1, the 3DS layout by D1); their available() says so until then.
+  // Prefs this file adds, with the same defaults as src/main.cjs SETTINGS_DEFAULTS. Menu music and its volume
+  // are read by the shared audio engine (window.gAudio); the 3DS layout is still waiting for D1, so its
+  // available() stays false until then.
   const DEFAULTS = {
     clockFormat: '12h', dateOrder: 'locale', enterButton: 'x', nintendoLayout: false,
-    menuMusic: true, menuMusicVolume: 60, screensaverDelay: 4,
+    menuMusic: true, menuMusicVolume: 60, ps3GameAudio: false, screensaverDelay: 4,
     notifyFriends: true, notifyDownloads: true, notifyAchievements: true,
     screenLayout3ds: 'stacked', ps3ThemeColour: 'month',
     pauseDownloadsWhilePlaying: true, controllerVibration: true
@@ -167,8 +168,8 @@
     return {
       id, kind, min, max, step, options, label,
       get: async () => { await readPrefs(); return pref(id); },
-      // A pref is persisted for its consumer. Until that consumer exists (menu music arrives with task A1,
-      // the 3DS layout with D1) the row is honestly unavailable instead of being a switch that does nothing.
+      // A pref is persisted for its consumer. Until that consumer exists (the 3DS layout arrives with D1)
+      // the row is honestly unavailable instead of being a switch that does nothing.
       available: async () => typeof root.launcher?.setPref === 'function' && (typeof enabled !== 'function' || enabled()),
       set: async value => {
         if (typeof root.launcher?.setPref !== 'function') throw new Error('Saved settings are unavailable.');
@@ -256,6 +257,8 @@
     formEntry({ id: 'soundEffects', kind: 'toggle', inputId: 'sound-toggle', label: { default: 'Interface sounds' } }),
     prefEntry({ id: 'menuMusic', kind: 'toggle', label: { default: 'Menu music', ps4: 'Home Music', wii: 'Wii Menu Music', '3ds': 'Theme Music' }, enabled: () => typeof root.gAudio?.menuMusic === 'function' }),
     prefEntry({ id: 'menuMusicVolume', kind: 'slider', min: 0, max: 100, step: 5, label: { default: 'Menu music volume' }, enabled: () => typeof root.gAudio?.menuMusic === 'function' }),
+    // PS3 only: after resting on a game, play its trailer audio quietly with no video (the console's SND0).
+    prefEntry({ id: 'ps3GameAudio', kind: 'toggle', label: { default: 'Game trailer audio', ps3: 'Game Audio (SND0)' }, enabled: () => typeof root.gAudio?.gameAudio === 'function' }),
 
     // Display and comfort
     {
@@ -509,7 +512,7 @@
     ],
     ps3: [
       { id: 'display', title: 'Display Settings', rows: [{ id: 'uiScale' }, { id: 'brightness' }, { id: 'fullscreen' }] },
-      { id: 'sound', title: 'Sound Settings', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }] },
+      { id: 'sound', title: 'Sound Settings', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'ps3GameAudio' }] },
       { id: 'theme', title: 'Theme Settings', rows: [{ id: 'ps3ThemeColour' }, { id: 'background' }] },
       { id: 'time', title: 'Date and Time Settings', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }] },
       { id: 'system', title: 'System Settings', rows: [{ id: 'appVersion' }, { id: 'freeDisk' }, { id: 'powerPlan' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },

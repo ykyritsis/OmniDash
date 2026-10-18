@@ -158,6 +158,8 @@ const SETTINGS_DEFAULTS = {
   nintendoLayout: false,
   menuMusic: true,
   menuMusicVolume: 60,
+  // The PS3 XMB's SND0: quiet audio from the selected game's trailer, off until the player turns it on.
+  ps3GameAudio: false,
   screensaverDelay: 4,
   notifyFriends: true,
   notifyDownloads: true,
@@ -2968,6 +2970,7 @@ function registerIpc() {
     nintendoLayout: true,
     menuMusic: true,
     menuMusicVolume: { min: 0, max: 100, step: 5 },
+    ps3GameAudio: true,
     screensaverDelay: { min: 1, max: 60, step: 1 },
     notifyFriends: true,
     notifyDownloads: true,
@@ -2985,8 +2988,17 @@ function registerIpc() {
   // Optional theme pack: DashX360's Xbox 360 assets (sounds, boot video, dashboard themes), installed by the
   // player into their own app data folder. It is never part of the launcher's files or releases.
   const themePackRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs', 'dashx360');
+  // The first file that exists in a pack, out of the names a theme looks for. Music is a list rather than a
+  // fixed name so a player can drop their own loop in without renaming anything.
+  async function firstExisting(root, names = []) {
+    for (const name of names) if (await exists(path.join(root, name))) return name;
+    return '';
+  }
   const PACK_SOUNDS = { navigate: 'tile-hover.wav', confirm: '10. Select A.mp3', back: '14. Back.mp3', pageLeft: '08. Page Left.mp3', pageRight: '09. Page Right.mp3',
-    notify: 'notify-popup.wav', launch: 'select-into-menu.wav', startup: '02. Startup (2010).mp3' };
+    notify: 'notify-popup.wav', launch: 'select-into-menu.wav', startup: '02. Startup (2010).mp3', boot: '02. Startup (2010).mp3' };
+  // Menu music from the pack. A player-supplied `Audio/Music/menu.mp3` (or one of the other names) wins; the
+  // 2011 dashboard has no music file in DashX360, so without one the renderer uses its drawn fallback loop.
+  const PACK_MUSIC = ['Audio/Music/menu music.mp3', 'Audio/Music/menu.mp3', 'Audio/Music/menu.ogg', 'Audio/Music/bgm.mp3', 'Audio/Music/bgm.ogg'];
   ipcMain.handle('theme:pack', async () => {
     if (!await exists(themePackRoot)) return { available: false };
     const themesDir = path.join(themePackRoot, 'Custom Files', 'Themes');
@@ -3002,38 +3014,61 @@ function registerIpc() {
     }
     const boot = path.join(themePackRoot, 'Boot', 'Boot Screen.mp4');
     return { available: true, credit: 'DashX360 by ZivvoZ', base: pathToFileURL(themePackRoot + path.sep).href, themes,
-      boot: await exists(boot) ? pathToFileURL(boot).href : '', sounds: Object.keys(PACK_SOUNDS) };
+      boot: await exists(boot) ? pathToFileURL(boot).href : '', sounds: Object.keys(PACK_SOUNDS), music: await firstExisting(themePackRoot, PACK_MUSIC) };
   });
   ipcMain.handle('theme:pack-sound', async (_event, kind) => {
+    if (kind === 'music') {
+      const music = await firstExisting(themePackRoot, PACK_MUSIC);
+      const data = music ? await fs.readFile(path.join(themePackRoot, music)).catch(() => null) : null;
+      const type = music.endsWith('.ogg') ? 'audio/ogg' : music.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
+      return data && data.length < 12e6 ? { type, base64: data.toString('base64') } : null;
+    }
     const file = PACK_SOUNDS[kind];
     if (!file) throw new Error('Unknown sound.');
     const data = await fs.readFile(path.join(themePackRoot, 'Audio', 'Sounds', file)).catch(() => null);
     return data && data.length < 4e6 ? { type: file.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav', base64: data.toString('base64') } : null;
   });
   // Optional PlayStation and Nintendo packs (icons, fonts, sounds) the player keeps in the same folder. The
-  // renderer gets file URLs for the folder; sounds come only from this fixed list.
+  // renderer gets file URLs for the folder; sounds and music come only from these fixed lists.
   const retroRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs');
   const RETRO_PACKS = {
     ps3: { check: 'ps3/PS3-Simulator-main/icons/settings.png', sounds: { navigate: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/down.ogg', category: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/up.ogg',
       confirm: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/ok.ogg', back: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/cancel.ogg',
-      launch: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/launch.ogg', notify: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/notice.ogg' } },
+      launch: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/launch.ogg', notify: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/notice.ogg',
+      achievement: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/unlock.ogg' } },
     ps4: { check: 'ps4/Ps4-UI-master/assets/img/background.png', sounds: { navigate: 'ps4/Ps4-UI-master/assets/js/navigate.mp3', category: 'ps4/Ps4-UI-master/assets/js/navigate.mp3',
-      notify: 'ps4/Ps4-UI-master/assets/js/reward.mp3', startup: 'ps4/Ps4-UI-master/assets/js/startup.mp3' } },
+      notify: 'ps4/Ps4-UI-master/assets/js/reward.mp3', achievement: 'ps4/Ps4-UI-master/assets/js/reward.mp3',
+      boot: 'ps4/Ps4-UI-master/assets/js/startup.mp3', startup: 'ps4/Ps4-UI-master/assets/js/startup.mp3', powerOff: 'ps4/Ps4-UI-master/assets/js/shutdown.mp3' } },
     wii: { check: 'wii/Wii.JS-gh-pages/assets/images/channel-border.png', sounds: { navigate: 'wii/Wii.JS-gh-pages/assets/audio/button-hover.mp3', category: 'wii/Wii.JS-gh-pages/assets/audio/zip.mp3',
-      confirm: 'wii/Wii.JS-gh-pages/assets/audio/button-select.mp3', back: 'wii/Wii.JS-gh-pages/assets/audio/back.mp3', startup: 'wii/Wii.JS-gh-pages/assets/audio/startup.mp3' } },
+      confirm: 'wii/Wii.JS-gh-pages/assets/audio/button-select.mp3', back: 'wii/Wii.JS-gh-pages/assets/audio/back.mp3',
+      boot: 'wii/Wii.JS-gh-pages/assets/audio/startup.mp3', startup: 'wii/Wii.JS-gh-pages/assets/audio/startup.mp3' } },
     '3ds': { check: '3ds', sounds: {} }
   };
+  // Menu music per theme. The first existing name wins. The PlayStation and Nintendo names are the files the
+  // installed packs already ship; the `music/menu.*` names are drop-in slots for every theme (including Series,
+  // One and 3DS, whose packs carry no music). Without one the renderer plays its own drawn fallback loop.
+  const RETRO_MUSIC = {
+    ps3: ['ps3/music/menu.ogg', 'ps3/music/menu.mp3', 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/bgm.ogg'],
+    ps4: ['ps4/music/menu.mp3', 'ps4/music/menu.ogg', 'ps4/Ps4-UI-master/assets/js/all.mp3'],
+    wii: ['wii/music/menu.mp3', 'wii/music/menu.ogg', 'wii/Wii.JS-gh-pages/assets/audio/bg-music.mp3'],
+    '3ds': ['3ds/music/menu.mp3', '3ds/music/menu.ogg'],
+    series: ['series/music/menu.mp3', 'series/music/menu.ogg'],
+    one: ['one/music/menu.mp3', 'one/music/menu.ogg']
+  };
   ipcMain.handle('theme:retro-pack', async () => {
-    const available = {};
+    const available = {}, music = {};
     for (const [id, pack] of Object.entries(RETRO_PACKS)) available[id] = await exists(path.join(retroRoot, pack.check));
-    return { available, base: pathToFileURL(retroRoot + path.sep).href, sounds: Object.fromEntries(Object.entries(RETRO_PACKS).map(([id, pack]) => [id, Object.keys(pack.sounds)])) };
+    for (const [id, names] of Object.entries(RETRO_MUSIC)) music[id] = await firstExisting(retroRoot, names);
+    return { available, base: pathToFileURL(retroRoot + path.sep).href, music,
+      sounds: Object.fromEntries(Object.entries(RETRO_PACKS).map(([id, pack]) => [id, Object.keys(pack.sounds)])) };
   });
   ipcMain.handle('theme:retro-sound', async (_event, id, kind) => {
-    const file = RETRO_PACKS[id]?.sounds?.[kind];
+    const file = kind === 'music' ? await firstExisting(retroRoot, RETRO_MUSIC[id] || []) : RETRO_PACKS[id]?.sounds?.[kind];
     if (!file) throw new Error('Unknown sound.');
     const data = await fs.readFile(path.join(retroRoot, file)).catch(() => null);
-    const type = file.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg';
-    return data && data.length < 4e6 ? { type, base64: data.toString('base64') } : null;
+    const type = file.endsWith('.ogg') ? 'audio/ogg' : file.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
+    const limit = kind === 'music' ? 12e6 : 4e6;
+    return data && data.length < limit ? { type, base64: data.toString('base64') } : null;
   });
   ipcMain.handle('prefs:get', async () => {
     const settings = await readSettings();

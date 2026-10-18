@@ -67,6 +67,9 @@
     const basePlay = interfaceAudio.play.bind(interfaceAudio);
     let lastAt = -Infinity, lastKind = '';
     interfaceAudio.play = function (kind = 'navigate') {
+      // The shared menu-audio engine (garrison-theme-retro.js) owns every console theme's sounds and music, and
+      // routes them through the one master gain. These cues are the fallback for a page where it isn't loaded.
+      if (window.gAudio?.play?.(kind)) return;
       const set = SOUNDS[theme()];
       if (!set || interfaceAudio.customCount?.() > 0 || !set[kind]) return basePlay(kind);
       if (document.hidden || !document.hasFocus()) return;
