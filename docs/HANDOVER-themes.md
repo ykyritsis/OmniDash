@@ -87,7 +87,7 @@ To check an install, extract the asar and look for the change, or start the app 
 `ELECTRON_RUN_AS_NODE=1`, which starts Electron as node and exits at once — remove it first). Kill the whole tree
 when done: `taskkill /IM "Xbox Preview UI.exe" /T /F`.
 
-The latest backup is `backup-0.6.0-test13` (it holds the build installed before the 2026-10-17 evening theme work).
+The latest backup is `backup-0.6.0-test25` (it holds the build installed before the S3 settings shells, 2026-10-18 11:46; test24 held the PS3 S2 build).
 
 ## Theme system
 
