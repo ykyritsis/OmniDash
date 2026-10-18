@@ -417,8 +417,12 @@ body:not(.g-retro-pack) #g-retro .wii-ch:is(.focused, :focus-visible, :hover)::b
 #g-retro .wii-ch:is(.focused, :focus-visible, :hover) { transform: translateY(calc(-5 * var(--cpx))) scale(1.05); z-index: 3; box-shadow: 0 calc(16 * var(--cpx)) calc(28 * var(--cpx)) rgba(0, 0, 0, .22), 0 calc(3 * var(--cpx)) calc(10 * var(--cpx)) rgba(0, 0, 0, .13), 0 0 calc(18 * var(--cpx)) rgba(72, 199, 243, .5) !important; }
 #g-retro .wii-ch:is(.focused, :focus-visible, :hover) .wii-drift { animation: wii-drift 7s ease-in-out infinite alternate; }
 @keyframes wii-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(calc(-3 * var(--cpx)), calc(2 * var(--cpx))) scale(1.035); } }
-#g-retro .wii-ch.game:is(.focused, :focus-visible, :hover) { animation: wii-art-drift 7s ease-in-out infinite alternate; }
-@keyframes wii-art-drift { from { background-position: 50% 50%; } to { background-position: 53% 47%; } }
+/* A game channel's art drifts on its own composited layer (a transform inside the clipping drift layer), not by
+   animating background-position on the tile, which repainted the whole tile and its shadows every frame. Without
+   verified wide art (--g-art unset) the layer stays empty and the tile's cover fallback shows as before. */
+#g-retro .wii-ch.game .wii-drift::before { content: ""; position: absolute; inset: 0; background: var(--g-art, none) center / cover no-repeat; }
+#g-retro .wii-ch.game:is(.focused, :focus-visible, :hover) .wii-drift { animation: none; }
+#g-retro .wii-ch.game:is(.focused, :focus-visible, :hover) .wii-drift::before { animation: wii-drift 7s ease-in-out infinite alternate; }
 #g-retro .wii-fill { inset: calc(2 * var(--cpx)); border-radius: calc(19 * var(--cpx)); background: center / cover no-repeat; }
 #g-retro .wii-title { left: calc(24 * var(--cpx)); right: calc(24 * var(--cpx)); top: calc(18 * var(--cpx)); color: #fff; font: 400 calc(30 * var(--cpx))/1 var(--g-font); text-align: center; text-shadow: 0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .4); }
 #g-retro .wii-title.dark { color: #4aa0d8; text-shadow: none; }
@@ -951,3 +955,4 @@ body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]).store-active #store
    consoles' grey text instead of the launcher's white. */
 body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay :is(.launch-copy, .launch-copy strong, .launch-copy small, .g-launch-cancel) { color: #5a5a5a !important; text-shadow: none !important; }
 body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay .g-launch-cancel { border-color: rgba(0, 0, 0, .18) !important; background: rgba(255, 255, 255, .7) !important; }
+#g-retro .wii-ch .wii-title { z-index: 2; } /* channel titles stay above their art (the Forecast globe covered its own name) */
