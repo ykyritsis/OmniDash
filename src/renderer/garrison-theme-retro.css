@@ -510,6 +510,93 @@ html.reduce-motion #g-retro .wii-ch:is(.focused, :focus-visible, :hover) { trans
 html.reduce-motion #g-retro .wii-ch:is(.focused, :focus-visible, :hover) .wii-drift { transform: none !important; }
 html.reduce-motion body[data-g-theme="wii"] .wii-clock .wii-seg { opacity: 1 !important; transform: none !important; }
 
+/* Wii Settings (task S3). The console's Wii Settings pages, extended with the rest of the registry layout:
+   a light striped wall, large rounded pill buttons, blue page arrows and the pack's zip/navigate/select sounds.
+   A value opens a sub-screen of pill choices with Back and Confirm along the bottom. Sizes are 1080p console
+   pixels like the rest of the Wii theme. */
+body[data-g-theme="wii"] #g-retro .wii-set-wall { position: absolute; inset: 0; background:
+  radial-gradient(ellipse 74% 58% at 50% 0%, #fff, transparent 72%),
+  radial-gradient(ellipse 60% 50% at 12% 100%, rgba(52, 189, 239, .1), transparent 70%),
+  repeating-linear-gradient(0deg, rgba(0, 0, 0, .018) 0 calc(1 * var(--cpx)), transparent calc(1 * var(--cpx)) calc(4 * var(--cpx))),
+  linear-gradient(#fbfcfd, #edf2f4 60%, #e5ebee); }
+#g-retro .wii-set { position: absolute; inset: 0; z-index: 6; color: #5a5a5a; font-family: var(--g-font); }
+#g-retro .wii-set-head { position: absolute; left: 0; right: 0; top: calc(34 * var(--cpx)); display: flex; align-items: center; justify-content: center; gap: calc(22 * var(--cpx)); }
+#g-retro .wii-set-icon { flex: none; width: calc(76 * var(--cpx)); height: calc(76 * var(--cpx)); }
+#g-retro .wii-set-icon :is(img, .g-glyph) { display: block; width: 100%; height: 100%; object-fit: contain; color: #9a9a9a; }
+#g-retro .wii-set-head-copy { display: grid; gap: calc(3 * var(--cpx)); text-align: center; }
+#g-retro .wii-set-head strong { color: #6d6d6d; font: 400 calc(54 * var(--cpx))/1.02 var(--g-font); text-shadow: 0 calc(2 * var(--cpx)) 0 #fff; }
+#g-retro .wii-set-head small { color: #9aa0a4; font: 400 calc(23 * var(--cpx))/1 var(--g-font); }
+#g-retro .wii-set-grid { position: absolute; left: calc(186 * var(--cpx)); right: calc(186 * var(--cpx)); top: calc(242 * var(--cpx)); bottom: calc(196 * var(--cpx)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: calc(158 * var(--cpx)); gap: calc(26 * var(--cpx)); align-content: center; }
+#g-retro .wii-set[data-anim="next"] .wii-set-grid { animation: wii-set-next .4s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .wii-set[data-anim="prev"] .wii-set-grid { animation: wii-set-prev .4s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes wii-set-next { from { opacity: .25; transform: translateX(calc(90 * var(--cpx))); } to { opacity: 1; transform: none; } }
+@keyframes wii-set-prev { from { opacity: .25; transform: translateX(calc(-90 * var(--cpx))); } to { opacity: 1; transform: none; } }
+#g-retro .wii-set-pill { position: relative; display: flex; align-items: center; gap: calc(18 * var(--cpx)); width: 100%; height: 100%; padding: 0 calc(38 * var(--cpx)); overflow: hidden; border: calc(4 * var(--cpx)) solid #cfe3ea; border-radius: calc(80 * var(--cpx)); background: linear-gradient(#fff, #f1f6f8 58%, #e4ecf0); color: #5d6164; text-align: left; cursor: pointer; transition: transform .18s cubic-bezier(.2, 1.2, .3, 1), box-shadow .18s ease, color .18s ease; }
+#g-retro .wii-set-pill i.cap { position: absolute; top: 0; bottom: 0; width: calc(54 * var(--cpx)); background: center / 100% 100% no-repeat; pointer-events: none; }
+#g-retro .wii-set-pill i.cap.l { left: 0; }
+#g-retro .wii-set-pill i.cap.r { right: 0; }
+#g-retro .wii-set-pill i.mid { position: absolute; left: calc(54 * var(--cpx)); right: calc(54 * var(--cpx)); top: 0; bottom: 0; background: center / auto 100% repeat-x; pointer-events: none; }
+body.g-retro-pack #g-retro .wii-set-pill { border-color: transparent; background: transparent; }
+#g-retro .wii-set-pill-icon { position: relative; z-index: 1; display: grid; place-items: center; flex: none; width: calc(80 * var(--cpx)); height: calc(80 * var(--cpx)); }
+#g-retro .wii-set-pill-icon > :is(img, .g-glyph) { width: 100%; height: 100%; color: #7db7cd; }
+#g-retro .wii-set-pill-copy { position: relative; z-index: 1; display: grid; gap: calc(3 * var(--cpx)); min-width: 0; }
+#g-retro .wii-set-pill-copy strong { overflow: hidden; color: inherit; font: 400 calc(29 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .wii-set-pill-copy small { overflow: hidden; color: #8a9094; font: 400 calc(21 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .wii-set-pill:is(.focused, :focus-visible, :hover) { color: #2396c4; transform: translateY(calc(-4 * var(--cpx))) scale(1.03); box-shadow: 0 calc(12 * var(--cpx)) calc(26 * var(--cpx)) rgba(0, 0, 0, .16), 0 0 calc(18 * var(--cpx)) rgba(58, 193, 240, .85) !important; }
+#g-retro .wii-set-pill:is(.focused, :focus-visible, :hover) .wii-set-pill-icon > :is(img, .g-glyph) { color: #2396c4; }
+#g-retro .wii-set-arrow { position: absolute; top: 50%; width: calc(94 * var(--cpx)); height: calc(186 * var(--cpx)); margin-top: calc(-93 * var(--cpx)); padding: 0; border: 0; background: none; cursor: pointer; transition: transform .18s ease, filter .18s ease; }
+#g-retro .wii-set-arrow::before { content: ""; position: absolute; inset: 0; background: #fff; clip-path: polygon(8% 2%, 100% 50%, 8% 98%); filter: drop-shadow(0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .2)); }
+#g-retro .wii-set-arrow::after { content: ""; position: absolute; inset: calc(3 * var(--cpx)); background: linear-gradient(160deg, #9cecff 0%, #42c8f7 38%, #108fd4 100%); clip-path: polygon(12% 7%, 92% 50%, 12% 93%); }
+#g-retro .wii-set-arrow.left { left: calc(44 * var(--cpx)); }
+#g-retro .wii-set-arrow.right { right: calc(44 * var(--cpx)); }
+#g-retro .wii-set-arrow.left::before { clip-path: polygon(92% 2%, 0 50%, 92% 98%); }
+#g-retro .wii-set-arrow.left::after { clip-path: polygon(88% 7%, 8% 50%, 88% 93%); }
+#g-retro .wii-set-arrow:is(.focused, :focus-visible, :hover) { transform: scale(1.1); filter: drop-shadow(0 0 calc(10 * var(--cpx)) rgba(80, 200, 245, .9)); box-shadow: none !important; outline: none !important; }
+#g-retro .wii-set-arrow[hidden] { display: none; }
+#g-retro .wii-set-note { grid-column: 1 / -1; margin: 0; padding: calc(30 * var(--cpx)); color: #8a9094; font: 400 calc(26 * var(--cpx))/1.35 var(--g-font); text-align: center; }
+#g-retro .wii-set-foot { position: absolute; left: calc(72 * var(--cpx)); right: calc(72 * var(--cpx)); bottom: calc(30 * var(--cpx)); display: flex; align-items: center; gap: calc(24 * var(--cpx)); }
+#g-retro .wii-set-back { flex: none; width: calc(300 * var(--cpx)); height: calc(96 * var(--cpx)); }
+#g-retro .wii-set-back span { font-size: calc(33 * var(--cpx)); }
+#g-retro .wii-set-dots { display: flex; gap: calc(12 * var(--cpx)); margin: 0 auto; }
+#g-retro .wii-set-dots i { width: calc(14 * var(--cpx)); height: calc(14 * var(--cpx)); border-radius: 50%; background: rgba(90, 120, 140, .22); box-shadow: inset 0 0 0 calc(1 * var(--cpx)) rgba(255, 255, 255, .75); }
+#g-retro .wii-set-dots i.on { background: linear-gradient(#8fe6ff, #34bdef); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(52, 189, 239, .8); }
+#g-retro .wii-set-hint { flex: none; color: #8a9094; font: 400 calc(20 * var(--cpx))/1 var(--g-font); }
+/* The value sub-screen: pill choices on the light panel, slider for numbers, Back and Confirm at the bottom. */
+#g-retro .wii-set-sub { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(24, 38, 48, .34); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+#g-retro .wii-set-sub.open { opacity: 1; pointer-events: auto; }
+#g-retro .wii-set-panel { width: calc(1120 * var(--cpx)); max-height: calc(780 * var(--cpx)); overflow: auto; padding: calc(32 * var(--cpx)) calc(42 * var(--cpx)) calc(24 * var(--cpx)); border: calc(5 * var(--cpx)) solid #35bdf0; border-radius: calc(38 * var(--cpx)); background: linear-gradient(#fff, #f5f9fb 60%, #eef3f6); box-shadow: 0 calc(26 * var(--cpx)) calc(70 * var(--cpx)) rgba(20, 40, 60, .35); color: #5a5a5a; }
+#g-retro .wii-set-panel h3 { display: flex; align-items: center; gap: calc(16 * var(--cpx)); margin: 0 0 calc(22 * var(--cpx)); padding-bottom: calc(14 * var(--cpx)); border-bottom: calc(2 * var(--cpx)) solid rgba(53, 189, 240, .35); color: #5d6164; font: 400 calc(38 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .wii-set-panel-icon { flex: none; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); color: #35a9d6; }
+#g-retro .wii-set-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(16 * var(--cpx)); }
+#g-retro .wii-set-opt { display: flex; align-items: center; justify-content: space-between; height: calc(84 * var(--cpx)); padding: 0 calc(30 * var(--cpx)); border: calc(3 * var(--cpx)) solid #d8e7ee; border-radius: calc(42 * var(--cpx)); background: linear-gradient(#fff, #eef4f7); color: #5d6164; text-align: left; cursor: pointer; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); transition: transform .16s ease, box-shadow .16s ease, background .16s ease; }
+#g-retro .wii-set-opt.on { border-color: #35bdf0; background: linear-gradient(#e8f9ff, #c9effb); color: #1b7fa8; }
+#g-retro .wii-set-opt:is(.focused, :focus-visible) { transform: scale(1.02); box-shadow: 0 0 0 calc(3 * var(--cpx)) #35bdf0, 0 0 calc(14 * var(--cpx)) rgba(53, 189, 240, .7) !important; }
+#g-retro .wii-set-opt i { font-style: normal; }
+#g-retro .wii-set-slider { padding: calc(34 * var(--cpx)) calc(10 * var(--cpx)) calc(8 * var(--cpx)); cursor: pointer; outline: none; }
+#g-retro .wii-set-track { position: relative; display: block; height: calc(26 * var(--cpx)); border-radius: calc(13 * var(--cpx)); background: linear-gradient(#dfe8ec, #f4f8fa); box-shadow: inset 0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .12), 0 0 0 calc(2 * var(--cpx)) #cfe3ea; }
+#g-retro .wii-set-track i { position: absolute; inset: calc(3 * var(--cpx)) auto calc(3 * var(--cpx)) calc(3 * var(--cpx)); border-radius: inherit; background: linear-gradient(90deg, #8fe6ff, #35bdf0); }
+#g-retro .wii-set-track b { position: absolute; top: 50%; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle at 40% 32%, #fff, #dbe6eb 70%); box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .25), 0 0 0 calc(3 * var(--cpx)) #35bdf0; }
+#g-retro .wii-set-slider:is(.focused, :focus-visible) { box-shadow: none !important; outline: calc(2 * var(--cpx)) solid rgba(53, 189, 240, .55) !important; outline-offset: calc(6 * var(--cpx)); border-radius: calc(20 * var(--cpx)); }
+#g-retro .wii-set-slider-value { display: block; margin-top: calc(16 * var(--cpx)); color: #5d6164; text-align: center; font: 400 calc(38 * var(--cpx))/1 var(--g-font); }
+#g-retro .wii-set-sub-value { margin: calc(10 * var(--cpx)) 0; color: #3f8fb0; text-align: center; font: 400 calc(48 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .wii-set-sub-copy { margin: calc(10 * var(--cpx)) 0; color: #7c8488; font: 400 calc(26 * var(--cpx))/1.4 var(--g-font); text-align: center; }
+#g-retro .wii-set-sub-error { min-height: calc(24 * var(--cpx)); margin: calc(8 * var(--cpx)) 0 0; color: #c0392b; text-align: center; font: 400 calc(22 * var(--cpx))/1.2 var(--g-font); }
+#g-retro .wii-set-panel-foot { display: flex; align-items: center; justify-content: center; gap: calc(90 * var(--cpx)); margin-top: calc(18 * var(--cpx)); }
+#g-retro .wii-set-panel-foot .wii-pbtn { width: calc(320 * var(--cpx)); height: calc(100 * var(--cpx)); }
+#g-retro .wii-set-panel-foot .wii-pbtn span { font-size: calc(33 * var(--cpx)); }
+#g-retro .wii-set-saving { color: #7c8488; font: 400 calc(22 * var(--cpx))/1 var(--g-font); }
+
+/* Reduced motion: keep the Wii Settings layout and selected states, drop the movement. */
+html.reduce-motion #g-retro .wii-set-pill,
+html.reduce-motion #g-retro .wii-set-arrow,
+html.reduce-motion #g-retro .wii-set-opt,
+html.reduce-motion #g-retro .wii-set-sub,
+html.reduce-motion #g-retro .wii-set-grid { transition: none !important; animation: none !important; }
+html.reduce-motion #g-retro .wii-set-pill:is(.focused, :focus-visible, :hover) { transform: none !important; }
+/* The real Wii Settings are this screen now (task S3); the decorative Wii block stays in the launcher dialog's
+   source for S5 but is hidden on this theme. */
+body[data-g-theme="wii"] #settings-dialog .g-con-options { display: none; }
+
 /* =========================== 3DS =========================== */
 /* One full-bleed screen after iiSU: a dimmed, blurred backdrop, a thin status strip and the selected
    app's banner across the top, then three rows of large square icons on a rail that slides sideways. */

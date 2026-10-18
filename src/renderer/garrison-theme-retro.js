@@ -1256,6 +1256,8 @@
   // starts at 780 and dips to 896 under the clock; the Wii and mail buttons are centred at 908.
   let wiiPage = 0, wiiFocus = 0, wiiPreview = null, wiiBar = -1;
   let wiiShownPage = -1, wiiPageDir = 0;
+  // Wii Settings shell state (task S3): the open page, its registry rows and an open value sub-screen.
+  let wiiSet = null, wiiSetScanToken = 0, wiiSetRowsToken = 0, wiiSetReloadTimer = 0;
   function wiiChannels() {
     const recent = games();
     return [
@@ -1278,6 +1280,7 @@
     game: ''
   })[ch.kind] || '';
   function renderWii() {
+    if (wiiSet) { renderWiiSettings(); return; }
     if (wiiPreview) { renderWiiPreview(); return; }
     const channels = wiiChannels();
     const pages = Math.max(1, Math.ceil(channels.length / 12));
@@ -1353,6 +1356,7 @@
     focusEl(host.querySelector('.wii-pbtn[data-start]'));
   }
   function wiiMove(direction) {
+    if (wiiSet) { wiiShellMove(direction); return; }
     if (wiiPreview) { const buttons = [...host.querySelectorAll('.wii-pbtn')]; const index = buttons.indexOf(document.activeElement.closest?.('.wii-pbtn')); const next = buttons[Math.max(0, Math.min(buttons.length - 1, index + (direction === 'right' ? 1 : direction === 'left' ? -1 : 0)))]; if (next && next !== buttons[index]) { play('navigate'); focusEl(next); } return; }
     const channels = wiiChannels(), pages = Math.max(1, Math.ceil(channels.length / 12));
     const filled = index => index < Math.max(0, channels.length - wiiPage * 12);
@@ -1371,6 +1375,380 @@
     if (next === wiiFocus || !filled(next)) return;
     wiiFocus = next; play('navigate');
     focusEl(host.querySelector(`.wii-ch[data-wii-index="${wiiFocus}"]`));
+  }
+
+  // ---------- Wii: Wii Settings, driven by gSettings (task S3) ----------
+  // The console's three-page Wii Settings, extended with the rest of the registry layout. The pages are
+  // gSettings.layout('wii'), each row is a large rounded pill, and the blue arrows (or left/right at the edge
+  // of the grid) turn the page with the pack's zip sound. A value opens a sub-screen of pill choices with
+  // Back and Confirm at the bottom; a toggle is an On/Off choice, a slider is the Wii's bar, and an action runs
+  // through gSettings.set(). No page, row or value is written by hand.
+  const WII_PAGE_GLYPHS = { 'page-1': 'settings', 'page-2': 'language', 'page-3': 'controller', internet: 'globe', 'message-board': 'bell', system: 'settings', advanced: 'settings' };
+  const wiiUnits = PS3_UNITS;
+  const wiiPillParts = () => WIII('btn-texture.png')
+    ? `<i class="cap l" style="background-image:${url(WIII('btn-left.png'))}"></i><i class="mid" style="background-image:${url(WIII('btn-texture.png'))}"></i><i class="cap r" style="background-image:${url(WIII('btn-right.png'))}"></i>`
+    : '';
+  function wiiOpenSettings() {
+    if (wiiSet) return;
+    play('confirm');
+    wiiSet = { pages: null, pageIndex: 0, page: null, rows: [], focus: 0, loading: true, error: '', sub: null, anim: '' };
+    renderWii();
+    wiiScanSettings();
+  }
+  function wiiCloseSettings() {
+    if (!wiiSet) return;
+    play('back');
+    wiiSet = null; wiiSetReloadTimer && clearTimeout(wiiSetReloadTimer); wiiSetReloadTimer = 0;
+    wiiBar = 0;
+    renderWii();
+  }
+  function wiiScanSettings(force = false) {
+    if (!wiiSet) return;
+    const token = ++wiiSetScanToken;
+    scanShellLayout('wii', force).then(pages => {
+      if (token !== wiiSetScanToken || !wiiSet) return;
+      const wanted = wiiSet.page?.id;
+      wiiSet.pages = pages;
+      wiiSet.loading = false;
+      if (wanted) {
+        const found = pages.findIndex(page => page.id === wanted);
+        if (found >= 0) wiiSet.pageIndex = found;
+      }
+      wiiSet.pageIndex = Math.max(0, Math.min(wiiSet.pageIndex, Math.max(0, pages.length - 1)));
+      wiiLoadPage(true);
+    }).catch(error => {
+      if (token !== wiiSetScanToken || !wiiSet) return;
+      wiiSet.loading = false;
+      wiiSet.error = error?.message || 'Could not read the settings on this PC.';
+      renderWii();
+    });
+  }
+  async function wiiLoadPage(preserveFocus = false) {
+    const state = wiiSet;
+    if (!state || !state.pages) return;
+    const page = state.pages[state.pageIndex];
+    if (!page) { state.rows = []; state.page = null; renderWii(); return; }
+    const token = ++wiiSetRowsToken;
+    state.page = page;
+    state.rows = [];
+    state.loading = true;
+    state.error = '';
+    if (!preserveFocus) state.focus = 0;
+    renderWii();
+    try {
+      const rows = await loadShellRows(page, 'wii');
+      if (token !== wiiSetRowsToken || wiiSet !== state) return;
+      state.rows = rows;
+      state.loading = false;
+      state.focus = Math.min(state.focus, Math.max(0, rows.length - 1));
+      renderWii();
+    } catch (error) {
+      if (token !== wiiSetRowsToken || wiiSet !== state) return;
+      state.loading = false;
+      state.error = error?.message || 'Could not read these settings.';
+      renderWii();
+    }
+  }
+  function wiiTurnPage(direction) {
+    const state = wiiSet;
+    const pages = state?.pages || [];
+    if (!state || !pages.length) return;
+    const next = Math.max(0, Math.min(pages.length - 1, state.pageIndex + direction));
+    if (next === state.pageIndex) return;
+    state.pageIndex = next;
+    state.focus = 0;
+    state.sub = null;
+    state.anim = direction > 0 ? 'next' : 'prev';
+    play('category');
+    wiiLoadPage(false);
+  }
+  function wiiBack() {
+    if (!wiiSet) return false;
+    if (wiiSet.sub) { wiiSubCancel(); return true; }
+    wiiCloseSettings();
+    return true;
+  }
+  function wiiShellMove(direction) {
+    const state = wiiSet;
+    if (!state) return;
+    if (state.sub) { wiiSubMove(direction); return; }
+    const count = state.rows.length;
+    if (!count) {
+      if (direction === 'left') wiiTurnPage(-1);
+      else if (direction === 'right') wiiTurnPage(1);
+      return;
+    }
+    const col = state.focus % 3;
+    let next = state.focus;
+    if (direction === 'left') {
+      if (col > 0) next = state.focus - 1;
+      else { wiiTurnPage(-1); return; }
+    } else if (direction === 'right') {
+      if (col < 2 && state.focus + 1 < count) next = state.focus + 1;
+      else { wiiTurnPage(1); return; }
+    } else if (direction === 'up') {
+      if (state.focus - 3 >= 0) next = state.focus - 3;
+      else return;
+    } else if (direction === 'down') {
+      if (state.focus + 3 < count) next = state.focus + 3;
+      else return;
+    } else return;
+    if (next === state.focus) return;
+    state.focus = next;
+    play('navigate');
+    renderWii();
+  }
+  const wiiSubCount = sub => sub.mode === 'info' ? 1 : sub.mode === 'action' ? 2 : sub.mode === 'slider' ? 3 : sub.options.length + 2;
+  function wiiOpenSub(index) {
+    const state = wiiSet;
+    const row = state?.rows?.[index];
+    if (!state || !row) return;
+    play('confirm');
+    if (row.kind === 'info') {
+      state.sub = { row, mode: 'info', options: [], selected: 0, focus: 0, saving: false, error: '' };
+    } else if (row.kind === 'toggle') {
+      state.sub = { row, mode: 'toggle', options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }], selected: row.value ? 0 : 1, focus: row.value ? 0 : 1, saving: false, error: '' };
+    } else if (row.kind === 'choice') {
+      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
+      const selected = Math.max(0, row.options.findIndex(option => option.value === row.value));
+      state.sub = { row, mode: 'choice', options: row.options, selected, focus: selected, saving: false, error: '' };
+    } else if (row.kind === 'slider') {
+      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
+      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
+      const raw = Number(row.value);
+      state.sub = { row, mode: 'slider', options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, focus: 0, saving: false, error: '' };
+    } else if (row.kind === 'action') {
+      state.sub = { row, mode: 'action', options: [], selected: 0, focus: 1, saving: false, error: '' };
+    } else return;
+    renderWii();
+  }
+  function wiiSubMove(direction) {
+    const state = wiiSet;
+    const sub = state?.sub;
+    if (!sub || sub.saving) return;
+    if (sub.mode === 'slider' && sub.focus === 0) {
+      if (direction === 'left' || direction === 'right') {
+        const next = Math.max(sub.min, Math.min(sub.max, sub.value + (direction === 'right' ? sub.step : -sub.step)));
+        if (next === sub.value) return;
+        sub.value = Number(next.toFixed(6));
+        play('navigate');
+        renderWii();
+        return;
+      }
+      if (direction === 'down') { sub.focus = 1; play('navigate'); renderWii(); return; }
+      return;
+    }
+    if (sub.mode === 'info') return;
+    const count = wiiSubCount(sub);
+    if (sub.mode === 'choice' || sub.mode === 'toggle') {
+      const n = sub.options.length;
+      if (direction === 'left' || direction === 'right') {
+        if (sub.focus >= n) { const next = sub.focus === n ? n + 1 : n; sub.focus = next; play('navigate'); renderWii(); }
+        return;
+      }
+      if (direction === 'up') {
+        if (sub.focus === n) { sub.focus = Math.max(0, n - 1); play('navigate'); renderWii(); }
+        else if (sub.focus === n + 1) { sub.focus = n; play('navigate'); renderWii(); }
+        else if (sub.focus > 0) { sub.focus -= 1; play('navigate'); renderWii(); }
+        return;
+      }
+      if (direction === 'down') {
+        if (sub.focus < n - 1) { sub.focus += 1; play('navigate'); renderWii(); }
+        else if (sub.focus === n - 1) { sub.focus = n; play('navigate'); renderWii(); }
+        else if (sub.focus === n) { sub.focus = n + 1; play('navigate'); renderWii(); }
+        return;
+      }
+      return;
+    }
+    // Action: Back / Confirm. Slider: the bar, then Back / Confirm.
+    if (sub.mode === 'slider') {
+      if (direction === 'up') { sub.focus = Math.max(0, sub.focus - 1); play('navigate'); renderWii(); return; }
+      if (direction === 'down') { sub.focus = Math.min(2, sub.focus + 1); play('navigate'); renderWii(); return; }
+      if (sub.focus >= 1 && (direction === 'left' || direction === 'right')) {
+        sub.focus = sub.focus === 1 ? 2 : 1; play('navigate'); renderWii();
+      }
+      return;
+    }
+    if (direction === 'left' || direction === 'right' || direction === 'up' || direction === 'down') {
+      const next = sub.focus === 0 ? 1 : 0;
+      sub.focus = next;
+      play('navigate');
+      renderWii();
+    }
+  }
+  function wiiSubCancel() {
+    if (!wiiSet?.sub || wiiSet.sub.saving) return;
+    play('back');
+    wiiSet.sub = null;
+    renderWii();
+  }
+  async function wiiSubConfirm() {
+    const state = wiiSet;
+    const sub = state?.sub;
+    if (!state || !sub || sub.saving) return;
+    if (sub.mode === 'info') { wiiSubCancel(); return; }
+    const value = sub.mode === 'slider' ? sub.value : sub.mode === 'action' ? null : sub.options[sub.selected]?.value;
+    sub.saving = true; sub.error = '';
+    renderWii();
+    try {
+      // Advanced (launcher) leaves the Wii screen and opens the launcher's own dialog over Home, so closing it
+      // returns to the Wii Menu rather than to a settings page behind a just-closed dialog.
+      if (sub.mode === 'action' && sub.row.id === 'launcherSettings') { wiiSet = null; wiiBar = 0; renderWii(); }
+      if (sub.mode !== 'action' && PS3_FORM_ROWS.has(sub.row.id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(sub.row.id, value);
+      if (wiiSet !== state) return;
+      if (sub.mode !== 'action') {
+        sub.row.value = await window.gSettings.get(sub.row.id).catch(() => value);
+      }
+      state.sub = null;
+      play('confirm');
+      renderWii();
+      if (sub.mode === 'action') wiiLoadPage(true);
+    } catch (error) {
+      if (wiiSet !== state) return;
+      sub.saving = false;
+      sub.error = error?.message || 'Could not change this setting.';
+      play('back');
+      renderWii();
+    }
+  }
+  function wiiSubActivate(index) {
+    const sub = wiiSet?.sub;
+    if (!sub || sub.saving) return;
+    if (sub.mode === 'choice' || sub.mode === 'toggle') {
+      const n = sub.options.length;
+      if (index < n) { sub.selected = index; play('confirm'); renderWii(); return; }
+      if (index === n) { wiiSubCancel(); return; }
+      wiiSubConfirm();
+      return;
+    }
+    if (sub.mode === 'info') { wiiSubCancel(); return; }
+    if (sub.mode === 'action') { if (index === 0) wiiSubCancel(); else wiiSubConfirm(); return; }
+    if (sub.mode === 'slider') { if (index === 1) wiiSubCancel(); else wiiSubConfirm(); }
+  }
+  function wiiSeek(event) {
+    const sub = wiiSet?.sub;
+    const track = host.querySelector('.wii-set-track');
+    if (!sub || sub.mode !== 'slider' || !track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const step = sub.step || 1;
+    const value = sub.min + Math.round((fraction * (sub.max - sub.min)) / step) * step;
+    sub.value = Number(Math.max(sub.min, Math.min(sub.max, value)).toFixed(6));
+    play('navigate');
+    renderWii();
+  }
+  function wiiQueueReload() {
+    if (!wiiSet || wiiSetReloadTimer) return;
+    wiiSetReloadTimer = setTimeout(() => {
+      wiiSetReloadTimer = 0;
+      if (!wiiSet || theme() !== 'wii' || document.querySelector('dialog[open]')) return;
+      forgetShellScan('wii');
+      wiiScanSettings(true);
+    }, 180);
+  }
+  let wiiSetGridKey = '', wiiSetSubKey = '', wiiSetAnimTimer = 0;
+  function renderWiiSettings() {
+    if (!wiiSet) { renderWii(); return; }
+    chrome.innerHTML = '';
+    let shell = host.querySelector('.wii-set');
+    if (!shell) {
+      host.innerHTML = `<i class="wii-set-wall" aria-hidden="true"></i>
+        <div class="wii-set">
+          <div class="wii-set-head"><span class="wii-set-icon" aria-hidden="true">${img(WIII('settings-icon.png'), icon('repair'))}</span><span class="wii-set-head-copy"><strong>Wii Settings</strong><small class="wii-set-page-name"></small></span></div>
+          <button class="wii-set-arrow left focusable" type="button" data-action="wii-set-page" data-dir="-1" aria-label="Previous page"></button>
+          <div class="wii-set-grid"></div>
+          <button class="wii-set-arrow right focusable" type="button" data-action="wii-set-page" data-dir="1" aria-label="Next page"></button>
+          <div class="wii-set-foot"><button class="wii-pbtn wii-set-back focusable" type="button" data-action="wii-set-back">${wiiPillParts()}<span>Back</span></button>
+            <span class="wii-set-dots" aria-hidden="true"></span><span class="wii-set-hint">A Select · B Back</span></div>
+          <div class="wii-set-sub" aria-hidden="true"><div class="wii-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
+        </div>`;
+      wiiSetGridKey = wiiSetSubKey = '';
+      shell = host.querySelector('.wii-set');
+    }
+    const state = wiiSet;
+    const pages = state.pages || [];
+    const page = state.page || pages[state.pageIndex] || null;
+    const rows = state.rows || [];
+    shell.dataset.anim = state.anim || '';
+    if (state.anim) {
+      clearTimeout(wiiSetAnimTimer);
+      wiiSetAnimTimer = setTimeout(() => {
+        if (!wiiSet) return;
+        wiiSet.anim = '';
+        const node = host.querySelector('.wii-set');
+        if (node) node.dataset.anim = '';
+      }, 460);
+    }
+    shell.querySelector('.wii-set-page-name').textContent = page ? page.title.replace(/^Wii Settings · /, '') : '';
+    const grid = shell.querySelector('.wii-set-grid');
+    const gridKey = `${page?.id || ''}|${state.loading ? 'load' : ''}|${state.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
+    if (gridKey !== wiiSetGridKey) {
+      wiiSetGridKey = gridKey;
+      grid.innerHTML = rows.length
+        ? rows.map((row, index) => {
+          const value = settingText(row, row.value);
+          return `<button class="wii-set-pill focusable" type="button" data-action="wii-set-pill" data-row="${index}" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+            ${wiiPillParts()}<span class="wii-set-pill-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+            <span class="wii-set-pill-copy"><strong>${esc(row.label)}</strong>${value ? `<small>${esc(value)}</small>` : ''}</span></button>`;
+        }).join('')
+        : `<p class="wii-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`;
+    }
+    [...grid.querySelectorAll('.wii-set-pill')].forEach((el, index) => el.classList.toggle('sel', index === state.focus));
+    const arrows = shell.querySelectorAll('.wii-set-arrow');
+    if (arrows[0]) arrows[0].hidden = state.pageIndex <= 0;
+    if (arrows[1]) arrows[1].hidden = state.pageIndex >= pages.length - 1;
+    const dots = shell.querySelector('.wii-set-dots');
+    dots.innerHTML = pages.map((item, index) => `<i${index === state.pageIndex ? ' class="on"' : ''}></i>`).join('');
+    shell.querySelector('.wii-set-hint').textContent = pages.length ? `Page ${state.pageIndex + 1} of ${pages.length} · A Select · B Back` : 'B Back';
+    // The sub-screen: title, pill choices or the Wii bar, and Back / Confirm at the bottom.
+    const overlay = shell.querySelector('.wii-set-sub');
+    const panel = shell.querySelector('.wii-set-panel');
+    const sub = state.sub;
+    overlay.classList.toggle('open', Boolean(sub));
+    overlay.setAttribute('aria-hidden', String(!sub));
+    const subKey = sub ? [sub.row.id, sub.mode, sub.selected, sub.value, sub.focus, sub.saving ? 1 : 0, sub.error].join('|') : '';
+    if (subKey !== wiiSetSubKey) {
+      wiiSetSubKey = subKey;
+      if (!sub) panel.innerHTML = '';
+      else {
+        const valueText = sub.mode === 'slider' ? settingText(sub.row, sub.value) : sub.mode === 'info' ? (settingText(sub.row, sub.row.value) || 'Unavailable') : '';
+        let body = '';
+        if (sub.mode === 'choice' || sub.mode === 'toggle') {
+          const n = sub.options.length;
+          body = `<div class="wii-set-options" role="listbox" aria-label="${esc(sub.row.label)}">${sub.options.map((option, index) => `<button class="wii-set-opt focusable${index === sub.selected ? ' on' : ''}${index === sub.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === sub.selected}" data-action="wii-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === sub.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+        } else if (sub.mode === 'slider') {
+          body = `<div class="wii-set-slider focusable${sub.focus === 0 ? ' focused' : ''}" role="slider" tabindex="-1" data-action="wii-set-slider" aria-label="${esc(sub.row.label)}" aria-valuemin="${sub.min}" aria-valuemax="${sub.max}" aria-valuenow="${sub.value}">
+            <span class="wii-set-track"><i style="width:${settingPercent(sub, sub.value)}%"></i><b style="left:${settingPercent(sub, sub.value)}%"></b></span></div>
+            <strong class="wii-set-slider-value">${esc(valueText)}</strong>`;
+        } else if (sub.mode === 'action') {
+          body = `<p class="wii-set-sub-copy">Run ${esc(sub.row.label)}? It opens the launcher's own control, with all of its confirmation steps.</p>`;
+        } else {
+          body = `<p class="wii-set-sub-value">${esc(valueText)}</p><p class="wii-set-sub-copy">This is read-only information from this PC.</p>`;
+        }
+        const footerIndex = sub.mode === 'info' ? 0 : sub.mode === 'slider' ? 1 : sub.mode === 'action' ? 0 : sub.options.length;
+        const confirmIndex = sub.mode === 'info' ? -1 : sub.mode === 'slider' ? 2 : sub.mode === 'action' ? 1 : sub.options.length + 1;
+        panel.innerHTML = `<h3><span class="wii-set-panel-icon" aria-hidden="true">${icon(settingGlyph(sub.row.id))}</span>${esc(sub.row.label)}</h3>${body}
+          <p class="wii-set-sub-error">${sub.error ? esc(sub.error) : ''}</p>
+          <div class="wii-set-panel-foot"><button class="wii-pbtn focusable${sub.focus === footerIndex ? ' focused' : ''}" type="button" data-action="wii-set-cancel">${wiiPillParts()}<span>Back</span></button>
+            ${confirmIndex >= 0 ? `<button class="wii-pbtn focusable${sub.focus === confirmIndex ? ' focused' : ''}" type="button" data-action="wii-set-commit">${wiiPillParts()}<span>Confirm</span></button>` : ''}
+            ${sub.saving ? '<span class="wii-set-saving">Saving…</span>' : ''}</div>`;
+        // The footer's own focused class is applied above; the option / bar focus is drawn by their state.
+      }
+    }
+    let target = null;
+    if (sub) {
+      if (sub.mode === 'choice' || sub.mode === 'toggle') {
+        if (sub.focus < sub.options.length) target = panel.querySelectorAll('.wii-set-opt')[sub.focus];
+        else target = panel.querySelectorAll('.wii-pbtn')[sub.focus - sub.options.length];
+      } else if (sub.mode === 'slider') {
+        target = sub.focus === 0 ? panel.querySelector('.wii-set-slider') : panel.querySelectorAll('.wii-pbtn')[sub.focus - 1];
+      } else target = panel.querySelectorAll('.wii-pbtn')[sub.focus] || panel;
+    } else {
+      target = grid.querySelector('.wii-set-pill.sel') || shell.querySelector('.wii-set-back');
+    }
+    focusEl(target);
   }
 
   // =========================== 3DS: the HOME Menu ===========================
@@ -1506,6 +1884,7 @@
     if (id !== 'ps3') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
     // The other console settings shells are per-theme screens too; leaving the theme closes them.
     if (id !== 'ps4') ps4Set = null;
+    if (id !== 'wii') wiiSet = null;
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
@@ -1554,7 +1933,14 @@
   // on the console screen so the first press does something.
   document.addEventListener('close', event => {
     if (!on() || state.view !== 'home' || !event.target?.matches?.('dialog')) return;
-    requestAnimationFrame(() => { if (on() && state.view === 'home') render(); });
+    requestAnimationFrame(() => {
+      if (!on() || state.view !== 'home') return;
+      render();
+      // A dialog can change what a console settings shell shows (the profile name, an account key, a reset),
+      // so re-read the shell's rows after it closes even when no g-setting-change fired.
+      if (theme() === 'ps4' && ps4Set) { forgetShellScan('ps4'); ps4QueueReload(); }
+      if (theme() === 'wii' && wiiSet) { forgetShellScan('wii'); wiiQueueReload(); }
+    });
   }, true);
   const firstFocus = () => host.querySelector('.xmb-item.on, .ps4-tile.sel, .wii-pbtn[data-start], .wii-ch.focusable, .ds-icon.sel');
   if (typeof navigateConsoleHome === 'function') {
@@ -1581,6 +1967,25 @@
     // A console's own Settings entry opens its registry-driven shell, not the launcher's dialog.
     if (action === 'settings' && el.closest('#g-retro, #g-retro-chrome')) {
       if (theme() === 'ps4' && !ps4Set) { stop(); ps4OpenSettings(); return; }
+      if (theme() === 'wii' && !wiiSet) { stop(); wiiOpenSettings(); return; }
+    }
+    // Wii Settings: page arrows, pills, the value sub-screen and its Back/Confirm.
+    if (theme() === 'wii' && wiiSet) {
+      if (action === 'wii-set-back') { stop(); wiiCloseSettings(); return; }
+      if (action === 'wii-set-page') { stop(); wiiTurnPage(Number(el.dataset.dir) || 1); return; }
+      if (action === 'wii-set-pill') { stop(); wiiSet.focus = Number(el.dataset.row) || 0; wiiOpenSub(wiiSet.focus); return; }
+      if (action === 'wii-set-option') {
+        stop();
+        const sub = wiiSet.sub;
+        if (!sub || sub.saving) return;
+        sub.selected = Number(el.dataset.option) || 0;
+        play('confirm');
+        renderWii();
+        return;
+      }
+      if (action === 'wii-set-commit') { stop(); wiiSubConfirm(); return; }
+      if (action === 'wii-set-cancel') { stop(); wiiSubCancel(); return; }
+      if (action === 'wii-set-slider') { stop(); if (state.controllerClick || event.detail === 0) wiiSubConfirm(); else wiiSeek(event); return; }
     }
     // PS4 Settings: its rows, pages and option dialog are real controls.
     if (theme() === 'ps4' && ps4Set) {
@@ -1643,6 +2048,7 @@
           if (ps3Open) { ps3ClosePage(); return; }
         }
         if (theme() === 'ps4' && ps4Set) { ps4SetBack(); return; }
+        if (theme() === 'wii' && wiiSet) { wiiBack(); return; }
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
         if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
@@ -1658,6 +2064,20 @@
     performAction = async function (action, source) {
       if (on() && state.view === 'home' && action === 'settings' && source?.closest?.('#g-retro, #g-retro-chrome')) {
         if (theme() === 'ps4' && !ps4Set) { ps4OpenSettings(); return true; }
+        if (theme() === 'wii' && !wiiSet) { wiiOpenSettings(); return true; }
+      }
+      if (on() && state.view === 'home' && theme() === 'wii' && wiiSet) {
+        if (action === 'wii-set-back') { wiiCloseSettings(); return true; }
+        if (action === 'wii-set-page') { wiiTurnPage(Number(source?.dataset?.dir) || 1); return true; }
+        if (action === 'wii-set-pill') { wiiSet.focus = Number(source?.dataset?.row) || 0; wiiOpenSub(wiiSet.focus); return true; }
+        if (action === 'wii-set-option') {
+          const sub = wiiSet.sub;
+          if (sub && !sub.saving) { sub.selected = Number(source?.dataset?.option) || 0; play('confirm'); renderWii(); }
+          return true;
+        }
+        if (action === 'wii-set-commit') { await wiiSubConfirm(); return true; }
+        if (action === 'wii-set-cancel') { wiiSubCancel(); return true; }
+        if (action === 'wii-set-slider') { await wiiSubConfirm(); return true; }
       }
       if (on() && state.view === 'home' && theme() === 'ps4' && ps4Set) {
         if (action === 'ps4-set-back') { ps4SetBack(); return true; }
@@ -1722,6 +2142,16 @@
     if (theme() !== 'ps4' || !ps4Set) return;
     forgetShellScan('ps4');
     ps4QueueReload();
+  });
+  // Wii Settings does the same: every change re-reads the current page, and availability is re-checked.
+  document.addEventListener('g-setting-change', event => {
+    if (theme() !== 'wii' || !event.detail?.id) return;
+    wiiQueueReload();
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() !== 'wii' || !wiiSet) return;
+    forgetShellScan('wii');
+    wiiQueueReload();
   });
 
   // Sounds: the pack's recordings when present, otherwise short synthesised cues.
