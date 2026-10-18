@@ -663,6 +663,80 @@
   addEventListener('focus', () => { if (theme() === 'ps3') xmbWave.start(); });
   document.addEventListener('visibilitychange', () => { if (theme() === 'ps3') xmbWave.start(); });
 
+  // ---------- Settings shells: registry plumbing shared by PS4, Wii and 3DS (task S3) ----------
+  // The three shells read the same registry as the PS3's: rows come from gSettings.layout(console), a row is only
+  // drawn while gSettings.available(id) is true, and every value is read and written through gSettings. These
+  // helpers hold the parts all three need, so each shell below owns only its own layout and navigation.
+  const SETTING_GLYPHS = {
+    volume: 'volume', mute: 'volume', soundEffects: 'volume', menuMusic: 'stream', menuMusicVolume: 'volume',
+    brightness: 'tv', uiScale: 'fullscreen', textSize: 'language', tileRadius: 'grid', reducedMotion: 'ease',
+    highContrastFocus: 'show', fullscreen: 'fullscreen', startupAnimation: 'play', powerPlan: 'power',
+    showUninstalledSteam: 'library', showUninstalledEpic: 'library', shuffleHomeScreenshots: 'photo',
+    randomScreenshotBackground: 'photo', theme: 'color', accent: 'color', background: 'photo', ps3ThemeColour: 'color',
+    clockFormat: 'language', dateOrder: 'language', screensaverDelay: 'tv', notifyFriends: 'bell', notifyDownloads: 'bell',
+    notifyAchievements: 'bell', controllerVibration: 'controller', pauseDownloadsWhilePlaying: 'download',
+    enterButton: 'controller', nintendoLayout: 'controller', screenLayout3ds: 'fullscreen', profile: 'contact',
+    steamAccount: 'shop', epicAccount: 'shop', artworkKey: 'photo', checkForUpdates: 'refresh', copyDiagnostics: 'info',
+    exportSettings: 'download', importSettings: 'download', resetLauncherData: 'delete', launcherSettings: 'settings',
+    wifi: 'globe', battery: 'power', appVersion: 'info', freeDisk: 'drive', libraryCounts: 'library',
+    friendsOnline: 'friends', controllerStatus: 'controller'
+  };
+  const settingGlyph = id => SETTING_GLYPHS[id] || 'settings';
+  // Availability is asked once per console and cached for a few seconds: a screen with thirty rows would
+  // otherwise ask Windows about the volume thirty times while it paints.
+  const shellScans = new Map();
+  async function scanShellLayout(id, force = false) {
+    const g = window.gSettings;
+    if (!g?.layout) return [];
+    const cached = shellScans.get(id);
+    if (!force && cached && Date.now() - cached.at < 30000) return cached.pages;
+    const pages = [];
+    for (const page of g.layout(id)) {
+      const rows = [];
+      for (const row of page.rows) {
+        let available = false;
+        try { available = await g.available(row.id); } catch { available = false; }
+        rows.push({ id: row.id, available });
+      }
+      pages.push({ id: page.id, title: page.title, rows });
+    }
+    // A page none of whose rows can do anything here is not a place the player can go.
+    const live = pages.filter(page => page.rows.some(row => row.available));
+    shellScans.set(id, { at: Date.now(), pages: live });
+    return live;
+  }
+  function forgetShellScan(id) { shellScans.delete(id); }
+  // Read one page's real rows: availability first, then the value and, for a choice, the list of values. The
+  // launcher's Settings form is filled from disk before a form-backed row is read, so saveSettingsForm cannot
+  // save the dialog's unopened defaults over the player's accounts and display settings.
+  async function loadShellRows(page, consoleId) {
+    const rows = [];
+    const g = window.gSettings;
+    if (page.rows.some(row => PS3_FORM_ROWS.has(row.id))) await ps3SyncLauncherForm();
+    for (const row of page.rows) {
+      let available = row.available !== false;
+      if (row.available === undefined) { try { available = await g.available(row.id); } catch { available = false; } }
+      if (!available) continue;
+      const entry = g.entry(row.id);
+      if (!entry) continue;
+      let value = null;
+      try { value = await g.get(row.id); } catch { value = null; }
+      let options = [];
+      if (entry.kind === 'choice') { try { options = await g.options(row.id); } catch { options = []; } }
+      rows.push({ id: row.id, kind: entry.kind, label: g.label(row.id, consoleId), min: entry.min, max: entry.max, step: entry.step, value, options });
+    }
+    return rows;
+  }
+  // A slider's filled fraction, for the small meters the shells draw beside a value.
+  function settingPercent(row, value) {
+    const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
+    const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
+    const span = max - min || 1;
+    return Math.max(0, Math.min(100, ((Number(value) - min) / span) * 100));
+  }
+  // "40%", "On", "24-hour": the registry's value in the console's own words (PS3's formatter).
+  const settingText = (row, value) => ps3Format(row, value);
+
   // =========================== PS4: the home screen ===========================
   // Measured from the 2013 home: the status/function row sits 78px down, square tiles are 214px from y 222,
   // the chosen tile grows to 376x433 from (328, 177) with its Start bar, the game name at y 536 and the
@@ -682,6 +756,7 @@
   // classes and offsets change, so the tiles can grow and slide and the function area can drop in.
   let ps4BuiltTiles = '';
   function renderPs4(rebuild = true) {
+    if (ps4Set) { renderPs4Settings(); return; }
     const list = ps4List();
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
@@ -778,6 +853,7 @@
     }).catch(() => {});
   }
   function ps4Move(direction) {
+    if (ps4Set) { ps4SetMove(direction); return; }
     const list = ps4List();
     if (ps4Area === 'fn') {
       if (direction === 'down') { ps4Area = 'row'; play('back'); }
@@ -802,6 +878,377 @@
       else { const next = Math.max(0, Math.min(list.length - 1, ps4Focus + (direction === 'right' ? 1 : -1))); if (next === ps4Focus) return; ps4Focus = next; play('navigate'); }
     }
     renderPs4(false);
+  }
+
+  // ---------- PS4: Settings, driven by gSettings (task S3) ----------
+  // The console's Settings app: a full-screen list of registry pages with their icons down the left and a blue
+  // focus bar. Choosing a page slides the category column away and brings its rows in from the right; choosing a
+  // row with a value opens the PS4 option dialog, while a toggle is a check box that changes in place. The
+  // layout's last page, Advanced (launcher), runs the launcher's own Settings dialog — nothing here is fake.
+  const PS4_PAGE_GLYPHS = { account: 'contact', notifications: 'bell', devices: 'controller', 'sound-screen': 'volume', network: 'globe', themes: 'color', system: 'settings', accessibility: 'ease', advanced: 'settings' };
+  let ps4Set = null, ps4ScanToken = 0, ps4RowsToken = 0, ps4ReloadTimer = 0;
+  const ps4SetGlyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { enter: '○', back: '✕' } : { enter: '✕', back: '○' });
+  function ps4OpenSettings() {
+    if (ps4Set) return;
+    play('confirm');
+    ps4Set = { level: 'pages', pages: null, page: null, rows: [], focus: 0, loading: true, error: '', overlay: null, anim: 'in' };
+    renderPs4(false);
+    ps4ScanSettings();
+  }
+  function ps4CloseSettings() {
+    if (!ps4Set) return;
+    play('back');
+    ps4Set = null; ps4ReloadTimer && clearTimeout(ps4ReloadTimer); ps4ReloadTimer = 0;
+    // Land back on the Settings function that opened it, not on a tile.
+    ps4Area = 'fn'; ps4Fn = PS4_FUNCTIONS.findIndex(item => item[0] === 'settings');
+    if (ps4Fn < 0) ps4Fn = 0;
+    renderPs4(false);
+  }
+  function ps4ScanSettings(force = false) {
+    if (!ps4Set) return;
+    const token = ++ps4ScanToken;
+    scanShellLayout('ps4', force).then(pages => {
+      if (token !== ps4ScanToken || !ps4Set || ps4Set.level !== 'pages') return;
+      ps4Set.pages = pages;
+      ps4Set.loading = false;
+      ps4Set.focus = Math.min(ps4Set.focus, Math.max(0, pages.length - 1));
+      renderPs4(false);
+    }).catch(error => {
+      if (token !== ps4ScanToken || !ps4Set) return;
+      ps4Set.loading = false;
+      ps4Set.error = error?.message || 'Could not read the settings on this PC.';
+      renderPs4(false);
+    });
+  }
+  function ps4SetBack() {
+    if (!ps4Set) return false;
+    if (ps4Set.overlay) { ps4CancelOverlay(); return true; }
+    if (ps4Set.level === 'rows') {
+      play('back');
+      ps4Set.level = 'pages'; ps4Set.page = null; ps4Set.rows = []; ps4Set.anim = 'back';
+      ps4Set.focus = Math.max(0, Math.min(ps4Set.pageIndex || 0, (ps4Set.pages?.length || 1) - 1));
+      renderPs4(false);
+      return true;
+    }
+    ps4CloseSettings();
+    return true;
+  }
+  async function ps4OpenPage(id) {
+    const page = ps4Set?.pages?.find(item => item.id === id);
+    if (!page) return;
+    // Advanced (launcher) is one real action, not a page with a single row to open.
+    if (page.rows.length === 1 && page.rows[0].id === 'launcherSettings') { ps4RunLauncher(); return; }
+    play('confirm');
+    ps4Set.pageIndex = ps4Set.focus;
+    ps4Set.level = 'rows'; ps4Set.page = page; ps4Set.rows = []; ps4Set.focus = 0;
+    ps4Set.loading = true; ps4Set.error = ''; ps4Set.overlay = null; ps4Set.anim = 'deep';
+    renderPs4(false);
+    const token = ++ps4RowsToken;
+    try {
+      const rows = await loadShellRows(page, 'ps4');
+      if (token !== ps4RowsToken || !ps4Set || ps4Set.page !== page) return;
+      ps4Set.rows = rows;
+      ps4Set.loading = false;
+      ps4Set.focus = Math.min(ps4Set.focus, Math.max(0, rows.length - 1));
+      renderPs4(false);
+    } catch (error) {
+      if (token !== ps4RowsToken || !ps4Set || ps4Set.page !== page) return;
+      ps4Set.loading = false;
+      ps4Set.error = error?.message || 'Could not read these settings.';
+      renderPs4(false);
+    }
+  }
+  function ps4RunLauncher() {
+    play('confirm');
+    ps4Set = null; ps4ReloadTimer && clearTimeout(ps4ReloadTimer); ps4ReloadTimer = 0;
+    renderPs4(false);
+    Promise.resolve(window.gSettings?.set('launcherSettings', null)).catch(error => {
+      if (typeof showToast === 'function') showToast(error?.message || 'The launcher settings are unavailable.');
+    });
+  }
+  async function ps4SetValue(id, value) {
+    const state = ps4Set;
+    const row = state?.rows.find(item => item.id === id);
+    if (!state || !row) return;
+    const previous = row.value;
+    row.value = value;
+    renderPs4(false);
+    try {
+      if (PS3_FORM_ROWS.has(id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(id, value);
+      const fresh = await window.gSettings.get(id).catch(() => value);
+      if (ps4Set !== state) return;
+      row.value = fresh;
+      play('confirm');
+    } catch (error) {
+      if (ps4Set !== state) return;
+      row.value = previous;
+      play('back');
+      if (typeof showToast === 'function') showToast(error?.message || 'Could not change this setting.');
+    }
+    if (ps4Set === state) renderPs4(false);
+  }
+  function ps4OpenRow(index) {
+    const row = ps4Set?.rows?.[index];
+    if (!row) return;
+    if (row.kind === 'action') {
+      play('confirm');
+      Promise.resolve(window.gSettings.set(row.id, null)).catch(error => {
+        if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
+      }).then(() => window.gSettings.get(row.id).then(value => {
+        if (ps4Set?.rows[index] === row) { row.value = value; renderPs4(false); }
+      }).catch(() => {}));
+      return;
+    }
+    if (row.kind === 'toggle') { ps4SetValue(row.id, !row.value); return; }
+    if (row.kind === 'info') {
+      play('confirm');
+      ps4Set.overlay = { mode: 'info', row, options: [], selected: 0, value: null, saving: false, error: '' };
+    } else if (row.kind === 'slider') {
+      play('confirm');
+      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
+      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
+      const raw = Number(row.value);
+      ps4Set.overlay = { mode: 'slider', row, options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, saving: false, error: '' };
+    } else if (row.kind === 'choice') {
+      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
+      play('confirm');
+      ps4Set.overlay = { mode: 'choice', row, options: row.options, selected: Math.max(0, row.options.findIndex(option => option.value === row.value)), value: null, saving: false, error: '' };
+    } else return;
+    renderPs4(false);
+  }
+  function ps4CancelOverlay() {
+    if (!ps4Set?.overlay || ps4Set.overlay.saving) return;
+    play('back');
+    ps4Set.overlay = null;
+    renderPs4(false);
+  }
+  async function ps4ConfirmOverlay() {
+    const state = ps4Set;
+    const overlay = state?.overlay;
+    if (!state || !overlay || overlay.saving) return;
+    if (overlay.mode === 'info') { ps4CancelOverlay(); return; }
+    const value = overlay.mode === 'slider' ? overlay.value : overlay.options[overlay.selected]?.value;
+    overlay.saving = true; overlay.error = '';
+    renderPs4(false);
+    try {
+      if (PS3_FORM_ROWS.has(overlay.row.id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(overlay.row.id, value);
+      const fresh = await window.gSettings.get(overlay.row.id).catch(() => value);
+      if (ps4Set !== state) return;
+      overlay.row.value = fresh;
+      ps4Set.overlay = null;
+      play('confirm');
+    } catch (error) {
+      if (ps4Set !== state) return;
+      overlay.saving = false;
+      overlay.error = error?.message || 'Could not change this setting.';
+      play('back');
+    }
+    if (ps4Set === state) renderPs4(false);
+  }
+  function ps4OverlayMove(direction) {
+    const overlay = ps4Set?.overlay;
+    if (!overlay || overlay.saving || overlay.mode === 'info') return;
+    if (overlay.mode === 'slider') {
+      if (direction !== 'left' && direction !== 'right') return;
+      const next = Math.max(overlay.min, Math.min(overlay.max, overlay.value + (direction === 'right' ? overlay.step : -overlay.step)));
+      if (next === overlay.value) return;
+      overlay.value = Number(next.toFixed(6));
+      play('navigate');
+      renderPs4(false);
+      return;
+    }
+    if (direction !== 'up' && direction !== 'down') return;
+    const next = Math.max(0, Math.min(overlay.options.length - 1, overlay.selected + (direction === 'down' ? 1 : -1)));
+    if (next === overlay.selected) return;
+    overlay.selected = next;
+    play('navigate');
+    renderPs4(false);
+  }
+  function ps4Seek(event) {
+    const overlay = ps4Set?.overlay;
+    const track = host.querySelector('.ps4-set-track');
+    if (!overlay || overlay.mode !== 'slider' || !track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const step = overlay.step || 1;
+    const value = overlay.min + Math.round((fraction * (overlay.max - overlay.min)) / step) * step;
+    overlay.value = Number(Math.max(overlay.min, Math.min(overlay.max, value)).toFixed(6));
+    play('navigate');
+    renderPs4(false);
+  }
+  function ps4SetMove(direction) {
+    if (!ps4Set) return;
+    if (ps4Set.overlay) { ps4OverlayMove(direction); return; }
+    const count = ps4Set.level === 'pages' ? (ps4Set.pages?.length || 0) : ps4Set.rows.length;
+    if (!count) return;
+    if (ps4Set.level === 'rows' && direction === 'left') { ps4SetBack(); return; }
+    if (direction !== 'up' && direction !== 'down') return;
+    const next = Math.max(0, Math.min(count - 1, ps4Set.focus + (direction === 'down' ? 1 : -1)));
+    if (next === ps4Set.focus) return;
+    ps4Set.focus = next;
+    ps4Set.anim = '';
+    play('navigate');
+    renderPs4(false);
+  }
+  function ps4QueueReload() {
+    if (!ps4Set || ps4ReloadTimer) return;
+    ps4ReloadTimer = setTimeout(() => {
+      ps4ReloadTimer = 0;
+      if (!ps4Set || theme() !== 'ps4' || document.querySelector('dialog[open]')) return;
+      forgetShellScan('ps4');
+      const state = ps4Set;
+      if (state.level === 'rows' && state.page) {
+        const page = state.page, focus = state.focus, token = ++ps4RowsToken;
+        loadShellRows(page, 'ps4').then(rows => {
+          if (token !== ps4RowsToken || ps4Set !== state) return;
+          state.rows = rows;
+          state.loading = false;
+          state.focus = Math.min(focus, Math.max(0, rows.length - 1));
+          if (!rows.length) { state.level = 'pages'; state.page = null; ps4ScanSettings(true); }
+          renderPs4(false);
+        }).catch(() => {});
+      } else if (state.level === 'pages') {
+        ps4ScanSettings(true);
+      }
+    }, 180);
+  }
+  let ps4SetPageKey = '', ps4SetRowKey = '', ps4SetOverlayKey = '', ps4SetAnimTimer = 0;
+  function renderPs4Settings() {
+    if (!ps4Set) { renderPs4(); return; }
+    chrome.innerHTML = '';
+    let shell = host.querySelector('.ps4-set');
+    if (!shell) {
+      host.innerHTML = `<i class="ps4-set-bg" aria-hidden="true"></i>
+        <div class="ps4-set">
+          <div class="ps4-set-head"><button class="ps4-set-back focusable" type="button" data-action="ps4-set-back" aria-label="Back"><span aria-hidden="true">‹</span></button><span class="ps4-set-kicker"></span><strong class="ps4-set-title"></strong></div>
+          <div class="ps4-set-pages" role="list"></div>
+          <div class="ps4-set-rows" role="list"></div>
+          <div class="ps4-set-load" role="status"></div>
+          <div class="ps4-set-hints"></div>
+          <div class="ps4-set-overlay" aria-hidden="true"><div class="ps4-set-dialog" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
+        </div>`;
+      ps4SetPageKey = ps4SetRowKey = ps4SetOverlayKey = '';
+      shell = host.querySelector('.ps4-set');
+    }
+    const state = ps4Set;
+    const pages = state.pages || [];
+    const rows = state.rows || [];
+    shell.dataset.level = state.level;
+    shell.classList.toggle('is-deep', state.level === 'rows');
+    shell.dataset.anim = state.anim || '';
+    if (state.anim) {
+      clearTimeout(ps4SetAnimTimer);
+      ps4SetAnimTimer = setTimeout(() => {
+        if (!ps4Set) return;
+        ps4Set.anim = '';
+        const node = host.querySelector('.ps4-set');
+        if (node) node.dataset.anim = '';
+      }, 420);
+    }
+    const deep = state.level === 'rows';
+    shell.querySelector('.ps4-set-kicker').textContent = deep ? 'Settings' : 'PlayStation 4';
+    shell.querySelector('.ps4-set-title').textContent = deep ? (state.page?.title || 'Settings') : 'Settings';
+    shell.querySelector('.ps4-set-back').setAttribute('aria-label', deep ? 'Back to Settings' : 'Close Settings');
+    // Pages
+    const pageEl = shell.querySelector('.ps4-set-pages');
+    const pageKey = `${state.loading && !pages.length ? 'load' : ''}|${state.error}|${pages.map(page => `${page.id}:${page.title}`).join('|')}`;
+    if (pageKey !== ps4SetPageKey) {
+      ps4SetPageKey = pageKey;
+      const scroll = pageEl.scrollTop;
+      pageEl.innerHTML = pages.length
+        ? pages.map((page, index) => `<button class="ps4-set-item focusable" type="button" data-action="ps4-set-page" data-page="${esc(page.id)}" data-index="${index}" role="listitem" aria-label="${esc(page.title)}">
+            <span class="ps4-set-icon" aria-hidden="true">${icon(PS4_PAGE_GLYPHS[page.id] || 'settings')}</span>
+            <span class="ps4-set-label">${esc(page.title)}</span>
+            <span class="ps4-set-chevron" aria-hidden="true">›</span>
+          </button>`).join('')
+        : `<p class="ps4-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'No settings are available on this PC right now.')}</p>`;
+      pageEl.scrollTop = scroll;
+    }
+    [...pageEl.querySelectorAll('.ps4-set-item')].forEach((el, index) => el.classList.toggle('sel', !deep && index === state.focus));
+    // Rows
+    const rowsEl = shell.querySelector('.ps4-set-rows');
+    const rowKey = `${state.page?.id || ''}|${state.loading ? 'load' : ''}|${state.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
+    if (rowKey !== ps4SetRowKey) {
+      ps4SetRowKey = rowKey;
+      const scroll = rowsEl.scrollTop;
+      rowsEl.innerHTML = rows.length
+        ? rows.map((row, index) => {
+          const value = settingText(row, row.value);
+          const meter = row.kind === 'slider' ? `<span class="ps4-set-meter" aria-hidden="true"><i style="width:${settingPercent(row, row.value)}%"></i></span>` : '';
+          const check = row.kind === 'toggle' ? `<span class="ps4-set-check${row.value ? ' on' : ''}" aria-hidden="true">${row.value ? '✓' : ''}</span>` : '';
+          return `<button class="ps4-set-row focusable" type="button" data-action="ps4-set-row" data-row="${index}" role="listitem" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+            <span class="ps4-set-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+            <span class="ps4-set-label">${esc(row.label)}</span>
+            ${meter}${value ? `<span class="ps4-set-value">${esc(value)}</span>` : ''}${check}
+            ${row.kind === 'choice' || row.kind === 'action' ? '<span class="ps4-set-chevron" aria-hidden="true">›</span>' : ''}
+          </button>`;
+        }).join('')
+        : `<p class="ps4-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`;
+      rowsEl.scrollTop = scroll;
+    }
+    [...rowsEl.querySelectorAll('.ps4-set-row')].forEach((el, index) => el.classList.toggle('sel', deep && index === state.focus));
+    shell.querySelector('.ps4-set-load').textContent = state.error || '';
+    // Hints
+    const glyphs = ps4SetGlyphs();
+    shell.querySelector('.ps4-set-hints').innerHTML = deep
+      ? `<span><b>${glyphs.enter}</b> Select</span><span><b>${glyphs.back}</b> Back</span>`
+      : `<span><b>${glyphs.enter}</b> Open</span><span><b>${glyphs.back}</b> Close</span>`;
+    // The option dialog
+    const overlayEl = shell.querySelector('.ps4-set-overlay');
+    const dialog = shell.querySelector('.ps4-set-dialog');
+    const overlay = state.overlay;
+    overlayEl.classList.toggle('open', Boolean(overlay));
+    overlayEl.setAttribute('aria-hidden', String(!overlay));
+    const overlayKey = overlay ? `${overlay.mode}|${overlay.row.id}|${overlay.selected}|${overlay.value}|${overlay.saving ? 1 : 0}|${overlay.error}` : '';
+    if (overlayKey !== ps4SetOverlayKey) {
+      ps4SetOverlayKey = overlayKey;
+      if (!overlay) {
+        dialog.innerHTML = '';
+        dialog.removeAttribute('tabindex');
+        delete dialog.dataset.action;
+      } else {
+        let body = '';
+        if (overlay.mode === 'slider') {
+          body = `<div class="ps4-set-slider focusable" role="slider" tabindex="-1" data-action="ps4-set-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
+            <span class="ps4-set-arrow" aria-hidden="true">◀</span><span class="ps4-set-track"><i style="width:${settingPercent(overlay, overlay.value)}%"></i><b style="left:${settingPercent(overlay, overlay.value)}%"></b></span><span class="ps4-set-arrow" aria-hidden="true">▶</span></div>
+            <strong class="ps4-set-slider-value">${esc(settingText(overlay.row, overlay.value))}</strong>`;
+        } else if (overlay.mode === 'choice') {
+          body = `<div class="ps4-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="ps4-set-option focusable${index === overlay.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="ps4-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+        } else {
+          body = `<p class="ps4-set-info">${esc(settingText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
+        }
+        const hint = overlay.mode === 'info'
+          ? `<button class="ps4-set-action focusable" type="button" data-action="ps4-set-cancel"><b>${glyphs.back}</b> Back</button>`
+          : `<button class="ps4-set-action focusable" type="button" data-action="ps4-set-commit"><b>${glyphs.enter}</b> Select</button><button class="ps4-set-action focusable" type="button" data-action="ps4-set-cancel"><b>${glyphs.back}</b> Back</button>`;
+        dialog.innerHTML = `<h3>${esc(overlay.row.label)}</h3>${body}<p class="ps4-set-dialog-hint">${overlay.error ? `<span class="ps4-set-error">${esc(overlay.error)}</span>` : ''}${hint}${overlay.saving ? '<span class="ps4-set-saving">Saving…</span>' : ''}</p>`;
+        if (overlay.mode === 'info') { dialog.setAttribute('tabindex', '-1'); dialog.dataset.action = 'ps4-set-cancel'; }
+        else { dialog.removeAttribute('tabindex'); delete dialog.dataset.action; }
+      }
+    }
+    // Focus: the open dialog's own control, else the chosen row, else the chosen page.
+    let target = null;
+    if (overlay) target = overlay.mode === 'slider' ? shell.querySelector('.ps4-set-slider') : overlay.mode === 'info' ? dialog : shell.querySelector('.ps4-set-option.on');
+    else if (deep) target = rowsEl.querySelector('.ps4-set-row.sel');
+    else target = pageEl.querySelector('.ps4-set-item.sel');
+    focusEl(target || shell.querySelector('.ps4-set-back'));
+    // The console's list scrolls under the focus bar; keep the chosen row in view without moving the page.
+    const pane = overlay ? null : deep ? rowsEl : pageEl;
+    if (pane && target) {
+      const top = target.offsetTop, bottom = top + target.offsetHeight;
+      if (top < pane.scrollTop) pane.scrollTop = top;
+      else if (bottom > pane.scrollTop + pane.clientHeight) pane.scrollTop = bottom - pane.clientHeight;
+    }
+  }
+  function ps4SetEnter() {
+    if (!ps4Set) return false;
+    if (ps4Set.overlay) { if (ps4Set.overlay.mode === 'info') ps4CancelOverlay(); else ps4ConfirmOverlay(); return true; }
+    if (ps4Set.level === 'rows') { ps4OpenRow(ps4Set.focus); return true; }
+    const page = ps4Set.pages?.[ps4Set.focus];
+    if (page) ps4OpenPage(page.id);
+    return true;
   }
 
   // =========================== Wii: the Wii Menu ===========================
@@ -1057,6 +1504,8 @@
     const id = theme();
     // Leaving PS3 gives up its open settings page and pop-up; coming back starts from the column again.
     if (id !== 'ps3') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
+    // The other console settings shells are per-theme screens too; leaving the theme closes them.
+    if (id !== 'ps4') ps4Set = null;
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
@@ -1129,6 +1578,28 @@
     if (!el) return;
     const action = el.dataset.action;
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
+    // A console's own Settings entry opens its registry-driven shell, not the launcher's dialog.
+    if (action === 'settings' && el.closest('#g-retro, #g-retro-chrome')) {
+      if (theme() === 'ps4' && !ps4Set) { stop(); ps4OpenSettings(); return; }
+    }
+    // PS4 Settings: its rows, pages and option dialog are real controls.
+    if (theme() === 'ps4' && ps4Set) {
+      if (action === 'ps4-set-back') { stop(); ps4SetBack(); return; }
+      if (action === 'ps4-set-page') { stop(); ps4Set.focus = Number(el.dataset.index) || 0; ps4OpenPage(el.dataset.page); return; }
+      if (action === 'ps4-set-row') { stop(); ps4Set.focus = Number(el.dataset.row); ps4OpenRow(ps4Set.focus); return; }
+      if (action === 'ps4-set-option') {
+        stop();
+        const overlay = ps4Set.overlay;
+        if (!overlay || overlay.saving) return;
+        overlay.selected = Number(el.dataset.option);
+        ps4ConfirmOverlay();
+        return;
+      }
+      if (action === 'ps4-set-commit') { stop(); ps4ConfirmOverlay(); return; }
+      if (action === 'ps4-set-cancel') { stop(); ps4CancelOverlay(); return; }
+      // A controller press confirms the slider; a pointer press moves the knob to where it landed.
+      if (action === 'ps4-set-slider') { stop(); if (state.controllerClick || event.detail === 0) ps4ConfirmOverlay(); else ps4Seek(event); return; }
+    }
     // A first click on an XMB item, PS4 tile or 3DS icon that isn't selected selects it, as the pointer did.
     if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); if (ps3Open) { ps3Open = null; ps3Popup = null; ps3Sub = 0; } play('navigate'); renderXmb(false); return; }
     if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); dsUpdate(); return; }
@@ -1171,6 +1642,7 @@
           if (ps3Popup) { ps3CancelPopup(); return; }
           if (ps3Open) { ps3ClosePage(); return; }
         }
+        if (theme() === 'ps4' && ps4Set) { ps4SetBack(); return; }
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
         if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
@@ -1184,6 +1656,26 @@
   if (typeof performAction === 'function') {
     const actionBase = performAction;
     performAction = async function (action, source) {
+      if (on() && state.view === 'home' && action === 'settings' && source?.closest?.('#g-retro, #g-retro-chrome')) {
+        if (theme() === 'ps4' && !ps4Set) { ps4OpenSettings(); return true; }
+      }
+      if (on() && state.view === 'home' && theme() === 'ps4' && ps4Set) {
+        if (action === 'ps4-set-back') { ps4SetBack(); return true; }
+        if (action === 'ps4-set-page') { ps4Set.focus = Number(source?.dataset?.index) || 0; ps4OpenPage(source?.dataset?.page); return true; }
+        if (action === 'ps4-set-row') {
+          const index = Number(source?.dataset?.row);
+          ps4Set.focus = index;
+          ps4OpenRow(index);
+          return true;
+        }
+        if (action === 'ps4-set-option') {
+          if (ps4Set.overlay) { ps4Set.overlay.selected = Number(source?.dataset?.option); await ps4ConfirmOverlay(); }
+          return true;
+        }
+        if (action === 'ps4-set-commit') { await ps4ConfirmOverlay(); return true; }
+        if (action === 'ps4-set-cancel') { ps4CancelOverlay(); return true; }
+        if (action === 'ps4-set-slider') { await ps4ConfirmOverlay(); return true; }
+      }
       if (on() && state.view === 'home' && theme() === 'ps3') {
         if (action === 'xmb-settings-page') { ps3OpenPage(source?.dataset?.page); return true; }
         if (action === 'xmb-settings-row') {
@@ -1219,6 +1711,17 @@
     if (theme() !== 'ps3') return;
     ps3Layout = null; ps3LayoutAt = 0;
     if (state.view === 'home') renderXmb(false);
+  });
+  // The PS4 shell follows every other way a setting can change, and re-checks what this PC can do when a
+  // preference that decides availability (an account key, say) changes.
+  document.addEventListener('g-setting-change', event => {
+    if (theme() !== 'ps4' || !event.detail?.id) return;
+    ps4QueueReload();
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() !== 'ps4' || !ps4Set) return;
+    forgetShellScan('ps4');
+    ps4QueueReload();
   });
 
   // Sounds: the pack's recordings when present, otherwise short synthesised cues.

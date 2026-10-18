@@ -265,6 +265,90 @@ body[data-g-theme="ps4"] .ps4-s.clock { right: calc(52 * var(--cpx)); font-size:
 #g-retro .ps4-fn span { position: absolute; top: calc(100% + 16 * var(--cpx)); white-space: nowrap; font: 300 calc(24 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 2px calc(8 * var(--cpx)) rgba(0, 0, 0, .5); }
 #g-retro .ps4-fn.sel, #g-retro .ps4-fn:is(.focused, :focus-visible) { transform: scale(1.1); background: rgba(8, 20, 50, .34); box-shadow: 0 0 0 calc(3 * var(--cpx)) rgba(255, 255, 255, .92), 0 0 calc(22 * var(--cpx)) rgba(120, 190, 255, .55) !important; }
 #g-retro .ps4-fn.sel span, #g-retro .ps4-fn:is(.focused, :focus-visible) span { opacity: 1; }
+/* PS4 Settings (task S3). The console's own app: a full-screen blue list, category icons down the left and a
+   blue focus bar. Choosing a category slides the column left and brings its rows in from the right, the depth
+   push the console used. Numbers are 1080p console pixels, like the rest of the PS4 theme. */
+body[data-g-theme="ps4"] #g-retro .ps4-set-bg { position: absolute; inset: 0; background:
+  radial-gradient(ellipse 70% 55% at 78% 12%, rgba(92, 160, 240, .38), transparent 68%),
+  radial-gradient(ellipse 60% 60% at 12% 100%, rgba(10, 48, 120, .55), transparent 70%),
+  linear-gradient(155deg, #10469e 0%, #0c3479 52%, #071d47 100%); }
+body[data-g-theme="ps4"] #g-retro .ps4-set-bg::after { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(ellipse 80% 40% at 50% 118%, rgba(3, 9, 26, .6), transparent 70%),
+  repeating-linear-gradient(0deg, rgba(255, 255, 255, .014) 0 calc(2 * var(--cpx)), transparent calc(2 * var(--cpx)) calc(5 * var(--cpx)));
+  pointer-events: none; }
+#g-retro .ps4-set { position: absolute; inset: 0; z-index: 6; color: #fff; font-family: var(--g-font); }
+#g-retro .ps4-set-head { position: absolute; left: calc(96 * var(--cpx)); top: calc(58 * var(--cpx)); display: flex; align-items: center; gap: calc(20 * var(--cpx)); }
+#g-retro .ps4-set-kicker { color: rgba(255, 255, 255, .56); font: 300 calc(21 * var(--cpx))/1 var(--g-font); letter-spacing: .16em; text-transform: uppercase; }
+#g-retro .ps4-set-title { font: 300 calc(56 * var(--cpx))/1.05 var(--g-font); letter-spacing: -.01em; text-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 0, 0, .35); }
+#g-retro .ps4-set-back { display: grid; place-items: center; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); padding: 0; border: calc(1.5 * var(--cpx)) solid rgba(255, 255, 255, .4); border-radius: 50%; background: rgba(255, 255, 255, .08); color: #fff; cursor: pointer; transition: background .18s ease, box-shadow .18s ease, transform .18s ease; }
+#g-retro .ps4-set-back span { margin-top: calc(-5 * var(--cpx)); font: 300 calc(50 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-back:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .22); box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; transform: scale(1.06); }
+#g-retro .ps4-set-pages { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(780 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
+#g-retro .ps4-set-pages::-webkit-scrollbar, #g-retro .ps4-set-rows::-webkit-scrollbar { display: none; }
+#g-retro .ps4-set.is-deep .ps4-set-pages { transform: translateX(calc(-300 * var(--cpx))); opacity: 0; pointer-events: none; }
+#g-retro .ps4-set-item { position: relative; display: flex; flex: none; align-items: center; gap: calc(22 * var(--cpx)); width: 100%; height: calc(82 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; transition: background .18s ease, box-shadow .18s ease; }
+#g-retro .ps4-set-item .ps4-set-icon { display: grid; place-items: center; flex: none; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); opacity: .92; }
+#g-retro .ps4-set-item .ps4-set-icon > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; }
+#g-retro .ps4-set-item .ps4-set-label { font: 300 calc(31 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ps4-set-item .ps4-set-chevron { margin-left: auto; color: rgba(255, 255, 255, .5); font: 300 calc(34 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-item.sel { background: linear-gradient(90deg, #1b6fd6 0%, #2f86ec 72%, rgba(47, 134, 236, .55) 100%); box-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(3, 16, 48, .4); }
+#g-retro .ps4-set-item.sel .ps4-set-icon { opacity: 1; }
+#g-retro .ps4-set-item.sel .ps4-set-chevron { color: #fff; }
+#g-retro .ps4-set-rows { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(1290 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; opacity: 0; transform: translateX(calc(140 * var(--cpx))); pointer-events: none; transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
+#g-retro .ps4-set.is-deep .ps4-set-rows { opacity: 1; transform: none; pointer-events: auto; }
+#g-retro .ps4-set-row { position: relative; display: flex; flex: none; align-items: center; gap: calc(20 * var(--cpx)); width: 100%; height: calc(80 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .045); color: #fff; text-align: left; cursor: pointer; transition: background .16s ease, box-shadow .16s ease; }
+#g-retro .ps4-set-row .ps4-set-icon { display: grid; place-items: center; flex: none; width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); opacity: .86; }
+#g-retro .ps4-set-row .ps4-set-icon > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; }
+#g-retro .ps4-set-row .ps4-set-label { font: 300 calc(29 * var(--cpx))/1.1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#g-retro .ps4-set-row .ps4-set-value { margin-left: auto; color: rgba(255, 255, 255, .68); font: 300 calc(24 * var(--cpx))/1.1 var(--g-font); white-space: nowrap; }
+#g-retro .ps4-set-row .ps4-set-chevron { margin-left: calc(12 * var(--cpx)); color: rgba(255, 255, 255, .5); font: 300 calc(30 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-row .ps4-set-meter { width: calc(150 * var(--cpx)); height: calc(6 * var(--cpx)); margin-left: auto; border-radius: calc(3 * var(--cpx)); background: rgba(255, 255, 255, .18); overflow: hidden; }
+#g-retro .ps4-set-row .ps4-set-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(255, 255, 255, .7), #fff); }
+#g-retro .ps4-set-row .ps4-set-check { display: grid; place-items: center; flex: none; width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .72); border-radius: calc(3 * var(--cpx)); color: #0b2f6b; font: 700 calc(21 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-row .ps4-set-check.on { border-color: #fff; background: #fff; }
+#g-retro .ps4-set-row.sel { background: linear-gradient(90deg, #1b6fd6 0%, #2f86ec 72%, rgba(47, 134, 236, .6) 100%); box-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(3, 16, 48, .35); }
+#g-retro .ps4-set-row.sel .ps4-set-value { color: #fff; }
+#g-retro .ps4-set-row.sel .ps4-set-meter { background: rgba(255, 255, 255, .3); }
+#g-retro .ps4-set-note { margin: 0; padding: calc(26 * var(--cpx)) calc(10 * var(--cpx)); color: rgba(255, 255, 255, .62); font: 300 calc(26 * var(--cpx))/1.35 var(--g-font); }
+#g-retro .ps4-set-load { position: absolute; left: calc(96 * var(--cpx)); bottom: calc(120 * var(--cpx)); color: #ffb4b4; font: 300 calc(21 * var(--cpx))/1.3 var(--g-font); }
+#g-retro .ps4-set-hints { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: calc(52 * var(--cpx)); height: calc(96 * var(--cpx)); padding: 0 calc(96 * var(--cpx)); background: linear-gradient(180deg, rgba(3, 10, 28, .1), rgba(3, 8, 22, .82)); color: rgba(255, 255, 255, .92); font: 300 calc(24 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-hints span { display: inline-flex; align-items: center; gap: calc(12 * var(--cpx)); }
+#g-retro .ps4-set-hints b { font: 400 calc(30 * var(--cpx))/1 var(--g-font); }
+/* The PS4 option dialog: a dark panel with the values as a white-highlighted list, or the horizontal slider. */
+#g-retro .ps4-set-overlay { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(2, 8, 24, .5); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+#g-retro .ps4-set-overlay.open { opacity: 1; pointer-events: auto; }
+#g-retro .ps4-set-dialog { width: calc(760 * var(--cpx)); max-height: calc(760 * var(--cpx)); overflow: auto; padding: calc(26 * var(--cpx)) calc(30 * var(--cpx)) calc(16 * var(--cpx)); border: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .2); border-radius: calc(6 * var(--cpx)); background: linear-gradient(180deg, rgba(17, 48, 100, .98), rgba(6, 22, 54, .99)); box-shadow: 0 calc(24 * var(--cpx)) calc(70 * var(--cpx)) rgba(0, 0, 0, .6); outline: none; }
+#g-retro .ps4-set-dialog:focus-visible { outline: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .55); outline-offset: calc(4 * var(--cpx)); }
+#g-retro .ps4-set-dialog h3 { margin: 0 0 calc(18 * var(--cpx)); padding: 0 calc(6 * var(--cpx)) calc(14 * var(--cpx)); border-bottom: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .2); font: 300 calc(34 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ps4-set-options { display: flex; flex-direction: column; }
+#g-retro .ps4-set-option { display: flex; align-items: center; justify-content: space-between; width: 100%; height: calc(62 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border: 0; border-radius: calc(3 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; font: 300 calc(26 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ps4-set-option + .ps4-set-option { box-shadow: inset 0 calc(1 * var(--cpx)) 0 rgba(255, 255, 255, .1); }
+#g-retro .ps4-set-option.on { background: #f2f6fb; color: #102a52; }
+#g-retro .ps4-set-option i { font-style: normal; font-size: calc(23 * var(--cpx)); }
+#g-retro .ps4-set-info { margin: 0; padding: calc(20 * var(--cpx)) calc(8 * var(--cpx)); font: 300 calc(29 * var(--cpx))/1.35 var(--g-font); }
+#g-retro .ps4-set-dialog-hint { display: flex; align-items: center; gap: calc(24 * var(--cpx)); margin: calc(16 * var(--cpx)) 0 0; padding-top: calc(12 * var(--cpx)); border-top: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .82); font: 300 calc(20 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-action { display: inline-flex; align-items: center; gap: calc(9 * var(--cpx)); padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+#g-retro .ps4-set-action b { font: 400 calc(24 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-action:focus-visible { outline: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .6); outline-offset: calc(4 * var(--cpx)); }
+#g-retro .ps4-set-saving { margin-left: auto; color: rgba(255, 255, 255, .65); }
+#g-retro .ps4-set-error { flex: 1; color: #ffb4b4; }
+#g-retro .ps4-set-slider { display: flex; align-items: center; gap: calc(18 * var(--cpx)); padding: calc(34 * var(--cpx)) calc(6 * var(--cpx)) calc(12 * var(--cpx)); cursor: pointer; outline: none; }
+#g-retro .ps4-set-slider:focus-visible { outline: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .55); outline-offset: calc(4 * var(--cpx)); }
+#g-retro .ps4-set-arrow { color: rgba(255, 255, 255, .7); font: 300 calc(19 * var(--cpx))/1 var(--g-font); }
+#g-retro .ps4-set-track { position: relative; flex: 1; height: calc(8 * var(--cpx)); border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 calc(1 * var(--cpx)) rgba(255, 255, 255, .2); }
+#g-retro .ps4-set-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #5aa9ff, #fff); }
+#g-retro .ps4-set-track b { position: absolute; top: 50%; width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); transform: translate(-50%, -50%); border-radius: 50%; background: #fff; box-shadow: 0 0 calc(10 * var(--cpx)) rgba(255, 255, 255, .55); }
+#g-retro .ps4-set-slider-value { display: block; padding-bottom: calc(6 * var(--cpx)); text-align: center; font: 300 calc(34 * var(--cpx))/1 var(--g-font); }
+/* The console's focus is the blue bar itself, not the launcher's white ring: keep the ring only on the small
+   controls where a ring is the only focus cue. */
+#g-retro .ps4-set :is(.ps4-set-item, .ps4-set-row, .ps4-set-option, .ps4-set-back, .ps4-set-action, .ps4-set-slider):is(.focused, :focus-visible) { outline: none !important; }
+#g-retro .ps4-set :is(.ps4-set-item, .ps4-set-row, .ps4-set-option).focused { box-shadow: none !important; }
+#g-retro .ps4-set-back:is(.focused, :focus-visible), #g-retro .ps4-set-action:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .85) !important; }
+#g-retro .ps4-set-slider:is(.focused, :focus-visible) { outline: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .5) !important; outline-offset: calc(4 * var(--cpx)); }
+/* The real PS4 settings are this screen now (task S3). The decorative PS4 block in the launcher's Settings
+   dialog stays in the source for task S5, but the PS4 theme no longer shows it. */
+body[data-g-theme="ps4"] #settings-dialog .g-con-options { display: none; }
+
 /* Moving along the row brings the content in under it, and choosing the console plays the home screen in. */
 #g-retro .ps4-under.ps4-swap { animation: ps4-under-in .34s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes ps4-under-in { from { opacity: 0; transform: translateY(calc(12 * var(--cpx))); } to { opacity: 1; transform: none; } }
@@ -279,7 +363,11 @@ body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-art.on { animation: xmb-fade-
 /* Reduced motion: keep the layout, drop the movement. */
 html.reduce-motion :is(#g-retro .xmb-cat, #g-retro .xmb-cat img, #g-retro .xmb-item, #g-retro .xmb-icon, #g-retro .xmb-copy,
   #g-retro .xmb-bar, #g-retro .xmb-list, #g-retro .xmb-sub, #g-retro .xmb-pop, #g-retro .xmb-sub-item, #g-retro .xmb-pop-option,
-  #g-retro .ps4-tile, #g-retro .ps4-tile em, #g-retro .ps4-under, #g-retro .ps4-functions) { transition: none !important; }
+  #g-retro .ps4-tile, #g-retro .ps4-tile em, #g-retro .ps4-under, #g-retro .ps4-functions,
+  #g-retro .ps4-set-pages, #g-retro .ps4-set-rows, #g-retro .ps4-set-overlay, #g-retro .ps4-set-dialog, #g-retro .ps4-set-item,
+  #g-retro .ps4-set-row, #g-retro .ps4-set-option, #g-retro .ps4-set-back) { transition: none !important; }
+/* The PS4 shell still swaps its panes; it just does not slide them. */
+html.reduce-motion #g-retro .ps4-set-pages, html.reduce-motion #g-retro .ps4-set-rows { transform: none !important; }
 /* The panels still appear, they just do not slide in. */
 html.reduce-motion #g-retro .xmb-sub, html.reduce-motion #g-retro .xmb-pop { transform: translate(0, -50%); }
 html.reduce-motion #g-retro .xmb-sub { transform: none; }
