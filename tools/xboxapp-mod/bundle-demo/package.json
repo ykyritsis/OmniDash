@@ -1,0 +1,17 @@
+{
+  "name": "xbox-app-mod-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo React Native Windows bundle for the official Xbox app (route A: replace Bundle/index.bundle)",
+  "scripts": {
+    "bundle": "react-native bundle --platform windows --dev false --minify true --entry-file index.js --bundle-output build/index.jsbundle --assets-dest build/assets"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-native": "0.76.5",
+    "react-native-windows": "0.76.17"
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "0.76.5"
+  }
+}

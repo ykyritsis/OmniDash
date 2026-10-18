@@ -1,0 +1,56 @@
+{
+  "type": 2,
+  "data": {
+    "description": "Xbox Game Pass (Starter Edition)",
+    "installationTerms": "",
+    "supportAddress": "1 Microsoft Way,Redmond,98052,WA,US",
+    "supportPhone": "+1 800-642-7676",
+    "sellerType": "Company",
+    "supportEmail": "appservices@microsoft.com",
+    "productKind": "PASS",
+    "shortDescription": "Xbox Game Pass (Starter Edition)",
+    "contentRating": {
+      "ratingBoardName": "",
+      "ratingId": ""
+    },
+    "title": "Xbox Game Pass (Starter Edition)",
+    "shortTitle": "Xbox Game Pass (Starter Edition)",
+    "publisher": "Microsoft Corporation",
+    "categories": [],
+    "artwork": [
+      {
+        "uri": "https://cms-assets.xboxservices.com/assets/ce/c7/cec7cd29-e60d-4d5a-97ac-ea70441baacb.png?n=GP_StarterEdition_1080x1080_stack_Wht_RGB-graygradient.png",
+        "height": 1080,
+        "width": 1080,
+        "purpose": "BOX ART"
+      }
+    ],
+    "averageRating": 0,
+    "ratingCount": 0,
+    "releaseDate": "0001-01-01T00:00:00",
+    "availablePlatforms": [
+      "PC",
+      "XboxOne",
+      "XboxSeriesX"
+    ],
+    "preinstallable": false,
+    "hasAddons": false,
+    "isXPA": false,
+    "xboxLiveGoldRequired": false,
+    "isMSIXVC": false,
+    "isDownloadable": false,
+    "supportsInstallFeatures": false,
+    "supportsIntelligentDelivery": false,
+    "supportsMods": false,
+    "usesXboxLive": false,
+    "maxInstallSizeInBytes": 0,
+    "maxDownloadSizeInBytes": 0,
+    "sumInstallSizeInBytes": 0,
+    "sumDownloadSizeInBytes": 0,
+    "hasUbisoftCrossEntitlementProduct": false,
+    "xCloudOfferings": {},
+    "StoreId": "CFQ7TTC10QFD"
+  },
+  "lastFetchedMS": 1791522762215,
+  "cacheTimeInMS": 86400000
+}

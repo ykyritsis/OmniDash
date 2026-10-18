@@ -1,0 +1,39 @@
+{
+  "_comment": "Equal-length hex swaps for the Xbox app's design tokens. Keys and values must have identical byte length; the patcher refuses anything else because Hermes string offsets must stay stable.",
+
+  "accent": {
+    "#008746ff": "#107c10ff",
+    "#04b358ff": "#16a116ff",
+    "#04ab4fff": "#149a14ff",
+    "#044e2aff": "#0b5c0bff",
+    "#008746": "#107C10",
+    "#0A5C36": "#0B5C0B",
+    "#047640": "#0C6410",
+    "#006F31": "#0C5E1C",
+    "#00773866": "#107C1066"
+  },
+
+  "surfaces": {
+    "#1a1b1eff": "#0b0b0dff",
+    "#101114ff": "#050506ff",
+    "#24262aff": "#17191dff",
+    "#2d3036ff": "#1f2126ff",
+    "#484e58ff": "#34383fff",
+    "#1A1B1E": "#0B0B0D",
+    "#24262A": "#17191D",
+    "#006EA5": "#0A5C8A",
+    "#007DB5": "#0E76C9",
+    "#006ea5": "#0A5C8A",
+    "#007db5": "#0E76C9"
+  },
+
+  "content": {
+    "#ffffffa6": "#ffffffb8",
+    "#ffffff80": "#ffffff8c",
+    "#ffffff1f": "#ffffff26",
+    "#ffffff3d": "#ffffff45",
+    "#ffffff52": "#ffffff5c",
+    "#ffffff1a": "#ffffff24",
+    "#0000001a": "#00000026"
+  }
+}
