@@ -1,10 +1,10 @@
-# Xbox Preview UI
+# OmniDash
 
-<img src="docs/promo/beta25-v2/github-hero.jpg" alt="Xbox Preview UI beta 25, with the app's blue icon and a sample library" width="100%">
+<img src="docs/promo/beta25-v2/github-hero.jpg" alt="OmniDash, with the app's new mark and a sample library" width="100%">
 
-A full-screen Windows launcher with controller navigation, a shared game library and Steam launch options.
+**OmniDash** — a full-screen Windows launcher with console-inspired themes, controller navigation, a shared game library and Steam launch options.
 
-**[Download 0.5.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.5.0/Xbox-Preview-UI-Setup-0.5.0.exe)** · [Setup](#getting-started) · [0.5.0 notes](docs/release-0.5.0.md)
+**[Download 0.6.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.6.0/OmniDash-Setup-0.6.0.exe)** · [Setup](#getting-started) · [0.6.0 notes](docs/release-0.6.0.md)
 
 - Browse installed games from Steam, Epic, Xbox PC and other launchers.
 - Use a controller, mouse or keyboard.
@@ -33,6 +33,9 @@ Device images are illustrative mockups based on app captures, not photographs of
 
 ## 0.6.0
 
+- **Now called OmniDash.** New name, window title, splash, onboarding and a drawn mark. Your settings, theme packs and library stay in the same place.
+- **Console settings do something.** PS3, PS4, Wii and 3DS each get their own settings screen backed by one registry of real launcher options; Advanced (launcher) stays at the bottom of every list.
+- **Console account menus.** PS3 gets an XMB account panel, PS4 a left Quick Menu, and Wii a HOME Menu with real volume, mute, rumble, notifications and battery.
 - Choose what to install: DLC and language packs are listed with sizes before a Steam install starts.
 - Cancelling a launch really cancels, and says honestly what happened. The launch screen now grows out of the tile like a console.
 - Handheld quick settings (volume, brightness, Wi-Fi, power plan), pause downloads while playing, and controller vibration.
@@ -76,12 +79,12 @@ Device images are illustrative mockups based on app captures, not photographs of
 
 ## Download
 
-Get **[0.5.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.5.0)**. Download the Setup executable for your handheld or desktop.
+Get **[0.6.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.6.0)**. Download the Setup executable for your handheld or desktop.
 
 | File | Choose this for |
 | --- | --- |
-| `Xbox-Preview-UI-Setup-x.y.z.exe` | An installed copy with a Start menu entry and uninstaller. |
-| `Xbox-Preview-UI-Portable-x.y.z.exe` | Running without installation. Replace the executable to update; settings remain in Windows app data. |
+| `OmniDash-Setup-x.y.z.exe` | An installed copy with a Start menu entry and uninstaller. |
+| `OmniDash-Portable-x.y.z.exe` | Running without installation. Replace the executable to update; settings remain in Windows app data. |
 | `SHA256SUMS.txt` | Verifying the downloaded files. |
 
 Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Choose **More info → Run anyway** if you trust the source.

@@ -1,6 +1,14 @@
-# 0.6.0 — install choices, handheld quick settings and a console-style launch
+# 0.6.0 — OmniDash, real console settings and console-native menus
 
 This release also carries the 0.5.1 audit pass ([notes](release-0.5.1.md)): the security, performance and settings fixes listed there.
+
+## The launcher has a new name
+
+The product is now **OmniDash — a multi-theme PC game launcher**. The old "Xbox Preview UI" name, installer name and icon are gone from what you see. Everything you already have comes with you:
+
+- Your settings, artwork caches and theme packs still live in `%APPDATA%\xbox-preview-ui`, and the installer keeps the same application ID, so this is an update rather than a new app.
+- Existing installs see a one-time "Now called OmniDash" note. Your theme, library, accounts and play history are untouched.
+- The updater still points at the same GitHub releases until the repository rename lands separately.
 
 ## Installing
 
@@ -25,6 +33,17 @@ This release also carries the 0.5.1 audit pass ([notes](release-0.5.1.md)): the 
 
 - **Smart collections** in the Filter menu: Not played yet, Recently added, Played a lot (20 h+), Large installs (50 GB+), Co-op games and Single-player.
 - **Friends playing now** and **Your captures** under a game's gallery. Captures are Steam screenshots for the game and Xbox Game Bar captures named after it. Selecting one opens it.
+
+## Settings that do something
+
+Every console's settings screen is now its own screen, backed by one registry of real launcher capabilities. There is no fake "HDMI / Dolby Digital / 4.90" copy any more.
+
+- **PS3:** the Settings column is real XMB items: Display, Sound, Theme, Date and Time, System, Accessory, Network, Notifications, Game, Account and Advanced (launcher). Choosing a page slides the column left and opens its rows in the console's translucent panel; choosing a row opens the PS3 value list, On/Off choice or horizontal bar dialog. ✕ sets, ○ cancels, and Enter Button flips those around.
+- **PS4:** Settings is a full-screen list with icons and the blue focus bar. Choices open the PS4 option dialog, toggles are check boxes, sliders use the PS4 bar, and Advanced (launcher) is the last row.
+- **Wii:** the Wii button opens Wii Settings, with rounded pill pages, the blue page arrows, and Back / Confirm on every sub-screen.
+- **3DS:** System Settings opens the two-screen app: Internet, Data Management and Other Settings on the bottom screen, with the focused option described on the top screen.
+- **Only real rows.** A setting this PC cannot change (brightness on a desktop, menu music before its audio engine) never appears. Values update in place when the launcher's own Settings dialog changes them.
+- **Advanced (launcher)** stays at the bottom of every console list, so the launcher's full Settings dialog is always one press away.
 
 ## Themes
 
