@@ -370,3 +370,82 @@ body[data-g-theme="x360"] #g-xset .g-xset-action:is(.focused, :focus-visible) { 
 html.reduce-motion #g-xset,
 html.reduce-motion #g-xset * { animation: none !important; transition: none !important; }
 
+/* ---------- Settings > Appearance: console pack manager (task P1) ----------
+   One row per pack folder: found/empty state, credit, the files actually counted in each category, the names the
+   app looks for, and two real actions (Open folder, Add README when the pack has none). The block is written in em
+   off the section's own font size: a Helix pixel size on the launcher dialog, and a 1080p console pixel (--cpx) on
+   PS3, PS4, Wii and 3DS, whose settings screens are scaled that way. Rows wrap rather than overflow, so the same
+   block keeps its width at 1706x960 and 1280x720. */
+.g-pack-section { font-size: 12px; }
+.g-pack-list { display: grid; gap: .85em; }
+.g-pack-row { display: grid; gap: .7em; padding: 1.15em 1.2em; border: 1px solid #ffffff17; border-radius: 12px; background: #ffffff06; }
+.g-pack-row.empty, .g-pack-row.missing { border-style: dashed; }
+.g-pack-row.empty { border-color: #ffffff24; background: #ffffff04; }
+.g-pack-row.missing { border-color: #ffffff1c; background: #ffffff02; }
+.g-pack-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1em; }
+.g-pack-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2em .8em; min-width: 0; }
+.g-pack-name strong { font-size: 1.18em; font-weight: 650; letter-spacing: -.01em; }
+.g-pack-name code { padding: .15em .5em; border-radius: 5px; background: #ffffff0d; color: #b9c6cc; font: 500 .85em/1.5 Consolas, monospace; }
+.g-pack-state { flex: none; padding: .25em .7em; border-radius: 999px; background: #ffffff14; color: #c3ced3; font-size: .78em; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+.g-pack-row.found .g-pack-state { background: #9bf00b1c; color: #b8f06a; }
+.g-pack-row.empty .g-pack-state { background: #ffcf6a1a; color: #e8c57c; }
+.g-pack-row.missing .g-pack-state { background: #ff8a8a15; color: #efa3a3; }
+.g-pack-credit { margin: 0; color: inherit; opacity: .82; line-height: 1.45; }
+.g-pack-credit small { opacity: .75; }
+.g-pack-counts { display: flex; flex-wrap: wrap; gap: .45em; }
+.g-pack-count { display: inline-flex; align-items: baseline; gap: .35em; padding: .22em .62em; border: 1px solid #ffffff14; border-radius: 999px; color: inherit; opacity: .62; font-size: .88em; }
+.g-pack-count b { color: inherit; font-weight: 700; }
+.g-pack-count.on { border-color: #ffffff26; background: #ffffff08; opacity: .92; }
+.g-pack-install { margin: 0; color: #dcc38b; font-size: .95em; line-height: 1.45; }
+.g-pack-wants { display: flex; flex-wrap: wrap; gap: .3em 1.1em; margin: 0; color: inherit; opacity: .88; font-size: .92em; line-height: 1.5; }
+.g-pack-want { min-width: 0; }
+.g-pack-want b { margin-right: .45em; color: inherit; font-size: .82em; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.g-pack-want code { padding: .1em .38em; border-radius: 4px; background: #ffffff0c; color: inherit; font: 500 .92em/1.45 Consolas, monospace; }
+.g-pack-label { display: inline-block; margin-right: .6em; color: inherit; font-size: .76em; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; opacity: .55; vertical-align: .1em; }
+.g-pack-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .7em; }
+.g-pack-readme { min-width: 0; color: inherit; opacity: .78; font-size: .9em; line-height: 1.4; }
+.g-pack-readme code { color: inherit; font: 500 .92em Consolas, monospace; }
+.g-pack-readme-missing { color: #dcc38b; }
+.g-pack-actions { display: flex; flex-wrap: wrap; gap: .5em; }
+.g-pack-section .g-pack-button { min-height: 0; padding: .55em 1em; border-radius: 7px; font-size: .9em; font-weight: 650; }
+.g-pack-section .g-pack-button:disabled { opacity: .55; cursor: default; }
+.g-pack-note { margin: .85em 0 0; padding: 0 .15em; color: inherit; font-size: .88em; line-height: 1.4; opacity: .72; }
+.g-pack-note:empty { display: none; }
+.g-pack-empty { margin: 0; padding: .8em 0; color: inherit; opacity: .72; font-size: .95em; }
+
+/* The console settings screens own the type scale; the same rows grow with it (21 console px at 1080p). */
+body[data-g-theme="ps3"] #settings-dialog .g-pack-section,
+body[data-g-theme="ps4"] #settings-dialog .g-pack-section { font-size: calc(21 * var(--cpx)); }
+body[data-g-theme="wii"] #settings-dialog .g-pack-section,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-section { font-size: calc(19 * var(--cpx)); }
+
+/* Wii and 3DS settings are light screens: keep the pack cards white with dark type, like their own rows. */
+body[data-g-theme="wii"] #settings-dialog .g-pack-section,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-section { border-color: #dfe3e6; background: #fff; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-section .settings-section-heading,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-section .settings-section-heading { border-bottom-color: #e3e6e8; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-row,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-row { border-color: #dfe3e6; background: #f7f8f9; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-row.missing,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-row.missing { background: #fbfbfb; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-name code,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-name code { background: #eceff1; color: #4f5f66; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-count,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-count { border-color: #dfe3e6; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-count.on,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-count.on { border-color: #d3dade; background: #eef2f3; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-want code,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-want code { background: #eef1f2; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-row.found .g-pack-state,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-row.found .g-pack-state { background: #e4f5e2; color: #2f7d32 !important; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-row.empty .g-pack-state,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-row.empty .g-pack-state { background: #faf1d9; color: #8a6d1f !important; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-row.missing .g-pack-state,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-row.missing .g-pack-state { background: #f8e7e7; color: #9a4a4a !important; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-install,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-install,
+body[data-g-theme="wii"] #settings-dialog .g-pack-readme-missing,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-readme-missing { color: #8a6d1f !important; }
+body[data-g-theme="wii"] #settings-dialog .g-pack-button,
+body[data-g-theme="3ds"] #settings-dialog .g-pack-button { background: #e8ebee; color: #3c3c3c; }
+

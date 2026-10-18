@@ -36,7 +36,48 @@ fresh clone the directory simply will not exist and the themes fall back to thei
 | `wii/Wii.JS-gh-pages/` | github.com/andrewplus/Wii.JS (GPL-3) | channel frames, cursor, bottom bar, sounds, menu music `assets/audio/bg-music.mp3` |
 | `wii/Liink-main/` | github.com/aica7/Liink (GPL-2) | Rodin fonts |
 | `3ds/` | owner-supplied / reference | 3DS HOME Menu assets if present, including optional `music/menu.*` |
+| `series/`, `one/` | OmniDash drop-in slots (no upstream pack) | Optional menu music in `music/menu.*`; OmniDash draws a loop without it |
 | `*/ref/` | Wikipedia/reference captures | small reference screenshots for measuring only |
+
+## Pack manager (Settings → Appearance → Console packs)
+
+There is no need to know the pack path by heart any more. The launcher's own Settings dialog (Helix's
+**Appearance**, and every console's **Advanced (launcher)** entry) lists each folder the theme engines read:
+
+| Row | Folder it manages | Expected names shown |
+|---|---|---|
+| PlayStation 3 | `ps3/` | `settings.png`, `SCE-PS3-RD-R-LATIN2.woff`, `down.ogg`, `ok.ogg`, `cancel.ogg`, `up.ogg`, `unlock.ogg`, `menu.ogg`/`.mp3`, `bgm.ogg` |
+| PlayStation 4 | `ps4/` | `background.png`, `sst.ttf`, `navigate.mp3`, `reward.mp3`, `startup.mp3`, `shutdown.mp3`, `menu.mp3`/`.ogg`, `all.mp3` |
+| Wii | `wii/` | `channel-border.png`, the two Rodin `.otf` fonts, five Wii.JS sounds, `menu.mp3`/`.ogg`, `bg-music.mp3` |
+| Nintendo 3DS | `3ds/` | `music/menu.mp3` or `music/menu.ogg` |
+| Xbox 360 | `dashx360/` | `Boot/Boot Screen.mp4`, five sounds, `Audio/Music/*`, `Custom Files/Themes/<name>/theme.json` |
+| Xbox Series X\|S, Xbox One | `series/`, `one/` | `music/menu.mp3` or `music/menu.ogg` (drop-in slots) |
+
+Each row reports:
+
+- **Found / No pack files / Not installed.** "Found" means at least one asset file the theme can actually read.
+  `ref/` and DashX360's `References/` are reference screenshots, not assets, so they never make an empty pack look
+  installed. `3ds/` on this machine holds only `ref/`, so it correctly reads as **No pack files**.
+- **Credit.** The first credit line found in the pack's own `README*`/`CREDITS*`/`AUTHORS*` file (an explicit
+  "credit:" line, a repository link, a "created by" line, or the line under a Credits/Thanks heading). When the
+  pack carries no readable credit, the row falls back to the documented credit in the inventory above.
+- **What is inside**, counted from the files actually present: icons, fonts, sounds, music, wallpapers and video.
+  Wallpapers are background-shaped images; other images are icons. Menu music is audio in a `music` folder or a
+  named `bgm`/`menu`/`all.mp3` track; the rest is counted as sound.
+- **Looks for**, a short list of the exact file names the theme engine requests (the README below carries the
+  folder each name belongs in).
+- **Open folder.** Uses the existing `shell.openPath` through IPC. A missing pack opens its parent
+  (`%APPDATA%\xbox-preview-ui\theme-packs`), so the player can create the folder there.
+- **Add README** when the pack's **root** has no README. It writes `OMNIDASH-README.md` with the pack's credit and
+  every expected relative path. The write is `wx` (create-only) and is skipped when any root README already exists,
+  so a file the player wrote is never overwritten. Packs with an upstream README one level down (PS3/PS4/Wii) still
+  get the button: the OmniDash guide belongs at the pack root, next to the folders the player drops files into.
+
+The registry lives in `src/support.cjs` (`PACK_REGISTRY`) and is served by three IPC channels: `theme:packs` (the
+report), `theme:pack-open` (reveal) and `theme:pack-readme` (the create-only guide). Both actions are no-ops in the
+hidden demo harness (`NEBULA_DEMO=1`), so reviews never open Explorer or write into a real pack folder.
+`scripts/pack-manager-test.cjs` checks that the registry covers every pack folder `main.cjs` reads, that every
+renderer row has an action, and that the scan, credit and README rules work against a temporary folder.
 
 ## Menu music (BGM) per theme
 

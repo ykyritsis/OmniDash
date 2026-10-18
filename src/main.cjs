@@ -3070,6 +3070,32 @@ function registerIpc() {
     const limit = kind === 'music' ? 12e6 : 4e6;
     return data && data.length < limit ? { type, base64: data.toString('base64') } : null;
   });
+  // Settings → Appearance → Console packs (task P1): one report for every pack folder the theme engines read, plus
+  // two real actions — reveal a folder, and write a short README when the pack has none. The report is read-only.
+  // Both actions are gated in demo mode so the hidden review harness never opens Explorer or writes into a pack
+  // folder; scripts/pack-manager-test.cjs exercises the real write against a temporary folder.
+  ipcMain.handle('theme:packs', async () => ({ root: retroRoot, packs: await support.listThemePacks(retroRoot) }));
+  ipcMain.handle('theme:pack-open', async (_event, id) => {
+    const pack = support.PACK_REGISTRY.find(item => item.id === id);
+    if (!pack) throw new Error('Unknown console pack.');
+    const target = await support.packOpenTarget(retroRoot, pack);
+    if (process.env.NEBULA_DEMO === '1') return { ok: true, demo: true, path: target.path, folder: target.folder };
+    // A missing pack still opens its parent folder, creating the packs folder on first use if needed.
+    await fs.mkdir(target.folder ? target.path : retroRoot, { recursive: true });
+    const result = await shell.openPath(target.path);
+    if (result) throw new Error(result);
+    return { ok: true, path: target.path, folder: target.folder };
+  });
+  ipcMain.handle('theme:pack-readme', async (_event, id) => {
+    const pack = support.PACK_REGISTRY.find(item => item.id === id);
+    if (!pack) throw new Error('Unknown console pack.');
+    if (process.env.NEBULA_DEMO === '1') {
+      const report = await support.themePackReport(retroRoot, pack);
+      return { written: false, demo: true, file: report.readme.present ? report.readme.file : support.PACK_README_NAME,
+        content: report.readme.present ? '' : support.buildPackReadme(pack, report.credit) };
+    }
+    return support.writePackReadme(retroRoot, pack);
+  });
   ipcMain.handle('prefs:get', async () => {
     const settings = await readSettings();
     const prefs = {};

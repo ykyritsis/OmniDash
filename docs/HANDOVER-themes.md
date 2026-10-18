@@ -87,7 +87,7 @@ To check an install, extract the asar and look for the change, or start the app 
 `ELECTRON_RUN_AS_NODE=1`, which starts Electron as node and exits at once — remove it first). Kill the whole tree
 when done: `taskkill /IM "Xbox Preview UI.exe" /T /F`.
 
-The latest backup is `backup-0.6.0-test32` (the M1/M2 motion build, installed 2026-10-18 13:38; the previous was `backup-0.6.0-test30`, the first A1 audio build at 13:09). The installed copy has this build. **Note:** the working tree also contained another task's uncommitted files (pack manager/support) when this install ran, so the installed asar carries those in-progress edits too.
+The latest backup is `backup-0.6.0-test33` (the P1 pack-manager build, installed 2026-10-18 13:42; the previous was `backup-0.6.0-test32`, the M1/M2 motion build at 13:38). The installed copy has this build, and every `src/` file in its asar matches the workspace (checked with the asar module: the five P1 code files are byte-identical; `verify-packaged-source.cjs` gets past the source check and then still reports the pre-existing StreamLight staged-binary mismatch, which is unrelated to the themes).
 
 ## Theme system
 
@@ -143,6 +143,19 @@ On `blur`/`visibilitychange` the engine stops every oscillator and buffer voice,
 - **Return (M2).** A focused launcher polls `state.activeGameSession` every 2 s (no extra IPC); when the game closes, the console's own layer fades back in over the same view — PS3 wave crest, PS4 blue depth, Wii/3DS white flash, Series/One fade, 360 Metro slide — with `gAudio.play('back')`. It never re-renders and never moves focus, so the player lands where they left off. `gMotion.return()` is the test hook.
 - **Verification.** Hidden captures (`THEMES=series,one,x360,ps3,ps4,wii,3ds`, `SCREENS=boot,home,press,launch`, `REVIEW_SIZE=1706,960`, 2026-10-18 13:35:27–13:36:26, `errors.json: []`): `node_modules\electron\dist\electron.exe scripts\theme-review.cjs`. Hidden eval (`EXPR_FILE=… theme-eval.cjs`, 2026-10-18 13:34) reported: the tables and CSS variables above; computed `transitionDuration` on the themed element equal to the table (`ps3 .18s`, `ps4 .25s`, `wii .3s`, `3ds .12s`, `series/one .2s`, `x360 .16s`); `html.reduce-motion` → `enter`/`exit` return `null`, `getAnimations()` is empty and a real `showView('library')` creates no animation and no curtain; a shadowed `document.hidden` does the same; a normal page change creates 2 animations plus the curtain, and the curtain is gone 450 ms later; two boot calls produce **1** start, a key skips it, Wii's key opens the Wii Menu stage; two launch calls produce **1** start with the overlay still visible; `return()` creates its layer once; `scrollWidth`/`scrollHeight` equal the viewport on all seven Hones at 1706×960. `errors.json` was `[]`.
 
+**Console pack manager (2026-10-18, task P1).** Settings → Appearance now has a **Console packs** section. It lives in the launcher's own Settings dialog, so the same screen appears under Helix's Appearance and every console's Advanced (launcher) entry. It lists the seven pack folders the theme engines read — `ps3`, `ps4`, `wii`, `3ds`, `dashx360` (Xbox 360), and `series`/`one` (music-only drop-in slots) — from one registry in `src/support.cjs` (`PACK_REGISTRY`), never from hand-written rows. Each row shows:
+
+- **Found / No pack files / Not installed.** "Found" means at least one file the theme can read. `*/ref/` and DashX360's `References/` are reference captures, not assets, and are skipped, so `3ds/` (which holds only `ref/` on this machine) correctly reads as no pack files.
+- **Credit.** The first credit line in the pack's own `README*`/`CREDITS*`/`AUTHORS*` file (explicit "credit:" line, a GitHub repository link, a "created by" line, or the line under a Credits/Thanks heading), shown with the file it came from; otherwise the credit documented in `docs/theme-packs.md`.
+- **What is inside**, counted from the files actually present: icons, fonts, sounds, music, wallpapers and video. Music is audio under a `music` folder or named `bgm`/`menu`/`all.mp3`; wallpapers are background-shaped images; other images are icons.
+- **Looks for**, a short grouped list of the exact names the theme engine requests (the generated README carries the folder for each).
+- **Open folder** (`theme:pack-open` → `shell.openPath`) reveals the pack. A missing pack opens its parent `theme-packs` folder (created on first use), so the player can add the folder there.
+- **Add README** only when the pack root has no README. `theme:pack-readme` writes `OMNIDASH-README.md` with the credit and every exact relative path, using a create-only `wx` write, so a README the player wrote is never overwritten. Packs with an upstream README one level down (PS3/PS4/Wii) still offer it because the OmniDash guide belongs at the pack root.
+
+The Appearance section restyles itself in `--cpx` on PS3/PS4/Wii/3DS (`calc(21 * var(--cpx))`, `calc(19 * var(--cpx))`) and stays a light card on the Wii/3DS settings screens; cards wrap instead of overflowing at both 1706×960 and 1280×720. Both IPC actions are no-ops under `NEBULA_DEMO=1`, so the hidden harness never opens Explorer or writes into a real pack folder. `scripts/pack-manager-test.cjs` checks the registry against `RETRO_PACKS`/`RETRO_MUSIC` in `main.cjs`, checks every renderer row has an action, and runs the real scan/credit/README path against a temporary folder (including the no-overwrite rule).
+
+**Pack manager verification (2026-10-18).** `THEMES=helix SCREENS=page-g-storage,page-personalization REVIEW_SIZE=1706,960` → `errors.json: []`, 13:38:48–13:38:57. `THEMES=ps3 SCREENS=page-personalization REVIEW_SIZE=1706,960` → `[]`, 13:38:59–13:39:06. Note: the task's `SCREENS=page-g-personalization` is not a real Settings page id — it opens the dialog with every page hidden (blank "General" page), so use `page-personalization`. Scrolled pack captures at 1706×960 (Helix and PS3) and 1280×720 (Wii) show the rows. The hidden eval (`EXPR_FILE=.visual-review/pack-eval.js`, `EVAL_SIZE=1706,960`, 13:39:10–13:39:19) reported `ok: true`: 7 rows, each with `data-state` found/missing, six numeric counts, a credit and a "Looks for" list; Open folder completed through IPC on `ps3` (found) and `3ds` (missing) with no error note; Add README answered in demo mode without writing; the section fit inside the dialog at 1706×960 and 1280×720 (`scrollWidth === clientWidth`). A concurrency note for future reviews: two `theme-review.cjs` runs sharing `.visual-review/themes/profile` at once can make Electron's own `logSecurityWarnings` throw `Failed to construct 'URL': Invalid URL` into `errors.json`; the same command run alone returns `[]`.
+
 ### Files (src/renderer)
 
 | File | What it does |
@@ -161,9 +174,13 @@ On `blur`/`visibilitychange` the engine stops every oscillator and buffer voice,
 | garrison-theme-art.js | Wide-art resolver (see the art rule) |
 | garrison-theme-extras.js | Accent colours, friend and download toasts, welcome back, achievements on return, controller-lost screen, Quick Resume |
 | garrison-theme-keyboard.js | On-screen keyboard per console |
-| garrison-theme-settings.js | Settings sidebar relabelled per era, and the Xbox Series/One/360 registry-driven settings shells (`#g-xset`); the PS3/PS4/Wii/3DS shells live in retro |
-| garrison-theme-screens.css | Keyboard, settings groups, Xbox settings shells, profile, achievements, search and power menu per console |
+| garrison-theme-settings.js | Settings sidebar relabelled per era, the Appearance → Console packs manager (`#g-pack-section`), and the Xbox Series/One/360 registry-driven settings shells (`#g-xset`); the PS3/PS4/Wii/3DS shells live in retro |
+| garrison-theme-screens.css | Keyboard, settings groups, the pack manager cards, Xbox settings shells, profile, achievements, search and power menu per console |
 | garrison-theme-retro.js/.css | PS3 XMB, PS4 home, Wii Menu, 3DS HOME Menu, plus their library, boot, toast and splash rules |
+
+`src/support.cjs` owns `PACK_REGISTRY` and the pack scan/credit/README helpers (directly testable in plain node);
+`src/main.cjs` serves them as `theme:packs`, `theme:pack-open` and `theme:pack-readme`; `src/preload.cjs` maps those
+to `getThemePacks`, `openThemePack` and `writeThemePackReadme`.
 
 ## Theme packs (local only, never in the repo or releases)
 

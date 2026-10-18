@@ -817,6 +817,9 @@
   const xsetPerformBase = typeof performAction === 'function' ? performAction : null;
   if (xsetPerformBase) {
     performAction = async function (action, source) {
+      // Console pack buttons (Settings → Appearance) run through the same action dispatcher as every other
+      // controller-driven control; clicks reach them through the capture listener in the pack block below.
+      if (action === 'g-pack-open' || action === 'g-pack-readme') { await gPackAction(action, source); return true; }
       if (xset) {
         if (action === 'g-xset-back') { xsetBack(); return true; }
         if (action === 'g-xset-page' || action === 'g-xset-rail') {
@@ -873,4 +876,192 @@
   new MutationObserver(() => {
     if (xset && theme() !== xset.console) xsetCloseSilently();
   }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+
+  // =========================== Console packs (task P1) ===========================
+  // Settings → Appearance → Console packs. One row per pack folder the theme engines read: whether it is found,
+  // the credit from the pack's own readme (or the credit documented in docs/theme-packs.md), what is inside it
+  // (files actually found, per category) and the exact names the app looks for. No row is decorative: Open folder
+  // reveals the pack (or its parent when the pack is missing), and Add README writes a short drop-in guide when the
+  // pack has no README of its own. The registry and the folder scan live in src/support.cjs and reach the page over
+  // theme:packs; the IPC opens Explorer and writes the README, and both are gated in the hidden review harness.
+  const GPACK_OPEN = 'g-pack-open', GPACK_README = 'g-pack-readme';
+  const GPACK_COUNTS = [
+    ['icons', 'icon', 'icons'], ['fonts', 'font', 'fonts'], ['sounds', 'sound', 'sounds'],
+    ['music', 'music', 'music'], ['wallpapers', 'wallpaper', 'wallpapers'], ['video', 'video', 'videos']
+  ];
+  let gPackSection = null, gPackData = null, gPackLoadedAt = 0, gPackLoading = false;
+  let gPackError = '', gPackMessage = '', gPackRequest = 0, gPackReadmeBusy = '';
+  const gPackName = (key, count) => {
+    const [, one, many] = GPACK_COUNTS.find(item => item[0] === key) || [key, key, key];
+    return count === 1 ? one : many;
+  };
+  const gPackPlay = kind => { try { interfaceAudio?.play?.(kind); } catch { /* Sound is optional. */ } };
+
+  function gPackBuild() {
+    if (gPackSection?.isConnected) return gPackSection;
+    const page = document.querySelector('[data-settings-page="personalization"]');
+    if (!page) return null;
+    gPackSection = document.createElement('section');
+    gPackSection.className = 'settings-section g-pack-section';
+    gPackSection.id = 'g-pack-section';
+    gPackSection.setAttribute('aria-labelledby', 'g-pack-heading');
+    gPackSection.innerHTML = `<div class="settings-section-heading">
+        <span class="eyebrow">CONSOLE PACKS</span>
+        <h3 id="g-pack-heading">Console packs</h3>
+        <p>Optional console art, fonts and sounds. OmniDash never ships them; each row shows what is really in the folder and the names the theme looks for.</p>
+      </div>
+      <div class="g-pack-list" role="list" aria-live="polite"></div>
+      <p class="g-pack-note" role="status"></p>`;
+    // Under the Theme picker, so Appearance reads: which dashboard, then the packs that dress it.
+    const themeSection = page.querySelector('.g-theme-section');
+    if (themeSection) themeSection.insertAdjacentElement('afterend', gPackSection);
+    else page.prepend(gPackSection);
+    return gPackSection;
+  }
+
+  function gPackRowMarkup(pack) {
+    const counts = pack.counts || {};
+    const chips = GPACK_COUNTS.map(([key]) => {
+      const count = Number(counts[key]) || 0;
+      return `<span class="g-pack-count${count ? ' on' : ''}"><b>${count}</b>${gPackName(key, count)}</span>`;
+    }).join('');
+    const wants = (pack.expected || []).map(group => `<span class="g-pack-want"><b>${xsetEscape(group.label)}</b>${(group.names || []).map(name => `<code>${xsetEscape(name)}</code>`).join(' ')}</span>`).join('');
+    const creditFrom = pack.creditSource === 'pack' && pack.creditFile ? ` <small>from ${xsetEscape(pack.creditFile)}</small>` : '';
+    const readme = pack.readme?.present
+      ? `<span class="g-pack-readme-ok">README <code>${xsetEscape(pack.readme.file || pack.readme.name)}</code></span>`
+      : '<span class="g-pack-readme-missing">No README at this folder’s root. Add one so the file names are written down.</span>';
+    const readmeButton = pack.readme?.present ? ''
+      : `<button class="secondary focusable g-pack-button" type="button" data-action="${GPACK_README}" data-pack="${xsetEscape(pack.id)}"${gPackReadmeBusy === pack.id ? ' disabled' : ''}>${gPackReadmeBusy === pack.id ? 'Writing README…' : 'Add README'}</button>`;
+    const state = pack.found ? 'found' : pack.folderExists ? 'empty' : 'missing';
+    const stateLabel = pack.found ? 'Found' : pack.folderExists ? 'No pack files' : 'Not installed';
+    const install = pack.found ? ''
+      : `<p class="g-pack-install">Install ${xsetEscape(pack.install)} in <code>${xsetEscape(pack.folder)}</code>.${pack.folderExists ? ' The folder exists but has no pack files yet.' : ' Open folder opens the folder above it so you can create it there.'}</p>`;
+    return `<article class="g-pack-row ${state}" data-pack-id="${xsetEscape(pack.id)}" data-state="${pack.found ? 'found' : 'missing'}" role="listitem">
+      <div class="g-pack-head"><div class="g-pack-name"><strong>${xsetEscape(pack.name)}</strong><code>${xsetEscape(pack.folder)}</code></div><span class="g-pack-state">${stateLabel}</span></div>
+      <p class="g-pack-credit"><span class="g-pack-label">Credit</span>${xsetEscape(pack.credit || 'No credit recorded')}${creditFrom}</p>
+      <div class="g-pack-counts" aria-label="Files found">${chips}</div>
+      ${install}
+      <p class="g-pack-wants"><span class="g-pack-label">Looks for</span>${wants}</p>
+      <div class="g-pack-foot"><div class="g-pack-readme">${readme}</div><div class="g-pack-actions">${readmeButton}<button class="secondary focusable g-pack-button" type="button" data-action="${GPACK_OPEN}" data-pack="${xsetEscape(pack.id)}" aria-label="Open folder ${xsetEscape(pack.folder)}">Open folder</button></div></div>
+    </article>`;
+  }
+
+  function gPackRender() {
+    const section = gPackBuild();
+    if (!section) return;
+    const list = section.querySelector('.g-pack-list');
+    const note = section.querySelector('.g-pack-note');
+    const packs = gPackData?.packs || [];
+    if (packs.length) list.innerHTML = packs.map(gPackRowMarkup).join('');
+    else if (!gPackLoading && !gPackError) list.innerHTML = '<p class="g-pack-empty">No console packs are registered in this build.</p>';
+    else list.innerHTML = gPackLoading ? '<p class="g-pack-empty">Reading pack folders…</p>' : '';
+    section.classList.toggle('loading', gPackLoading);
+    note.textContent = gPackError || (gPackLoading ? 'Reading pack folders…' : gPackMessage);
+    if (!gPackLoading) {
+      try { refreshFocusables(); } catch { /* The launcher focus model may be mid-paint. */ }
+    }
+  }
+
+  async function gPackLoad(force = false) {
+    const section = gPackBuild();
+    if (!section) return;
+    if (!window.launcher?.getThemePacks) {
+      gPackError = 'The console pack manager needs this OmniDash build’s launcher bridge.';
+      gPackRender();
+      return;
+    }
+    if (gPackLoading) return;
+    if (!force && gPackData && Date.now() - gPackLoadedAt < 20000) return;
+    const request = ++gPackRequest;
+    gPackLoading = true;
+    gPackError = '';
+    gPackRender();
+    try {
+      const data = await window.launcher.getThemePacks();
+      if (request !== gPackRequest) return;
+      gPackData = data && Array.isArray(data.packs) ? data : { packs: [] };
+      gPackLoadedAt = Date.now();
+      if (!gPackData.packs.length) gPackError = 'No console packs are registered in this build.';
+    } catch (error) {
+      if (request !== gPackRequest) return;
+      gPackError = error?.message || 'Could not read the theme pack folders.';
+    } finally {
+      if (request === gPackRequest) { gPackLoading = false; gPackRender(); }
+    }
+  }
+
+  function gPackNote(text) {
+    gPackMessage = text || '';
+    gPackRender();
+  }
+
+  async function gPackAction(action, source) {
+    const id = source?.dataset?.pack || '';
+    const pack = gPackData?.packs?.find(item => item.id === id);
+    if (!pack) return false;
+    if (action === GPACK_OPEN) {
+      if (source.dataset.busy === 'true') return true;
+      source.dataset.busy = 'true';
+      source.disabled = true;
+      try {
+        const result = await window.launcher.openThemePack(id);
+        gPackSection.dataset.lastOpen = id;
+        gPackNote(result?.demo ? `Pack folder: ${result.path || ''}` : `Opened ${pack.folder} in Explorer.`);
+        gPackPlay('confirm');
+      } catch (error) {
+        gPackNote(error?.message || 'Could not open the theme pack folder.');
+        gPackPlay('back');
+      } finally {
+        delete source.dataset.busy;
+        if (source.isConnected) source.disabled = false;
+      }
+      return true;
+    }
+    if (action === GPACK_README) {
+      if (gPackReadmeBusy) return true;
+      gPackReadmeBusy = id;
+      gPackRender();
+      try {
+        const result = await window.launcher.writeThemePackReadme(id);
+        await gPackLoad(true);
+        if (result?.written) gPackNote(`Wrote ${result.file} into ${pack.folder}.`);
+        else if (result?.demo) gPackNote(`Review mode: ${result.file || 'the pack README'} was not written.`);
+        else gPackNote(`A README already exists in ${pack.folder}; nothing was overwritten.`);
+        gPackPlay('confirm');
+      } catch (error) {
+        gPackNote(error?.message || 'Could not write the pack README.');
+        gPackPlay('back');
+      } finally {
+        gPackReadmeBusy = '';
+        gPackRender();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // A click on a pack button goes straight to the action; the capture listener stops the global dispatcher from
+  // running it twice. The controller's performAction route is wrapped below.
+  document.addEventListener('click', event => {
+    const button = event.target.closest?.(`[data-action="${GPACK_OPEN}"], [data-action="${GPACK_README}"]`);
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    gPackAction(button.dataset.action, button).catch(error => gPackNote(error?.message || 'That pack action failed.'));
+  }, true);
+  // Re-read the folders when Appearance opens or its tab is clicked (the 20 s cache stops a scan per keypress).
+  const gPackDialog = document.querySelector('#settings-dialog');
+  gPackDialog?.addEventListener('toggle', () => {
+    if (!gPackDialog.open) return;
+    gPackMessage = '';
+    gPackLoad();
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest?.('[data-settings-tab="personalization"]')) return;
+    setTimeout(() => gPackLoad(), 0);
+  }, true);
+  if (document.querySelector('[data-settings-page="personalization"]')) {
+    gPackRender();
+    gPackLoad();
+  }
 })();
