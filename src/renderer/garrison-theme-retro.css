@@ -109,6 +109,79 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
 @keyframes xmb-clock-in { from { opacity: 0; transform: translateX(calc(48 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes xmb-fade-in { from { opacity: 0; } }
 
+/* Settings in the XMB (task S2). Choosing a page slides the whole column left by 280px with the same easing the
+   item column already uses, and opens that page's rows in a translucent black panel at x 700 (860 wide, level
+   with the selected item at y 468). Choosing a row opens the console's option pop-up at x 800 (720 wide), which
+   slides in from the right. Numbers are 1080p console pixels, like the rest of the XMB. */
+#g-retro .xmb-bar, #g-retro .xmb-list { transition: transform .34s cubic-bezier(.22, 1, .36, 1); }
+#g-retro.sub-open .xmb-bar, #g-retro.sub-open .xmb-list { transform: translateX(calc(-280 * var(--cpx))); }
+#g-retro.sub-open .xmb-item.on .xmb-copy { opacity: 0; }
+#g-retro .xmb-sub {
+  position: absolute; left: calc(700 * var(--cpx)); top: calc(318 * var(--cpx)); z-index: 3;
+  width: calc(860 * var(--cpx)); max-height: calc(600 * var(--cpx)); overflow: hidden;
+  padding: calc(20 * var(--cpx)) calc(24 * var(--cpx)) calc(14 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .26); border-radius: calc(10 * var(--cpx));
+  background: linear-gradient(180deg, rgba(0, 0, 0, .46), rgba(0, 0, 0, .6));
+  box-shadow: 0 calc(12 * var(--cpx)) calc(44 * var(--cpx)) rgba(0, 0, 0, .3), inset 0 0 calc(30 * var(--cpx)) rgba(255, 255, 255, .05);
+  color: #fff; opacity: 0; transform: translateX(calc(64 * var(--cpx))); pointer-events: none;
+  transition: opacity .24s ease, transform .34s cubic-bezier(.22, 1, .36, 1);
+}
+#g-retro.sub-open .xmb-sub { opacity: 1; transform: none; pointer-events: auto; }
+#g-retro .xmb-sub-head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(8 * var(--cpx)) calc(10 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .24); }
+#g-retro .xmb-sub-kicker { font: 400 calc(33 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 calc(2 * var(--cpx)) calc(7 * var(--cpx)) rgba(0, 0, 0, .55); }
+#g-retro .xmb-sub-head small { color: rgba(255, 255, 255, .62); font: 400 calc(19 * var(--cpx))/1 var(--g-font); }
+#g-retro .xmb-sub-list { padding-top: calc(8 * var(--cpx)); }
+#g-retro .xmb-sub-item { position: relative; display: grid; grid-template-columns: calc(46 * var(--cpx)) minmax(0, 1fr) auto; align-items: center; gap: calc(14 * var(--cpx)); width: 100%; height: calc(64 * var(--cpx)); padding: 0 calc(12 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; }
+#g-retro .xmb-sub-item + .xmb-sub-item { box-shadow: inset 0 1px rgba(255, 255, 255, .1); }
+#g-retro .xmb-sub-item.on { background: linear-gradient(90deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .05)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .34); }
+#g-retro .xmb-sub-icon { display: grid; place-items: center; width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); }
+#g-retro .xmb-sub-icon > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .45)); }
+#g-retro .xmb-sub-label { overflow: hidden; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 calc(1 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .5); }
+#g-retro .xmb-sub-value { overflow: hidden; max-width: calc(300 * var(--cpx)); color: rgba(255, 255, 255, .82); font: 400 calc(23 * var(--cpx))/1 var(--g-font); text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .xmb-sub-item.on .xmb-sub-value { color: #fff; }
+#g-retro .xmb-sub-open { margin-left: calc(4 * var(--cpx)); color: rgba(255, 255, 255, .8); font: 400 calc(30 * var(--cpx))/1 var(--g-font); }
+#g-retro .xmb-sub-empty { margin: 0; padding: calc(30 * var(--cpx)) calc(8 * var(--cpx)); color: rgba(255, 255, 255, .66); font: 400 calc(24 * var(--cpx))/1.3 var(--g-font); }
+#g-retro .xmb-sub-hint, #g-retro .xmb-pop-hint { display: flex; align-items: center; gap: calc(9 * var(--cpx)); margin: calc(12 * var(--cpx)) 0 0; padding-top: calc(10 * var(--cpx)); border-top: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .78); font: 400 calc(19 * var(--cpx))/1 var(--g-font); }
+#g-retro .xmb-pop {
+  position: absolute; left: calc(800 * var(--cpx)); top: 50%; z-index: 5;
+  width: calc(720 * var(--cpx)); padding: calc(22 * var(--cpx)) calc(24 * var(--cpx)) calc(14 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .44); border-radius: calc(8 * var(--cpx));
+  background: rgba(3, 5, 8, .92); backdrop-filter: blur(calc(7 * var(--cpx)));
+  box-shadow: 0 calc(16 * var(--cpx)) calc(54 * var(--cpx)) rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .06);
+  color: #fff; opacity: 0; transform: translate(calc(110 * var(--cpx)), -50%); pointer-events: none;
+  transition: opacity .2s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+#g-retro .xmb-pop.open { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+#g-retro .xmb-pop-head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(6 * var(--cpx)) calc(12 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .28); }
+#g-retro .xmb-pop-head strong { overflow: hidden; font: 400 calc(30 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .xmb-pop-head small { color: rgba(255, 255, 255, .55); font: 400 calc(18 * var(--cpx))/1 var(--g-font); white-space: nowrap; }
+#g-retro .xmb-pop-list { padding-top: calc(8 * var(--cpx)); }
+#g-retro .xmb-pop-option { display: flex; align-items: center; justify-content: space-between; width: 100%; height: calc(58 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; border-radius: calc(3 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; font: 400 calc(25 * var(--cpx))/1 var(--g-font); }
+#g-retro .xmb-pop-option + .xmb-pop-option { box-shadow: inset 0 1px rgba(255, 255, 255, .12); }
+#g-retro .xmb-pop-option.on { background: rgba(255, 255, 255, .94); color: #101010; box-shadow: none; text-shadow: none; }
+#g-retro .xmb-pop-option.on + .xmb-pop-option { box-shadow: none; }
+#g-retro .xmb-pop-option i { font-style: normal; font-size: calc(22 * var(--cpx)); }
+#g-retro .xmb-pop-info { margin: 0; padding: calc(22 * var(--cpx)) calc(8 * var(--cpx)); font: 400 calc(29 * var(--cpx))/1.35 var(--g-font); }
+#g-retro .xmb-pop-hint .xmb-glyph, #g-retro .xmb-sub-hint .xmb-glyph { display: inline-grid; place-items: center; width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); border: 1px solid rgba(255, 255, 255, .78); border-radius: 50%; font: 400 calc(16 * var(--cpx))/1 var(--g-font); }
+/* The hint row is also the pointer's way to set/cancel a slider, so its buttons are real controls. */
+#g-retro .xmb-pop-action { display: inline-flex; align-items: center; gap: calc(7 * var(--cpx)); padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+#g-retro .xmb-pop-action:focus-visible { outline: 1px solid rgba(255, 255, 255, .55); outline-offset: calc(3 * var(--cpx)); }
+#g-retro .xmb-hint-open { display: inline-flex; align-items: center; gap: calc(9 * var(--cpx)); }
+#g-retro .xmb-pop-saving { margin-left: auto; color: rgba(255, 255, 255, .7); }
+#g-retro .xmb-pop-error { flex: 1; color: #ffb4b4; }
+/* The PS3 slider is the console's horizontal bar dialog: a long track with a knob, the value under it. */
+#g-retro .xmb-bar-dialog { display: flex; align-items: center; gap: calc(16 * var(--cpx)); padding: calc(30 * var(--cpx)) calc(4 * var(--cpx)) calc(10 * var(--cpx)); cursor: pointer; outline: none; }
+#g-retro .xmb-bar-dialog:focus-visible { outline: 1px solid rgba(255, 255, 255, .5); outline-offset: calc(4 * var(--cpx)); }
+#g-retro .xmb-bar-arrow { color: rgba(255, 255, 255, .72); font: 400 calc(20 * var(--cpx))/1 var(--g-font); }
+#g-retro .xmb-bar-track { position: relative; flex: 1; height: calc(8 * var(--cpx)); border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+#g-retro .xmb-bar-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, rgba(255, 255, 255, .72), #fff); }
+#g-retro .xmb-bar-track b { position: absolute; top: 50%; width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); transform: translate(-50%, -50%); border-radius: 50%; background: #fff; box-shadow: 0 0 calc(10 * var(--cpx)) rgba(255, 255, 255, .55); }
+#g-retro .xmb-bar-value { display: block; padding-bottom: calc(6 * var(--cpx)); text-align: center; font: 400 calc(34 * var(--cpx))/1 var(--g-font); }
+/* The PS3's real settings are the XMB now (task S2). The old decorative XMB block in the launcher's Settings
+   dialog stays in the source for task S5, but the PS3 theme no longer shows it: Advanced (launcher) is the
+   launcher's own controls, nothing fake. */
+body[data-g-theme="ps3"] #settings-dialog .g-con-options { display: none; }
+
 /* =========================== PS4 =========================== */
 body.garrison[data-g-theme="ps4"] { --r-accent: #1f7ae0; --g-font: "g-retro-sst", "Segoe UI", Arial, sans-serif; color: #fff; }
 html:has(body[data-g-theme="ps4"]) { background: #0a3f93; }
@@ -205,7 +278,11 @@ body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-art.on { animation: xmb-fade-
 @keyframes ps4-hints-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 /* Reduced motion: keep the layout, drop the movement. */
 html.reduce-motion :is(#g-retro .xmb-cat, #g-retro .xmb-cat img, #g-retro .xmb-item, #g-retro .xmb-icon, #g-retro .xmb-copy,
+  #g-retro .xmb-bar, #g-retro .xmb-list, #g-retro .xmb-sub, #g-retro .xmb-pop, #g-retro .xmb-sub-item, #g-retro .xmb-pop-option,
   #g-retro .ps4-tile, #g-retro .ps4-tile em, #g-retro .ps4-under, #g-retro .ps4-functions) { transition: none !important; }
+/* The panels still appear, they just do not slide in. */
+html.reduce-motion #g-retro .xmb-sub, html.reduce-motion #g-retro .xmb-pop { transform: translate(0, -50%); }
+html.reduce-motion #g-retro .xmb-sub { transform: none; }
 
 /* =========================== Wii =========================== */
 /* The launcher's own screens (library, settings, details) stay dark, so the body text stays light; the

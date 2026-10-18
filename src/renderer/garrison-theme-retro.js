@@ -118,13 +118,9 @@
     const list = allGames().slice(0, 60);
     return [
       { id: 'users', label: 'Users', file: 'users', glyph: 'contact', items: [{ label: name(), sub: 'Signed in', action: 'g-account', file: 'current-user', glyph: 'contact' }, { label: 'Turn Off System', action: 'power-menu', file: 'power', glyph: 'power' }] },
-      { id: 'settings', label: 'Settings', file: 'settings', glyph: 'settings', items: [
-        { label: 'System Update', action: 'g-update-check', file: 'system-update', glyph: 'refresh' }, settingsItem('Game Settings', 'services', 'game-settings', 'game'),
-        settingsItem('Display Settings', 'accessibility', 'display-settings', 'tv'), settingsItem('Sound Settings', 'audio', 'sound-settings', 'volume'),
-        settingsItem('Theme Settings', 'personalization', 'theme-settings', 'color'), settingsItem('Date and Time Settings', 'g-language', 'time-settings', 'clock'),
-        settingsItem('System Settings', 'g-storage', 'system-settings', 'settings'), settingsItem('Accessory Settings', 'g-input', 'acc-settings', 'controller'),
-        settingsItem('Network Settings', 'g-streaming', 'network-settings', 'globe'), settingsItem('Security Settings', 'g-privacy', 'privacy-settings', 'lock'),
-        settingsItem('Notification Settings', 'g-notifications', 'chat-settings', 'bell')] },
+      // The Settings column is the registry's PS3 layout (task S2): one XMB item per settings page, each row
+      // backed by a real gSettings entry. Nothing here is hand-written; gSettings.layout('ps3') owns the order.
+      { id: 'settings', label: 'Settings', file: 'settings', glyph: 'settings', items: ps3SettingsItems() },
       { id: 'photo', label: 'Photo', file: 'photo', glyph: 'photo', items: [settingsItem('Backgrounds', 'personalization', 'photo-gallery', 'color'), ...captureItems('photo')] },
       { id: 'music', label: 'Music', file: 'music', glyph: 'music', items: [settingsItem('Menu Sounds', 'audio', 'playlist', 'volume')] },
       { id: 'video', label: 'Video', file: 'video', glyph: 'video', items: [{ label: 'Game Clips', sub: captures?.some(item => item.kind === 'video') ? 'Recorded from your games' : 'No clips yet', action: 'g-retro-captures', file: 'video', glyph: 'video' }, ...captureItems('video')] },
@@ -150,6 +146,9 @@
     const cats = xmbCategories();
     xmbCat = Math.max(0, Math.min(xmbCat, cats.length - 1));
     const cat = cats[xmbCat], items = cat.items;
+    // A settings page only belongs to the Settings column; a library refresh that lands on another category
+    // closes the sub-list instead of leaving it floating over a different column.
+    if (ps3Open && cat.id !== 'settings') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
     if (xmbItem[cat.id] == null) xmbItem[cat.id] = Math.min(cat.start || 0, items.length - 1);
     const sel = xmbItem[cat.id] = Math.max(0, Math.min(xmbItem[cat.id], items.length - 1));
     document.body.style.setProperty('--xmb-tint', xmbTint());
@@ -165,7 +164,9 @@
     });
     if (!host.querySelector('.xmb-list')) {
       host.innerHTML = `<i class="xmb-pic" aria-hidden="true"></i><canvas class="xmb-wave" aria-hidden="true"></canvas>
-        <div class="xmb-bar"></div><div class="xmb-list"></div>`;
+        <div class="xmb-bar"></div><div class="xmb-list"></div>
+        <div class="xmb-sub" role="group" aria-label="Settings options" aria-hidden="true"></div>
+        <div class="xmb-pop" role="dialog" aria-modal="false" aria-hidden="true"></div>`;
       xmbBuiltBar = xmbBuiltList = '';
     }
     const bar = host.querySelector('.xmb-bar'), list = host.querySelector('.xmb-list');
@@ -178,7 +179,7 @@
       el.style.setProperty('--x', String(560 + (i - xmbCat) * 224));
       el.classList.toggle('on', i === xmbCat);
     });
-    const listKey = `${cat.id}|${items.length}`;
+    const listKey = `${cat.id}|${items.map(item => `${item.label}:${item.action}:${item.sub || ''}`).join('|')}`;
     if (rebuild || xmbBuiltList !== listKey) {
       list.innerHTML = items.map((item, index) => `<button class="xmb-item focusable${item.game ? ' is-game' : ''}" type="button" ${attrs(item)} data-xmb-index="${index}" aria-label="${esc(item.label)}">
         ${xmbIcon(item, index === sel)}<span class="xmb-copy"><strong>${esc(item.label)}</strong>${item.sub ? `<small>${esc(item.sub)}</small>` : ''}</span></button>`).join('');
@@ -197,7 +198,14 @@
       el.classList.toggle('above', i < sel);
     });
     chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>`;
-    focusEl(list.querySelector('.xmb-item.on'));
+    renderXmbSub();
+    renderXmbPop();
+    // The Settings column's own pop-up owns the focus while it is open; otherwise the selected row or item.
+    const focusTarget = ps3Popup
+      ? (ps3Popup.mode === 'info' ? host.querySelector('.xmb-pop') : ps3Popup.mode === 'slider' ? host.querySelector('.xmb-bar-dialog') : host.querySelector('.xmb-pop-option.on'))
+      : ps3Open ? host.querySelector('.xmb-sub-item.on') : list.querySelector('.xmb-item.on');
+    focusEl(focusTarget);
+    if (cat.id === 'settings') scanPs3Settings();
     xmbBackdrop(items[sel]);
     loadCaptures();
     xmbWave.start();
@@ -215,12 +223,386 @@
       host.classList.add('pic-on');
     }).catch(() => {}), 900);
   }
+  // ---------- PS3: Settings, driven by gSettings (task S2) ----------
+  // The Settings column is the registry's PS3 layout: one XMB item per settings page, in the layout's order.
+  // Choosing a page slides the XMB column left and opens that page's rows in the XMB's right-hand panel. Choosing
+  // a row opens the console's option pop-up: a translucent black panel of values for a choice, On/Off for a
+  // toggle, and the horizontal bar dialog for a slider. Actions run as soon as they are chosen; read-only facts
+  // open a panel showing the real value. Only rows whose available() is true are listed, and every value comes
+  // from gSettings, so nothing on this screen can drift from what the launcher can actually do.
+  const PS3_PAGE_ICONS = { display: 'display-settings', sound: 'sound-settings', theme: 'theme-settings', time: 'time-settings', system: 'system-settings', accessory: 'acc-settings', network: 'network-settings', notifications: 'chat-settings', game: 'game-settings', account: 'psn', advanced: 'settings' };
+  const PS3_PAGE_GLYPHS = { display: 'tv', sound: 'volume', theme: 'color', time: 'language', system: 'settings', accessory: 'controller', network: 'globe', notifications: 'bell', game: 'game', account: 'contact', advanced: 'settings' };
+  const PS3_ROW_ICONS = {
+    uiScale: 'display-settings', brightness: 'display-settings', fullscreen: 'display-settings',
+    volume: 'sound-settings', mute: 'sound-settings', soundEffects: 'sound-settings', menuMusic: 'music-settings', menuMusicVolume: 'music-settings',
+    ps3ThemeColour: 'theme-settings', background: 'photo-gallery', clockFormat: 'time-settings', dateOrder: 'time-settings', screensaverDelay: 'time-settings',
+    appVersion: 'system-settings', freeDisk: 'system-settings', powerPlan: 'power-settings', checkForUpdates: 'system-update', resetLauncherData: 'setting-edit',
+    controllerStatus: 'acc-settings', controllerVibration: 'acc-settings', enterButton: 'acc-settings', wifi: 'network-settings', friendsOnline: 'network-settings',
+    notifyFriends: 'chat-settings', notifyDownloads: 'chat-settings', notifyAchievements: 'chat-settings',
+    pauseDownloadsWhilePlaying: 'game-settings', libraryCounts: 'folder-game',
+    profile: 'current-user', steamAccount: 'sign-up', epicAccount: 'sign-up', artworkKey: 'photo-gallery', launcherSettings: 'settings'
+  };
+  const PS3_ROW_GLYPHS = {
+    uiScale: 'tv', brightness: 'tv', fullscreen: 'fullscreen', volume: 'volume', mute: 'volume', soundEffects: 'volume', menuMusic: 'stream', menuMusicVolume: 'volume',
+    ps3ThemeColour: 'color', background: 'photo', clockFormat: 'language', dateOrder: 'language', screensaverDelay: 'tv',
+    appVersion: 'info', freeDisk: 'drive', powerPlan: 'power', checkForUpdates: 'refresh', resetLauncherData: 'delete',
+    controllerStatus: 'controller', controllerVibration: 'controller', enterButton: 'controller', wifi: 'globe', friendsOnline: 'friends',
+    notifyFriends: 'bell', notifyDownloads: 'bell', notifyAchievements: 'bell', pauseDownloadsWhilePlaying: 'download', libraryCounts: 'library',
+    profile: 'contact', steamAccount: 'shop', epicAccount: 'shop', artworkKey: 'photo', launcherSettings: 'settings'
+  };
+  // The launcher's Settings form is only filled from disk when its dialog opens, but saveSettingsForm() saves
+  // every field at once. A console form row must not show (or save) those defaults over the player's real
+  // account and display settings, so fill the form from disk once before the XMB reads or writes a form row.
+  const PS3_FORM_ROWS = new Set(['uiScale', 'textSize', 'tileRadius', 'reducedMotion', 'highContrastFocus', 'fullscreen', 'startupAnimation', 'soundEffects', 'showUninstalledSteam', 'showUninstalledEpic', 'shuffleHomeScreenshots', 'randomScreenshotBackground']);
+  let ps3FormReady = null;
+  function ps3SyncLauncherForm() {
+    if (ps3FormReady) return ps3FormReady;
+    ps3FormReady = (async () => {
+      if (typeof window.launcher?.getSettings !== 'function') return;
+      const settings = await window.launcher.getSettings();
+      const value = (id, input) => { const el = document.getElementById(id); if (el) { el.value = String(input); return el; } return null; };
+      const checked = (id, on) => { const el = document.getElementById(id); if (el) el.checked = Boolean(on); return el; };
+      const region = document.getElementById('player-region');
+      if (region) {
+        const savedRegion = settings.region || 'auto';
+        if (![...region.options].some(option => option.value === savedRegion)) region.add(new Option(savedRegion, savedRegion));
+        region.value = savedRegion;
+      }
+      value('sgdb-key', settings.steamGridDbKey || '');
+      value('steam-api-key', settings.steamApiKey || '');
+      value('steam-id64', settings.steamId64 || '');
+      checked('show-uninstalled-toggle', settings.showUninstalledSteam);
+      checked('steam-family-toggle', settings.includeSteamFamily !== false);
+      checked('show-uninstalled-epic-toggle', settings.showUninstalledEpic);
+      checked('uninstalled-ubisoft', settings.showUninstalledUbisoft);
+      checked('uninstalled-ea', settings.showUninstalledEA);
+      checked('uninstalled-battlenet', settings.showUninstalledBattleNet);
+      value('legendary-path', settings.legendaryPath || '');
+      checked('fullscreen-toggle', settings.fullscreen);
+      checked('sound-toggle', settings.soundEffects !== false);
+      checked('startup-toggle', settings.startupAnimation !== false);
+      value('ui-scale', Math.round((settings.uiScale || 1) * 100));
+      value('tile-radius', settings.tileRadius ?? 8);
+      checked('reduced-motion-toggle', settings.reducedMotion);
+      value('text-size', Math.round((settings.textScale || 1) * 100));
+      checked('high-contrast-focus-toggle', settings.highContrastFocus);
+      checked('random-screenshot-background-toggle', settings.useRandomScreenshotBackground !== false);
+      checked('shuffle-home-screenshots-toggle', settings.shuffleHomeScreenshots !== false);
+      if (typeof renderDuplicateSettings === 'function') renderDuplicateSettings(settings);
+      // The launcher's previews and its "did this field change?" baseline follow the values now in the form.
+      try { if (typeof previewPersonalization === 'function') previewPersonalization(); } catch { /* Preview only. */ }
+      try {
+        if (typeof state !== 'undefined' && state) state.settingsOriginal = {
+          uiScale: Number(document.querySelector('#ui-scale')?.value) / 100,
+          tileRadius: Number(document.querySelector('#tile-radius')?.value),
+          reducedMotion: Boolean(document.querySelector('#reduced-motion-toggle')?.checked),
+          textScale: Number(document.querySelector('#text-size')?.value) / 100,
+          highContrastFocus: Boolean(document.querySelector('#high-contrast-focus-toggle')?.checked),
+          steamGridDbKey: document.querySelector('#sgdb-key')?.value.trim() || '',
+          libraryKey: typeof librarySettingsKey === 'function' ? librarySettingsKey() : ''
+        };
+      } catch { /* The launcher's own state is optional here. */ }
+    })().catch(() => { ps3FormReady = null; });
+    return ps3FormReady;
+  }
+  // Percent, milliseconds and console words, as the console printed them beside a value.
+  const PS3_UNITS = { uiScale: '%', textSize: '%', volume: '%', brightness: '%', menuMusicVolume: '%', tileRadius: ' px', screensaverDelay: ' min' };
+  // The Enter Button setting swaps the PlayStation face buttons the same way the input layer already does.
+  const ps3Glyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { enter: '○', back: '✕' } : { enter: '✕', back: '○' });
+  const ps3LayoutPages = () => (window.gSettings?.layout ? window.gSettings.layout('ps3') : []);
+  let ps3Layout = null, ps3LayoutAt = 0, ps3LayoutPromise = null, ps3ScanSeq = 0, ps3RowsSeq = 0;
+  let ps3Open = null, ps3Sub = 0, ps3Popup = null;
+  const ps3PageList = () => ps3Layout || ps3LayoutPages();
+  function ps3SettingsItems() {
+    return ps3PageList().map(page => ({
+      label: page.title, action: 'xmb-settings-page', data: { page: page.id },
+      file: PS3_PAGE_ICONS[page.id] || 'settings', glyph: PS3_PAGE_GLYPHS[page.id] || 'settings'
+    }));
+  }
+  // Find out which rows this PC can really honour. The Settings column only lists a page that still has at
+  // least one live row (Advanced always stays, even if every other row were unavailable).
+  function scanPs3Settings(force = false) {
+    if (!window.gSettings) return;
+    if (!force && ps3Layout && Date.now() - ps3LayoutAt < 30000) return;
+    if (ps3LayoutPromise) return ps3LayoutPromise;
+    const layout = ps3LayoutPages();
+    if (!layout.length) return;
+    const token = ++ps3ScanSeq;
+    const selectedId = ps3Layout?.[Number(xmbItem.settings)]?.id;
+    ps3LayoutPromise = (async () => {
+      const pages = [];
+      for (const page of layout) {
+        const rows = [];
+        for (const row of page.rows) {
+          let available = false;
+          try { available = await window.gSettings.available(row.id); } catch { available = false; }
+          rows.push({ id: row.id, available });
+        }
+        pages.push({ id: page.id, title: page.title, rows });
+      }
+      if (token !== ps3ScanSeq) return;
+      ps3Layout = pages.filter(page => page.rows.some(row => row.available) || page.id === 'advanced');
+      ps3LayoutAt = Date.now();
+      if (selectedId) {
+        const index = ps3Layout.findIndex(page => page.id === selectedId);
+        if (index >= 0) xmbItem.settings = index;
+      }
+      if (theme() === 'ps3' && state.view === 'home') {
+        const cat = xmbCategories()[xmbCat];
+        if (cat?.id === 'settings' && ps3Open && !ps3PageList().some(page => page.id === ps3Open.id)) ps3ClosePage();
+        else renderXmb(false);
+      }
+    })().catch(() => {}).finally(() => { ps3LayoutPromise = null; });
+    return ps3LayoutPromise;
+  }
+  // Read one page's real rows: availability first, then the value and (for a choice) the list of values.
+  async function ps3LoadPageRows(page) {
+    const rows = [];
+    const g = window.gSettings;
+    if (page.rows.some(row => PS3_FORM_ROWS.has(row.id))) await ps3SyncLauncherForm();
+    for (const row of page.rows) {
+      let available = row.available !== false;
+      if (row.available === undefined) { try { available = await g.available(row.id); } catch { available = false; } }
+      if (!available) continue;
+      const entry = g.entry(row.id);
+      if (!entry) continue;
+      let value = null;
+      try { value = await g.get(row.id); } catch { value = null; }
+      let options = [];
+      if (entry.kind === 'choice') { try { options = await g.options(row.id); } catch { options = []; } }
+      rows.push({ id: row.id, kind: entry.kind, label: g.label(row.id, 'ps3'), min: entry.min, max: entry.max, step: entry.step, value, options });
+    }
+    return rows;
+  }
+  // The console printed a number and its unit, On/Off, or the chosen value's own wording.
+  function ps3Format(row, value) {
+    if (value === null || value === undefined || value === '') return '';
+    if (row.kind === 'slider') return `${Math.round(Number(value))}${PS3_UNITS[row.id] || ''}`;
+    if (row.kind === 'toggle') return value ? 'On' : 'Off';
+    if (row.kind === 'choice') {
+      const option = (row.options || []).find(item => String(item.value) === String(value));
+      return option?.label || String(value);
+    }
+    return String(value);
+  }
+  function ps3Hint(mode) {
+    const glyphs = ps3Glyphs();
+    if (mode === 'info') return `<button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-cancel" aria-label="Back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button>`;
+    return `<button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-commit"><b class="xmb-glyph" aria-hidden="true">${glyphs.enter}</b> Set</button>
+      <button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Cancel</button>`;
+  }
+  function ps3OpenPage(id) {
+    const pages = ps3PageList();
+    const index = pages.findIndex(page => page.id === id);
+    const page = pages[index];
+    if (!page) return;
+    // Advanced (launcher) is one real action: run it instead of opening a page with a single row.
+    if (page.rows.length === 1 && page.rows[0].id === 'launcherSettings') { ps3RunAction('launcherSettings'); return; }
+    play('confirm');
+    const token = ++ps3RowsSeq;
+    ps3Open = {
+      id: page.id, title: page.title, loading: true, error: '',
+      rows: page.rows.filter(row => row.available !== false).map(row => ({
+        id: row.id, kind: window.gSettings?.entry(row.id)?.kind || 'info', label: window.gSettings?.label(row.id, 'ps3') || row.id, value: null, options: [], pending: true
+      }))
+    };
+    ps3Sub = 0;
+    ps3Popup = null;
+    renderXmb(false);
+    ps3LoadPageRows(page).then(rows => {
+      if (token !== ps3RowsSeq || ps3Open?.id !== page.id) return;
+      ps3Open.rows = rows;
+      ps3Open.loading = false;
+      ps3Sub = Math.min(ps3Sub, Math.max(0, rows.length - 1));
+      renderXmb(false);
+    }).catch(error => {
+      if (token !== ps3RowsSeq || ps3Open?.id !== page.id) return;
+      ps3Open.loading = false;
+      ps3Open.error = error?.message || 'Could not read these settings.';
+      renderXmb(false);
+    });
+  }
+  function ps3ClosePage() {
+    if (!ps3Open) return;
+    play('back');
+    ps3Open = null; ps3Sub = 0; ps3Popup = null;
+    renderXmb(false);
+  }
+  function ps3RunAction(id) {
+    play('confirm');
+    // Open the launcher's own dialog from the XMB's normal state, so closing it lands back on the pages list.
+    if (id === 'launcherSettings') { ps3Open = null; ps3Sub = 0; ps3Popup = null; renderXmb(false); }
+    Promise.resolve(window.gSettings?.set(id, null)).catch(error => {
+      if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
+    }).then(() => {
+      const row = ps3Open?.rows?.find(item => item.id === id);
+      if (!row) return;
+      window.gSettings.get(id).then(value => { row.value = value; if (ps3Open) renderXmb(false); }).catch(() => {});
+    });
+  }
+  function ps3OpenRow(index) {
+    const row = ps3Open?.rows?.[index];
+    if (!row || row.pending) return;
+    if (row.kind === 'action') { ps3RunAction(row.id); return; }
+    if (row.kind === 'info') {
+      play('confirm');
+      ps3Popup = { mode: 'info', row };
+    } else if (row.kind === 'toggle') {
+      play('confirm');
+      ps3Popup = { mode: 'toggle', row, options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }], selected: row.value ? 0 : 1, saving: false, error: '' };
+    } else if (row.kind === 'slider') {
+      play('confirm');
+      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
+      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
+      const raw = Number(row.value);
+      const value = Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min;
+      ps3Popup = { mode: 'slider', row, min, max, step: Number(row.step) || 1, value, original: value, saving: false, error: '' };
+    } else if (row.kind === 'choice') {
+      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
+      play('confirm');
+      ps3Popup = { mode: 'choice', row, options: row.options, selected: Math.max(0, row.options.findIndex(option => option.value === row.value)), saving: false, error: '' };
+    } else return;
+    renderXmb(false);
+  }
+  function ps3SubMove(direction) {
+    if (direction === 'left') { ps3ClosePage(); return; }
+    if (direction !== 'up' && direction !== 'down') return;
+    const count = ps3Open?.rows?.length || 0;
+    if (!count) return;
+    const next = Math.max(0, Math.min(count - 1, ps3Sub + (direction === 'down' ? 1 : -1)));
+    if (next === ps3Sub) return;
+    ps3Sub = next;
+    play('navigate');
+    renderXmb(false);
+  }
+  function ps3PopupMove(direction) {
+    const popup = ps3Popup;
+    if (!popup || popup.saving || popup.mode === 'info') return;
+    if (popup.mode === 'slider') {
+      if (direction !== 'left' && direction !== 'right') return;
+      const next = Math.max(popup.min, Math.min(popup.max, popup.value + (direction === 'right' ? popup.step : -popup.step)));
+      if (next === popup.value) return;
+      popup.value = Number(next.toFixed(6));
+      play('navigate');
+      renderXmb(false);
+      return;
+    }
+    if (direction !== 'up' && direction !== 'down') return;
+    const next = Math.max(0, Math.min(popup.options.length - 1, popup.selected + (direction === 'down' ? 1 : -1)));
+    if (next === popup.selected) return;
+    popup.selected = next;
+    play('navigate');
+    renderXmb(false);
+  }
+  function ps3CancelPopup() {
+    if (!ps3Popup || ps3Popup.saving) return;
+    play('back');
+    ps3Popup = null;
+    renderXmb(false);
+  }
+  async function ps3ConfirmPopup() {
+    const popup = ps3Popup;
+    if (!popup || popup.saving) return;
+    if (popup.mode === 'info') { ps3CancelPopup(); return; }
+    const value = popup.mode === 'slider' ? popup.value : popup.options[popup.selected]?.value;
+    popup.saving = true; popup.error = '';
+    renderXmb(false);
+    try {
+      if (PS3_FORM_ROWS.has(popup.row.id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(popup.row.id, value);
+      popup.row.value = await window.gSettings.get(popup.row.id).catch(() => value);
+      ps3Popup = null;
+      play('confirm');
+      renderXmb(false);
+    } catch (error) {
+      popup.saving = false;
+      popup.error = error?.message || 'Could not change this setting.';
+      play('back');
+      renderXmb(false);
+    }
+  }
+  function ps3Seek(event) {
+    const popup = ps3Popup;
+    const track = host.querySelector('.xmb-bar-track');
+    if (!popup || popup.mode !== 'slider' || !track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const step = popup.step || 1;
+    const value = popup.min + Math.round((fraction * (popup.max - popup.min)) / step) * step;
+    popup.value = Number(Math.max(popup.min, Math.min(popup.max, value)).toFixed(6));
+    play('navigate');
+    renderXmb(false);
+  }
+  function renderXmbSub() {
+    const panel = host.querySelector('.xmb-sub');
+    if (!panel) return;
+    const open = Boolean(ps3Open);
+    host.classList.toggle('sub-open', open);
+    panel.classList.toggle('open', open);
+    panel.setAttribute('aria-hidden', String(!open));
+    if (!open) { panel.innerHTML = ''; panel.removeAttribute('data-key'); return; }
+    const page = ps3Open;
+    const rows = page.rows || [];
+    const glyphs = ps3Glyphs();
+    const key = [page.id, page.loading ? 1 : 0, page.error, ps3Sub, glyphs.enter, glyphs.back, rows.map(row => `${row.id}:${row.kind}:${row.pending ? 1 : 0}:${row.value}`).join(',')].join('|');
+    if (panel.dataset.key === key) return;
+    panel.dataset.key = key;
+    panel.innerHTML = `<div class="xmb-sub-head"><span class="xmb-sub-kicker">${esc(page.title)}</span><small>${rows.length ? `${ps3Sub + 1} / ${rows.length}` : ''}</small></div>
+      <div class="xmb-sub-list">${rows.length ? rows.map((row, index) => `<button class="xmb-sub-item focusable${index === ps3Sub ? ' on' : ''}" type="button" data-action="xmb-settings-row" data-row="${index}" aria-label="${esc(row.label)}${row.pending ? '' : `, ${esc(ps3Format(row, row.value))}`}">
+        <span class="xmb-sub-icon" aria-hidden="true">${row.pending ? '' : img(PS3I(PS3_ROW_ICONS[row.id] || 'settings'), icon(PS3_ROW_GLYPHS[row.id] || 'settings'))}</span>
+        <span class="xmb-sub-label">${esc(row.label)}</span>
+        <span class="xmb-sub-value">${row.pending ? '…' : esc(ps3Format(row, row.value))}</span>
+        ${row.kind === 'action' ? '<span class="xmb-sub-open" aria-hidden="true">›</span>' : ''}
+      </button>`).join('') : `<p class="xmb-sub-empty">${page.loading ? 'Reading settings…' : esc(page.error || 'Nothing on this page is available on this PC.')}</p>`}</div>
+      <p class="xmb-sub-hint"><span class="xmb-hint-open"><b class="xmb-glyph" aria-hidden="true">${glyphs.enter}</b> Open</span><button class="xmb-pop-action focusable" type="button" data-action="xmb-settings-back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button></p>`;
+  }
+  function renderXmbPop() {
+    const panel = host.querySelector('.xmb-pop');
+    if (!panel) return;
+    const open = Boolean(ps3Popup);
+    host.classList.toggle('pop-open', open);
+    panel.classList.toggle('open', open);
+    panel.setAttribute('aria-hidden', String(!open));
+    if (!open) {
+      panel.innerHTML = '';
+      panel.removeAttribute('data-key');
+      panel.removeAttribute('tabindex');
+      delete panel.dataset.action;
+      return;
+    }
+    const popup = ps3Popup, row = popup.row;
+    const glyphs = ps3Glyphs();
+    const key = [row.id, popup.mode, popup.selected, popup.value, popup.saving ? 1 : 0, popup.error, glyphs.enter, glyphs.back].join('|');
+    if (panel.dataset.key === key) return;
+    panel.dataset.key = key;
+    // The read-only panel is its own close target; the others focus their value list.
+    if (popup.mode === 'info') { panel.setAttribute('tabindex', '-1'); panel.dataset.action = 'xmb-pop-close'; }
+    else { panel.removeAttribute('tabindex'); delete panel.dataset.action; }
+    let body = '';
+    if (popup.mode === 'slider') {
+      const span = popup.max - popup.min || 1;
+      const percent = Math.max(0, Math.min(100, ((popup.value - popup.min) / span) * 100));
+      body = `<div class="xmb-bar-dialog" role="slider" tabindex="-1" data-action="xmb-bar" aria-label="${esc(row.label)}" aria-valuemin="${popup.min}" aria-valuemax="${popup.max}" aria-valuenow="${popup.value}">
+        <span class="xmb-bar-arrow" aria-hidden="true">◀</span><span class="xmb-bar-track"><i style="width:${percent}%"></i><b style="left:${percent}%"></b></span><span class="xmb-bar-arrow" aria-hidden="true">▶</span></div>
+        <strong class="xmb-bar-value">${esc(ps3Format(row, popup.value))}</strong>`;
+    } else if (popup.mode === 'toggle' || popup.mode === 'choice') {
+      body = `<div class="xmb-pop-list" role="listbox" aria-label="${esc(row.label)}">${popup.options.map((option, index) => `<button class="xmb-pop-option focusable${index === popup.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === popup.selected}" data-action="xmb-pop-option" data-option="${index}"><span>${esc(option.label)}</span>${index === popup.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+    } else {
+      body = `<p class="xmb-pop-info">${esc(ps3Format(row, row.value) || 'Unavailable')}</p>`;
+    }
+    panel.innerHTML = `<div class="xmb-pop-head"><strong>${esc(row.label)}</strong><small>${esc(ps3Open?.title || '')}</small></div>${body}
+      <p class="xmb-pop-hint">${popup.error ? `<span class="xmb-pop-error">${esc(popup.error)}</span>` : ''}${ps3Hint(popup.mode)}${popup.saving ? '<span class="xmb-pop-saving">Saving…</span>' : ''}</p>`;
+  }
   function xmbMove(direction) {
+    if (ps3Popup) { ps3PopupMove(direction); return; }
+    if (ps3Open) { ps3SubMove(direction); return; }
     const cats = xmbCategories();
     if (direction === 'left' || direction === 'right') {
       const next = Math.max(0, Math.min(cats.length - 1, xmbCat + (direction === 'right' ? 1 : -1)));
       if (next === xmbCat) return;
       xmbCat = next; play('category');
+      if (cats[xmbCat].id === 'settings') scanPs3Settings();
     } else {
       const cat = cats[xmbCat];
       const current = xmbItem[cat.id] ?? (cat.start || 0);
@@ -673,6 +1055,8 @@
   let renderedTheme = '', enterTimer = 0;
   function render(rebuild = true) {
     const id = theme();
+    // Leaving PS3 gives up its open settings page and pop-up; coming back starts from the column again.
+    if (id !== 'ps3') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
@@ -746,9 +1130,25 @@
     const action = el.dataset.action;
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
     // A first click on an XMB item, PS4 tile or 3DS icon that isn't selected selects it, as the pointer did.
-    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); play('navigate'); renderXmb(false); return; }
+    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); if (ps3Open) { ps3Open = null; ps3Popup = null; ps3Sub = 0; } play('navigate'); renderXmb(false); return; }
     if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); dsUpdate(); return; }
     if (theme() === 'ps4' && el.classList.contains('ps4-tile') && !el.classList.contains('sel')) { stop(); ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; play('navigate'); renderPs4(false); return; }
+    if (theme() === 'ps3' && el.classList.contains('xmb-sub-item') && !el.classList.contains('on')) { stop(); ps3Sub = Number(el.dataset.row); play('navigate'); renderXmb(false); return; }
+    if (theme() === 'ps3' && action === 'xmb-settings-page') { stop(); ps3OpenPage(el.dataset.page); return; }
+    if (theme() === 'ps3' && action === 'xmb-settings-row') { stop(); ps3OpenRow(Number(el.dataset.row)); return; }
+    if (theme() === 'ps3' && action === 'xmb-pop-option') {
+      stop();
+      const popup = ps3Popup;
+      if (!popup || popup.saving) return;
+      popup.selected = Number(el.dataset.option);
+      ps3ConfirmPopup();
+      return;
+    }
+    // A controller press confirms the bar; a pointer press moves the knob to where it landed.
+    if (theme() === 'ps3' && action === 'xmb-bar') { stop(); if (state.controllerClick || event.detail === 0) ps3ConfirmPopup(); else ps3Seek(event); return; }
+    if (theme() === 'ps3' && action === 'xmb-pop-commit') { stop(); ps3ConfirmPopup(); return; }
+    if (theme() === 'ps3' && (action === 'xmb-pop-close' || action === 'xmb-pop-cancel')) { stop(); ps3CancelPopup(); return; }
+    if (theme() === 'ps3' && action === 'xmb-settings-back') { stop(); ps3ClosePage(); return; }
     if (action === 'g-retro-settings') { stop(); play('confirm'); Promise.resolve(typeof openSettings === 'function' ? openSettings() : settingsDialog.showModal()).then(() => { try { showSettingsPage(el.dataset.page); } catch { /* Missing. */ } }); return; }
     if (action === 'g-ps4-overview') { stop(); play('confirm'); if (typeof openGameDetails === 'function') openGameDetails(el.dataset.gameId); return; }
     if (action === 'g-retro-preview') { stop(); play('confirm'); wiiPreview = el.dataset.gameId; render(); return; }
@@ -767,6 +1167,10 @@
     const back = navigateBack;
     navigateBack = function (...args) {
       if (on() && state.view === 'home') {
+        if (theme() === 'ps3') {
+          if (ps3Popup) { ps3CancelPopup(); return; }
+          if (ps3Open) { ps3ClosePage(); return; }
+        }
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
         if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
@@ -774,6 +1178,48 @@
       return back.apply(this, args);
     };
   }
+
+  // The console's keyboard/controller Enter path calls performAction() with the focused item's data-action.
+  // Handle the XMB settings actions here so Enter behaves exactly like the controller's ✕ press.
+  if (typeof performAction === 'function') {
+    const actionBase = performAction;
+    performAction = async function (action, source) {
+      if (on() && state.view === 'home' && theme() === 'ps3') {
+        if (action === 'xmb-settings-page') { ps3OpenPage(source?.dataset?.page); return true; }
+        if (action === 'xmb-settings-row') {
+          const index = Number(source?.dataset?.row);
+          if (index !== ps3Sub) { ps3Sub = index; play('navigate'); renderXmb(false); return true; }
+          ps3OpenRow(index);
+          return true;
+        }
+        if (action === 'xmb-pop-option') {
+          if (ps3Popup) { ps3Popup.selected = Number(source?.dataset?.option); await ps3ConfirmPopup(); }
+          return true;
+        }
+        if (action === 'xmb-bar') { await ps3ConfirmPopup(); return true; }
+        if (action === 'xmb-pop-commit') { await ps3ConfirmPopup(); return true; }
+        if (action === 'xmb-pop-close' || action === 'xmb-pop-cancel') { ps3CancelPopup(); return true; }
+        if (action === 'xmb-settings-back') { ps3ClosePage(); return true; }
+      }
+      return actionBase.call(this, action, source);
+    };
+  }
+  // The console screens stay in step with every other way a setting can change (the launcher's own Settings
+  // dialog, a quick-settings shortcut, another theme's shell). Availability is re-checked on the next scan.
+  document.addEventListener('g-setting-change', event => {
+    if (theme() !== 'ps3' || !event.detail?.id) return;
+    ps3LayoutAt = 0;
+    const row = ps3Open?.rows?.find(item => item.id === event.detail.id);
+    if (row) row.value = event.detail.value;
+    // A launcher dialog owns the screen while it is open; the close handler repaints the XMB for it.
+    if (document.querySelector('dialog[open]')) return;
+    if (ps3Open || ps3Popup || event.detail.id === 'enterButton') renderXmb(false);
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() !== 'ps3') return;
+    ps3Layout = null; ps3LayoutAt = 0;
+    if (state.view === 'home') renderXmb(false);
+  });
 
   // Sounds: the pack's recordings when present, otherwise short synthesised cues.
   let ctx;
