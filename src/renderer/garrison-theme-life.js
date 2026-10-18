@@ -82,7 +82,7 @@
     me.type = 'button';
     me.dataset.action = 'g-account';
     me.setAttribute('aria-label', 'Profile');
-    me.innerHTML = '<span class="g-me-avatar"></span><span class="g-me-copy"><strong></strong><small>Xbox Preview</small></span>';
+    me.innerHTML = '<span class="g-me-avatar"></span><span class="g-me-copy"><strong></strong><small>OmniDash</small></span>';
     left.prepend(me);
     const sync = () => {
       me.querySelector('.g-me-avatar').innerHTML = document.querySelector('#profile-avatar')?.innerHTML || '';

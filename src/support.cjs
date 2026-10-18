@@ -127,7 +127,7 @@ function buildBackup(settings, { includeKeys = false, now = Date.now(), version 
 function parseBackup(text) {
   let file;
   try { file = JSON.parse(String(text || '')); } catch { throw new Error('That file is not a settings backup.'); }
-  if (!file || file.format !== BACKUP_FORMAT || file.formatVersion !== 1 || typeof file.data !== 'object') throw new Error('That file is not a settings backup from Xbox Preview UI.');
+  if (!file || file.format !== BACKUP_FORMAT || file.formatVersion !== 1 || typeof file.data !== 'object') throw new Error('That file is not a settings backup from OmniDash.');
   const shape = { hiddenGameIds: 'array', favoriteGameIds: 'array', customCollections: 'array', customGames: 'array', playHistory: 'array', artwork: 'object', playCounts: 'object', gameLaunchOptions: 'object', installChoices: 'object', gameCategoryOverrides: 'object', achievementReferenceAppIds: 'object', duplicatePreferences: 'object' };
   const data = {};
   for (const field of [...BACKUP_FIELDS, ...KEY_FIELDS]) {

@@ -50,6 +50,12 @@ process.on('uncaughtException', error => {
   try { console.error('[uncaughtException]', error instanceof Error ? error.stack || error.message : error); } catch { /* Logging must never throw. */ }
 });
 
+// OmniDash (2026-10-18): the product name changed, but the installed app keeps its original appId and data
+// folder. Settings, caches and theme packs live in %APPDATA%\xbox-preview-ui, so pin userData there instead of
+// letting the new product name move it. NEBULA_* names and the Xbox mode bridge folder are unchanged.
+app.setName('OmniDash');
+if (process.env.NEBULA_DEMO !== '1') app.setPath('userData', path.join(app.getPath('appData'), 'xbox-preview-ui'));
+
 if (process.env.NEBULA_DEMO === '1') {
   app.setPath('userData', process.env.NEBULA_DEMO_USER_DATA || path.join(app.getPath('temp'), 'xbox-preview-ui-demo'));
   if (process.env.NEBULA_DEMO_GPU !== '1') app.disableHardwareAcceleration();
@@ -2751,12 +2757,12 @@ function registerIpc() {
     if (!await developerMode()) return { status: 'needs-developer-mode' };
     const source = path.join(__dirname, 'xbox-mode-bridge').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
     const target = path.join(process.env.LOCALAPPDATA || app.getPath('userData'), 'Xbox Preview UI', 'xbox-mode-bridge');
-    if (!await exists(path.join(source, 'AppxManifest.xml'))) throw new Error('The Xbox mode bridge is missing from this install. Reinstall Xbox Preview UI.');
+    if (!await exists(path.join(source, 'AppxManifest.xml'))) throw new Error('The Xbox mode bridge is missing from this install. Reinstall OmniDash.');
     await fs.rm(target, { recursive: true, force: true });
     await fs.cp(source, target, { recursive: true });
     await fs.writeFile(path.join(path.dirname(target), 'xbox-mode-target.txt'), process.execPath, 'utf8');
     const result = await powershell(`Add-AppxPackage -Register '${path.join(target, 'AppxManifest.xml').replace(/'/g, "''")}' -ForceApplicationShutdown`);
-    if (!result.ok) throw new Error(`Windows could not add Xbox Preview UI to Xbox mode. ${result.stderr.split(/\r?\n/).find(Boolean) || ''}`.trim());
+    if (!result.ok) throw new Error(`Windows could not add OmniDash to Xbox mode. ${result.stderr.split(/\r?\n/).find(Boolean) || ''}`.trim());
     return { status: 'registered' };
   });
   ipcMain.handle('xbox-mode:unregister', async () => {

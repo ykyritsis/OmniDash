@@ -1,1 +1,1 @@
-Xbox Preview UI Xbox mode bridge.
+OmniDash Xbox mode bridge.

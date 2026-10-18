@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Registers Xbox Preview UI as a Windows Xbox mode (full screen experience) home app. -->
+<!-- Registers OmniDash as a Windows Xbox mode (full screen experience) home app. The package Identity and
+     Publisher stay as they were so Windows still recognises the existing registration. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -9,8 +10,8 @@
   IgnorableNamespaces="uap uap3 uap4 rescap">
   <Identity Name="XboxPreviewUI.XboxModeHome" Publisher="CN=Xbox Preview UI Local" Version="1.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>Xbox Preview UI</DisplayName>
-    <PublisherDisplayName>Xbox Preview UI</PublisherDisplayName>
+    <DisplayName>OmniDash</DisplayName>
+    <PublisherDisplayName>OmniDash</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
@@ -21,12 +22,12 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="XboxPreviewUIHome.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements DisplayName="Xbox Preview UI" Description="Use Xbox Preview UI as your Xbox mode home app." BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
+      <uap:VisualElements DisplayName="OmniDash" Description="Use OmniDash as your Xbox mode home app." BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
       </uap:VisualElements>
       <Extensions>
         <uap3:Extension Category="windows.appExtension">
-          <uap3:AppExtension Name="windows.gamingApp" Id="App" DisplayName="Xbox Preview UI" Description="Your games from every launcher, in the Xbox full screen experience." PublicFolder="Public" />
+          <uap3:AppExtension Name="windows.gamingApp" Id="App" DisplayName="OmniDash" Description="Your games from every launcher, in the Xbox full screen experience." PublicFolder="Public" />
         </uap3:Extension>
       </Extensions>
     </Application>

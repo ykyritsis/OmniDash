@@ -2469,7 +2469,7 @@ async function performAction(action, source) {
   if (action === 'clear-custom-artwork' || action === 'reset-launcher-data') {
     state.resetKind = action;
     const all = action === 'reset-launcher-data';
-    document.querySelector('#reset-confirm-title').textContent = all ? 'Reset Xbox Preview UI?' : 'Clear chosen artwork?';
+    document.querySelector('#reset-confirm-title').textContent = all ? 'Reset OmniDash?' : 'Clear chosen artwork?';
     document.querySelector('#reset-confirm-copy').textContent = all
       ? 'This removes your local profile, preferences, custom games and apps, saved artwork, API keys, and play history. Installed games are not deleted. This cannot be undone.'
       : 'This removes only artwork you chose manually. Automatic artwork will be fetched again. Your games and other settings stay as they are.';
@@ -3213,6 +3213,13 @@ window.launcher.getSettings().then(async (settings) => {
   state.steamBannerDismissed = settings.steamBannerDismissed === true;
   state.displayName = settings.displayName || 'Player';
   refreshPlayerIdentity();
+  // R1 rename: existing players get one "now called OmniDash" note; first-run onboarding does not.
+  try {
+    if (settings.onboardingComplete && localStorage.getItem('g-renamed-omnidash') !== '1') {
+      localStorage.setItem('g-renamed-omnidash', '1');
+      setTimeout(() => showToast('Now called OmniDash — same launcher, same games and theme packs.'), 2600);
+    }
+  } catch { /* Storage unavailable: skipping the one-time note is harmless. */ }
   scheduleScoreRefresh();
   window.launcher.getSteamLocalStatus().then((status) => {
     state.steamLocalStatus = status;

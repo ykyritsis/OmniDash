@@ -1,9 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="OmniDash">
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16202f"/><stop offset="1" stop-color="#070b12"/></linearGradient>
-    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5cc8ff"/><stop offset="1" stop-color="#1579e8"/></linearGradient>
+    <linearGradient id="od-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ff3dc"/>
+      <stop offset=".55" stop-color="#59d7ff"/>
+      <stop offset="1" stop-color="#7a8dff"/>
+    </linearGradient>
   </defs>
-  <rect width="256" height="256" rx="58" fill="url(#tile)"/>
-  <rect x="1" y="1" width="254" height="254" rx="57" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
-  <g transform="translate(-32.33 55.69) scale(0.44910)"><path fill="url(#blue)" d="M356.8 128.8s.4 0 0 0c48.4 36.8 130.4 127.2 105.6 152.8-28.4 24.8-65.2 39.6-105.6 39.6s-77.6-14.8-105.6-39.6c-25.2-25.6 57.2-116 105.2-152.4 0-.4.4-.4.4-.4zm83.6-105.2C416 8.8 389.2 0 356.8 0s-59.2 8.8-83.6 23.6c-.4 0-.4.4-.4.8s.4.4.8.4c31.2-6.8 78.4 20 82.8 22.8h.8c4.4-2.8 51.6-29.6 82.8-22.8.4 0 .8 0 .8-.4s0-.8-.4-.8zM244.4 46c-.4 0-.4.4-.8.4-29.2 29.2-47.2 69.6-47.2 114 0 36.4 12.4 70.4 32.8 97.2 0 .4.4.4.8.4s.4-.4 0-.8c-12.4-38 50.4-129.6 82.8-168l.4-.4c0-.4 0-.4-.4-.4-49.2-48.8-65.6-43.6-68.4-42.4zm156.4 42l-.4.4s0 .4.4.4c32.4 38.4 94.8 130 82.8 168v.8c.4 0 .8 0 .8-.4 20.4-26.8 32.8-60.8 32.8-97.2 0-44.4-18-84.8-47.6-114-.4-.4-.4-.4-.8-.4-2.4-.8-18.8-6-68 42.4z"/></g>
+  <rect x="10" y="10" width="236" height="236" rx="60" fill="#0d1218"/>
+  <rect x="10" y="10" width="236" height="236" rx="60" fill="none" stroke="#ffffff" stroke-opacity=".14" stroke-width="2"/>
+  <circle cx="128" cy="128" r="80" fill="none" stroke="url(#od-ring)" stroke-width="13" stroke-linecap="round" stroke-dasharray="356 146" transform="rotate(-42 128 128)"/>
+  <circle cx="128" cy="128" r="43" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-dasharray="188 82" transform="rotate(138 128 128)"/>
+  <circle cx="128" cy="128" r="12" fill="#8ff3dc"/>
+  <circle cx="196" cy="128" r="10" fill="#ffffff"/>
+  <circle cx="60" cy="128" r="10" fill="#59d7ff"/>
 </svg>

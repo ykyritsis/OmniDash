@@ -44,10 +44,10 @@
     const ready = status.ready && !downloading && !restarting;
     const retry = status.state === 'error' && !ready;
     title.textContent = restarting ? 'Restarting to update…' : ready ? 'Update ready' : retry ? 'Update interrupted' : 'An update is available';
-    description.textContent = ready ? `Xbox Preview UI ${status.readyVersion} is ready. Restart to install it, or choose Later to keep using the app. It also installs when you close the launcher.`
+    description.textContent = ready ? `OmniDash ${status.readyVersion} is ready. Restart to install it, or choose Later to keep using the app. It also installs when you close the launcher.`
       : restarting ? 'The launcher will reopen after the update is installed.'
       : retry ? 'Try downloading the update again, or continue using the app.'
-      : `Xbox Preview UI ${status.version} is downloading. You can keep using the app while it finishes.`;
+      : `OmniDash ${status.version} is downloading. You can keep using the app while it finishes.`;
     progress.hidden = !downloading;
     const percent = Math.round(Math.max(0, Math.min(1, Number(status.progress) || 0)) * 100);
     dialog.querySelector('.g-update-percent').textContent = `${percent}%`;

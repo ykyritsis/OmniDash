@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://store-images.s-microsoft.com https://store-images.microsoft.com https://steamdb.info https://*.steamstatic.com https://media.steampowered.com https://*.akamaihd.net https://assets.xboxgamer.pics https://live.staticflickr.com https://image.api.playstation.com https://assets-prd.ignimgs.com https://upload.wikimedia.org https://commons.wikimedia.org https://thumb.wikimedia.org https://i.ytimg.com; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob:; connect-src 'self' https://cdn.trailers.xboxservices.com https://video.akamai.steamstatic.com https://video.fastly.steamstatic.com https://video.cloudflare.steamstatic.com" />
-    <title>Xbox Preview UI</title>
+    <title>OmniDash</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="console.css" />
     <link rel="stylesheet" href="dashboard.css" />
@@ -216,7 +216,7 @@
     </div>
 
     <div id="empty-state" class="empty-state" hidden>
-      <span class="empty-logo"><img src="assets/xbox.svg" alt="" /></span>
+      <span class="empty-logo"><img src="assets/omnidash.svg" alt="" /></span>
       <h2>No games found yet</h2>
       <p>Your installed PC games belong here. Scan your libraries or add a game to get started.</p>
       <div class="empty-actions">
@@ -229,7 +229,7 @@
     <dialog id="settings-dialog">
       <form method="dialog" id="settings-form">
         <nav class="settings-sidebar" aria-label="Settings categories">
-          <div class="settings-sidebar-brand"><span class="settings-brand-mark"><img src="assets/xbox.svg" alt="" /></span><span><strong>Settings</strong><small>Xbox Preview UI</small></span></div>
+          <div class="settings-sidebar-brand"><span class="settings-brand-mark"><img src="assets/omnidash.svg" alt="" /></span><span><strong>Settings</strong><small>OmniDash</small></span></div>
           <button class="settings-tab focusable active" type="button" data-action="settings-tab" data-settings-tab="experience" aria-selected="true"><span class="settings-tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 8h9a5 5 0 0 1 4.7 6.7l-.6 1.6a2 2 0 0 1-3.3.7l-2-2H8.7l-2 2a2 2 0 0 1-3.3-.7l-.6-1.6A5 5 0 0 1 7.5 8Z" /><path d="M8 10.5v4M6 12.5h4M16 11.5h.1M18.5 13.5h.1" /></svg></span>General</button>
           <button class="settings-tab focusable" type="button" data-action="settings-tab" data-settings-tab="services" aria-selected="false"><span class="settings-tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" /></svg></span>Library</button>
           <button class="settings-tab focusable" type="button" data-action="settings-tab" data-settings-tab="personalization" aria-selected="false"><span class="settings-tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8L12 3Z" /></svg></span>Appearance</button>
@@ -239,16 +239,16 @@
         <div class="settings-main">
           <div class="settings-scroll">
             <div class="dialog-header">
-              <div class="settings-title"><div class="settings-heading-copy"><span class="eyebrow">XBOX PREVIEW UI</span><h2>Settings</h2><p>Make your gaming space feel like yours.</p></div></div>
+              <div class="settings-title"><div class="settings-heading-copy"><span class="eyebrow">OMNIDASH</span><h2>Settings</h2><p>Make your gaming space feel like yours.</p></div></div>
               <button class="close-button focusable" value="cancel" aria-label="Close settings">×</button>
             </div>
             <div class="settings-page" data-settings-page="experience">
-              <div class="settings-welcome"><img src="assets/xbox.svg" alt="" /><div><strong>Your console space</strong><span>Make this PC feel ready to play.</span></div></div>
+              <div class="settings-welcome"><img src="assets/omnidash.svg" alt="" /><div><strong>Your console space</strong><span>Make this PC feel ready to play.</span></div></div>
               <section class="settings-section" aria-labelledby="settings-console-heading">
                 <div class="settings-section-heading"><h3 id="settings-console-heading">Start and navigation</h3></div>
                 <label class="toggle-row"><span><strong>Fullscreen on launch</strong><small>Open directly in the console-style view.</small></span><input class="focusable" id="fullscreen-toggle" type="checkbox" /></label>
                 <label class="toggle-row"><span><strong>Interface sounds</strong><small>Subtle sounds for focus, navigation, and launch.</small></span><input class="focusable" id="sound-toggle" type="checkbox" /></label>
-                <label class="toggle-row"><span><strong>Startup animation</strong><small>Xbox logo animation with an original startup chime. Respects Interface sounds and Reduced motion.</small></span><input class="focusable" id="startup-toggle" type="checkbox" /></label>
+                <label class="toggle-row"><span><strong>Startup animation</strong><small>Boot animation with an original startup chime. Respects Interface sounds and Reduced motion.</small></span><input class="focusable" id="startup-toggle" type="checkbox" /></label>
                 <div class="console-sound-pack"><p id="sound-pack-status">Use your own navigation and selection sounds. Choose a folder with navigation.wav and activation.wav; back.wav and launch.wav are optional.</p><div><button class="secondary focusable" type="button" data-action="console-sound-import">Choose sound folder</button><button class="secondary focusable" type="button" data-action="console-sound-preview">Preview</button><button class="secondary focusable" type="button" data-action="console-sound-reset">Use default sounds</button></div></div>
               </section>
               <section class="settings-section settings-quick-links"><div class="settings-section-heading"><h3>Quick access</h3></div><button class="settings-link focusable" type="button" data-action="settings-open-apps"><span>Game launchers & apps<small>Open Steam, Epic, and other installed launchers</small></span><b>›</b></button><button class="settings-link focusable" type="button" data-action="settings-open-profile"><span>Player profile<small>Name, gamerpic, and recent games</small></span><b>›</b></button></section>
@@ -448,8 +448,8 @@
       <div class="setup-actions" data-profile-page="customize" hidden><button class="secondary focusable" type="button" data-action="avatar-close">Cancel</button><button class="primary focusable" type="button" data-action="profile-save">Save profile</button></div>
     </dialog>
 
-    <dialog id="onboarding-dialog" class="setup-dialog onboarding-dialog" aria-label="Welcome to Xbox Preview UI">
-      <div class="onboarding-brand"><img src="assets/xbox.svg" alt="" /><span class="eyebrow">XBOX PREVIEW UI</span></div>
+    <dialog id="onboarding-dialog" class="setup-dialog onboarding-dialog" aria-label="Welcome to OmniDash">
+      <div class="onboarding-brand"><img src="assets/omnidash.svg" alt="" /><span class="eyebrow">OMNIDASH</span></div>
       <ol class="onboarding-stepper" aria-label="Setup progress"><li data-onboarding-indicator="0" aria-current="step"><span>1</span><small>Welcome</small></li><li data-onboarding-indicator="1"><span>2</span><small>Player</small></li><li data-onboarding-indicator="2"><span>3</span><small>Libraries</small></li></ol>
       <section class="onboarding-panel" data-onboarding-step="0">
         <div class="setup-heading"><h2>Welcome home.</h2><p>Let’s set up your place to play.</p></div>
@@ -505,13 +505,13 @@
       </div>
     </dialog>
 
-    <section id="importing-screen" class="importing-screen" role="status" aria-live="polite" aria-hidden="true" hidden><div class="importing-orbit" aria-hidden="true"><img src="assets/xbox.svg" alt="" /></div><span class="eyebrow">XBOX PREVIEW UI</span><h1>Getting things ready</h1><p id="importing-message">Finding the games on this PC…</p><div class="importing-progress"><span id="importing-fill"></span></div><div class="importing-progress-meta"><span>Preparing your library</span><strong id="importing-percent">0%</strong></div><div class="importing-dots" aria-hidden="true"><i></i><i></i><i></i></div></section>
+    <section id="importing-screen" class="importing-screen" role="status" aria-live="polite" aria-hidden="true" hidden><div class="importing-orbit" aria-hidden="true"><img src="assets/omnidash.svg" alt="" /></div><span class="eyebrow">OMNIDASH</span><h1>Getting things ready</h1><p id="importing-message">Finding the games on this PC…</p><div class="importing-progress"><span id="importing-fill"></span></div><div class="importing-progress-meta"><span>Preparing your library</span><strong id="importing-percent">0%</strong></div><div class="importing-dots" aria-hidden="true"><i></i><i></i><i></i></div></section>
     <input id="gamerpic-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
 
     <div id="launch-overlay" class="launch-overlay" hidden aria-live="assertive">
       <div id="launch-art" class="launch-art" aria-hidden="true"></div>
       <div class="launch-vignette" aria-hidden="true"></div>
-      <img class="launch-brand" src="assets/xbox.svg" alt="Xbox" />
+      <img class="launch-brand" src="assets/omnidash.svg" alt="OmniDash" />
       <div class="launch-copy"><strong id="launching-title">Launching…</strong><img id="launch-game-logo" class="launch-game-logo" alt="" hidden /><span id="launching-game" hidden></span></div>
       <div class="launch-progress" aria-hidden="true"><span></span></div>
       <div class="g-launch-status"><span class="g-launch-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong id="launch-status">Starting</strong><small id="launch-via"></small></div>
@@ -530,7 +530,7 @@
     <script src="console-search.js"></script>
     <script src="interface-audio.js"></script>
     <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"><button class="close-button focusable" data-action="install-close" aria-label="Close installation">×</button><div id="install-cover" class="install-cover"></div><div class="install-copy"><span class="eyebrow">STEAM INSTALLATION</span><h2 id="install-title">Preparing your game</h2><p id="install-status" role="status">Waiting for Steam…</p><progress id="install-progress" max="100" aria-label="Installation progress"></progress><p id="install-help">Confirm the installation in Steam. We’ll track the download here and let you know when it’s ready.</p><div class="install-actions"><button class="primary focusable" data-action="install-steam">Open Steam installation</button><button class="secondary focusable" data-action="install-close">Continue browsing</button></div></div></dialog>
-    <div id="startup-screen" class="startup-screen" aria-hidden="true" hidden><div class="startup-glow"></div><img src="assets/xbox.svg" alt="" /><span>XBOX PREVIEW UI</span><small>Unofficial fan project</small></div>
+    <div id="startup-screen" class="startup-screen" aria-hidden="true" hidden><div class="startup-glow"></div><img src="assets/omnidash.svg" alt="" /><span>OMNIDASH</span><small>Unofficial fan project</small></div>
     <script src="console-refinement.js"></script>
     <script src="player-profile.js"></script>
     <script src="../pc-gamerscore.cjs"></script>

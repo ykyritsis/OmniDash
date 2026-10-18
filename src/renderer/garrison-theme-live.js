@@ -65,7 +65,7 @@
     const me = document.querySelector('#g-series-me small');
     if (!me) return;
     const score = gamerscore();
-    me.innerHTML = score ? `<span class="g-me-g">G</span> ${escape(score)}` : 'Xbox Preview';
+    me.innerHTML = score ? `<span class="g-me-g">G</span> ${escape(score)}` : 'OmniDash';
   }
   const scoreNode = document.querySelector('#profile-score-value');
   if (scoreNode) new MutationObserver(syncScore).observe(scoreNode, { childList: true, characterData: true, subtree: true });

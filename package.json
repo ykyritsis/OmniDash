@@ -2,7 +2,7 @@
   "name": "xbox-preview-ui",
   "version": "0.6.0",
   "private": true,
-  "description": "A controller-first Windows game launcher inspired by the Xbox console dashboard.",
+  "description": "OmniDash — a controller-first Windows game launcher with console-inspired themes.",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
@@ -29,7 +29,7 @@
   },
   "build": {
     "appId": "com.nebula.pclauncher",
-    "productName": "Xbox Preview UI",
+    "productName": "OmniDash",
     "asarUnpack": ["src/xbox-mode-bridge/**"],
     "extraResources": [{ "from": ".packaging-staging/streamlight", "to": "streamlight", "filter": ["**/*"] }],
     "files": [
@@ -41,10 +41,10 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.png",
-      "artifactName": "Xbox-Preview-UI-Setup-${version}.${ext}"
+      "artifactName": "OmniDash-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "Xbox-Preview-UI-Portable-${version}.${ext}"
+      "artifactName": "OmniDash-Portable-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

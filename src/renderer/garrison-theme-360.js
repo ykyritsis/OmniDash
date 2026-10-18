@@ -34,7 +34,7 @@
     if (!event.target.closest('.g-360-pic')) return;
     const name = state.displayName || document.querySelector('#dashboard-player-name')?.textContent || 'Player';
     const score = (document.querySelector('#profile-score-value')?.textContent || '0').replace(/[^\d,]/g, '') || '0';
-    card.innerHTML = `<span class="pic">${document.querySelector('#profile-avatar')?.innerHTML || ''}</span><strong>${esc(name)}</strong><span>${esc(score)} G</span><span class="stars">★★★★★</span><span>Online · Xbox Preview UI</span>`;
+    card.innerHTML = `<span class="pic">${document.querySelector('#profile-avatar')?.innerHTML || ''}</span><strong>${esc(name)}</strong><span>${esc(score)} G</span><span class="stars">★★★★★</span><span>Online · OmniDash</span>`;
     card.classList.toggle('on');
     try { interfaceAudio.play(card.classList.contains('on') ? 'confirm' : 'back'); } catch { /* Optional. */ }
   });

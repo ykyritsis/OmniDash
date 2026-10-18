@@ -566,7 +566,7 @@ function renderOnboarding(focus = true) {
   const avatar = gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
   stage.dataset.step = String(step);
   stage.innerHTML = step === 0
-    ? `<div class="g-onboard-hero"><img class="g-onboard-logo" src="assets/xbox.svg" alt="" /><h1>Welcome</h1><p>All your PC games, from every launcher, in one Xbox home.</p><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Get started</button></div>${gOnboardDots(0)}`
+    ? `<div class="g-onboard-hero"><img class="g-onboard-logo" src="assets/omnidash.svg" alt="" /><h1>Welcome</h1><p>All your PC games, from every launcher, in one home.</p><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Get started</button></div>${gOnboardDots(0)}`
     : step === 1
       ? `<div class="g-onboard-panel"><h1>Is this you?</h1><p>${gOnboard.identity?.name ? 'We found your Steam account on this PC.' : 'Choose how you appear on this PC. You can change it any time.'}</p><div class="g-onboard-player"><span class="g-onboard-avatar">${avatar}</span><strong>${escapeHtml(name)}</strong></div><div class="g-onboard-actions"><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Continue as ${escapeHtml(name)}</button><button class="g-onboard-secondary focusable" type="button" data-action="g-onboard-rename">Use another name</button></div></div>${gOnboardDots(1)}`
       : step === 2
@@ -1585,7 +1585,7 @@ const gSettingsPages = [
   fullscreen.closest('label').hidden = true;
   appearance.querySelector('.g-setting-group').after(document.querySelector('#ui-scale').closest('label'));
   document.querySelector('.settings-help-card')?.remove();
-  appearance.insertAdjacentHTML('beforeend', `<section class="g-setting-group" id="g-xbox-mode"><h3>Xbox mode</h3><p class="g-setting-note">Make Xbox Preview UI your home app in Windows Xbox mode, so it opens full screen when your PC starts in Xbox mode.</p><div class="g-setting-list" id="g-xbox-mode-rows">${gAction('g-xbox-mode-refresh', 'Checking Xbox mode…', '')}</div></section>`);
+  appearance.insertAdjacentHTML('beforeend', `<section class="g-setting-group" id="g-xbox-mode"><h3>Xbox mode</h3><p class="g-setting-note">Make OmniDash your home app in Windows Xbox mode, so it opens full screen when your PC starts in Xbox mode.</p><div class="g-setting-list" id="g-xbox-mode-rows">${gAction('g-xbox-mode-refresh', 'Checking Xbox mode…', '')}</div></section>`);
   const syncModes = () => appearance.querySelectorAll('.g-mode-card').forEach(card => card.classList.toggle('active', (card.dataset.mode === 'full') === fullscreen.checked));
   fullscreen.addEventListener('change', syncModes);
   settingsDialog.addEventListener('toggle', syncModes);
@@ -1619,9 +1619,9 @@ async function renderXboxModeSettings() {
   rows.innerHTML = !status.supported
     ? `<div class="g-setting-row g-setting-info"><span><strong>Xbox mode isn't available</strong><small>Xbox mode needs Windows 11 24H2 or later.</small></span></div>`
     : status.registered
-      ? `${gAction('g-xbox-mode-open', 'Choose Xbox Preview UI as your home app', 'Windows Settings → Gaming → Xbox mode → Choose home app.', gIcon('open', 'g-trailing'))}${gAction('g-xbox-mode-remove', 'Remove from Xbox mode', 'Switch your home app back to Xbox first.', gIcon('delete', 'g-trailing'))}`
+      ? `${gAction('g-xbox-mode-open', 'Choose OmniDash as your home app', 'Windows Settings → Gaming → Xbox mode → Choose home app.', gIcon('open', 'g-trailing'))}${gAction('g-xbox-mode-remove', 'Remove from Xbox mode', 'Switch your home app back to Xbox first.', gIcon('delete', 'g-trailing'))}`
       : status.developerMode
-        ? gAction('g-xbox-mode-add', 'Add to Xbox mode', 'Adds Xbox Preview UI to the Windows home app list. No restart needed.', gIcon('add', 'g-trailing'))
+        ? gAction('g-xbox-mode-add', 'Add to Xbox mode', 'Adds OmniDash to the Windows home app list. No restart needed.', gIcon('add', 'g-trailing'))
         : `${gAction('g-xbox-mode-dev', 'Turn on Developer Mode', 'Windows only lists home apps outside the Microsoft Store when Developer Mode is on.', gIcon('open', 'g-trailing'))}${gAction('g-xbox-mode-refresh', 'Check again', '', gIcon('refresh', 'g-trailing'))}`;
   refreshFocusables();
 }
