@@ -1,4 +1,4 @@
-﻿/* Console-native account overlays (PS3 XMB options, PS4 Quick Menu, Wii HOME Menu). These replace the shared
+/* Console-native account overlays (PS3 XMB options, PS4 Quick Menu, Wii HOME Menu). These replace the shared
    Garrison account flyout on the three 2013-era shells. Sizes are 1080p console pixels through --cpx, like the
    rest of the console themes; every panel is a real control, not a picture. */
 
@@ -228,3 +228,8 @@ body[data-g-theme="wii"] #power-dialog .power-confirm-actions :is(.primary, .sec
 /* The old onboarding logo was a white Xbox sphere and used brightness(10); the OmniDash tile is already a
    dark rounded mark, so just give it a soft console glow instead of washing it out. */
 .g-onboard-logo { filter: drop-shadow(0 0 calc(1.4 * var(--p)) rgba(120, 230, 220, .38)) !important; }
+/* The eight-theme picker makes the Welcome step taller than a 1080p dialog; tighten it so Get started stays
+   on screen rather than relying on a scroll. */
+.g-onboard-hero { gap: calc(1 * var(--p)) !important; }
+.g-theme-onboard { width: min(960px, 88vw) !important; margin: calc(1.4 * var(--p)) auto calc(1.6 * var(--p)) !important; }
+.g-theme-onboard .g-theme-picker { gap: calc(1 * var(--p)) !important; margin-top: calc(1 * var(--p)) !important; }
