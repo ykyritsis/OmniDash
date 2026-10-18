@@ -1,5 +1,28 @@
 # Handover: console themes (0.6.0 work in progress)
 
+> **2026-10-19, Claude: polish and bug-fix pass** (commits `9f4087d`, then the Wii drift commit; installed
+> as test39). Fixed:
+> - PS5 library layout
+> - 360 hints on game pages
+> - PS3/PS4 toast positions
+> - XMB settings overlap
+> - options-menu anchoring
+> - Wii/3DS Store and launch text
+> - launch flash lifting after 2.2 s
+> - Xbox boot layout
+> - 3DS gamepad poll gating
+> - Wii art drift composited
+>
+> Harness: `shell`, `shD/U/R/A/B` steps drive the console Settings shell without closing it. Measured: no DOM or
+> heap growth over 40 theme switches, about 0% JS when blurred, and no errors in an 80-step navigation fuzz per
+> theme.
+>
+> Still open:
+> - PS3 game icons are square 74 px covers; the console's ICON0 is wide 320:176. This is the main cause of
+>   "PS3 too small" (NEXT-LEVEL-PLAN X1).
+> - The Wii balloon covers part of the row below.
+> - The PS5 cards blur the drifting background (cheap, but it's per-frame work).
+
 > **2026-10-18, Claude: the work queue is now `docs/NEXT-LEVEL-PLAN.md`** (parity review, settings registry,
 > per-console specs, rename and GitHub relaunch, ordered prompts). Start with its Phase 1 (real settings).
 > Correction to the art rule below: **PS3 game icons are wide ICON0 (320:176)**, not square slots.
