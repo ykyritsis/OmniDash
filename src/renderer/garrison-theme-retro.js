@@ -25,6 +25,10 @@
   const weekday = () => now().toLocaleDateString([], { weekday: 'short' });
   const focusEl = el => { if (el) setFocusedElement(el, { scroll: false }); };
   const findGame = id => (state.games || []).find(item => item.id === id);
+  // The one motion table (garrison-theme-motion.js). Every timer that used to hold a hand-typed millisecond
+  // value reads the console's own duration instead, so a theme change cannot leave the CSS and JS out of step.
+  const motionMs = (which = 'page') => window.gMotion?.ms?.(which) || 200;
+  const swapMs = () => motionMs('page') + 60;
 
   // ---------- Packs ----------
   let pack = { available: {}, base: '', sounds: {}, music: {} };
@@ -193,7 +197,7 @@
       if (!reducedMotion()) {
         list.classList.remove('xmb-swap'); void list.offsetWidth; list.classList.add('xmb-swap');
         clearTimeout(xmbSwapTimer);
-        xmbSwapTimer = setTimeout(() => list.classList.remove('xmb-swap'), 420);
+        xmbSwapTimer = setTimeout(() => list.classList.remove('xmb-swap'), swapMs());
       }
     }
     [...list.children].forEach((el, i) => {
@@ -807,7 +811,7 @@
       const under = host.querySelector('.ps4-under');
       under.classList.remove('ps4-swap'); void under.offsetWidth; under.classList.add('ps4-swap');
       clearTimeout(ps4SwapTimer);
-      ps4SwapTimer = setTimeout(() => under.classList.remove('ps4-swap'), 420);
+      ps4SwapTimer = setTimeout(() => under.classList.remove('ps4-swap'), swapMs());
     }
     ps4LastUnder = ps4Focus;
     host.querySelector('.ps4-hints').innerHTML = `<span><i class="ps4-x"></i>Enter</span>${sel.game ? '<span><i class="ps4-opt">OPTIONS</i></span>' : ''}`;
@@ -2418,7 +2422,7 @@
         void document.body.offsetWidth;
         document.body.classList.add('retro-enter');
         clearTimeout(enterTimer);
-        enterTimer = setTimeout(() => document.body.classList.remove('retro-enter'), 1100);
+        enterTimer = setTimeout(() => document.body.classList.remove('retro-enter'), motionMs('fade') + 500);
       }
     }
     try {

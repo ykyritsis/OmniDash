@@ -27,7 +27,7 @@ body.garrison[data-g-theme="series"] #g-theme-wall, body.garrison[data-g-theme="
 body.garrison[data-g-theme="series"] .g-swirl-ribbons { transform-origin: 50% 80%; animation: g-swirl 38s ease-in-out infinite alternate; }
 @keyframes g-swirl { from { transform: translate(-2%, 0) scale(1.02); } to { transform: translate(2%, -2%) scale(1.06) rotate(-1deg); } }
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer {
-  visibility: visible !important; z-index: 0; background-size: cover !important; background-position: center 30% !important; transition: opacity .7s ease !important;
+  visibility: visible !important; z-index: 0; background-size: cover !important; background-position: center 30% !important; transition: opacity var(--m-fade) var(--m-ease) !important;
   /* The game's art owns the middle of the screen, but it falls away at the edges so the green swirl is never lost. */
   -webkit-mask-image: radial-gradient(ellipse 80% 76% at 50% 38%, #000 30%, rgba(0, 0, 0, .9) 52%, rgba(0, 0, 0, .34) 78%, transparent 100%);
   mask-image: radial-gradient(ellipse 80% 76% at 50% 38%, #000 30%, rgba(0, 0, 0, .9) 52%, rgba(0, 0, 0, .34) 78%, transparent 100%);
@@ -50,7 +50,7 @@ body.garrison[data-g-theme="series"] .top-center-nav { gap: calc(42 * var(--cpx)
 body.garrison[data-g-theme="series"] .top-center-nav .g-360-only { display: none !important; }
 body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) {
   position: relative; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); border-radius: 50%; background: rgba(8, 12, 8, .34) !important;
-  transition: background-color .18s ease, box-shadow .18s ease, transform .22s cubic-bezier(.34, 1.56, .64, 1) !important;
+  transition: background-color var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-spring) !important;
 }
 body.garrison[data-g-theme="series"] :is(.top-nav-button, .g-icon-button) > svg { width: calc(29 * var(--cpx)); height: calc(29 * var(--cpx)); }
 body.garrison[data-g-theme="series"] .top-nav-button .gamepass-glyph { width: calc(38 * var(--cpx)); height: calc(25 * var(--cpx)); border-width: calc(2 * var(--cpx)); border-radius: calc(4 * var(--cpx)); font-size: calc(8 * var(--cpx)); transform: none; }
@@ -66,7 +66,7 @@ body.garrison[data-g-theme="series"] .topbar #profile-button { display: none !im
 body.garrison[data-g-theme="series"] #g-series-me {
   display: flex; align-items: center; gap: calc(13 * var(--cpx)); margin-right: calc(22 * var(--cpx)); padding: calc(4 * var(--cpx)) calc(18 * var(--cpx)) calc(4 * var(--cpx)) calc(4 * var(--cpx));
   border: 0; border-radius: calc(34 * var(--cpx)); background: rgba(8, 12, 8, .3); color: #fff; text-align: left;
-  transition: background-color .18s ease, box-shadow .18s ease !important;
+  transition: background-color var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease) !important;
 }
 body.garrison[data-g-theme="series"] #g-series-me:hover { background: rgba(255, 255, 255, .1); }
 body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar { display: grid; place-items: center; width: calc(60 * var(--cpx)); height: calc(60 * var(--cpx)); overflow: hidden; border-radius: 50%; background: #2a2b2b; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .25); }
@@ -94,7 +94,7 @@ body.garrison[data-g-theme="series"] #recent-row > :is(.game-card, .g-library-ti
 body.garrison[data-g-theme="series"] #recent-row:not(.row-focused) > :is(.game-card, .g-library-tile) {
   flex: 0 0 var(--s-tile); width: var(--s-tile); height: auto; aspect-ratio: 5 / 3; min-width: 0; border-radius: var(--tile-radius);
   background: rgba(255, 255, 255, .07); box-shadow: 0 calc(6 * var(--cpx)) calc(20 * var(--cpx)) rgba(0, 0, 0, .32);
-  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .22s ease, filter .22s ease !important;
+  transition: transform var(--m-dur) var(--m-spring), box-shadow var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease) !important;
 }
 body.garrison[data-g-theme="series"] #recent-row > .game-card > :is(img, .art-fallback) {
   width: 100%; height: 100%; border-radius: var(--tile-radius); overflow: hidden;
@@ -129,7 +129,7 @@ body.garrison[data-g-theme="series"] .g-series-card {
   position: relative; width: 100%; height: calc(168 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: calc(6 * var(--cpx));
   background: var(--g-card-art, linear-gradient(135deg, #1b5e1b, #0d2b0d)) center / cover no-repeat; color: #fff; text-align: left; cursor: pointer;
   box-shadow: 0 calc(8 * var(--cpx)) calc(24 * var(--cpx)) rgba(0, 0, 0, .35);
-  transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease !important;
+  transition: transform var(--m-dur) var(--m-spring), box-shadow var(--m-dur) var(--m-ease) !important;
 }
 body.garrison[data-g-theme="series"] .g-series-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 55%); }
 body.garrison[data-g-theme="series"] .g-series-card[data-action="dashboard-gamepass"] { background: radial-gradient(circle at 80% 20%, #46c946, #107c10 45%, #0a3f0a); }
@@ -147,7 +147,7 @@ body.garrison[data-g-theme="series"] .g-series-card small { font: 400 calc(17 * 
 }
 body.garrison[data-g-theme="series"] .g-series-card:is(.focused, :focus, :focus-visible) { box-shadow: var(--g-ring) !important; transform: scale(1.035); z-index: 2; }
 /* A quiet rise for the whole lower stack when Home arrives. */
-body.garrison[data-g-theme="series"] #home-view:not([hidden]) .dashboard-recent { animation: g-series-enter .55s cubic-bezier(.2, .8, .2, 1) both; }
+body.garrison[data-g-theme="series"] #home-view:not([hidden]) .dashboard-recent { animation: g-series-enter var(--m-dur) var(--m-ease) both; }
 @keyframes g-series-enter { from { opacity: 0; transform: translateY(calc(26 * var(--cpx))); } to { opacity: 1; transform: none; } }
 /* The rows further down keep the same tile language. */
 body.garrison[data-g-theme="series"] :is(.collection-band, #g-home-rows > *) { background: transparent; }
@@ -198,7 +198,7 @@ body.garrison[data-g-theme="series"] .library-grid, body.garrison[data-g-theme="
 }
 body.garrison[data-g-theme="series"] .library-grid .game-card .g-card-text { display: none !important; }
 body.garrison[data-g-theme="series"] .library-grid .game-card > :is(img, .art-fallback) { border-radius: var(--tile-radius); }
-body.garrison[data-g-theme="series"] .library-grid .game-card { transition: transform .12s ease !important; }
+body.garrison[data-g-theme="series"] .library-grid .game-card { transition: transform var(--m-dur-fast) var(--m-ease) !important; }
 body.garrison[data-g-theme="series"] .library-grid .game-card.focused { transform: scale(1.06) !important; z-index: 2; }
 body.garrison[data-g-theme="series"] .library-grid.apps-grid .app-list-icon { border-radius: var(--tile-radius); background: #2a2b2b; }
 
@@ -227,12 +227,12 @@ body.garrison[data-g-theme="series"] #game-options-dialog :is(.options-tabs butt
 body.garrison[data-g-theme="series"] #launch-overlay #launch-art { filter: blur(42px) brightness(.42) saturate(1.2) !important; transform: scale(1.18) !important; }
 body.garrison[data-g-theme="series"] #launch-overlay .g-theme-cover {
   width: calc(400 * var(--cpx)); border-radius: calc(6 * var(--cpx)); box-shadow: 0 calc(24 * var(--cpx)) calc(60 * var(--cpx)) rgba(0, 0, 0, .6);
-  animation: g-series-cover .5s cubic-bezier(.2, .8, .2, 1) both;
+  animation: g-series-cover var(--m-dur) var(--m-ease) both;
 }
 @keyframes g-series-cover { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
 body.garrison[data-g-theme="series"] #launch-overlay .g-launch-ring {
   left: 50%; top: calc(50% + 250 * var(--cpx)); right: auto; bottom: auto; width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); margin-left: calc(-20 * var(--cpx));
-  border: calc(4 * var(--cpx)) solid rgba(255, 255, 255, .18); border-top-color: #fff; border-radius: 50%; animation: g-series-spin .9s linear infinite;
+  border: calc(4 * var(--cpx)) solid rgba(255, 255, 255, .18); border-top-color: #fff; border-radius: 50%; animation: g-series-spin var(--m-fade) linear infinite;
 }
 @keyframes g-series-spin { to { transform: rotate(360deg); } }
 body.garrison[data-g-theme="series"] #startup-screen { background: #000; }
@@ -245,9 +245,7 @@ body[data-g-theme="series"] #g-theme-saver .g-saver-drift { display: none; }
 body[data-g-theme="series"]:has(#g-theme-saver.on) :is(main, .topbar) { opacity: 0; transition: opacity 1.2s ease; }
 body[data-g-theme="series"]:has(#g-theme-saver.on) #g-theme-wall { z-index: 79; }
 
-/* ---------- Motion ---------- */
-body.garrison[data-g-theme="series"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-series-page .32s cubic-bezier(.2, .8, .2, 1) both; }
-@keyframes g-series-page { from { opacity: 0; transform: translateY(calc(16 * var(--cpx))); } to { opacity: 1; transform: none; } }
+/* ---------- Motion: page transitions are driven by garrison-theme-motion.js (task M1) ---------- */
 body.garrison[data-g-theme="series"] .g-series-card > span, body.garrison[data-g-theme="series"] .g-series-card > span > * { text-align: left; }
 body.garrison[data-g-theme="series"] .g-library-toolbar .g-sort-pill :is(span, select, button, strong) { font-size: inherit; }
 
@@ -256,7 +254,7 @@ body.garrison[data-g-theme="series"] .g-library-toolbar .g-sort-pill :is(span, s
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { animation: g-series-drift 26s ease-in-out infinite alternate; }
 @keyframes g-series-drift { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.1) translate(-1.6%, -1%); } }
 /* Focus springs with a short overshoot, like the dashboard tiles. */
-body.garrison[data-g-theme="series"] :is(#recent-row > .game-card, .library-grid .game-card, .g-series-card, .collection-band .game-card) { transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s ease !important; }
+body.garrison[data-g-theme="series"] :is(#recent-row > .game-card, .library-grid .game-card, .g-series-card, .collection-band .game-card) { transition: transform var(--m-dur) var(--m-spring), box-shadow var(--m-dur) var(--m-ease) !important; }
 /* Your Gamerscore under your name. */
 body.garrison[data-g-theme="series"] #g-series-me .g-me-g {
   display: inline-grid; place-items: center; width: calc(17 * var(--cpx)); height: calc(17 * var(--cpx)); margin-right: calc(2 * var(--cpx)); border-radius: 50%;
@@ -266,9 +264,9 @@ body.garrison[data-g-theme="series"] #g-series-me .g-me-g {
 body.garrison[data-g-theme="series"] #launch-overlay.g-has-logo #launch-art { filter: brightness(.62) saturate(1.1) !important; transform: scale(1.04) !important; }
 body.garrison[data-g-theme="series"] #launch-overlay.g-has-logo .g-launch-ring { top: auto; bottom: calc(110 * var(--cpx)); }
 /* Notifications: the green circle arrives first, then opens into the pill. */
-body.garrison[data-g-theme="series"] #toast.g-toast-in { animation: g-series-toast .62s cubic-bezier(.2, .8, .2, 1) both; }
-body.garrison[data-g-theme="series"] #toast.g-toast-in > * { animation: g-toast-text .5s .28s both; }
-body.garrison[data-g-theme="series"] #toast.g-toast-in::before { animation: g-series-badge .4s cubic-bezier(.34, 1.56, .64, 1) both; }
+body.garrison[data-g-theme="series"] #toast.g-toast-in { animation: g-series-toast var(--m-dur) var(--m-ease) both; }
+body.garrison[data-g-theme="series"] #toast.g-toast-in > * { animation: g-toast-text var(--m-dur) .28s both; }
+body.garrison[data-g-theme="series"] #toast.g-toast-in::before { animation: g-series-badge var(--m-dur) var(--m-spring) both; }
 @keyframes g-series-toast {
   0%, 35% { clip-path: inset(0 calc(100% - 64 * var(--cpx)) 0 0 round calc(34 * var(--cpx))); }
   100% { clip-path: inset(0 0 0 0 round calc(34 * var(--cpx))); }
@@ -282,7 +280,7 @@ body.garrison[data-g-theme="series"] #g-store-hero strong { font-weight: 600; }
 body.garrison[data-g-theme="series"] .console-store-tabs button { height: calc(46 * var(--cpx)); padding: 0 calc(22 * var(--cpx)); border-radius: calc(23 * var(--cpx)); font: 600 calc(18 * var(--cpx))/1 var(--g-font); }
 body.garrison[data-g-theme="series"] .console-store-tabs button.active { background: #107c10 !important; color: #fff; }
 body.garrison[data-g-theme="series"] .g-store-card .g-store-art img { border-radius: calc(4 * var(--cpx)); }
-body.garrison[data-g-theme="series"] .g-store-card { transition: transform .28s cubic-bezier(.34, 1.56, .64, 1) !important; }
+body.garrison[data-g-theme="series"] .g-store-card { transition: transform var(--m-dur) var(--m-spring) !important; }
 body.garrison[data-g-theme="series"] .g-store-card.focused { transform: scale(1.05); z-index: 2; }
 /* Every page but Home and the full-bleed game page starts below the bar. */
 body.garrison[data-g-theme="series"]:not(.home-active):not(.detail-active):not(.library-active) main { padding-top: calc(160 * var(--cpx)); }

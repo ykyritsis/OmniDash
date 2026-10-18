@@ -58,7 +58,7 @@ body.garrison[data-g-theme="one"] #g-one-clock {
 }
 body.garrison[data-g-theme="one"]:not(.home-active) #g-one-clock { display: none !important; }
 body.garrison[data-g-theme="one"] .top-center-nav { position: absolute; left: var(--g-gutter); top: calc(92 * var(--cpx)); transform: none; gap: calc(54 * var(--cpx)); }
-body.garrison[data-g-theme="one"] .top-nav-button { width: auto; height: auto; padding: calc(2 * var(--cpx)) 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .32); transition: color .18s ease, transform .24s cubic-bezier(.2, .8, .2, 1) !important; }
+body.garrison[data-g-theme="one"] .top-nav-button { width: auto; height: auto; padding: calc(2 * var(--cpx)) 0; background: transparent !important; box-shadow: none !important; color: rgba(255, 255, 255, .32); transition: color var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease) !important; }
 body.garrison[data-g-theme="one"] .top-nav-button > :is(svg, .gamepass-glyph, span) { display: none; }
 body.garrison[data-g-theme="one"] .top-nav-button::after {
   content: attr(data-g-label); display: block !important; position: static; transform: none; opacity: 1; padding: 0; background: none; color: inherit;
@@ -82,7 +82,7 @@ body.garrison[data-g-theme="one"] #g-one-pins { display: grid; flex: none; grid-
 body.garrison[data-g-theme="one"] .g-one-pin {
   position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: calc(12 * var(--cpx)); border: 0;
   background: #107c10; color: #fff; text-align: left; font: 400 calc(19 * var(--cpx))/1.15 var(--g-font); cursor: pointer;
-  transition: filter .18s ease, box-shadow .18s ease !important;
+  transition: filter var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease) !important;
 }
 body.garrison[data-g-theme="one"] .g-one-pin.wide { grid-column: span 1; background: #1a8c1a; }
 body.garrison[data-g-theme="one"] .g-one-pin.blue { background: #1a8ad4; }
@@ -216,17 +216,15 @@ body.garrison[data-g-theme="one"] #startup-screen { background: #000; }
 body.garrison[data-g-theme="one"] #startup-screen :is(.g-boot-bloom, .g-boot-ring) { display: none; }
 body.garrison[data-g-theme="one"] #startup-screen .g-boot-mark { width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); }
 body.garrison[data-g-theme="one"] #startup-screen .g-boot-mark img { filter: brightness(10) drop-shadow(0 0 26px rgba(16, 200, 16, .75)); }
-body.garrison[data-g-theme="one"] #startup-screen::after {
+body.garrison[data-g-theme="one"] #startup-screen:not(.g-m-booting)::after {
   content: "XBOX"; position: absolute; top: calc(50% + 120 * var(--cpx)); left: 50%; transform: translateX(-50%); padding-left: .32em; color: #fff; letter-spacing: .32em;
-  font: 300 calc(36 * var(--cpx))/1 var(--g-display); animation: g-boot-word .6s .9s both; opacity: 0;
+  font: 300 calc(36 * var(--cpx))/1 var(--g-display); animation: g-boot-word var(--m-dur) .9s both; opacity: 0;
 }
 body.garrison[data-g-theme="one"] #toast { background-color: #1b1b1b !important; border: 0 !important; font-family: var(--g-display); font-weight: 300; }
 
-/* ---------- Motion: Metro turnstile ---------- */
-body.garrison[data-g-theme="one"] :is(#home-view, #library-view, #game-detail-view, #store-view):not([hidden]) { animation: g-one-page .42s cubic-bezier(.1, .9, .2, 1) both; transform-origin: 0 50%; }
-@keyframes g-one-page { from { opacity: 0; transform: perspective(1600px) translateX(calc(80 * var(--cpx))) rotateY(-14deg); } to { opacity: 1; transform: none; } }
+/* ---------- Motion: Metro turnstile; page transitions are driven by garrison-theme-motion.js (task M1) ---------- */
 body.garrison[data-g-theme="one"] #home-view:not([hidden]) :is(.g-one-pin, #recent-row > .game-card, .g-one-spot),
-body.garrison[data-g-theme="one"] #library-view:not([hidden]) .library-grid > .game-card { animation: g-one-tile .5s cubic-bezier(.1, .9, .2, 1) both; transform-origin: 0 50%; }
+body.garrison[data-g-theme="one"] #library-view:not([hidden]) .library-grid > .game-card { animation: g-one-tile var(--m-dur) var(--m-ease) both; transform-origin: 0 50%; }
 @keyframes g-one-tile { from { opacity: 0; transform: perspective(900px) rotateY(-70deg); } to { opacity: 1; transform: none; } }
 body.garrison[data-g-theme="one"] #home-view:not([hidden]) :is(.g-one-pin:nth-child(3n+2), #recent-row > .game-card:nth-child(2), #recent-row > .game-card:nth-child(3)) { animation-delay: .05s; }
 body.garrison[data-g-theme="one"] #home-view:not([hidden]) :is(.g-one-pin:nth-child(3n), #recent-row > .game-card:nth-child(4), #recent-row > .game-card:nth-child(5)) { animation-delay: .1s; }
@@ -245,10 +243,10 @@ body.garrison[data-g-theme="one"] .g-one-spot .g-glyph { position: absolute; top
 /* ---------- Life ---------- */
 /* Live tiles: the face slides up and the live content follows from below, then it all slides back. */
 body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot) { overflow: hidden; }
-body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot) > :not(.g-live) { transition: transform .55s cubic-bezier(.1, .9, .2, 1), opacity .3s ease; }
+body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot) > :not(.g-live) { transition: transform var(--m-fade) var(--m-ease), opacity var(--m-dur) var(--m-ease); }
 body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot) > .g-live {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: calc(12 * var(--cpx)); transform: translateY(100%);
-  transition: transform .55s cubic-bezier(.1, .9, .2, 1); background: inherit; color: #fff; text-align: left; pointer-events: none;
+  transition: transform var(--m-fade) var(--m-ease); background: inherit; color: #fff; text-align: left; pointer-events: none;
 }
 body.garrison[data-g-theme="one"] .g-live-on > :not(.g-live) { transform: translateY(-100%); opacity: 0; }
 body.garrison[data-g-theme="one"] .g-live-on > .g-live { transform: none; }
@@ -274,8 +272,8 @@ body.garrison[data-g-theme="one"] .topbar #profile-button { display: none !impor
 /* The launch splash: the game's colour with its logo. */
 body.garrison[data-g-theme="one"] #launch-overlay.g-has-logo .g-theme-logo:not([hidden]) { max-width: calc(560 * var(--cpx)); max-height: calc(240 * var(--cpx)); }
 /* Notifications slide up as a flat black bar, the green tab first. */
-body.garrison[data-g-theme="one"] #toast.g-toast-in { animation: g-one-toast .45s cubic-bezier(.1, .9, .2, 1) both; }
-body.garrison[data-g-theme="one"] #toast.g-toast-in > * { animation: g-toast-text .4s .18s both; }
+body.garrison[data-g-theme="one"] #toast.g-toast-in { animation: g-one-toast var(--m-dur) var(--m-ease) both; }
+body.garrison[data-g-theme="one"] #toast.g-toast-in > * { animation: g-toast-text var(--m-dur) .18s both; }
 @keyframes g-one-toast {
   from { clip-path: inset(0 calc(100% - 64 * var(--cpx)) 0 0); transform: translate(-50%, calc(30 * var(--cpx))); }
   to { clip-path: inset(0); transform: translate(-50%, 0); }
@@ -291,7 +289,7 @@ body.garrison[data-g-theme="one"] .g-store-card { position: relative; }
 body.garrison[data-g-theme="one"] .g-store-card .g-card-text strong { font-weight: 400; }
 /* Dashboard-theme pictures were made for the 360 layout: on One their top is shaded so the headings stay clear. */
 body.garrison[data-g-theme="one"][data-g-bg] #g-theme-wall .g-wall-image::after { background: linear-gradient(180deg, rgba(3, 6, 12, .82) 0, rgba(3, 6, 12, .55) 22%, rgba(0, 0, 0, .05) 45%, rgba(0, 0, 0, .3)); }
-body.garrison[data-g-theme="one"] .g-one-spot.big { transition: transform .28s ease-in, opacity .28s ease-in; }
+body.garrison[data-g-theme="one"] .g-one-spot.big { transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); }
 body.garrison[data-g-theme="one"] .g-one-spot.big.g-spot-turn { transform: perspective(900px) rotateX(70deg); opacity: 0; }
 /* Reduced motion: no turns, no spring, no drift. */
 html.reduce-motion body.garrison[data-g-theme="one"] :is(.g-one-pin, .g-one-spot, .g-pivot, #recent-row > .game-card, #g-one-clock) { animation: none !important; transition: none !important; }

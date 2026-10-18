@@ -51,32 +51,32 @@ body[data-g-theme="ps3"] #g-theme-wall {
     radial-gradient(ellipse 85% 75% at 106% 108%, rgba(0, 0, 0, .34) 0%, transparent 66%),
     linear-gradient(168deg, color-mix(in srgb, var(--xmb-tint) 78%, #fff 22%) 0%, var(--xmb-tint) 44%, color-mix(in srgb, var(--xmb-tint) 64%, #000) 100%);
 }
-#g-retro .xmb-pic { position: absolute; inset: 0; background: center 28% / cover no-repeat; opacity: 0; transition: opacity .9s ease; pointer-events: none; }
+#g-retro .xmb-pic { position: absolute; inset: 0; background: center 28% / cover no-repeat; opacity: 0; transition: opacity var(--m-fade) var(--m-ease); pointer-events: none; }
 #g-retro .xmb-pic::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .58), rgba(0, 0, 0, .42) 42%, rgba(0, 0, 0, .62)); }
 #g-retro.pic-on .xmb-pic { opacity: .58; }
 #g-retro .xmb-wave { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #g-retro .xmb-bar { position: absolute; inset: 0; pointer-events: none; }
-#g-retro .xmb-cat { position: absolute; left: 0; top: calc(292 * var(--cpx)); display: grid; justify-items: center; width: calc(156 * var(--cpx)); height: calc(94 * var(--cpx)); transform: translate(calc(var(--x) * var(--cpx)), 0) translate(-50%, -50%); opacity: .48; transition: transform .3s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
-#g-retro .xmb-cat > :is(img, .g-glyph, .g-mdl2) { width: calc(128 * var(--cpx)); height: calc(90 * var(--cpx)); object-fit: contain; color: #fff; filter: drop-shadow(0 0 calc(4 * var(--cpx)) rgba(0, 0, 0, .45)); transition: transform .34s cubic-bezier(.34, 1.45, .64, 1), filter .3s ease; }
-#g-retro .xmb-cat b { position: absolute; top: calc(100% + 6 * var(--cpx)); white-space: nowrap; font: 400 calc(32 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 1px calc(7 * var(--cpx)) rgba(0, 0, 0, .65); transition: opacity .24s ease; }
+#g-retro .xmb-cat { position: absolute; left: 0; top: calc(292 * var(--cpx)); display: grid; justify-items: center; width: calc(156 * var(--cpx)); height: calc(94 * var(--cpx)); transform: translate(calc(var(--x) * var(--cpx)), 0) translate(-50%, -50%); opacity: .48; transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); will-change: transform; }
+#g-retro .xmb-cat > :is(img, .g-glyph, .g-mdl2) { width: calc(128 * var(--cpx)); height: calc(90 * var(--cpx)); object-fit: contain; color: #fff; filter: drop-shadow(0 0 calc(4 * var(--cpx)) rgba(0, 0, 0, .45)); transition: transform var(--m-dur) var(--m-spring), filter var(--m-dur) var(--m-ease); }
+#g-retro .xmb-cat b { position: absolute; top: calc(100% + 6 * var(--cpx)); white-space: nowrap; font: 400 calc(32 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 1px calc(7 * var(--cpx)) rgba(0, 0, 0, .65); transition: opacity var(--m-dur) var(--m-ease); }
 #g-retro .xmb-cat.on { opacity: 1; }
 #g-retro .xmb-cat.on > :is(img, .g-glyph, .g-mdl2) { transform: scale(1.07); filter: drop-shadow(0 0 calc(8 * var(--cpx)) rgba(255, 255, 255, .48)); }
 #g-retro .xmb-cat.on b { opacity: 1; }
 #g-retro .xmb-list { position: absolute; inset: 0; pointer-events: none; }
 #g-retro .xmb-item {
   position: absolute; left: calc(560 * var(--cpx)); top: 0; display: block; width: 0; height: 0; padding: 0; border: 0;
-  background: none; color: #fff; text-align: left; transform: translateY(calc(var(--y) * var(--cpx))); transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; cursor: pointer; white-space: nowrap; pointer-events: auto; will-change: transform;
+  background: none; color: #fff; text-align: left; transform: translateY(calc(var(--y) * var(--cpx))); transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); cursor: pointer; white-space: nowrap; pointer-events: auto; will-change: transform;
 }
 #g-retro .xmb-item.above { opacity: .55; }
-#g-retro .xmb-icon { position: absolute; left: 0; top: 0; display: grid; place-items: center; width: calc(104 * var(--cpx)); height: calc(104 * var(--cpx)); transform: translate(-50%, -50%); transition: transform .34s cubic-bezier(.34, 1.4, .64, 1), box-shadow .3s ease; }
+#g-retro .xmb-icon { position: absolute; left: 0; top: 0; display: grid; place-items: center; width: calc(104 * var(--cpx)); height: calc(104 * var(--cpx)); transform: translate(-50%, -50%); transition: transform var(--m-dur) var(--m-spring), box-shadow var(--m-dur) var(--m-ease); }
 #g-retro .xmb-icon > :is(img, .g-glyph, .g-mdl2) { width: calc(86 * var(--cpx)); height: calc(86 * var(--cpx)); object-fit: contain; filter: drop-shadow(0 0 calc(3 * var(--cpx)) rgba(0, 0, 0, .5)); }
 #g-retro .xmb-icon.game { border-radius: calc(5 * var(--cpx)); background: var(--cover, rgba(255, 255, 255, .14)) center / cover no-repeat; box-shadow: 0 0 0 1px rgba(255, 255, 255, .35), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .35); }
 #g-retro .xmb-icon.pic { width: calc(86 * var(--cpx)); height: calc(86 * var(--cpx)); background: center / cover no-repeat; border-radius: calc(4 * var(--cpx)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
 #g-retro .xmb-item.on .xmb-icon { transform: translate(-50%, -50%) scale(1.15); }
 #g-retro .xmb-item.on .xmb-icon > :is(img, .g-glyph, .g-mdl2) { filter: drop-shadow(0 0 calc(7 * var(--cpx)) rgba(255, 255, 255, .58)); }
 #g-retro .xmb-item.on .xmb-icon.game { box-shadow: 0 0 0 1px rgba(255, 255, 255, .7), 0 0 calc(20 * var(--cpx)) rgba(255, 255, 255, .32); }
-#g-retro .xmb-item.on::before { content: ""; position: absolute; left: calc(-102 * var(--cpx)); top: 0; transform: translateY(-50%); border-top: calc(14 * var(--cpx)) solid transparent; border-bottom: calc(14 * var(--cpx)) solid transparent; border-left: calc(21 * var(--cpx)) solid rgba(255, 255, 255, .92); filter: drop-shadow(0 0 calc(6 * var(--cpx)) rgba(255, 255, 255, .55)); animation: xmb-cursor .26s cubic-bezier(.22, 1, .36, 1) both; }
-#g-retro .xmb-copy { position: absolute; left: calc(120 * var(--cpx)); top: 0; max-width: calc(760 * var(--cpx)); transform: translateY(-50%) translateX(calc(-16 * var(--cpx))); opacity: 0; transition: opacity .24s ease .05s, transform .3s cubic-bezier(.22, 1, .36, 1) .05s; }
+#g-retro .xmb-item.on::before { content: ""; position: absolute; left: calc(-102 * var(--cpx)); top: 0; transform: translateY(-50%); border-top: calc(14 * var(--cpx)) solid transparent; border-bottom: calc(14 * var(--cpx)) solid transparent; border-left: calc(21 * var(--cpx)) solid rgba(255, 255, 255, .92); filter: drop-shadow(0 0 calc(6 * var(--cpx)) rgba(255, 255, 255, .55)); animation: xmb-cursor var(--m-dur) var(--m-ease) both; }
+#g-retro .xmb-copy { position: absolute; left: calc(120 * var(--cpx)); top: 0; max-width: calc(760 * var(--cpx)); transform: translateY(-50%) translateX(calc(-16 * var(--cpx))); opacity: 0; transition: opacity var(--m-dur) var(--m-ease) .05s, transform var(--m-dur) var(--m-ease) .05s; }
 #g-retro .xmb-item.on .xmb-copy { opacity: 1; transform: translateY(-50%); }
 #g-retro .xmb-copy strong { display: block; max-width: calc(760 * var(--cpx)); overflow: hidden; text-overflow: ellipsis; font: 400 calc(48 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 2px calc(8 * var(--cpx)) rgba(0, 0, 0, .62); }
 #g-retro .xmb-copy small { display: block; margin-top: calc(4 * var(--cpx)); font: 400 calc(27 * var(--cpx))/1.2 var(--g-font); opacity: .78; }
@@ -93,17 +93,17 @@ body[data-g-theme="ps3"] .xmb-dial::before { content: ""; position: absolute; le
 body[data-g-theme="ps3"] .xmb-dial::after { content: ""; position: absolute; left: 50%; top: 46%; width: 30%; height: 12%; background: #fff; border-radius: 2px; }
 /* The item column slides up into place when a category's list changes, and the cursor pops in. */
 @keyframes xmb-cursor { from { opacity: 0; transform: translateY(-50%) translateX(calc(-10 * var(--cpx))); } to { opacity: 1; transform: translateY(-50%); } }
-#g-retro .xmb-list.xmb-swap .xmb-item { animation: xmb-item-in .36s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .xmb-list.xmb-swap .xmb-item { animation: xmb-item-in var(--m-dur) var(--m-ease) both; }
 @keyframes xmb-item-in {
   from { opacity: 0; transform: translateY(calc(var(--y) * var(--cpx) + 20 * var(--cpx))); }
   to { opacity: 1; transform: translateY(calc(var(--y) * var(--cpx))); }
 }
 /* Choosing the console: the categories, the column, the wave and the clock panel arrive in order. */
-body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-bar { animation: xmb-cats-in .5s cubic-bezier(.22, 1, .36, 1) both; }
-body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-list { animation: xmb-column-in .58s .05s cubic-bezier(.22, 1, .36, 1) both; }
-body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-wave { animation: xmb-fade-in 1s ease both; }
-body.retro-enter[data-g-theme="ps3"] #g-retro.pic-on .xmb-pic { animation: xmb-fade-in 1s ease both; }
-body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb-clock-in .55s .12s cubic-bezier(.22, 1, .36, 1) both; }
+body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-bar { animation: xmb-cats-in var(--m-dur) var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-list { animation: xmb-column-in var(--m-dur) .05s var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps3"] #g-retro .xmb-wave { animation: xmb-fade-in var(--m-fade) var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps3"] #g-retro.pic-on .xmb-pic { animation: xmb-fade-in var(--m-fade) var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb-clock-in var(--m-dur) .12s var(--m-ease) both; }
 @keyframes xmb-cats-in { from { opacity: 0; transform: translateY(calc(14 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes xmb-column-in { from { opacity: 0; transform: translateX(calc(-26 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes xmb-clock-in { from { opacity: 0; transform: translateX(calc(48 * var(--cpx))); } to { opacity: 1; transform: none; } }
@@ -113,7 +113,7 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
    item column already uses, and opens that page's rows in a translucent black panel at x 700 (860 wide, level
    with the selected item at y 468). Choosing a row opens the console's option pop-up at x 800 (720 wide), which
    slides in from the right. Numbers are 1080p console pixels, like the rest of the XMB. */
-#g-retro .xmb-bar, #g-retro .xmb-list { transition: transform .34s cubic-bezier(.22, 1, .36, 1); }
+#g-retro .xmb-bar, #g-retro .xmb-list { transition: transform var(--m-dur) var(--m-ease); }
 #g-retro.sub-open .xmb-bar, #g-retro.sub-open .xmb-list { transform: translateX(calc(-280 * var(--cpx))); }
 #g-retro.sub-open .xmb-item.on .xmb-copy { opacity: 0; }
 #g-retro .xmb-sub {
@@ -124,7 +124,7 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
   background: linear-gradient(180deg, rgba(0, 0, 0, .46), rgba(0, 0, 0, .6));
   box-shadow: 0 calc(12 * var(--cpx)) calc(44 * var(--cpx)) rgba(0, 0, 0, .3), inset 0 0 calc(30 * var(--cpx)) rgba(255, 255, 255, .05);
   color: #fff; opacity: 0; transform: translateX(calc(64 * var(--cpx))); pointer-events: none;
-  transition: opacity .24s ease, transform .34s cubic-bezier(.22, 1, .36, 1);
+  transition: opacity var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease);
 }
 #g-retro.sub-open .xmb-sub { opacity: 1; transform: none; pointer-events: auto; }
 #g-retro .xmb-sub-head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(8 * var(--cpx)) calc(10 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .24); }
@@ -149,7 +149,7 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
   background: rgba(3, 5, 8, .92); backdrop-filter: blur(calc(7 * var(--cpx)));
   box-shadow: 0 calc(16 * var(--cpx)) calc(54 * var(--cpx)) rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .06);
   color: #fff; opacity: 0; transform: translate(calc(110 * var(--cpx)), -50%); pointer-events: none;
-  transition: opacity .2s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
+  transition: opacity var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease);
 }
 #g-retro .xmb-pop.open { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
 #g-retro .xmb-pop-head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(6 * var(--cpx)) calc(12 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .28); }
@@ -186,7 +186,7 @@ body[data-g-theme="ps3"] #settings-dialog .g-con-options { display: none; }
 body.garrison[data-g-theme="ps4"] { --r-accent: #1f7ae0; --g-font: "g-retro-sst", "Segoe UI", Arial, sans-serif; color: #fff; }
 html:has(body[data-g-theme="ps4"]) { background: #0a3f93; }
 body[data-g-theme="ps4"] #g-theme-wall { display: block; background: radial-gradient(ellipse 90% 80% at 70% 10%, #3f86e0 0%, #1d5ec2 45%, #0d3f97 100%); }
-#g-retro .ps4-art { position: absolute; inset: 0; background: center 25% / cover no-repeat; opacity: 0; transition: opacity .75s ease; pointer-events: none; }
+#g-retro .ps4-art { position: absolute; inset: 0; background: center 25% / cover no-repeat; opacity: 0; transition: opacity var(--m-fade) var(--m-ease); pointer-events: none; }
 #g-retro .ps4-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7, 31, 78, .52), rgba(8, 34, 86, .22) 34%, rgba(4, 14, 40, .62) 82%); }
 #g-retro .ps4-art.on { opacity: .3; }
 body[data-g-theme="ps4"] #g-retro-chrome .ps4-status { position: fixed; inset: 0 0 auto; z-index: 5; height: calc(150 * var(--cpx)); background: linear-gradient(180deg, rgba(7, 30, 74, .42) 0%, rgba(7, 30, 74, .22) 62%, rgba(7, 30, 74, 0) 100%); font: 300 calc(22 * var(--cpx))/1 var(--g-font); pointer-events: none; }
@@ -205,20 +205,20 @@ body[data-g-theme="ps4"] .ps4-s.me i { width: calc(72 * var(--cpx)); height: cal
 body[data-g-theme="ps4"] .ps4-s.me :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
 body[data-g-theme="ps4"] .ps4-s.trophy { left: calc(1478 * var(--cpx)); }
 body[data-g-theme="ps4"] .ps4-s.clock { right: calc(52 * var(--cpx)); font-size: calc(36 * var(--cpx)); }
-#g-retro .ps4-home { position: absolute; inset: 0; transition: transform .34s ease, opacity .3s ease; }
+#g-retro .ps4-home { position: absolute; inset: 0; transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); }
 #g-retro .ps4-home.away { transform: translateY(calc(300 * var(--cpx))); opacity: 0; pointer-events: none; }
 #g-retro .ps4-row { position: absolute; left: 0; top: 0; height: calc(660 * var(--cpx)); width: 100%; }
 #g-retro .ps4-tile {
   position: absolute; top: calc(222 * var(--cpx)); left: 0; width: calc(214 * var(--cpx)); height: calc(214 * var(--cpx)); padding: 0; border: 0;
   background: rgba(255, 255, 255, .1) var(--cover, none) 50% 50% / calc(214 * var(--cpx)) calc(214 * var(--cpx)) no-repeat; color: #fff; display: grid; place-items: center; cursor: pointer;
   transform: translateX(calc(var(--x) * var(--cpx)));
-  transition: transform .32s cubic-bezier(.22, 1, .36, 1), top .32s cubic-bezier(.22, 1, .36, 1), width .32s cubic-bezier(.22, 1, .36, 1), height .32s cubic-bezier(.22, 1, .36, 1),
-    background-size .32s cubic-bezier(.22, 1, .36, 1), background-position .32s cubic-bezier(.22, 1, .36, 1), box-shadow .25s ease;
+  transition: transform var(--m-dur) var(--m-ease), top var(--m-dur) var(--m-ease), width var(--m-dur) var(--m-ease), height var(--m-dur) var(--m-ease),
+    background-size var(--m-dur) var(--m-ease), background-position var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease);
   will-change: transform;
 }
 #g-retro .ps4-tile > :is(img, .g-glyph, .g-mdl2) { width: 52%; height: 52%; }
 /* The Start bar lives in every tile and fades in when the tile is chosen, so the row can grow in place. */
-#g-retro .ps4-tile em { opacity: 0; transform: translateY(calc(10 * var(--cpx))); transition: opacity .22s ease .06s, transform .28s cubic-bezier(.22, 1, .36, 1) .06s; }
+#g-retro .ps4-tile em { opacity: 0; transform: translateY(calc(10 * var(--cpx))); transition: opacity var(--m-dur) var(--m-ease) .06s, transform var(--m-dur) var(--m-ease) .06s; }
 #g-retro .ps4-tile.glass { background: linear-gradient(135deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .08)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
 #g-retro .ps4-shapes { width: 62%; height: 62%; color: rgba(255, 255, 255, .92); filter: drop-shadow(0 1px calc(3 * var(--cpx)) rgba(0, 0, 0, .35)); }
 #g-retro .ps4-tile.store { background: #0b62c9; }
@@ -257,9 +257,9 @@ body[data-g-theme="ps4"] .ps4-s.clock { right: calc(52 * var(--cpx)); font-size:
 #g-retro .ps4-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
 #g-retro .ps4-opt { padding: calc(5 * var(--cpx)) calc(12 * var(--cpx)); border: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .7); border-radius: calc(14 * var(--cpx)); font: 400 calc(16 * var(--cpx))/1 var(--g-font); font-style: normal; letter-spacing: .05em; }
 /* The function area: Up from the content row, as on the console. */
-#g-retro .ps4-functions { position: absolute; left: 0; right: 0; top: calc(178 * var(--cpx)); display: flex; justify-content: center; gap: calc(40 * var(--cpx)); opacity: 0; transform: translateY(calc(-60 * var(--cpx))); transition: opacity .26s ease, transform .34s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
+#g-retro .ps4-functions { position: absolute; left: 0; right: 0; top: calc(178 * var(--cpx)); display: flex; justify-content: center; gap: calc(40 * var(--cpx)); opacity: 0; transform: translateY(calc(-60 * var(--cpx))); transition: opacity var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease); pointer-events: none; }
 #g-retro .ps4-functions.open { opacity: 1; transform: none; pointer-events: auto; }
-#g-retro .ps4-fn { position: relative; display: grid; place-items: center; width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); border: 0; background: transparent; color: #fff; cursor: pointer; transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }
+#g-retro .ps4-fn { position: relative; display: grid; place-items: center; width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); border: 0; background: transparent; color: #fff; cursor: pointer; transition: transform var(--m-dur-fast) var(--m-ease), background var(--m-dur-fast) var(--m-ease), box-shadow var(--m-dur-fast) var(--m-ease); }
 #g-retro .ps4-fn > img { object-fit: contain; }
 #g-retro .ps4-fn > :is(img, .g-glyph, .g-mdl2) { width: calc(76 * var(--cpx)); height: calc(76 * var(--cpx)); filter: drop-shadow(0 calc(2 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .45)); }
 #g-retro .ps4-fn span { position: absolute; top: calc(100% + 16 * var(--cpx)); white-space: nowrap; font: 300 calc(24 * var(--cpx))/1 var(--g-font); opacity: 0; text-shadow: 0 2px calc(8 * var(--cpx)) rgba(0, 0, 0, .5); }
@@ -280,13 +280,13 @@ body[data-g-theme="ps4"] #g-retro .ps4-set-bg::after { content: ""; position: ab
 #g-retro .ps4-set-head { position: absolute; left: calc(96 * var(--cpx)); top: calc(58 * var(--cpx)); display: flex; align-items: center; gap: calc(20 * var(--cpx)); }
 #g-retro .ps4-set-kicker { color: rgba(255, 255, 255, .56); font: 300 calc(21 * var(--cpx))/1 var(--g-font); letter-spacing: .16em; text-transform: uppercase; }
 #g-retro .ps4-set-title { font: 300 calc(56 * var(--cpx))/1.05 var(--g-font); letter-spacing: -.01em; text-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 0, 0, .35); }
-#g-retro .ps4-set-back { display: grid; place-items: center; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); padding: 0; border: calc(1.5 * var(--cpx)) solid rgba(255, 255, 255, .4); border-radius: 50%; background: rgba(255, 255, 255, .08); color: #fff; cursor: pointer; transition: background .18s ease, box-shadow .18s ease, transform .18s ease; }
+#g-retro .ps4-set-back { display: grid; place-items: center; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); padding: 0; border: calc(1.5 * var(--cpx)) solid rgba(255, 255, 255, .4); border-radius: 50%; background: rgba(255, 255, 255, .08); color: #fff; cursor: pointer; transition: background var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease); }
 #g-retro .ps4-set-back span { margin-top: calc(-5 * var(--cpx)); font: 300 calc(50 * var(--cpx))/1 var(--g-font); }
 #g-retro .ps4-set-back:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .22); box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; transform: scale(1.06); }
-#g-retro .ps4-set-pages { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(780 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
+#g-retro .ps4-set-pages { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(780 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); will-change: transform; }
 #g-retro .ps4-set-pages::-webkit-scrollbar, #g-retro .ps4-set-rows::-webkit-scrollbar { display: none; }
 #g-retro .ps4-set.is-deep .ps4-set-pages { transform: translateX(calc(-300 * var(--cpx))); opacity: 0; pointer-events: none; }
-#g-retro .ps4-set-item { position: relative; display: flex; flex: none; align-items: center; gap: calc(22 * var(--cpx)); width: 100%; height: calc(82 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; transition: background .18s ease, box-shadow .18s ease; }
+#g-retro .ps4-set-item { position: relative; display: flex; flex: none; align-items: center; gap: calc(22 * var(--cpx)); width: 100%; height: calc(82 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: #fff; text-align: left; cursor: pointer; transition: background var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease); }
 #g-retro .ps4-set-item .ps4-set-icon { display: grid; place-items: center; flex: none; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); opacity: .92; }
 #g-retro .ps4-set-item .ps4-set-icon > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; }
 #g-retro .ps4-set-item .ps4-set-label { font: 300 calc(31 * var(--cpx))/1.1 var(--g-font); }
@@ -294,9 +294,9 @@ body[data-g-theme="ps4"] #g-retro .ps4-set-bg::after { content: ""; position: ab
 #g-retro .ps4-set-item.sel { background: linear-gradient(90deg, #1b6fd6 0%, #2f86ec 72%, rgba(47, 134, 236, .55) 100%); box-shadow: 0 calc(2 * var(--cpx)) calc(14 * var(--cpx)) rgba(3, 16, 48, .4); }
 #g-retro .ps4-set-item.sel .ps4-set-icon { opacity: 1; }
 #g-retro .ps4-set-item.sel .ps4-set-chevron { color: #fff; }
-#g-retro .ps4-set-rows { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(1290 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; opacity: 0; transform: translateX(calc(140 * var(--cpx))); pointer-events: none; transition: transform .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease; will-change: transform; }
+#g-retro .ps4-set-rows { position: absolute; left: calc(96 * var(--cpx)); top: calc(194 * var(--cpx)); bottom: calc(108 * var(--cpx)); width: calc(1290 * var(--cpx)); display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; opacity: 0; transform: translateX(calc(140 * var(--cpx))); pointer-events: none; transition: transform var(--m-dur) var(--m-ease), opacity var(--m-dur) var(--m-ease); will-change: transform; }
 #g-retro .ps4-set.is-deep .ps4-set-rows { opacity: 1; transform: none; pointer-events: auto; }
-#g-retro .ps4-set-row { position: relative; display: flex; flex: none; align-items: center; gap: calc(20 * var(--cpx)); width: 100%; height: calc(80 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .045); color: #fff; text-align: left; cursor: pointer; transition: background .16s ease, box-shadow .16s ease; }
+#g-retro .ps4-set-row { position: relative; display: flex; flex: none; align-items: center; gap: calc(20 * var(--cpx)); width: 100%; height: calc(80 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .045); color: #fff; text-align: left; cursor: pointer; transition: background var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease); }
 #g-retro .ps4-set-row .ps4-set-icon { display: grid; place-items: center; flex: none; width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); opacity: .86; }
 #g-retro .ps4-set-row .ps4-set-icon > :is(img, .g-glyph, .g-mdl2) { width: 100%; height: 100%; }
 #g-retro .ps4-set-row .ps4-set-label { font: 300 calc(29 * var(--cpx))/1.1 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -315,7 +315,7 @@ body[data-g-theme="ps4"] #g-retro .ps4-set-bg::after { content: ""; position: ab
 #g-retro .ps4-set-hints span { display: inline-flex; align-items: center; gap: calc(12 * var(--cpx)); }
 #g-retro .ps4-set-hints b { font: 400 calc(30 * var(--cpx))/1 var(--g-font); }
 /* The PS4 option dialog: a dark panel with the values as a white-highlighted list, or the horizontal slider. */
-#g-retro .ps4-set-overlay { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(2, 8, 24, .5); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+#g-retro .ps4-set-overlay { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(2, 8, 24, .5); opacity: 0; pointer-events: none; transition: opacity var(--m-dur) var(--m-ease); }
 #g-retro .ps4-set-overlay.open { opacity: 1; pointer-events: auto; }
 #g-retro .ps4-set-dialog { width: calc(760 * var(--cpx)); max-height: calc(760 * var(--cpx)); overflow: auto; padding: calc(26 * var(--cpx)) calc(30 * var(--cpx)) calc(16 * var(--cpx)); border: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .2); border-radius: calc(6 * var(--cpx)); background: linear-gradient(180deg, rgba(17, 48, 100, .98), rgba(6, 22, 54, .99)); box-shadow: 0 calc(24 * var(--cpx)) calc(70 * var(--cpx)) rgba(0, 0, 0, .6); outline: none; }
 #g-retro .ps4-set-dialog:focus-visible { outline: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .55); outline-offset: calc(4 * var(--cpx)); }
@@ -350,13 +350,13 @@ body[data-g-theme="ps4"] #g-retro .ps4-set-bg::after { content: ""; position: ab
 body[data-g-theme="ps4"] #settings-dialog .g-con-options { display: none; }
 
 /* Moving along the row brings the content in under it, and choosing the console plays the home screen in. */
-#g-retro .ps4-under.ps4-swap { animation: ps4-under-in .34s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .ps4-under.ps4-swap { animation: ps4-under-in var(--m-dur) var(--m-ease) both; }
 @keyframes ps4-under-in { from { opacity: 0; transform: translateY(calc(12 * var(--cpx))); } to { opacity: 1; transform: none; } }
-body.retro-enter[data-g-theme="ps4"] #g-retro-chrome .ps4-status { animation: ps4-status-in .5s cubic-bezier(.22, 1, .36, 1) both; }
-body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-row { animation: ps4-row-in .56s .04s cubic-bezier(.22, 1, .36, 1) both; }
-body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-under { animation: ps4-under-in .54s .1s both; }
-body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-hints { animation: ps4-hints-in .5s .16s cubic-bezier(.22, 1, .36, 1) both; }
-body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-art.on { animation: xmb-fade-in .8s ease both; }
+body.retro-enter[data-g-theme="ps4"] #g-retro-chrome .ps4-status { animation: ps4-status-in var(--m-dur) var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-row { animation: ps4-row-in var(--m-dur) .04s var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-under { animation: ps4-under-in var(--m-dur) .1s both; }
+body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-hints { animation: ps4-hints-in var(--m-dur) .16s var(--m-ease) both; }
+body.retro-enter[data-g-theme="ps4"] #g-retro .ps4-art.on { animation: xmb-fade-in var(--m-fade) var(--m-ease) both; }
 @keyframes ps4-status-in { from { opacity: 0; transform: translateY(calc(-18 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes ps4-row-in { from { opacity: 0; transform: translateY(calc(24 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes ps4-hints-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
@@ -384,13 +384,13 @@ body[data-g-theme="wii"] #g-theme-wall { display: block; background: repeating-l
 #g-retro .wii-bands span { position: absolute; left: calc(-40 * var(--cpx)); right: calc(-40 * var(--cpx)); top: calc((73 + var(--row) * 224) * var(--cpx)); height: calc(240 * var(--cpx)); border-radius: calc(34 * var(--cpx)); background: linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, .06)); box-shadow: inset 0 calc(12 * var(--cpx)) calc(30 * var(--cpx)) rgba(0, 0, 0, .018), 0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .025); }
 /* 4×3 channels, 384×206 starting at (160, 91) with 18px between them; the fifth column peeks in at the right. */
 #g-retro .wii-grid { position: absolute; left: calc(160 * var(--cpx)); top: calc(91 * var(--cpx)); display: grid; grid-template-columns: repeat(4, calc(384 * var(--cpx))); grid-auto-rows: calc(206 * var(--cpx)); gap: calc(18 * var(--cpx)); }
-#g-retro .wii-grid.wii-next { animation: wii-page-next .42s cubic-bezier(.22, 1, .36, 1) both; }
-#g-retro .wii-grid.wii-prev { animation: wii-page-prev .42s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .wii-grid.wii-next { animation: wii-page-next var(--m-dur) var(--m-ease) both; }
+#g-retro .wii-grid.wii-prev { animation: wii-page-prev var(--m-dur) var(--m-ease) both; }
 @keyframes wii-page-next { from { opacity: .35; transform: translateX(calc(90 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes wii-page-prev { from { opacity: .35; transform: translateX(calc(-90 * var(--cpx))); } to { opacity: 1; transform: none; } }
 #g-retro .wii-ch {
   position: relative; display: block; padding: 0; overflow: visible; border: 0; border-radius: calc(20 * var(--cpx)); background: #fff var(--g-art, none) center / cover no-repeat; color: #555; cursor: pointer;
-  box-shadow: 0 calc(2 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .09); transition: transform .24s cubic-bezier(.22, 1, .36, 1), box-shadow .24s ease, filter .24s ease;
+  box-shadow: 0 calc(2 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .09); transition: transform var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease);
 }
 #g-retro .wii-ch.peek { position: absolute; left: calc(1608 * var(--cpx)); top: calc(var(--r) * 224 * var(--cpx)); width: calc(384 * var(--cpx)); height: calc(206 * var(--cpx)); }
 #g-retro .wii-ch.empty { background: linear-gradient(#f1f1f1, #e4e4e4); box-shadow: inset 0 0 0 calc(1 * var(--cpx)) rgba(0, 0, 0, .06); }
@@ -434,13 +434,13 @@ body:not(.g-retro-pack) #g-retro .wii-ch:is(.focused, :focus-visible, :hover)::b
 /* The channel name balloon eases in below the tile, or above it for the bottom row. */
 #g-retro .wii-balloon {
   position: absolute; left: 50%; bottom: calc(100% + 8 * var(--cpx)); z-index: 5; max-width: calc(330 * var(--cpx)); padding: calc(10 * var(--cpx)) calc(24 * var(--cpx)); transform: translate(-50%, var(--by, calc(6 * var(--cpx)))) scale(.94); border: calc(3 * var(--cpx)) solid #34bdef; border-radius: calc(24 * var(--cpx));
-  background: linear-gradient(#fff, #f1f1f1); color: #5a5a5a; font: 400 calc(25 * var(--cpx))/1.15 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .26s ease, transform .28s cubic-bezier(.2, .85, .3, 1.15); pointer-events: none; box-shadow: 0 calc(4 * var(--cpx)) calc(12 * var(--cpx)) rgba(0, 0, 0, .16);
+  background: linear-gradient(#fff, #f1f1f1); color: #5a5a5a; font: 400 calc(25 * var(--cpx))/1.15 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-spring); pointer-events: none; box-shadow: 0 calc(4 * var(--cpx)) calc(12 * var(--cpx)) rgba(0, 0, 0, .16);
 }
 #g-retro .wii-ch:is(.focused, :focus-visible, :hover) .wii-balloon { opacity: 1; transform: translate(-50%, 0) scale(1); }
 #g-retro .wii-balloon em { margin-left: calc(14 * var(--cpx)); font-style: normal; color: #8a8a8a; font-size: calc(21 * var(--cpx)); }
 #g-retro .wii-grid > :nth-child(-n+8) .wii-balloon { top: calc(100% + 8 * var(--cpx)); bottom: auto; --by: calc(-6 * var(--cpx)); }
 #g-retro .wii-grid > :nth-child(n+9) .wii-balloon { top: auto; bottom: calc(100% + 8 * var(--cpx)); --by: calc(6 * var(--cpx)); }
-#g-retro .wii-arrow { position: absolute; top: calc(396 * var(--cpx)); width: calc(74 * var(--cpx)); height: calc(150 * var(--cpx)); padding: 0; border: 0; background: none; cursor: pointer; transition: transform .18s ease, filter .18s ease; }
+#g-retro .wii-arrow { position: absolute; top: calc(396 * var(--cpx)); width: calc(74 * var(--cpx)); height: calc(150 * var(--cpx)); padding: 0; border: 0; background: none; cursor: pointer; transition: transform var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease); }
 #g-retro .wii-arrow::before { content: ""; position: absolute; inset: calc(-2 * var(--cpx)); background: #fff; clip-path: polygon(8% 2%, 100% 50%, 8% 98%); filter: drop-shadow(0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .22)); }
 #g-retro .wii-arrow::after { content: ""; position: absolute; inset: calc(2 * var(--cpx)); background: linear-gradient(160deg, #9cecff 0%, #42c8f7 38%, #108fd4 100%); clip-path: polygon(12% 7%, 92% 50%, 12% 93%); }
 #g-retro .wii-arrow.left::before { clip-path: polygon(92% 2%, 0 50%, 92% 98%); }
@@ -456,7 +456,7 @@ body[data-g-theme="wii"] .wii-ring { position: absolute; bottom: 0; width: calc(
 body[data-g-theme="wii"] .wii-ring.art { background: center bottom / 100% 100% no-repeat; border-radius: 0; box-shadow: none; opacity: .72; }
 body[data-g-theme="wii"] .wii-ring.left { left: calc(-8 * var(--cpx)); }
 body[data-g-theme="wii"] .wii-ring.right { right: calc(-8 * var(--cpx)); }
-body[data-g-theme="wii"] :is(.wii-btn, .wii-mail) { position: absolute; top: calc(32 * var(--cpx)); width: calc(178 * var(--cpx)); height: calc(188 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; transition: transform .18s cubic-bezier(.22, 1, .36, 1), filter .18s ease; }
+body[data-g-theme="wii"] :is(.wii-btn, .wii-mail) { position: absolute; top: calc(32 * var(--cpx)); width: calc(178 * var(--cpx)); height: calc(188 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; transition: transform var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease); }
 body[data-g-theme="wii"] .wii-btn { left: calc(85 * var(--cpx)); }
 body[data-g-theme="wii"] .wii-mail { right: calc(85 * var(--cpx)); }
 body[data-g-theme="wii"] :is(.wii-btn, .wii-mail) > b, body[data-g-theme="wii"] :is(.wii-btn, .wii-mail) > i { display: grid; place-items: center; width: 100%; height: 100%; border: calc(4 * var(--cpx)) solid #39c1ef; border-radius: 50%; background: radial-gradient(circle at 38% 26%, #fff 0%, #f4f4f4 42%, #dcdcdc 100%); color: #a5a5a5; font: 700 calc(44 * var(--cpx))/1 Arial, sans-serif; }
@@ -471,14 +471,14 @@ body[data-g-theme="wii"] .wii-clock svg { height: calc(90 * var(--cpx)); fill: c
 body[data-g-theme="wii"] .wii-clock em { position: absolute; left: calc(100% + 34 * var(--cpx)); bottom: calc(3 * var(--cpx)); font: 700 calc(32 * var(--cpx))/1 var(--g-font); font-style: normal; color: #9a9a9a; }
 body[data-g-theme="wii"] .wii-date { position: absolute; left: 0; right: 0; top: calc(132 * var(--cpx)); color: #8f9195; font: 400 calc(68 * var(--cpx))/1 "g-retro-rodin", var(--g-font); letter-spacing: -.01em; text-align: center; }
 /* Channel preview: the banner fills the top, the Wii Menu / Start pills sit on the real bar chrome. */
-#g-retro .wii-preview { position: absolute; inset: 0; background: #000; overflow: hidden; transform-origin: 50% 50%; animation: wii-preview-in .52s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .wii-preview { position: absolute; inset: 0; background: #000; overflow: hidden; transform-origin: 50% 50%; animation: wii-preview-in var(--m-dur) var(--m-ease) both; }
 @keyframes wii-preview-in { from { opacity: .15; transform: translate(var(--wii-from-x, 0px), var(--wii-from-y, 0px)) scale(var(--wii-from-s, .34)); } to { opacity: 1; transform: none; } }
 #g-retro .wii-banner { position: absolute; inset: 0 0 calc(260 * var(--cpx)); background: #ddd var(--g-art, none) center / cover no-repeat; display: grid; place-items: end start; overflow: hidden; }
 #g-retro .wii-banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0) 55%), linear-gradient(0deg, rgba(0, 0, 0, .62), transparent 42%); pointer-events: none; }
 #g-retro .wii-banner strong { position: relative; z-index: 1; margin: 0 calc(60 * var(--cpx)) calc(46 * var(--cpx)); max-width: calc(1400 * var(--cpx)); color: #fff; font: 400 calc(52 * var(--cpx))/1.15 var(--g-font); text-shadow: 0 calc(2 * var(--cpx)) calc(10 * var(--cpx)) rgba(0, 0, 0, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #g-retro .wii-preview-bar { position: absolute; inset: auto 0 0; height: calc(260 * var(--cpx)); display: flex; align-items: center; justify-content: center; gap: calc(150 * var(--cpx)); overflow: hidden; border-top: calc(4 * var(--cpx)) solid #34bdef; background: radial-gradient(ellipse 42% 120% at 50% 0%, #fff 0%, rgba(255, 255, 255, .62) 45%, rgba(255, 255, 255, 0) 78%), repeating-linear-gradient(0deg, rgba(0, 0, 0, .02) 0 1px, transparent 1px 4px), linear-gradient(#d8dade, #c9ccd0 62%, #d6d8dc); box-shadow: inset 0 calc(2 * var(--cpx)) 0 rgba(255, 255, 255, .82); }
 #g-retro .wii-preview-glow { position: absolute; left: 50%; top: calc(-130 * var(--cpx)); width: calc(900 * var(--cpx)); height: calc(280 * var(--cpx)); transform: translateX(-50%); background: radial-gradient(ellipse 50% 100% at 50% 100%, #fff 0%, rgba(255, 255, 255, .8) 55%, rgba(255, 255, 255, 0) 80%); pointer-events: none; }
-#g-retro .wii-pbtn { position: relative; z-index: 1; display: flex; width: calc(380 * var(--cpx)); height: calc(116 * var(--cpx)); padding: 0; border: 0; background: none; color: #555; cursor: pointer; transition: transform .16s cubic-bezier(.22, 1, .36, 1), filter .16s ease, color .16s ease; }
+#g-retro .wii-pbtn { position: relative; z-index: 1; display: flex; width: calc(380 * var(--cpx)); height: calc(116 * var(--cpx)); padding: 0; border: 0; background: none; color: #555; cursor: pointer; transition: transform var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease), color var(--m-dur) var(--m-ease); }
 #g-retro .wii-pbtn i { height: 100%; background: center / 100% 100% no-repeat; }
 #g-retro .wii-pbtn i.cap { width: calc(52 * var(--cpx)); }
 #g-retro .wii-pbtn i.mid { flex: 1; background-size: auto 100%; background-repeat: repeat-x; }
@@ -486,15 +486,15 @@ body[data-g-theme="wii"] .wii-date { position: absolute; left: 0; right: 0; top:
 body:not(.g-retro-pack) #g-retro .wii-pbtn { border: calc(4 * var(--cpx)) solid #b9d9e6; border-radius: calc(58 * var(--cpx)); background: linear-gradient(#fff, #e8e8e8); }
 #g-retro .wii-pbtn:is(.focused, :focus-visible) { box-shadow: none !important; transform: scale(1.055); filter: drop-shadow(0 calc(2 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 0, 0, .16)) drop-shadow(0 0 calc(12 * var(--cpx)) rgba(58, 193, 240, .9)); color: #2a9fd6; }
 /* Entering the theme: the channels pop in one after another, the bar slides up and the clock counts in. */
-body.retro-enter[data-g-theme="wii"] #g-retro .wii-ch { animation: wii-pop .34s cubic-bezier(.2, .9, .3, 1.25) both; animation-delay: calc(var(--i) * 26ms); }
+body.retro-enter[data-g-theme="wii"] #g-retro .wii-ch { animation: wii-pop var(--m-dur) var(--m-spring) both; animation-delay: calc(var(--i) * 26ms); }
 @keyframes wii-pop { from { opacity: 0; transform: translateY(calc(24 * var(--cpx))) scale(.86); } to { opacity: 1; transform: none; } }
-body.retro-enter[data-g-theme="wii"] #g-retro-chrome .wii-bar { animation: wii-bar-up .6s .08s cubic-bezier(.22, 1, .36, 1) both; }
+body.retro-enter[data-g-theme="wii"] #g-retro-chrome .wii-bar { animation: wii-bar-up var(--m-dur) .08s var(--m-ease) both; }
 @keyframes wii-bar-up { from { transform: translateY(102%); } to { transform: none; } }
-body.retro-enter[data-g-theme="wii"] #g-retro-chrome :is(.wii-btn, .wii-mail) { animation: wii-knob-in .5s .34s cubic-bezier(.2, .9, .3, 1.3) both; }
+body.retro-enter[data-g-theme="wii"] #g-retro-chrome :is(.wii-btn, .wii-mail) { animation: wii-knob-in var(--m-dur) .34s var(--m-spring) both; }
 @keyframes wii-knob-in { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: none; } }
-body.retro-enter[data-g-theme="wii"] .wii-clock .wii-seg { animation: wii-count .3s cubic-bezier(.2, .8, .3, 1.2) both; animation-delay: calc(.32s + var(--d) * 70ms); transform-box: fill-box; transform-origin: center; }
+body.retro-enter[data-g-theme="wii"] .wii-clock .wii-seg { animation: wii-count var(--m-dur) var(--m-spring) both; animation-delay: calc(.32s + var(--d) * 70ms); transform-box: fill-box; transform-origin: center; }
 @keyframes wii-count { from { opacity: 0; transform: translateY(calc(8 * var(--cpx))) scale(.82); } to { opacity: 1; transform: none; } }
-body.retro-enter[data-g-theme="wii"] .wii-date { animation: wii-date-in .4s .5s ease both; }
+body.retro-enter[data-g-theme="wii"] .wii-date { animation: wii-date-in var(--m-dur) .5s var(--m-ease) both; }
 @keyframes wii-date-in { from { opacity: 0; transform: translateY(calc(8 * var(--cpx))); } to { opacity: 1; transform: none; } }
 /* Reduced motion: keep the layout and the selected states, drop the movement. */
 html.reduce-motion #g-retro .wii-grid,
@@ -527,11 +527,11 @@ body[data-g-theme="wii"] #g-retro .wii-set-wall { position: absolute; inset: 0; 
 #g-retro .wii-set-head strong { color: #6d6d6d; font: 400 calc(54 * var(--cpx))/1.02 var(--g-font); text-shadow: 0 calc(2 * var(--cpx)) 0 #fff; }
 #g-retro .wii-set-head small { color: #9aa0a4; font: 400 calc(23 * var(--cpx))/1 var(--g-font); }
 #g-retro .wii-set-grid { position: absolute; left: calc(186 * var(--cpx)); right: calc(186 * var(--cpx)); top: calc(242 * var(--cpx)); bottom: calc(196 * var(--cpx)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: calc(158 * var(--cpx)); gap: calc(26 * var(--cpx)); align-content: center; }
-#g-retro .wii-set[data-anim="next"] .wii-set-grid { animation: wii-set-next .4s cubic-bezier(.22, 1, .36, 1) both; }
-#g-retro .wii-set[data-anim="prev"] .wii-set-grid { animation: wii-set-prev .4s cubic-bezier(.22, 1, .36, 1) both; }
+#g-retro .wii-set[data-anim="next"] .wii-set-grid { animation: wii-set-next var(--m-dur) var(--m-ease) both; }
+#g-retro .wii-set[data-anim="prev"] .wii-set-grid { animation: wii-set-prev var(--m-dur) var(--m-ease) both; }
 @keyframes wii-set-next { from { opacity: .25; transform: translateX(calc(90 * var(--cpx))); } to { opacity: 1; transform: none; } }
 @keyframes wii-set-prev { from { opacity: .25; transform: translateX(calc(-90 * var(--cpx))); } to { opacity: 1; transform: none; } }
-#g-retro .wii-set-pill { position: relative; display: flex; align-items: center; gap: calc(18 * var(--cpx)); width: 100%; height: 100%; padding: 0 calc(38 * var(--cpx)); overflow: hidden; border: calc(4 * var(--cpx)) solid #cfe3ea; border-radius: calc(80 * var(--cpx)); background: linear-gradient(#fff, #f1f6f8 58%, #e4ecf0); color: #5d6164; text-align: left; cursor: pointer; transition: transform .18s cubic-bezier(.2, 1.2, .3, 1), box-shadow .18s ease, color .18s ease; }
+#g-retro .wii-set-pill { position: relative; display: flex; align-items: center; gap: calc(18 * var(--cpx)); width: 100%; height: 100%; padding: 0 calc(38 * var(--cpx)); overflow: hidden; border: calc(4 * var(--cpx)) solid #cfe3ea; border-radius: calc(80 * var(--cpx)); background: linear-gradient(#fff, #f1f6f8 58%, #e4ecf0); color: #5d6164; text-align: left; cursor: pointer; transition: transform var(--m-dur) var(--m-spring), box-shadow var(--m-dur) var(--m-ease), color var(--m-dur) var(--m-ease); }
 #g-retro .wii-set-pill i.cap { position: absolute; top: 0; bottom: 0; width: calc(54 * var(--cpx)); background: center / 100% 100% no-repeat; pointer-events: none; }
 #g-retro .wii-set-pill i.cap.l { left: 0; }
 #g-retro .wii-set-pill i.cap.r { right: 0; }
@@ -544,7 +544,7 @@ body.g-retro-pack #g-retro .wii-set-pill { border-color: transparent; background
 #g-retro .wii-set-pill-copy small { overflow: hidden; color: #8a9094; font: 400 calc(21 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
 #g-retro .wii-set-pill:is(.focused, :focus-visible, :hover) { color: #2396c4; transform: translateY(calc(-4 * var(--cpx))) scale(1.03); box-shadow: 0 calc(12 * var(--cpx)) calc(26 * var(--cpx)) rgba(0, 0, 0, .16), 0 0 calc(18 * var(--cpx)) rgba(58, 193, 240, .85) !important; }
 #g-retro .wii-set-pill:is(.focused, :focus-visible, :hover) .wii-set-pill-icon > :is(img, .g-glyph) { color: #2396c4; }
-#g-retro .wii-set-arrow { position: absolute; top: 50%; width: calc(94 * var(--cpx)); height: calc(186 * var(--cpx)); margin-top: calc(-93 * var(--cpx)); padding: 0; border: 0; background: none; cursor: pointer; transition: transform .18s ease, filter .18s ease; }
+#g-retro .wii-set-arrow { position: absolute; top: 50%; width: calc(94 * var(--cpx)); height: calc(186 * var(--cpx)); margin-top: calc(-93 * var(--cpx)); padding: 0; border: 0; background: none; cursor: pointer; transition: transform var(--m-dur) var(--m-ease), filter var(--m-dur) var(--m-ease); }
 #g-retro .wii-set-arrow::before { content: ""; position: absolute; inset: 0; background: #fff; clip-path: polygon(8% 2%, 100% 50%, 8% 98%); filter: drop-shadow(0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .2)); }
 #g-retro .wii-set-arrow::after { content: ""; position: absolute; inset: calc(3 * var(--cpx)); background: linear-gradient(160deg, #9cecff 0%, #42c8f7 38%, #108fd4 100%); clip-path: polygon(12% 7%, 92% 50%, 12% 93%); }
 #g-retro .wii-set-arrow.left { left: calc(44 * var(--cpx)); }
@@ -562,13 +562,13 @@ body.g-retro-pack #g-retro .wii-set-pill { border-color: transparent; background
 #g-retro .wii-set-dots i.on { background: linear-gradient(#8fe6ff, #34bdef); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(52, 189, 239, .8); }
 #g-retro .wii-set-hint { flex: none; color: #8a9094; font: 400 calc(20 * var(--cpx))/1 var(--g-font); }
 /* The value sub-screen: pill choices on the light panel, slider for numbers, Back and Confirm at the bottom. */
-#g-retro .wii-set-sub { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(24, 38, 48, .34); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+#g-retro .wii-set-sub { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(24, 38, 48, .34); opacity: 0; pointer-events: none; transition: opacity var(--m-dur) var(--m-ease); }
 #g-retro .wii-set-sub.open { opacity: 1; pointer-events: auto; }
 #g-retro .wii-set-panel { width: calc(1120 * var(--cpx)); max-height: calc(780 * var(--cpx)); overflow: auto; padding: calc(32 * var(--cpx)) calc(42 * var(--cpx)) calc(24 * var(--cpx)); border: calc(5 * var(--cpx)) solid #35bdf0; border-radius: calc(38 * var(--cpx)); background: linear-gradient(#fff, #f5f9fb 60%, #eef3f6); box-shadow: 0 calc(26 * var(--cpx)) calc(70 * var(--cpx)) rgba(20, 40, 60, .35); color: #5a5a5a; }
 #g-retro .wii-set-panel h3 { display: flex; align-items: center; gap: calc(16 * var(--cpx)); margin: 0 0 calc(22 * var(--cpx)); padding-bottom: calc(14 * var(--cpx)); border-bottom: calc(2 * var(--cpx)) solid rgba(53, 189, 240, .35); color: #5d6164; font: 400 calc(38 * var(--cpx))/1.1 var(--g-font); }
 #g-retro .wii-set-panel-icon { flex: none; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); color: #35a9d6; }
 #g-retro .wii-set-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(16 * var(--cpx)); }
-#g-retro .wii-set-opt { display: flex; align-items: center; justify-content: space-between; height: calc(84 * var(--cpx)); padding: 0 calc(30 * var(--cpx)); border: calc(3 * var(--cpx)) solid #d8e7ee; border-radius: calc(42 * var(--cpx)); background: linear-gradient(#fff, #eef4f7); color: #5d6164; text-align: left; cursor: pointer; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); transition: transform .16s ease, box-shadow .16s ease, background .16s ease; }
+#g-retro .wii-set-opt { display: flex; align-items: center; justify-content: space-between; height: calc(84 * var(--cpx)); padding: 0 calc(30 * var(--cpx)); border: calc(3 * var(--cpx)) solid #d8e7ee; border-radius: calc(42 * var(--cpx)); background: linear-gradient(#fff, #eef4f7); color: #5d6164; text-align: left; cursor: pointer; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); transition: transform var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease), background var(--m-dur) var(--m-ease); }
 #g-retro .wii-set-opt.on { border-color: #35bdf0; background: linear-gradient(#e8f9ff, #c9effb); color: #1b7fa8; }
 #g-retro .wii-set-opt:is(.focused, :focus-visible) { transform: scale(1.02); box-shadow: 0 0 0 calc(3 * var(--cpx)) #35bdf0, 0 0 calc(14 * var(--cpx)) rgba(53, 189, 240, .7) !important; }
 #g-retro .wii-set-opt i { font-style: normal; }
@@ -603,7 +603,7 @@ body[data-g-theme="wii"] #settings-dialog .g-con-options { display: none; }
 body.garrison[data-g-theme="3ds"] { --r-accent: #2fa7e8; --g-font: "g-retro-rodin", "Segoe UI", Arial, sans-serif; color: #fff; }
 html:has(body[data-g-theme="3ds"]) { background: #07090b; }
 body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-gradient(ellipse 80% 80% at 50% 45%, #161d24, #050608 82%); }
-#g-retro .ds-bg { position: absolute; inset: calc(-40 * var(--cpx)); background: center / cover no-repeat; opacity: .62; filter: blur(calc(24 * var(--cpx))) saturate(1.15) brightness(.82); transition: opacity .6s ease; }
+#g-retro .ds-bg { position: absolute; inset: calc(-40 * var(--cpx)); background: center / cover no-repeat; opacity: .62; filter: blur(calc(24 * var(--cpx))) saturate(1.15) brightness(.82); transition: opacity var(--m-fade) var(--m-ease); }
 #g-retro .ds-bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 46%, rgba(5, 7, 9, .26) 0%, rgba(5, 7, 9, .78) 100%), linear-gradient(180deg, rgba(5, 7, 9, .45), rgba(5, 7, 9, .18) 42%, rgba(5, 7, 9, .66)); }
 /* The status strip, now a thin overlay instead of a white top-screen bar. */
 #g-retro .ds-statusbar { position: absolute; inset: 0 0 auto; z-index: 4; display: flex; align-items: center; gap: calc(12 * var(--cpx)); height: calc(44 * var(--cpx)); padding: 0 calc(32 * var(--cpx)); background: linear-gradient(180deg, rgba(4, 6, 9, .85), rgba(4, 6, 9, .16)); color: rgba(236, 247, 255, .92); font: 400 calc(17 * var(--cpx))/1 var(--g-font); text-shadow: 0 1px calc(3 * var(--cpx)) rgba(0, 0, 0, .6); }
@@ -614,7 +614,7 @@ body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-grad
 #g-retro .ds-coin { display: inline-flex; align-items: center; gap: calc(5 * var(--cpx)); margin-left: calc(6 * var(--cpx)); }
 #g-retro .ds-coin i { display: grid; place-items: center; width: calc(19 * var(--cpx)); height: calc(19 * var(--cpx)); border-radius: 50%; background: radial-gradient(circle at 38% 32%, #ffe98f, #d9a614); color: #7c5600; font: 700 calc(11 * var(--cpx))/1 Arial, sans-serif; font-style: normal; }
 #g-retro .ds-when { margin-left: auto; }
-#g-retro .ds-clock b { animation: ds-blink 1s steps(1) infinite; font-weight: inherit; }
+#g-retro .ds-clock b { animation: ds-blink var(--m-fade) steps(1) infinite; font-weight: inherit; }
 @keyframes ds-blink { 50% { opacity: .2; } }
 #g-retro .ds-battery { position: relative; width: calc(30 * var(--cpx)); height: calc(15 * var(--cpx)); border: calc(1.6 * var(--cpx)) solid rgba(230, 245, 255, .6); border-radius: calc(3 * var(--cpx)); }
 #g-retro .ds-battery::after { content: ""; position: absolute; right: calc(-4 * var(--cpx)); top: 25%; width: calc(2 * var(--cpx)); height: 50%; border-radius: 0 calc(1 * var(--cpx)) calc(1 * var(--cpx)) 0; background: rgba(230, 245, 255, .6); }
@@ -636,14 +636,14 @@ body[data-g-theme="3ds"] #g-theme-wall { display: block; background: radial-grad
 #g-retro .ds-banner.system .ds-art svg { width: 100%; height: 100%; }
 /* The rail: five 300px columns of three 224px icons with 14px rows, slid one column at a time. */
 #g-retro .ds-field { position: absolute; left: 0; right: 0; top: calc(252 * var(--cpx)); bottom: calc(104 * var(--cpx)); overflow: hidden; clip-path: inset(0 calc((100% - 1500 * var(--cpx)) / 2)); }
-#g-retro .ds-grid { position: absolute; top: 0; bottom: 0; left: calc(50% - 750 * var(--cpx) + var(--pad, 0) * var(--cpx)); width: calc(1500 * var(--cpx)); transform: translateX(calc(var(--start, 0) * -300 * var(--cpx))); transition: transform .45s cubic-bezier(.22, 1, .36, 1); will-change: transform; }
-#g-retro .ds-icon { position: absolute; left: calc((var(--c) * 300 + 38) * var(--cpx)); top: calc((var(--r) * 238 + 12) * var(--cpx)); display: grid; place-items: center; width: calc(224 * var(--cpx)); height: calc(224 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: calc(26 * var(--cpx)); background: rgba(255, 255, 255, .07); box-shadow: 0 calc(10 * var(--cpx)) calc(26 * var(--cpx)) rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1); cursor: pointer; transition: transform .22s cubic-bezier(.2, 1.2, .3, 1), filter .22s ease; }
+#g-retro .ds-grid { position: absolute; top: 0; bottom: 0; left: calc(50% - 750 * var(--cpx) + var(--pad, 0) * var(--cpx)); width: calc(1500 * var(--cpx)); transform: translateX(calc(var(--start, 0) * -300 * var(--cpx))); transition: transform var(--m-dur) var(--m-ease); will-change: transform; }
+#g-retro .ds-icon { position: absolute; left: calc((var(--c) * 300 + 38) * var(--cpx)); top: calc((var(--r) * 238 + 12) * var(--cpx)); display: grid; place-items: center; width: calc(224 * var(--cpx)); height: calc(224 * var(--cpx)); padding: 0; overflow: hidden; border: 0; border-radius: calc(26 * var(--cpx)); background: rgba(255, 255, 255, .07); box-shadow: 0 calc(10 * var(--cpx)) calc(26 * var(--cpx)) rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1); cursor: pointer; transition: transform var(--m-dur) var(--m-spring), filter var(--m-dur) var(--m-ease); }
 #g-retro .ds-icon svg { width: 100%; height: 100%; }
 #g-retro .ds-cover { width: 100%; height: 100%; background: center / cover no-repeat; }
 #g-retro .ds-icon:not(.sel):hover { transform: translateY(calc(-4 * var(--cpx))); }
 #g-retro .ds-icon.sel { z-index: 2; transform: scale(1.08); filter: drop-shadow(0 0 calc(18 * var(--cpx)) rgba(80, 220, 255, .45)); }
 #g-retro .ds-icon.sel::before { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(120, 236, 255, .8); pointer-events: none; }
-#g-retro .ds-cursor { position: absolute; left: calc((var(--c) * 300 + 24) * var(--cpx)); top: calc(var(--r) * 238 * var(--cpx)); z-index: 3; width: calc(248 * var(--cpx)); height: calc(248 * var(--cpx)); pointer-events: none; transition: left .3s cubic-bezier(.22, 1, .36, 1), top .3s cubic-bezier(.22, 1, .36, 1); animation: ds-pulse 2.4s ease-in-out infinite; }
+#g-retro .ds-cursor { position: absolute; left: calc((var(--c) * 300 + 24) * var(--cpx)); top: calc(var(--r) * 238 * var(--cpx)); z-index: 3; width: calc(248 * var(--cpx)); height: calc(248 * var(--cpx)); pointer-events: none; transition: left var(--m-dur) var(--m-ease), top var(--m-dur) var(--m-ease); animation: ds-pulse 2.4s ease-in-out infinite; }
 body[data-g-theme="3ds"] #g-retro:has(.ds-tool.sel) .ds-cursor { display: none; }
 #g-retro .ds-cursor i { position: absolute; width: calc(34 * var(--cpx)); height: calc(34 * var(--cpx)); border: calc(5 * var(--cpx)) solid #63e2ff; filter: drop-shadow(0 0 calc(6 * var(--cpx)) rgba(80, 220, 255, .9)); }
 #g-retro .ds-cursor i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-radius: calc(12 * var(--cpx)) 0 0 0; }
@@ -654,7 +654,7 @@ body[data-g-theme="3ds"] #g-retro:has(.ds-tool.sel) .ds-cursor { display: none; 
 /* Bottom bar: the small toolbar on the left, the camera and shoulder hints beside the size and scroll. */
 #g-retro .ds-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; align-items: center; gap: calc(16 * var(--cpx)); height: calc(104 * var(--cpx)); padding: 0 calc(40 * var(--cpx)) calc(18 * var(--cpx)); background: linear-gradient(0deg, rgba(4, 6, 9, .92), rgba(4, 6, 9, .36)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); backdrop-filter: blur(calc(10 * var(--cpx))); }
 #g-retro .ds-toolbar { display: flex; align-items: center; gap: calc(10 * var(--cpx)); }
-#g-retro .ds-tool { display: grid; place-items: center; width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); padding: calc(10 * var(--cpx)); border: 0; border-radius: calc(15 * var(--cpx)); background: rgba(255, 255, 255, .07); cursor: pointer; transition: background .18s ease, box-shadow .18s ease, transform .18s ease; }
+#g-retro .ds-tool { display: grid; place-items: center; width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); padding: calc(10 * var(--cpx)); border: 0; border-radius: calc(15 * var(--cpx)); background: rgba(255, 255, 255, .07); cursor: pointer; transition: background var(--m-dur) var(--m-ease), box-shadow var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease); }
 #g-retro .ds-tool svg { width: 100%; height: 100%; }
 #g-retro .ds-tool.tab { width: calc(72 * var(--cpx)); border-radius: calc(18 * var(--cpx)); background: linear-gradient(#1d8fd0, #12659c); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), 0 calc(6 * var(--cpx)) calc(16 * var(--cpx)) rgba(0, 0, 0, .35); }
 #g-retro .ds-tool:is(.sel, .focused, :focus-visible) { background: rgba(95, 220, 255, .2); box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(120, 236, 255, .85) !important; transform: translateY(calc(-2 * var(--cpx))); }
@@ -667,7 +667,7 @@ body[data-g-theme="3ds"] #g-retro:has(.ds-tool.sel) .ds-cursor { display: none; 
 #g-retro .ds-cam { position: relative; width: calc(21 * var(--cpx)); height: calc(15 * var(--cpx)); border-radius: calc(4 * var(--cpx)); background: rgba(190, 220, 238, .45); }
 #g-retro .ds-cam::after { content: ""; position: absolute; left: 30%; top: 20%; width: 40%; height: 60%; border-radius: 50%; background: rgba(6, 9, 13, .9); }
 #g-retro .ds-scroll { position: absolute; left: calc(40 * var(--cpx)); right: calc(40 * var(--cpx)); bottom: calc(10 * var(--cpx)); z-index: 5; height: calc(3 * var(--cpx)); border-radius: calc(2 * var(--cpx)); background: rgba(255, 255, 255, .1); }
-#g-retro .ds-scroll i { position: absolute; left: calc(var(--p, 0) * (100% - 54 * var(--cpx))); top: 0; width: calc(54 * var(--cpx)); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2fa7e8, #8ff0ff); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(80, 220, 255, .6); transition: left .3s ease; }
+#g-retro .ds-scroll i { position: absolute; left: calc(var(--p, 0) * (100% - 54 * var(--cpx))); top: 0; width: calc(54 * var(--cpx)); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2fa7e8, #8ff0ff); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(80, 220, 255, .6); transition: left var(--m-dur) var(--m-ease); }
 #g-retro.ds-still :is(.ds-grid, .ds-cursor, .ds-icon, .ds-scroll i) { transition: none; }
 #g-retro.ds-still .ds-cursor { animation: none; }
 @media (prefers-reduced-motion: reduce) {
@@ -698,7 +698,7 @@ body[data-g-theme="3ds"] #g-retro .ds-set-device { position: absolute; inset: 0;
 #g-retro .ds-set-buttons.categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 #g-retro .ds-set-buttons.other { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 #g-retro .ds-set-buttons.rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#g-retro .ds-set-tile { position: relative; display: flex; align-items: center; gap: calc(16 * var(--cpx)); min-height: calc(88 * var(--cpx)); padding: calc(14 * var(--cpx)) calc(22 * var(--cpx)); border: calc(2 * var(--cpx)) solid #e0e8ec; border-radius: calc(14 * var(--cpx)); background: linear-gradient(#fff, #f5f9fb); color: #3f4f58; text-align: left; cursor: pointer; box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(60, 90, 110, .1); transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+#g-retro .ds-set-tile { position: relative; display: flex; align-items: center; gap: calc(16 * var(--cpx)); min-height: calc(88 * var(--cpx)); padding: calc(14 * var(--cpx)) calc(22 * var(--cpx)); border: calc(2 * var(--cpx)) solid #e0e8ec; border-radius: calc(14 * var(--cpx)); background: linear-gradient(#fff, #f5f9fb); color: #3f4f58; text-align: left; cursor: pointer; box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(60, 90, 110, .1); transition: transform var(--m-dur-fast) var(--m-ease), box-shadow var(--m-dur-fast) var(--m-ease), border-color var(--m-dur-fast) var(--m-ease); }
 #g-retro .ds-set-tile.category { flex-direction: column; justify-content: center; gap: calc(9 * var(--cpx)); min-height: calc(132 * var(--cpx)); padding: calc(14 * var(--cpx)); text-align: center; }
 #g-retro .ds-set-tile.category.small { min-height: calc(104 * var(--cpx)); }
 #g-retro .ds-set-tile.category.small .ds-set-tile-icon { width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); }
@@ -719,7 +719,7 @@ body[data-g-theme="3ds"] #g-retro .ds-set-device { position: absolute; inset: 0;
 #g-retro .ds-set-back:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #63c7ee !important; }
 #g-retro .ds-set-hint { position: absolute; right: calc(32 * var(--cpx)); bottom: calc(32 * var(--cpx)); color: #93a3ab; font: 400 calc(18 * var(--cpx))/1 var(--g-font); }
 /* The bottom screen's sub-screen: values as white buttons, the slider, Back and OK. */
-#g-retro .ds-set-sub { position: absolute; inset: calc(14 * var(--cpx)) calc(18 * var(--cpx)); z-index: 3; border-radius: calc(12 * var(--cpx)); background: linear-gradient(#fafcfd, #eef4f7); box-shadow: 0 calc(10 * var(--cpx)) calc(26 * var(--cpx)) rgba(40, 70, 90, .22); opacity: 0; pointer-events: none; transition: opacity .16s ease; }
+#g-retro .ds-set-sub { position: absolute; inset: calc(14 * var(--cpx)) calc(18 * var(--cpx)); z-index: 3; border-radius: calc(12 * var(--cpx)); background: linear-gradient(#fafcfd, #eef4f7); box-shadow: 0 calc(10 * var(--cpx)) calc(26 * var(--cpx)) rgba(40, 70, 90, .22); opacity: 0; pointer-events: none; transition: opacity var(--m-dur) var(--m-ease); }
 #g-retro .ds-set-sub.open { opacity: 1; pointer-events: auto; }
 #g-retro .ds-set-panel { display: flex; flex-direction: column; height: 100%; padding: calc(18 * var(--cpx)) calc(26 * var(--cpx)) calc(14 * var(--cpx)); }
 #g-retro .ds-set-panel h3 { display: flex; align-items: center; gap: calc(12 * var(--cpx)); margin: 0 0 calc(12 * var(--cpx)); padding-bottom: calc(10 * var(--cpx)); border-bottom: calc(2 * var(--cpx)) solid rgba(47, 143, 214, .2); color: #2b3b45; font: 400 calc(27 * var(--cpx))/1.1 var(--g-font); }
@@ -772,7 +772,6 @@ body.garrison.g-retro #startup-screen .g-boot-mark img { display: none; }
 body.garrison.g-retro #startup-screen .g-boot-mark::before { font: 400 calc(92 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; color: #fff; }
 body.garrison.g-retro[data-g-theme="ps3"] #startup-screen .g-boot-mark::before { content: "PS3"; }
 body.garrison.g-retro[data-g-theme="ps4"] #startup-screen .g-boot-mark::before { content: "PS4"; font-weight: 300; letter-spacing: .12em; }
-body.garrison.g-retro[data-g-theme="wii"] #startup-screen { background: #f2f2f2 !important; }
 body.garrison.g-retro[data-g-theme="wii"] #startup-screen .g-boot-mark::before { content: "Wii"; color: #8c8c8c; }
 body.garrison.g-retro[data-g-theme="wii"] #startup-screen :is(.g-boot-bloom, .g-boot-ring, .g-boot-sweep) { display: none !important; }
 body.garrison.g-retro[data-g-theme="3ds"] #startup-screen .g-boot-mark::before { content: "Nintendo 3DS"; font-size: calc(60 * var(--cpx)); letter-spacing: .01em; }
@@ -797,3 +796,81 @@ body.garrison.g-retro[data-g-theme="3ds"] #startup-screen .g-boot-mark::before {
 }
 .g-tp-3ds::before { content: ""; position: absolute; left: 13.5%; top: 44%; width: 73%; height: 38%; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
 .g-tp-3ds::after { content: ""; position: absolute; left: 12.5%; top: 43%; width: 12.7%; height: 13.8%; border: 2px solid #63e2ff; border-radius: 4px; box-shadow: 0 0 8px rgba(95, 220, 255, .75); }
+/* ============================================================================
+   M1/M2: one motion system, boot, launch and return (garrison-theme-motion.js)
+   Fallback tokens only: the file above writes the per-console values on <body>
+   from its timing table, and sets --m-dur/--m-ease on every console theme.
+   ============================================================================ */
+:root {
+  --m-dur: 200ms; --m-dur-fast: 130ms; --m-dur-slow: 360ms; --m-dur-page: 200ms; --m-fade: 700ms;
+  --m-ease: cubic-bezier(.2, .8, .2, 1); --m-ease-page: cubic-bezier(.2, .8, .2, 1); --m-spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+#g-m-curtain { position: fixed; inset: 0; z-index: 8500; pointer-events: none; }
+
+/* ---------- Boot ---------- */
+#startup-screen.g-m-booting { display: block; padding: 0; background: #000; }
+#startup-screen .g-m-boot { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; }
+#startup-screen .g-m-hint { position: absolute; left: 0; right: 0; bottom: calc(84 * var(--cpx)); text-align: center; font: 300 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .24em; text-transform: uppercase; color: rgba(255, 255, 255, .45); }
+
+/* PS3 coldboot: the wave forms, then the wordmark. */
+#startup-screen .g-m-wave { position: absolute; inset: 0; width: 100%; height: 100%; }
+#startup-screen .g-m-ps3-mark { position: relative; z-index: 1; display: flex; align-items: baseline; gap: calc(16 * var(--cpx)); font: 400 calc(92 * var(--cpx))/1 var(--g-retro-xmb, var(--g-font)); color: #fff; letter-spacing: .015em; text-shadow: 0 0 calc(46 * var(--cpx)) rgba(130, 175, 255, .55); }
+#startup-screen .g-m-ps3-mark em { font-style: normal; font-weight: 300; }
+
+/* PS4: the PS mark and its chime. */
+#startup-screen[data-g-boot="ps4"] { background: #000; }
+#startup-screen .g-m-ps4-glow { position: absolute; inset: 0; background: radial-gradient(ellipse 42% 46% at 50% 47%, rgba(62, 132, 255, .38), transparent 70%); }
+#startup-screen .g-m-ps4-mark { position: relative; z-index: 1; font: 300 calc(280 * var(--cpx))/1 var(--g-retro-sst, var(--g-font)); letter-spacing: .01em; color: #fff; text-shadow: 0 0 calc(60 * var(--cpx)) rgba(80, 150, 255, .45); }
+#startup-screen .g-m-ps4-sub { position: absolute; left: 0; right: 0; bottom: calc(92 * var(--cpx)); text-align: center; font: 300 calc(21 * var(--cpx))/1 var(--g-font); letter-spacing: .1em; color: rgba(255, 255, 255, .58); }
+
+/* Wii: Health and Safety, then the Wii Menu. */
+body.garrison #startup-screen[data-g-boot="wii"] { background: linear-gradient(#e9f6fd, #f8fcfe 52%, #e0f1f9); color: #4a5a63; }
+#startup-screen .g-m-boot-wii { font-family: var(--g-retro-rodin, var(--g-font)); }
+#startup-screen .g-m-hs { display: grid; justify-items: center; gap: calc(20 * var(--cpx)); width: calc(1160 * var(--cpx)); max-width: 74vw; text-align: center; }
+#startup-screen .g-m-hs-word { display: grid; place-items: center; width: calc(168 * var(--cpx)); height: calc(104 * var(--cpx)); border-radius: calc(20 * var(--cpx)); background: #fff; box-shadow: 0 calc(5 * var(--cpx)) calc(16 * var(--cpx)) rgba(60, 120, 150, .18), inset 0 calc(-8 * var(--cpx)) 0 rgba(57, 182, 232, .18); color: #39b6e8; font: 700 calc(58 * var(--cpx))/1 var(--g-retro-rodin-b, var(--g-font)); }
+#startup-screen .g-m-hs h2 { margin: 0; font: 500 calc(44 * var(--cpx))/1.15 var(--g-retro-rodin, var(--g-font)); color: #46565f; }
+#startup-screen .g-m-hs p { margin: 0; max-width: calc(900 * var(--cpx)); font-size: calc(22 * var(--cpx)); line-height: 1.55; color: #5f7079; }
+#startup-screen .g-m-hs-a { display: inline-flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: calc(8 * var(--cpx)); padding: calc(13 * var(--cpx)) calc(32 * var(--cpx)); border-radius: 999px; background: #fff; box-shadow: 0 calc(3 * var(--cpx)) calc(12 * var(--cpx)) rgba(50, 90, 110, .18); font-size: calc(24 * var(--cpx)); color: #3f8fd0; }
+#startup-screen .g-m-hs-a kbd { display: grid; place-items: center; width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); border-radius: 50%; background: #39b6e8; color: #fff; font: 700 calc(22 * var(--cpx))/1 var(--g-font); }
+#startup-screen .g-m-wii-menu { grid-auto-rows: min-content; gap: calc(12 * var(--cpx)); background: linear-gradient(#f6fbfe, #e7f3fa); }
+#startup-screen .g-m-wii-word { font: 700 calc(86 * var(--cpx))/1 var(--g-retro-rodin-b, var(--g-font)); color: #6f7f88; letter-spacing: .06em; }
+#startup-screen .g-m-wii-menu-word { font: 500 calc(24 * var(--cpx))/1 var(--g-retro-rodin, var(--g-font)); letter-spacing: .2em; text-transform: uppercase; color: #4d9fd0; }
+#startup-screen .g-m-wii-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: calc(16 * var(--cpx)); width: calc(1080 * var(--cpx)); max-width: 72vw; margin-top: calc(14 * var(--cpx)); }
+#startup-screen .g-m-wii-grid i { aspect-ratio: 16 / 10; border-radius: calc(12 * var(--cpx)); background: #fff; border: calc(2 * var(--cpx)) solid #dbeaf2; box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(60, 110, 140, .12); }
+
+/* 3DS: the HOME Menu slides in. */
+body.garrison #startup-screen[data-g-boot="3ds"] { background: linear-gradient(#f8fcfe, #e8f3fa); color: #43525b; }
+#startup-screen .g-m-3ds-word { position: absolute; left: 0; right: 0; top: calc(190 * var(--cpx)); text-align: center; font: 300 calc(46 * var(--cpx))/1 var(--g-font); letter-spacing: .05em; color: #4c5a63; }
+#startup-screen .g-m-3ds-menu { position: absolute; left: calc(120 * var(--cpx)); right: calc(120 * var(--cpx)); top: calc(330 * var(--cpx)); bottom: calc(90 * var(--cpx)); display: grid; grid-template-rows: calc(44 * var(--cpx)) 1fr; gap: calc(16 * var(--cpx)); overflow: hidden; }
+#startup-screen .g-m-3ds-bar { display: flex; align-items: center; justify-content: flex-end; gap: calc(12 * var(--cpx)); }
+#startup-screen .g-m-3ds-bar i { width: calc(30 * var(--cpx)); height: calc(9 * var(--cpx)); border-radius: 999px; background: rgba(70, 120, 150, .32); }
+#startup-screen .g-m-3ds-grid { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: min-content; align-content: start; gap: calc(16 * var(--cpx)); }
+#startup-screen .g-m-3ds-grid i { aspect-ratio: 1; align-self: start; border-radius: calc(20 * var(--cpx)); background: #fff; box-shadow: 0 calc(3 * var(--cpx)) calc(10 * var(--cpx)) rgba(60, 90, 120, .15); }
+
+/* Series, One, 360: a short branded splash. */
+#startup-screen[data-g-boot="series"], #startup-screen[data-g-boot="one"], #startup-screen[data-g-boot="x360"] { background: #000; }
+#startup-screen .g-m-boot-xbox { gap: calc(24 * var(--cpx)); }
+#startup-screen .g-m-xbox-mark { width: calc(116 * var(--cpx)); height: calc(116 * var(--cpx)); filter: brightness(0) invert(1); opacity: .95; }
+#startup-screen .g-m-xbox-word { font: 300 calc(62 * var(--cpx))/1 var(--g-font); letter-spacing: .05em; color: #fff; }
+#startup-screen .g-m-xbox-sub { font: 400 calc(19 * var(--cpx))/1 var(--g-font); letter-spacing: .34em; text-transform: uppercase; color: var(--g-green, #107c10); }
+body[data-g-theme="one"] #startup-screen .g-m-xbox-sub { color: #4cc24c; }
+body[data-g-theme="x360"] #startup-screen .g-m-xbox-sub { color: #8ed14a; }
+
+/* ---------- Launch ---------- */
+#launch-overlay .g-m-flash { position: absolute; inset: 0; z-index: 6; background: #fff; opacity: 0; pointer-events: none; }
+
+/* ---------- Return ---------- */
+.g-m-return { position: fixed; inset: 0; z-index: 8500; pointer-events: none; overflow: hidden; }
+.g-m-return[data-console="ps3"] { background: radial-gradient(ellipse 86% 62% at 50% 56%, rgba(86, 128, 224, .5), transparent 72%), #04040a; }
+.g-m-return[data-console="ps3"] .g-m-return-crest { position: absolute; left: -12%; right: -12%; top: 54%; height: 24%; border-top: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .9); border-radius: 50% 50% 0 0 / 70% 70% 0 0; background: linear-gradient(rgba(255, 255, 255, .2), transparent 70%); transform: rotate(-4deg); }
+.g-m-return[data-console="ps4"] { background: radial-gradient(ellipse 74% 62% at 62% 22%, #1c5098, #030d1c 76%); }
+.g-m-return[data-console="ps4"] .g-m-return-crest { position: absolute; left: -14%; right: -14%; top: 58%; height: 26%; border-top: calc(2 * var(--cpx)) solid rgba(255, 255, 255, .5); border-radius: 50% 50% 0 0 / 70% 70% 0 0; }
+.g-m-return:is([data-console="wii"], [data-console="3ds"]) { background: #fff; }
+.g-m-return[data-console="series"] { background: #050805; }
+.g-m-return[data-console="one"] { background: #071007; }
+.g-m-return[data-console="x360"] { background: #101010; }
+
+/* Reduce motion: no boot, launch or return movement. The JS skips its animations at the same time. */
+html.reduce-motion #startup-screen .g-m-boot *, html.reduce-motion #startup-screen .g-m-boot,
+html.reduce-motion .g-m-return, html.reduce-motion #launch-overlay .g-m-flash { animation: none !important; transition: none !important; }
+
