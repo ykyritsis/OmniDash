@@ -33,8 +33,8 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
 
   // Prefs this file adds, with the same defaults as src/main.cjs SETTINGS_DEFAULTS. Menu music and its volume
-  // are read by the shared audio engine (window.gAudio); the 3DS layout is still waiting for D1, so its
-  // available() stays false until then.
+  // are read by the shared audio engine (window.gAudio); the 3DS screen layout is read by window.g3dsLayout
+  // in garrison-theme-retro.js (task D1), which applies it to the two-screen dashboard live.
   const DEFAULTS = {
     clockFormat: '12h', dateOrder: 'locale', enterButton: 'x', nintendoLayout: false,
     menuMusic: true, menuMusicVolume: 60, ps3GameAudio: false, screensaverDelay: 4,
@@ -168,8 +168,8 @@
     return {
       id, kind, min, max, step, options, label,
       get: async () => { await readPrefs(); return pref(id); },
-      // A pref is persisted for its consumer. Until that consumer exists (the 3DS layout arrives with D1)
-      // the row is honestly unavailable instead of being a switch that does nothing.
+      // A pref is persisted for its consumer. A row whose consumer does not exist yet is honestly unavailable
+      // instead of being a switch that does nothing (the 3DS layout's consumer is window.g3dsLayout, task D1).
       available: async () => typeof root.launcher?.setPref === 'function' && (typeof enabled !== 'function' || enabled()),
       set: async value => {
         if (typeof root.launcher?.setPref !== 'function') throw new Error('Saved settings are unavailable.');

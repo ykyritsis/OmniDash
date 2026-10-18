@@ -20,7 +20,9 @@
   const allGames = () => (state.games || []).filter(game => !game.isApp && game.installed !== false);
   const cover = game => game?.artwork?.tile || game?.artwork?.grid || '';
   const url = value => value ? `url(&quot;${esc(value).replaceAll('"', '%22')}&quot;)` : 'none';
-  const cssUrl = value => `url("${String(value).replaceAll('"', '%22')}")`;
+  // `none` rather than an empty CSS url(): Chromium and Electron's security-warning helper both treat an
+  // empty resource URL badly (Electron's own logSecurityWarnings throws on new URL('')), so never emit one.
+  const cssUrl = value => value ? `url("${String(value).replaceAll('"', '%22')}")` : 'none';
   const name = () => state.displayName || document.querySelector('#dashboard-player-name')?.textContent || 'Player';
   const avatar = () => document.querySelector('#profile-avatar')?.innerHTML || '';
   const now = () => new Date();
@@ -1062,54 +1064,175 @@
   });
 
   // =========================== 3DS: the HOME Menu ===========================
-  // One full-bleed screen after iiSU: three rows of large square icons under the selected app's banner.
-  // Five columns are in view at a time; the rail slides one column at a time instead of being rebuilt.
+  // The console, not a picture of it: a light 400x240 top screen above a light 320x240 bottom screen inside a
+  // dark body. The stylesheet carries the 1080p geometry for the three Screen Layout arrangements; the top
+  // screen shows the status bar, the selected software's banner and its title plate, the bottom screen carries
+  // the toolbar and the three-row icon rail. Five columns are in view at Small icon size, four at Large; the rail
+  // slides one column at a time instead of being rebuilt.
   let dsFocus = 0, dsTool = -1, dsArtToken = 0;
-  const DS_ROWS = 3, DS_COLS = 5, DS_PITCH = 300;
-  const DS_TOOLS = [['settings', 'System Settings', 'home'], ['library', 'Game Notes', 'notes'], ['g-friends', 'Friend List', 'friends'], ['g-notifications', 'Notifications', 'notes2'], ['toggle-search', 'Internet Browser', 'web'], ['g-account', 'Miiverse', 'miiverse']];
-  const DS_SVG = {
-    home: '<svg viewBox="0 0 24 24"><path d="M3 12 12 4l9 8h-3v7H6v-7z" fill="#8aa7c7"/><path d="M14 13l5 5-1.6 1.6-5-5z" fill="#6c87a8"/></svg>',
-    notes: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4L16 5l3 3L9 18z" fill="#f7cf1f" stroke="#c9a400" stroke-width="1"/><path d="M5 19l1-4 3 3z" fill="#555"/></svg>',
-    friends: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" fill="#fff" stroke="#f08b1e" stroke-width="2"/><circle cx="9" cy="10" r="1.3" fill="#f08b1e"/><circle cx="15" cy="10" r="1.3" fill="#f08b1e"/><path d="M8 14q4 3.5 8 0" fill="none" stroke="#f08b1e" stroke-width="1.6" stroke-linecap="round"/></svg>',
-    notes2: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 3v-3H4z" fill="#fff" stroke="#1fb3a8" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h8M8 12h6" stroke="#1fb3a8" stroke-width="1.6" stroke-linecap="round"/></svg>',
-    web: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#2f7fe6"/><path d="M3 12h18M12 3c-4 4.5-4 13.5 0 18M12 3c4 4.5 4 13.5 0 18" fill="none" stroke="#fff" stroke-width="1.3"/></svg>',
-    miiverse: '<svg viewBox="0 0 24 24"><circle cx="7" cy="9" r="2.6" fill="#55b52e"/><circle cx="12" cy="7.5" r="2.8" fill="#55b52e"/><circle cx="17" cy="9" r="2.6" fill="#55b52e"/><path d="M3 19c0-4 2-6 4-6s3 1 5 1 3-1 5-1 4 2 4 6z" fill="#55b52e"/></svg>',
-    eshop: '<svg viewBox="0 0 40 40"><rect x="2" y="2" width="36" height="36" rx="5" fill="#ff8b1a"/><path d="M11 15h18l-1.5 16h-15z" fill="#fff"/><path d="M15 16v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#fff" stroke-width="2.2"/></svg>',
-    wrench: '<svg viewBox="0 0 40 40"><defs><linearGradient id="ds-w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4efd8"/><stop offset="1" stop-color="#b9b190"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="5" fill="url(#ds-w)"/><path d="M27 8a6 6 0 0 0-7.5 7.6L9 26.1l3.9 3.9 10.5-10.5A6 6 0 0 0 31 12l-3.6 3.6-3-3L28 9z" fill="#3a3a3a"/></svg>',
-    mii: '<svg viewBox="0 0 40 40"><rect x="2" y="2" width="36" height="36" rx="5" fill="#f4f7f6"/><text x="20" y="27" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="700" font-size="17" fill="#fff" stroke="#3aa58c" stroke-width="1.6" paint-order="stroke">Mii</text></svg>',
-    camera: '<svg viewBox="0 0 40 40"><rect x="2" y="2" width="36" height="36" rx="5" fill="#ffa419"/><rect x="8" y="13" width="24" height="17" rx="3" fill="#fff"/><rect x="15" y="10" width="10" height="4" rx="1.5" fill="#fff"/><circle cx="20" cy="21.5" r="5" fill="#ffa419"/></svg>',
-    library: '<svg viewBox="0 0 40 40"><rect x="2" y="2" width="36" height="36" rx="5" fill="#fff" stroke="#3d74d9" stroke-width="2.5"/><g fill="#3d74d9">' + [0, 1, 2].flatMap(r => [0, 1, 2].map(c => `<rect x="${10 + c * 7.5}" y="${10 + r * 7.5}" width="5" height="5" rx="1.2"/>`)).join('') + '</g></svg>',
-    gamepass: '<svg viewBox="0 0 40 40"><rect x="2" y="2" width="36" height="36" rx="5" fill="#107c10"/><circle cx="20" cy="20" r="10" fill="none" stroke="#fff" stroke-width="3"/><path d="M14 14q6 4 12 12M26 14q-6 4-12 12" stroke="#fff" stroke-width="3" fill="none"/></svg>'
+  const dsHeld = new Set();
+  // Wide art is resolved only after the window's load event (see dsBanner): it keeps Electron's security-warning
+  // helper from reading the empty resource entry the launcher's image probe leaves behind during load.
+  let dsArtReady = document.readyState === 'complete';
+  window.addEventListener('load', () => {
+    dsArtReady = true;
+    if (theme() !== '3ds' || state.view !== 'home' || window.gShell?.isOpen?.('3ds')) return;
+    const list = dsList();
+    if (list[dsFocus]) dsBanner(list[dsFocus]);
+  }, { once: true });
+  const DS_ROWS = 3;
+  // Screen Layout (registry `screenLayout3ds`): the console arrangement and two 16:9 alternatives.
+  const DS_LAYOUTS = ['stacked', 'side-by-side', 'large-top'];
+  // The console's two grid sizes in bottom-screen native pixels. The rail is 304px wide, so five 50px columns
+  // fit at Small and four 58px columns at Large; both keep three rows so the D-pad grammar never changes.
+  const DS_ZOOM = { small: { cell: 44, pitch: 50, cols: 5 }, large: { cell: 52, pitch: 58, cols: 4 } };
+  let dsZoom = 'small';
+  try { if (localStorage.getItem('g-3ds-zoom') === 'large') dsZoom = 'large'; } catch { /* No storage. */ }
+  const dsSpec = () => DS_ZOOM[dsZoom] || DS_ZOOM.small;
+  // Toolbar order is the console's: the HOME Menu settings tab, Game Notes, Friend List, Notifications, the
+  // Internet Browser, Miiverse, then the two icon-size buttons on the right. Every one is a real action; the
+  // two size buttons are real controls that change the grid (and persist), not a picture.
+  const DS_TOOLS = [
+    ['settings', 'HOME Menu settings', 'tabSettings'],
+    ['library', 'Game Notes', 'notes'],
+    ['g-friends', 'Friend List', 'friends'],
+    ['g-notifications', 'Notifications', 'notes2'],
+    ['toggle-search', 'Internet Browser', 'web'],
+    ['g-account', 'Miiverse', 'miiverse'],
+    ['g-ds-zoom', 'Small icons', 'zoomSmall', 'small'],
+    ['g-ds-zoom', 'Large icons', 'zoomLarge', 'large']
+  ];
+  // D2: the 3ds pack on this machine holds only reference captures, so every system app uses a drawn icon in
+  // the console's own colours and shapes. These are original SVGs, never console artwork, and the theme asks
+  // for no pack file it cannot see. 48x48 is the console's icon size; the rail draws them in a white cell.
+  const DS_ICON = {
+    health: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#dcdcd6" stroke-width="1.6"/><path d="M24 9 41 38H7Z" fill="#ffd535" stroke="#c79a00" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 18v10" stroke="#3c3422" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="33" r="2.2" fill="#3c3422"/></svg>`,
+    camera: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#ff9f1c"/><rect x="9" y="16" width="30" height="21" rx="4" fill="#fff"/><rect x="17" y="12" width="14" height="5" rx="2" fill="#fff"/><circle cx="24" cy="27" r="7" fill="#ff9f1c"/><circle cx="24" cy="27" r="3" fill="#fff" opacity=".55"/></svg>`,
+    sound: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#dcdcd6" stroke-width="1.6"/><path d="M19 34V16l15-3.5V31" fill="none" stroke="#2f9ade" stroke-width="3.2" stroke-linejoin="round"/><ellipse cx="15" cy="35" rx="5" ry="4" fill="#2f9ade"/><ellipse cx="30" cy="32" rx="5" ry="4" fill="#ff9f1c"/></svg>`,
+    mii: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#e0e0da" stroke-width="1.6"/><circle cx="24" cy="20" r="9.5" fill="#f7cfa4"/><path d="M14.5 19c.4-6.2 4.4-9.5 9.5-9.5s9.1 3.3 9.5 9.5c-2.8-3-5.6-4.4-9.5-4.4s-6.7 1.4-9.5 4.4z" fill="#6b4a2f"/><path d="M11.5 40c1.4-8 6.2-11.5 12.5-11.5S35.1 32 36.5 40z" fill="#4ec06b"/><circle cx="20.3" cy="20.6" r="1.25" fill="#5a4432"/><circle cx="27.7" cy="20.6" r="1.25" fill="#5a4432"/><path d="M20.5 24.5q3.5 2.4 7 0" fill="none" stroke="#5a4432" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    plaza: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#eef7dc"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#d7e6bd" stroke-width="1.6"/><path d="M4 33h40v11H4z" fill="#9bd45a"/><circle cx="17" cy="23" r="6.4" fill="#f7cfa4"/><path d="M8 40c0-5.4 3.6-8.5 9-8.5s9 3.1 9 8.5" fill="#48ae3a"/><path d="M12 17c.4-4 2.6-6.2 5-6.2s4.6 2.2 5 6.2c-1.6-1.8-3-2.8-5-2.8s-3.4 1-5 2.8z" fill="#7a4b2a"/><circle cx="33" cy="25" r="5.4" fill="#eab98d"/><path d="M26 40c0-4.6 3-7.2 7-7.2s7 2.6 7 7.2" fill="#3f9e6a"/><path d="M28.5 20.5c.3-3.3 2.2-5 4.5-5s4.2 1.7 4.5 5c-1.4-1.5-2.7-2.3-4.5-2.3s-3.1.8-4.5 2.3z" fill="#d8b45a"/></svg>`,
+    eshop: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#ff8a1e"/><path d="M13 18h22l-2.2 20H15.2z" fill="#fff"/><path d="M18.5 18v-2a5.5 5.5 0 0 1 11 0v2" fill="none" stroke="#fff" stroke-width="3.2"/></svg>`,
+    wrench: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#f4efd8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#d9d2b4" stroke-width="1.6"/><path d="M32 9a7 7 0 0 0-8.6 8.8L11 30.2l5.8 5.8 12.4-12.4A7 7 0 0 0 38 15l-4.4 4.4-3.5-3.5z" fill="#4a4a44"/></svg>`,
+    download: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#b96a2f"/><rect x="6" y="16" width="17" height="21" rx="2.4" fill="#f6ead9"/><rect x="9" y="19" width="11" height="9" rx="1.2" fill="#7a4a26"/><rect x="25" y="19" width="17" height="21" rx="2.4" fill="#f6ead9"/><rect x="28" y="22" width="11" height="9" rx="1.2" fill="#7a4a26"/><path d="M24 7v12m-4.5-4.5L24 19l4.5-4.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    activity: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#deded8" stroke-width="1.6"/><rect x="8" y="27" width="8" height="12" rx="1.6" fill="#7ac94f"/><rect x="20" y="19" width="8" height="20" rx="1.6" fill="#48b34a"/><rect x="32" y="11" width="8" height="28" rx="1.6" fill="#8bd45a"/><path d="M7 15 21 8" fill="none" stroke="#3f9e3a" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+    notes2: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#deded8" stroke-width="1.6"/><path d="M9 11h30v19H22l-8 7v-7H9z" fill="#fff" stroke="#3fbf8f" stroke-width="2.6" stroke-linejoin="round"/><path d="M15 18h18M15 23h13" stroke="#3fbf8f" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+    friends: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fff8ef"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#f0a54a" stroke-width="2"/><circle cx="18" cy="21" r="2.4" fill="#f2912a"/><circle cx="30" cy="21" r="2.4" fill="#f2912a"/><path d="M16.5 28.5q7.5 6.5 15 0" fill="none" stroke="#f2912a" stroke-width="2.8" stroke-linecap="round"/></svg>`,
+    notes: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#deded8" stroke-width="1.6"/><rect x="10" y="9" width="24" height="29" rx="2.4" fill="#fff" stroke="#e5e5dc" stroke-width="1.4"/><path d="M14 16h16M14 21h16M14 26h11" stroke="#d9d9cf" stroke-width="2" stroke-linecap="round"/><path d="M26 35 37 24l3.2 3.2L29.2 38z" fill="#f7cf1f" stroke="#c9a400" stroke-width="1.4" stroke-linejoin="round"/><path d="M26 35l3.2 3.2-4.6 1.4z" fill="#5a5a55"/></svg>`,
+    web: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#deded8" stroke-width="1.6"/><circle cx="24" cy="24" r="14" fill="#2f8fe0"/><path d="M10 24h28M24 10c-5 5.6-5 22.4 0 28M24 10c5 5.6 5 22.4 0 28" fill="none" stroke="#fff" stroke-width="1.8"/></svg>`,
+    miiverse: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#dbead2" stroke-width="1.6"/><circle cx="15" cy="19" r="4.2" fill="#5cbf3f"/><circle cx="24" cy="16.5" r="4.6" fill="#4bb332"/><circle cx="33" cy="19" r="4.2" fill="#5cbf3f"/><path d="M8 38c0-6 3.2-9.5 7-9.5s4.6 1.6 9 1.6 5.2-1.6 9-1.6 7 3.5 7 9.5z" fill="#4bb332"/></svg>`,
+    tabSettings: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M8 24 24 9l16 15" fill="none" stroke="#2f9ade" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 22v17h22V22" fill="none" stroke="#2f9ade" stroke-width="3.6" stroke-linejoin="round"/><circle cx="34" cy="34" r="10" fill="#eaf6fd"/><path d="M38.5 28.5a5 5 0 0 0-6.2 6.2l-4.6 4.6 2.2 2.2 4.6-4.6a5 5 0 0 0 6.2-6.2l-2.6 2.6-2.2-2.2z" fill="#2f9ade"/></svg>`,
+    library: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fff"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#d9e4f4" stroke-width="1.6"/><g fill="#3d74d9">${[0, 1, 2].flatMap(row => [0, 1, 2].map(col => `<rect x="${11 + col * 9}" y="${11 + row * 9}" width="7" height="7" rx="1.4"/>`)).join('')}</g></svg>`,
+    folder: `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1" y="1" width="46" height="46" rx="10" fill="#fbfbf8"/><rect x="1" y="1" width="46" height="46" rx="10" fill="none" stroke="#deded8" stroke-width="1.6"/><path d="M7 15h12l3 4h19v21H7z" fill="#bfe3f4"/><g fill="#fff"><rect x="12" y="23" width="9" height="8" rx="1"/><rect x="23" y="23" width="9" height="8" rx="1"/><rect x="12" y="33" width="9" height="6" rx="1"/><rect x="23" y="33" width="9" height="6" rx="1"/></g></svg>`,
+    zoomSmall: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="currentColor">${[0, 1, 2].flatMap(row => [0, 1, 2].map(col => `<rect x="${3 + col * 6.4}" y="${3 + row * 6.4}" width="4.6" height="4.6" rx=".9"/>`)).join('')}</g></svg>`,
+    zoomLarge: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.4"/><rect x="13" y="3" width="8" height="8" rx="1.4"/><rect x="3" y="13" width="8" height="8" rx="1.4"/><rect x="13" y="13" width="8" height="8" rx="1.4"/></g></svg>`,
+    cameraHint: `<svg viewBox="0 0 24 17" aria-hidden="true" focusable="false"><rect x="1.5" y="4" width="15" height="11" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="5.6" y="1.8" width="6.8" height="3.4" rx="1.2" fill="currentColor"/><circle cx="9" cy="9.6" r="3.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.5 6.5a5.2 5.2 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`
   };
-  function dsList() {
-    return [...games().slice(0, 30).map(gameItem), { label: 'Nintendo eShop', sub: 'Store', action: 'dashboard-store', svg: 'eshop' }, { label: 'Game Pass', sub: 'Subscription', action: 'dashboard-gamepass', svg: 'gamepass' },
-      { label: 'System Settings', sub: 'Settings', action: 'settings', svg: 'wrench' }, { label: 'Mii Maker', sub: 'Profile', action: 'g-account', svg: 'mii' }, { label: 'Nintendo 3DS Camera', sub: 'Screenshots', action: 'g-retro-captures', svg: 'camera' },
-      { label: 'All Software', sub: 'Library', action: 'library', svg: 'library' }];
+  // The Screen Layout pref is read through the registry's synchronous cache, so the first paint already has it.
+  const dsLayoutPref = () => {
+    const value = window.gSettings?.cached?.('screenLayout3ds');
+    return DS_LAYOUTS.includes(value) ? value : 'stacked';
+  };
+  // The setting's consumer probe. The registry keeps the row unavailable unless this exists, and the eval reads
+  // the applied layout straight off the theme's root element.
+  function dsApplyLayout() {
+    const layout = dsLayoutPref();
+    host.dataset.dsLayout = layout;
+    document.body.dataset.g3dsLayout = layout;
+    return layout;
   }
-  // The rail's offset: the selection keeps two columns of context on either side, and a library too short
-  // to fill five columns is padded so the icons stay centred.
+  window.g3dsLayout = () => dsApplyLayout();
+  // A folder is a real launcher collection: its cell shows the first four covers, and pressing it opens the
+  // collection in the library. The console put user folders on the HOME Menu; this is the same thing.
+  function dsFolders() {
+    return (state.customCollections || []).slice(0, 6).map(collection => ({
+      label: collection.name || 'Folder', sub: `${(collection.gameIds || []).length} titles`, folder: true, id: collection.id,
+      action: 'collection-open', data: { collection: `custom:${collection.id}` },
+      covers: (collection.gameIds || []).map(findGame).filter(Boolean).slice(0, 4)
+    }));
+  }
+  // The bottom-screen grid: folders, then the library, then the console's own apps. Every app is a real action
+  // behind a drawn console-style icon (D2); nothing here is a tile that only decorates the screen.
+  function dsList() {
+    const friends = Number(state.gFriends?.online) || 0;
+    const apps = [
+      { label: 'Health and Safety', sub: 'System information', action: 'gsh-page', data: { page: 'system' }, svg: 'health' },
+      { label: 'Nintendo 3DS Camera', sub: 'Screenshots and clips', action: 'g-retro-captures', svg: 'camera' },
+      { label: 'Nintendo 3DS Sound', sub: 'Volume, sounds and music', action: 'gsh-page', data: { page: 'sound' }, svg: 'sound' },
+      { label: 'Mii Maker', sub: 'Name and picture', action: 'g-account', svg: 'mii' },
+      { label: 'StreetPass Mii Plaza', sub: `${friends} friends online`, action: 'g-friends', svg: 'plaza' },
+      { label: 'Nintendo eShop', sub: 'Store', action: 'dashboard-store', svg: 'eshop' },
+      { label: 'System Settings', sub: 'Every launcher setting', action: 'settings', svg: 'wrench' },
+      { label: 'Download Play', sub: 'Downloads and queue', action: 'console-library-section', data: { section: 'queue' }, svg: 'download' },
+      { label: 'Activity Log', sub: 'Play time and all software', action: 'library', svg: 'activity' },
+      { label: 'Notifications', sub: 'Recent notices', action: 'g-notifications', svg: 'notes2' },
+      { label: 'Friend List', sub: `${friends} online`, action: 'g-friends', svg: 'friends' }
+    ];
+    return [...dsFolders(), ...games().slice(0, 24).map(gameItem), ...apps];
+  }
+  // The rail's offset: the selection keeps two columns of context on either side, and the view is centred
+  // whatever the number of columns or the icon size. `pad` is the native-pixel inset of the first column.
   function dsRail(list) {
+    const spec = dsSpec();
     const cols = Math.max(1, Math.ceil(list.length / DS_ROWS));
     const col = Math.floor(dsFocus / DS_ROWS);
-    return { cols, col, start: Math.max(0, Math.min(col - 2, cols - DS_COLS)), pad: Math.max(0, DS_COLS - cols) * DS_PITCH / 2 };
+    const view = spec.cols;
+    return {
+      cols, col, view, cell: spec.cell, pitch: spec.pitch,
+      start: Math.max(0, Math.min(col - Math.floor(view / 2), Math.max(0, cols - view))),
+      pad: Math.max(0, (304 - view * spec.pitch) / 2)
+    };
+  }
+  const dsFolderMarkup = item => `<span class="ds-folder" aria-hidden="true">${[0, 1, 2, 3].map(index => `<i${item.covers[index] ? ` style="background-image:${url(cover(item.covers[index]))}"` : ''}></i>`).join('')}</span>`;
+  function dsSetZoom(next) {
+    const value = next === 'large' ? 'large' : 'small';
+    if (value === dsZoom) return false;
+    dsZoom = value;
+    try { localStorage.setItem('g-3ds-zoom', value); } catch { /* No storage. */ }
+    renderDs();
+    return true;
+  }
+  // The Camera hint (Y) opens the newest capture; the size buttons and L+R change the grid's icon size.
+  function openDsCamera() {
+    if (theme() !== '3ds' || state.view !== 'home' || document.querySelector('dialog[open]')) return false;
+    play('confirm');
+    loadCaptures();
+    openLatestCapture();
+    return true;
   }
   function renderDs() {
     if (window.gShell?.isOpen?.('3ds')) { window.gShell.render(); return; }
+    const layout = dsApplyLayout();
     const list = dsList();
+    const spec = dsSpec();
     dsFocus = Math.max(0, Math.min(dsFocus, list.length - 1));
     const rail = dsRail(list);
     const coins = Math.min(300, 10 + allGames().length);
+    const tools = DS_TOOLS.slice(0, 6).map(([action, label, svg], index) => `<button class="ds-tool${index === 0 ? ' tab' : ''} focusable${dsTool === index ? ' sel' : ''}" type="button" data-action="${action}" data-ds-tool="${index}" aria-label="${esc(label)}">${DS_ICON[svg] || ''}</button>`).join('');
+    const sizes = DS_TOOLS.slice(6).map(([action, label, svg, size], index) => {
+      const toolIndex = index + 6, on = size === dsZoom;
+      return `<button class="ds-tool ds-size-btn focusable${dsTool === toolIndex ? ' sel' : ''}${on ? ' on' : ''}" type="button" data-action="${action}" data-size="${size}" data-ds-tool="${toolIndex}" aria-label="${esc(label)}" aria-pressed="${on}">${DS_ICON[svg] || ''}</button>`;
+    }).join('');
+    const cells = list.map((item, index) => `<button class="ds-icon focusable${index === dsFocus && dsTool < 0 ? ' sel' : ''}" type="button" ${attrs(item)} data-ds-index="${index}" aria-label="${esc(item.label)}" style="--c:${Math.floor(index / DS_ROWS)};--r:${index % DS_ROWS}">
+          ${item.folder ? dsFolderMarkup(item) : item.game ? `<span class="ds-cover" style="background-image:${url(cover(item.game))}"></span>` : `<span class="ds-app">${DS_ICON[item.svg] || icon('game')}</span>`}</button>`).join('');
     host.classList.toggle('ds-still', reducedMotion());
-    host.innerHTML = `<i class="ds-bg" aria-hidden="true"></i>
-        <div class="ds-statusbar"><span class="ds-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="ds-pill">Internet</span><span class="ds-coin"><i>P</i>${coins}</span>
-          <span class="ds-when">${esc(dayMonth())} (${esc(weekday())})</span><span class="ds-clock">${esc(time()).replace(':', '<b>:</b>')}</span><span class="ds-battery" aria-hidden="true"><i></i></span></div>
-        <div class="ds-banner"><i class="ds-art"></i><div class="ds-plate"><i class="ds-plate-icon"></i><span><em class="ds-kicker"></em><strong></strong><small></small></span></div></div>
-        <div class="ds-field"><div class="ds-grid" style="--start:${rail.start};--pad:${rail.pad}">${list.map((item, i) => `<button class="ds-icon focusable${i === dsFocus && dsTool < 0 ? ' sel' : ''}" type="button" ${attrs(item)} data-ds-index="${i}" aria-label="${esc(item.label)}" style="--c:${Math.floor(i / DS_ROWS)};--r:${i % DS_ROWS}">
-          ${item.game ? `<span class="ds-cover" style="background-image:${url(cover(item.game))}"></span>` : DS_SVG[item.svg] || icon('game')}</button>`).join('')}<span class="ds-cursor" style="--c:${rail.col};--r:${dsFocus % DS_ROWS}" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></div>
-        <div class="ds-bottom"><div class="ds-toolbar">${DS_TOOLS.map(([action, label, svg], i) => `<button class="ds-tool focusable${i === 0 ? ' tab' : ''}${dsTool === i ? ' sel' : ''}" type="button" data-action="${action}" data-ds-tool="${i}" aria-label="${label}">${DS_SVG[svg]}</button>`).join('')}</div>
-          <span class="ds-gap"></span><span class="ds-size" aria-hidden="true"><i></i><i class="grid"></i></span>
-          <div class="ds-foot">${gRow('3ds', homePrompts('3ds'))}</div></div>
-        <div class="ds-scroll" aria-hidden="true"><i style="--p:${rail.cols > DS_COLS ? rail.start / (rail.cols - DS_COLS) : 0}"></i></div>`;
+    host.innerHTML = `<div class="ds-device" role="group" aria-label="Nintendo 3DS">
+        <i class="ds-hinge" aria-hidden="true"></i><i class="ds-cam-dot" aria-hidden="true"></i><i class="ds-led" aria-hidden="true"></i>
+        <section class="ds-screen ds-top" aria-label="Top screen">
+          <div class="ds-statusbar"><span class="ds-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="ds-pill">Internet</span><span class="ds-coin" aria-label="${coins} Play Coins"><i>P</i>${coins}</span>
+            <span class="ds-when">${esc(dayMonth())} (${esc(weekday())})</span><span class="ds-clock">${esc(time()).replace(':', '<b>:</b>')}</span><span class="ds-battery" aria-hidden="true"><i></i></span></div>
+          <div class="ds-banner"><i class="ds-art" aria-hidden="true"></i><div class="ds-plate"><i class="ds-plate-icon" aria-hidden="true"></i><span><strong></strong><small></small></span></div></div>
+          <div class="ds-hints">
+            <span class="ds-hint ds-hint-l"><span class="ds-hint-cam" aria-hidden="true">${DS_ICON.cameraHint}</span>${gRow('3ds', [{ button: 'y', label: 'Camera' }])}</span>
+            <span class="ds-hint ds-hint-r">${gRow('3ds', [{ buttons: ['l', 'r'], label: 'Icon size' }])}</span>
+          </div>
+        </section>
+        <section class="ds-screen ds-bot" aria-label="Bottom screen">
+          <div class="ds-toolbar">${tools}<span class="ds-gap"></span><span class="ds-sizes" role="group" aria-label="Icon size">${sizes}</span></div>
+          <div class="ds-field"><div class="ds-grid" style="--cell:${spec.cell};--pitch:${spec.pitch};--cols:${rail.cols};--start:${rail.start};--pad:${rail.pad}">${cells}
+            <span class="ds-cursor" style="--c:${rail.col};--r:${dsFocus % DS_ROWS}" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></div>
+          <div class="ds-scroll" aria-hidden="true"><i style="--p:${rail.cols > rail.view ? rail.start / (rail.cols - rail.view) : 0}"></i></div>
+        </section>
+      </div>`;
     chrome.innerHTML = '';
     dsBanner(list[dsFocus]);
     focusEl(dsTool >= 0 ? host.querySelector(`[data-ds-tool="${dsTool}"]`) : host.querySelector('.ds-icon.sel'));
@@ -1123,47 +1246,53 @@
     if (!grid) { renderDs(); return; }
     grid.style.setProperty('--start', rail.start);
     grid.style.setProperty('--pad', rail.pad);
+    grid.style.setProperty('--cols', rail.cols);
     host.querySelectorAll('.ds-icon').forEach((button, i) => button.classList.toggle('sel', i === dsFocus && dsTool < 0));
     const cursor = host.querySelector('.ds-cursor');
     if (cursor) { cursor.style.setProperty('--c', rail.col); cursor.style.setProperty('--r', dsFocus % DS_ROWS); }
     host.querySelectorAll('.ds-tool').forEach((button, i) => button.classList.toggle('sel', i === dsTool));
     const bar = host.querySelector('.ds-scroll i');
-    if (bar) bar.style.setProperty('--p', rail.cols > DS_COLS ? rail.start / (rail.cols - DS_COLS) : 0);
+    if (bar) bar.style.setProperty('--p', rail.cols > rail.view ? rail.start / (rail.cols - rail.view) : 0);
     dsBanner(list[dsFocus]);
     focusEl(dsTool >= 0 ? host.querySelector(`[data-ds-tool="${dsTool}"]`) : host.querySelector('.ds-icon.sel'));
   }
   function dsBanner(item) {
+    const banner = host.querySelector('.ds-banner');
     const plate = host.querySelector('.ds-plate');
-    if (!plate || !item) return;
+    if (!banner || !plate || !item) return;
     const token = ++dsArtToken;
     plate.querySelector('strong').textContent = item.label;
-    plate.querySelector('.ds-kicker').textContent = item.game ? 'Now Playing' : 'System App';
-    // The plate carries the software's publisher, and the play time once it has been played.
+    // The white plate carries the software's publisher, or the system app's own line.
     plate.querySelector('small').textContent = item.game
       ? [item.game.developer || item.game.publisher || (item.game.provider === 'PC' ? '' : item.game.provider), playtime(item.game)].filter(Boolean).join(' · ')
       : item.sub || '';
     const iconEl = plate.querySelector('.ds-plate-icon');
-    iconEl.innerHTML = item.game ? '' : DS_SVG[item.svg] || '';
-    iconEl.style.backgroundImage = item.game ? cssUrl(cover(item.game)) : '';
+    iconEl.innerHTML = item.game ? '' : DS_ICON[item.folder ? 'folder' : item.svg] || '';
+    iconEl.style.backgroundImage = item.game && cover(item.game) ? cssUrl(cover(item.game)) : '';
     const art = host.querySelector('.ds-art');
-    const backdrop = host.querySelector('.ds-bg');
     art.style.backgroundImage = ''; art.innerHTML = '';
-    art.parentElement.classList.toggle('system', !item.game);
+    banner.classList.toggle('system', !item.game);
+    banner.classList.remove('preload');
+    banner.style.setProperty('--px', 0); banner.style.setProperty('--py', 0);
     if (!item.game) {
-      art.innerHTML = DS_SVG[item.svg] || '';
-      // A system app has no wallpaper of its own, so the library's first game stays behind it.
-      const fallback = dsList().find(entry => entry.game)?.game;
-      if (backdrop && !backdrop.style.backgroundImage && fallback && window.gWideArt) {
-        window.gWideArt(fallback).then(src => { if (src && backdrop.isConnected) backdrop.style.backgroundImage = cssUrl(src); }).catch(() => {});
-      }
+      // A system app has no wide art, so its own drawn icon stands in on the light banner.
+      art.innerHTML = DS_ICON[item.folder ? 'folder' : item.svg] || '';
       return;
     }
-    if (!window.gWideArt) return;
+    // The wide-art resolver probes candidates with <img> loads. The launcher's probe clears a failed image with
+    // `src = ''`, and Electron 39's security-warning helper throws on the resulting empty resource entry when it
+    // runs at the window load event. Resolve art after load instead, showing the square cover in the frame first.
+    if (!dsArtReady) {
+      art.style.backgroundImage = cover(item.game) ? cssUrl(cover(item.game)) : '';
+      banner.classList.add('preload');
+      return;
+    }
+    banner.classList.remove('preload');
+    if (!window.gWideArt) { art.style.backgroundImage = cover(item.game) ? cssUrl(cover(item.game)) : ''; return; }
     window.gWideArt(item.game).then(src => {
       // A quick move can land this lookup after the next game's; only the latest selection may paint.
       if (token !== dsArtToken || !art.isConnected) return;
       art.style.backgroundImage = cssUrl(src || cover(item.game));
-      if (src && backdrop?.isConnected) backdrop.style.backgroundImage = cssUrl(src);
     }).catch(() => {});
   }
   function dsMove(direction) {
@@ -1186,6 +1315,53 @@
     dsFocus = next; play('navigate');
     dsUpdate();
   }
+  // The banner has depth: the wide art drifts a few native pixels against the pointer while the white plate
+  // stays still. It is pointer-driven only (no loop), and reduce-motion turns it off with the rest of the theme.
+  host.addEventListener('pointermove', event => {
+    if (theme() !== '3ds' || reducedMotion()) return;
+    const banner = event.target.closest?.('.ds-banner');
+    if (!banner) return;
+    const rect = banner.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    banner.style.setProperty('--px', (((event.clientX - rect.left) / rect.width) - .5).toFixed(3));
+    banner.style.setProperty('--py', (((event.clientY - rect.top) / rect.height) - .5).toFixed(3));
+  }, { passive: true });
+  host.addEventListener('pointerleave', () => {
+    const banner = host.querySelector('.ds-banner');
+    if (!banner) return;
+    banner.style.setProperty('--px', 0);
+    banner.style.setProperty('--py', 0);
+  }, { passive: true });
+  // Screen Layout changes the device live (task D1): the pref drives a data attribute on the root element, so
+  // the screens are only rebuilt when the registry reports a new value. If System Settings is open, the Home
+  // screen underneath is hidden; it is rebuilt when the shell closes instead of fighting the shell's painter.
+  document.addEventListener('g-setting-change', event => {
+    if (event.detail?.id !== 'screenLayout3ds' || theme() !== '3ds') return;
+    dsApplyLayout();
+    if (state.view === 'home' && !window.gShell?.isOpen?.('3ds')) renderDs();
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() !== '3ds') return;
+    dsApplyLayout();
+    if (state.view === 'home' && !window.gShell?.isOpen?.('3ds')) renderDs();
+  });
+  // Y is the console's Camera shortcut (printed on the top screen); L+R changes the icon size (printed beside
+  // it). X stays the Options button handled above. The pad paths are the toggle-search redirect and the poll.
+  document.addEventListener('keydown', event => {
+    if (!on() || theme() !== '3ds' || state.view !== 'home' || document.querySelector('dialog[open]')
+      || (typeof isTextEntry === 'function' && isTextEntry(event.target))) return;
+    const key = String(event.key || '').toLowerCase();
+    if (key === 'y' && openDsCamera()) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+    if (key === 'l' || key === 'r') {
+      dsHeld.add(key);
+      if (dsHeld.has('l') && dsHeld.has('r')) {
+        dsSetZoom(dsZoom === 'small' ? 'large' : 'small');
+        event.preventDefault(); event.stopImmediatePropagation();
+      }
+    }
+  }, true);
+  document.addEventListener('keyup', event => dsHeld.delete(String(event.key || '').toLowerCase()), true);
+  window.addEventListener('blur', () => dsHeld.clear());
 
   // ---------- 3DS: System Settings, the two-screen skin ----------
   // The top screen describes the focused option; the bottom screen holds the console's large white buttons. Its
@@ -1213,7 +1389,7 @@
   };
   const dsSetIcon = pageId => {
     const spec = DS_SET_ICONS[pageId] || {};
-    if (spec.svg && DS_SVG[spec.svg]) return DS_SVG[spec.svg];
+    if (spec.svg && DS_ICON[spec.svg]) return DS_ICON[spec.svg];
     return icon(spec.glyph || 'settings');
   };
   const dsSetPageCopy = page => DS_SET_COPY[page?.id] || 'Each row here changes something real in the launcher.';
@@ -1226,7 +1402,7 @@
     if (internet) list.push({ kind: 'page', id: 'internet', pageId: 'internet', label: internet.title, copy: DS_SET_COPY.internet, icon: dsSetIcon('internet') });
     const data = find('data');
     if (data) list.push({ kind: 'page', id: 'data', pageId: 'data', label: data.title, copy: DS_SET_COPY.data, icon: dsSetIcon('data') });
-    if (pages.some(page => !['internet', 'data', 'advanced'].includes(page.id))) list.push({ kind: 'other', id: 'other', label: 'Other Settings', copy: DS_SET_COPY.other, icon: DS_SVG.wrench });
+    if (pages.some(page => !['internet', 'data', 'advanced'].includes(page.id))) list.push({ kind: 'other', id: 'other', label: 'Other Settings', copy: DS_SET_COPY.other, icon: DS_ICON.wrench });
     const advanced = find('advanced');
     if (advanced) list.push({ kind: 'advanced', id: 'advanced', pageId: 'advanced', label: advanced.title, copy: DS_SET_COPY.advanced, icon: icon('settings') });
     return list;
@@ -1509,6 +1685,7 @@
     if (action === 'g-wii-back') { stop(); play('back'); wiiPreview = null; render(); return; }
     if (action === 'g-wii-page') { stop(); play('category'); wiiPage += Number(el.dataset.dir); wiiFocus = 0; render(); return; }
     if (action === 'g-retro-captures') { stop(); play('confirm'); loadCaptures(); openLatestCapture(); return; }
+    if (action === 'g-ds-zoom') { stop(); if (dsSetZoom(el.dataset.size === 'large' ? 'large' : 'small')) play('category'); return; }
     if (action === 'g-retro-weather') { stop(); if (typeof showToast === 'function') showToast(`Forecast · ${now().toLocaleDateString([], { weekday: 'long' })} · Have a great day of gaming`); return; }
     // Items that are games boot straight into them, as on these consoles.
     if (el.dataset.retroBoot && el.dataset.gameId) {
@@ -1551,25 +1728,33 @@
     const performBase = performAction;
     performAction = async function (action, source) {
       // A controller press arrives without a source element; the XMB's own Internet Search tile passes one.
-      if (action === 'toggle-search' && !source && (theme() === 'ps3' || theme() === '3ds') && state.view === 'home') {
-        if (openHomeOptions()) return true;
+      // On the 3DS Y is the Camera shortcut the top screen prints, while X (pad button 2, polled below) is
+      // that console's Options button.
+      if (action === 'toggle-search' && !source && state.view === 'home') {
+        if (theme() === '3ds' && openDsCamera()) return true;
+        if (theme() === 'ps3' && openHomeOptions()) return true;
       }
       return performBase.apply(this, arguments);
     };
   }
-  let dsOptionsTimer = 0, dsOptionsHeld = false;
+  let dsOptionsTimer = 0, dsOptionsHeld = false, dsSizeHeld = false;
   function pollDsOptions() {
-    if (theme() !== '3ds' || document.hidden || !document.hasFocus() || state.view !== 'home' || document.querySelector('dialog[open]')) { dsOptionsHeld = false; return; }
+    if (theme() !== '3ds' || document.hidden || !document.hasFocus() || state.view !== 'home' || document.querySelector('dialog[open]')) { dsOptionsHeld = dsSizeHeld = false; return; }
     const pads = navigator.getGamepads?.() || [];
     const pad = [...pads].find(candidate => candidate?.connected);
     const pressed = Boolean(pad?.buttons?.[2]?.pressed || pad?.buttons?.[2]?.value > .55);
     if (pressed && !dsOptionsHeld) openHomeOptions();
     dsOptionsHeld = pressed;
+    // L+R (the two shoulder buttons the top screen prints) changes the icon size while both are held.
+    const held = index => Boolean(pad?.buttons?.[index]?.pressed || pad?.buttons?.[index]?.value > .55);
+    const both = held(4) && held(5);
+    if (both && !dsSizeHeld) dsSetZoom(dsZoom === 'small' ? 'large' : 'small');
+    dsSizeHeld = both;
   }
   function syncDsOptionsPoll() {
     const wanted = theme() === '3ds' && document.visibilityState === 'visible' && document.hasFocus();
     if (wanted && !dsOptionsTimer) dsOptionsTimer = setInterval(pollDsOptions, 40);
-    else if (!wanted && dsOptionsTimer) { clearInterval(dsOptionsTimer); dsOptionsTimer = 0; dsOptionsHeld = false; }
+    else if (!wanted && dsOptionsTimer) { clearInterval(dsOptionsTimer); dsOptionsTimer = 0; dsOptionsHeld = dsSizeHeld = false; }
   }
   syncDsOptionsPoll();
   window.addEventListener('gamepadconnected', syncDsOptionsPoll);
@@ -2205,7 +2390,11 @@
     if (t === 'ps3') { const el = chrome.querySelector('.xmb-time'); if (el) el.textContent = `${dayMonth()} ${time()}`; }
     if (t === 'ps4') { const el = chrome.querySelector('.ps4-s.clock'); if (el) el.textContent = time(); }
     if (t === 'wii') { const el = chrome.querySelector('.wii-clock'); if (el) el.innerHTML = segClock(); }
-    if (t === '3ds') { const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>'); const when = host.querySelector('.ds-set-when'); if (when) when.textContent = `${dayMonth()} ${time()}`; }
+    if (t === '3ds') {
+      const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>');
+      const when = host.querySelector('.ds-when'); if (when) when.textContent = `${dayMonth()} (${weekday()})`;
+      const setWhen = host.querySelector('.ds-set-when'); if (setWhen) setWhen.textContent = `${dayMonth()} ${time()}`;
+    }
   }, 15000);
   new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; syncDsOptionsPoll(); gAudio.themeChanged(); render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   window.gRetro = { render, play: kind => gAudio.play(kind), pack: () => pack };
