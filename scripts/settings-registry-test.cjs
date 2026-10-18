@@ -276,5 +276,43 @@ function eventFor(events, name, id) {
   assert.equal(await noAudio.api.available('volume'), false, 'no audio device means no volume row');
   assert.equal(await noAudio.api.available('mute'), false);
 
+  // ---------- No decorative console settings row can come back (task S5) ----------
+  // Every console screen draws its rows from gSettings.layout(console), so the layout is the only place a row
+  // can be named. A layout row may carry a registry id and nothing else: a hard-coded label, value or glyph
+  // here would be the old decorative path growing back, and this is what fails if it does.
+  for (const console of CONSOLES) {
+    for (const page of api.layout(console)) {
+      for (const row of page.rows) {
+        assert.deepEqual(Object.keys(row), ['id'], `${console}/${page.id} row "${row.id}" names only a registry id`);
+        assert.ok(api.entry(row.id), `${console}/${page.id} row "${row.id}" is a real registry entry, not hand-written text`);
+        assert.ok(api.label(row.id, console).length > 0, `${console}/${page.id} row "${row.id}" has real wording`);
+      }
+    }
+    // Advanced (launcher) is always one real action at the bottom, never a fake console block.
+    const last = api.layout(console).at(-1);
+    assert.deepEqual(Array.from(last.rows, row => row.id), ['launcherSettings'], `${console} keeps Advanced (launcher) last`);
+  }
+  const rendererDir = path.resolve(__dirname, '../src/renderer');
+  const readRenderer = name => fs.readFileSync(path.join(rendererDir, name), 'utf8');
+  // The decorative blocks were created by JS (the CONSOLES table in garrison-theme-settings.js). No renderer
+  // script may recreate a g-con row; scanning every JS file catches a reintroduction anywhere, not just the one
+  // file the blocks used to live in.
+  for (const name of fs.readdirSync(rendererDir).filter(file => file.endsWith('.js'))) {
+    assert.doesNotMatch(readRenderer(name), /g-con-option|g-con-glyph|g-con-chevron/, `${name} has no decorative console settings rows`);
+  }
+  const settingsShell = readRenderer('garrison-theme-settings.js');
+  // Anchored so the surviving `XSET_CONSOLES` (the Xbox-era list) does not count as the deleted table.
+  assert.doesNotMatch(settingsShell, /^\s*(?:const|let|var)\s+CONSOLES\s*=|function conBlock|paintConsole/m, 'the hard-coded console option table stays deleted');
+  assert.doesNotMatch(readRenderer('garrison-theme-screens.css'), /#settings-dialog \.g-con-option/, 'the decorative console option CSS stays deleted');
+  // The Xbox shell must render registry rows (with their registry id in the DOM) and cover exactly the three
+  // Xbox eras; the retro shells read the same registry through gSettings.layout/scanShellLayout.
+  assert.match(settingsShell, /XSET_CONSOLES = \['series', 'one', 'x360'\]/, 'the Xbox shell covers Series, One and 360');
+  assert.match(settingsShell, /data-setting-id="\$\{xsetEscape\(row\.id\)\}"/, 'every rendered Xbox settings row carries its registry id');
+  const retroShell = readRenderer('garrison-theme-retro.js');
+  for (const console of ['ps3', 'ps4', 'wii', '3ds']) {
+    // `layout('ps4')` and `scanShellLayout('ps4', force)` both count: the shells may pass extra arguments.
+    assert.match(retroShell, new RegExp(`(?:layout\\(|scanShellLayout\\()['"]${console}['"][,)]`), `the ${console} shell reads its pages from the registry`);
+  }
+
   console.log(`settings-registry tests passed: ${api.entries.length} entries, ${CONSOLES.length} console layouts`);
 })().catch(error => { console.error(error); process.exit(1); });
