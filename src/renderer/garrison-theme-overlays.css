@@ -1,0 +1,226 @@
+/* Console-native account overlays (PS3 XMB options, PS4 Quick Menu, Wii HOME Menu). These replace the shared
+   Garrison account flyout on the three 2013-era shells. Sizes are 1080p console pixels through --cpx, like the
+   rest of the console themes; every panel is a real control, not a picture. */
+
+#g-console-account {
+  position: fixed; inset: 0; z-index: 80; display: block; color: #fff;
+  font-family: var(--g-font); opacity: 0; pointer-events: none;
+  transition: opacity .18s ease;
+}
+#g-console-account.on { opacity: 1; pointer-events: auto; }
+#g-console-account .g-ov-dim { position: absolute; inset: 0; }
+#g-console-account .g-ov-panel {
+  position: absolute; color: #fff; font-family: inherit;
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1), opacity .2s ease;
+}
+#g-console-account .g-ov-kicker { margin: 0 0 calc(8 * var(--cpx)); color: rgba(255, 255, 255, .5); font-size: calc(14 * var(--cpx)); letter-spacing: .22em; text-transform: uppercase; }
+#g-console-account .g-ov-list { display: flex; flex-direction: column; }
+#g-console-account .g-ov-row {
+  display: flex; align-items: center; gap: calc(14 * var(--cpx)); width: 100%;
+  min-height: calc(62 * var(--cpx)); padding: 0 calc(14 * var(--cpx));
+  border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: inherit;
+  font: 400 calc(26 * var(--cpx))/1.1 var(--g-font); text-align: left; cursor: pointer;
+}
+#g-console-account .g-ov-ic { flex: none; display: grid; place-items: center; width: calc(36 * var(--cpx)); height: calc(36 * var(--cpx)); opacity: .92; }
+#g-console-account .g-ov-ic > :is(svg, .g-glyph, .g-mdl2, img) { width: 100%; height: 100%; }
+#g-console-account .g-ov-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#g-console-account .g-ov-row b { margin-left: auto; font-weight: 400; opacity: .78; }
+#g-console-account .g-ov-user {
+  display: flex; align-items: center; gap: calc(14 * var(--cpx)); width: 100%;
+  padding: calc(10 * var(--cpx)); border: 0; border-radius: calc(4 * var(--cpx)); background: none; color: inherit;
+  font: inherit; text-align: left; cursor: pointer;
+}
+#g-console-account .g-ov-user strong { display: block; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); }
+#g-console-account .g-ov-user small { display: block; margin-top: calc(3 * var(--cpx)); color: rgba(255, 255, 255, .55); font-size: calc(16 * var(--cpx)); }
+#g-console-account .g-ov-avatar { flex: none; display: grid; place-items: center; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); overflow: hidden; border-radius: 50%; background: rgba(255, 255, 255, .14); }
+#g-console-account .g-ov-avatar > :is(img, svg) { width: 100%; height: 100%; object-fit: cover; }
+#g-console-account .g-ov-hint { display: flex; align-items: center; gap: calc(8 * var(--cpx)); margin: calc(14 * var(--cpx)) 0 0; padding-top: calc(12 * var(--cpx)); border-top: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .68); font: 400 calc(18 * var(--cpx))/1 var(--g-font); }
+#g-console-account .g-ov-key { display: inline-grid; place-items: center; width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); border: 1px solid rgba(255, 255, 255, .7); border-radius: 50%; font: 400 calc(15 * var(--cpx))/1 var(--g-font); }
+#g-console-account .g-ov-empty { display: flex; align-items: center; gap: calc(12 * var(--cpx)); margin: 0; padding: calc(24 * var(--cpx)) calc(14 * var(--cpx)); color: rgba(255, 255, 255, .62); font-size: calc(20 * var(--cpx)); }
+#g-console-account .g-ov-empty > :is(svg, .g-glyph) { width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); }
+#g-console-account .g-ov-notices { max-height: calc(360 * var(--cpx)); overflow: hidden; }
+#g-console-account .g-ov-notice { padding: calc(9 * var(--cpx)) calc(14 * var(--cpx)); border-top: 1px solid rgba(255, 255, 255, .1); font: 400 calc(17 * var(--cpx))/1.3 var(--g-font); }
+#g-console-account .g-ov-notice strong { display: block; font-weight: 400; }
+#g-console-account .g-ov-notice small { display: block; margin-top: calc(2 * var(--cpx)); color: rgba(255, 255, 255, .45); font-size: calc(14 * var(--cpx)); }
+#g-console-account .g-ov-slider {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center;
+  gap: calc(12 * var(--cpx)); min-height: calc(62 * var(--cpx)); padding: 0 calc(14 * var(--cpx));
+  border-radius: calc(4 * var(--cpx)); outline: none;
+}
+#g-console-account .g-ov-slider-label { font: 400 calc(24 * var(--cpx))/1 var(--g-font); }
+#g-console-account .g-ov-slider b { min-width: calc(56 * var(--cpx)); text-align: right; font: 400 calc(20 * var(--cpx))/1 var(--g-font); opacity: .82; }
+#g-console-account .g-ov-meter { position: relative; display: block; height: calc(8 * var(--cpx)); overflow: hidden; border-radius: calc(4 * var(--cpx)); background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); }
+#g-console-account .g-ov-meter i { display: block; height: 100%; border-radius: inherit; background: currentColor; }
+#g-console-account .g-ov-step {
+  width: calc(36 * var(--cpx)); height: calc(36 * var(--cpx)); padding: 0; border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 50%; background: rgba(255, 255, 255, .1); color: inherit; font: 400 calc(22 * var(--cpx))/1 var(--g-font); cursor: pointer;
+}
+#g-console-account .g-ov-row:is(.focused, :focus-visible), #g-console-account .g-ov-user:is(.focused, :focus-visible),
+#g-console-account .g-ov-slider:is(.focused, :focus-visible), #g-console-account .g-ov-wii-pill:is(.focused, :focus-visible),
+#g-console-account .g-ov-wii-link:is(.focused, :focus-visible) { outline: none !important; }
+html.reduce-motion #g-console-account, html.reduce-motion #g-console-account .g-ov-panel { transition: none !important; }
+
+/* ---------- PS3: the XMB's right-hand black panel ---------- */
+#g-console-account.g-ov-ps3 { background: linear-gradient(90deg, rgba(0, 0, 0, .04), rgba(0, 0, 0, .38)); }
+#g-console-account.g-ov-ps3 .g-ov-dim { display: none; }
+#g-console-account.g-ov-ps3 .g-ov-panel {
+  right: calc(84 * var(--cpx)); top: calc(168 * var(--cpx)); width: calc(620 * var(--cpx));
+  padding: calc(24 * var(--cpx)) calc(26 * var(--cpx)) calc(16 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .44); border-radius: calc(8 * var(--cpx));
+  background: rgba(3, 5, 8, .93); box-shadow: 0 calc(16 * var(--cpx)) calc(54 * var(--cpx)) rgba(0, 0, 0, .5);
+  transform: translateX(calc(90 * var(--cpx))); opacity: .001;
+}
+#g-console-account.g-ov-ps3.on .g-ov-panel { transform: none; opacity: 1; }
+#g-console-account .g-ov-ps3-head { display: flex; align-items: center; gap: calc(14 * var(--cpx)); padding: 0 calc(8 * var(--cpx)) calc(12 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .24); }
+#g-console-account .g-ov-ps3-head strong { display: block; font: 400 calc(28 * var(--cpx))/1.1 var(--g-font); }
+#g-console-account .g-ov-ps3-head small { display: block; margin-top: calc(3 * var(--cpx)); color: rgba(255, 255, 255, .52); font-size: calc(15 * var(--cpx)); }
+#g-console-account.g-ov-ps3 .g-ov-kicker { margin-top: calc(12 * var(--cpx)); }
+#g-console-account.g-ov-ps3 .g-ov-row:is(.focused, :focus-visible) {
+  background: rgba(255, 255, 255, .94) !important; color: #111 !important;
+  box-shadow: none !important;
+}
+#g-console-account.g-ov-ps3 .g-ov-avatar { border-radius: calc(4 * var(--cpx)); }
+
+/* ---------- PS4: the left Quick Menu ---------- */
+#g-console-account.g-ov-ps4 { background: linear-gradient(90deg, rgba(0, 0, 0, .4), rgba(0, 0, 0, .06) 55%, rgba(0, 0, 0, 0)); }
+#g-console-account.g-ov-ps4 .g-ov-dim { display: none; }
+#g-console-account.g-ov-ps4 .g-ov-panel {
+  left: 0; top: 0; bottom: 0; width: calc(470 * var(--cpx));
+  padding: calc(92 * var(--cpx)) calc(38 * var(--cpx)) calc(52 * var(--cpx));
+  background: linear-gradient(180deg, rgba(7, 20, 48, .97), rgba(10, 38, 84, .92));
+  border-right: 1px solid rgba(112, 190, 255, .32); box-shadow: calc(12 * var(--cpx)) 0 calc(48 * var(--cpx)) rgba(0, 0, 0, .4);
+  transform: translateX(-100%);
+}
+#g-console-account.g-ov-ps4.on .g-ov-panel { transform: none; }
+#g-console-account.g-ov-ps4 .g-ov-user { margin-bottom: calc(18 * var(--cpx)); padding: calc(10 * var(--cpx)) calc(12 * var(--cpx)); background: rgba(255, 255, 255, .06); border-radius: calc(4 * var(--cpx)); }
+#g-console-account.g-ov-ps4 .g-ov-user:is(.focused, :focus-visible) { background: rgba(55, 128, 226, .55) !important; box-shadow: inset calc(4 * var(--cpx)) 0 #6fc9ff !important; }
+#g-console-account.g-ov-ps4 .g-ov-kicker { color: rgba(130, 196, 255, .72); }
+#g-console-account.g-ov-ps4 .g-ov-row { min-height: calc(58 * var(--cpx)); font-weight: 300; color: rgba(255, 255, 255, .9); }
+#g-console-account.g-ov-ps4 .g-ov-row:is(.focused, :focus-visible), #g-console-account.g-ov-ps4 .g-ov-slider:is(.focused, :focus-visible) {
+  background: #1d4f9e !important; box-shadow: inset calc(4 * var(--cpx)) 0 #6fc9ff !important;
+}
+#g-console-account.g-ov-ps4 .g-ov-slider-label { font-weight: 300; }
+#g-console-account.g-ov-ps4 .g-ov-meter i { background: #6fc9ff; }
+#g-console-account.g-ov-ps4 .g-ov-hint { margin-top: auto; border-top-color: rgba(120, 190, 255, .2); }
+#g-console-account.g-ov-ps4 .g-ov-avatar { border-radius: calc(3 * var(--cpx)); }
+#g-console-account.g-ov-ps4 .g-ov-notice small { color: rgba(160, 210, 255, .55); }
+
+/* ---------- Wii: the HOME Menu over a dimmed Wii Menu ---------- */
+#g-console-account.g-ov-wii { background: rgba(0, 0, 0, .5); }
+#g-console-account.g-ov-wii .g-ov-dim { display: none; }
+#g-console-account.g-ov-wii .g-ov-panel {
+  left: 50%; bottom: calc(64 * var(--cpx)); width: calc(1240 * var(--cpx));
+  padding: calc(22 * var(--cpx)) calc(40 * var(--cpx)) calc(18 * var(--cpx));
+  border: calc(3 * var(--cpx)) solid #d8d8d8; border-radius: calc(30 * var(--cpx));
+  background: linear-gradient(#ffffff, #ececec); color: #6a6a6a;
+  box-shadow: 0 calc(18 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 0, 0, .35), inset 0 calc(2 * var(--cpx)) 0 #fff;
+  transform: translate(-50%, calc(38 * var(--cpx))); opacity: .001;
+}
+#g-console-account.g-ov-wii.on .g-ov-panel { transform: translate(-50%, 0); opacity: 1; }
+#g-console-account.g-ov-wii .g-ov-wii-head { display: flex; align-items: center; justify-content: space-between; gap: calc(20 * var(--cpx)); padding-bottom: calc(8 * var(--cpx)); }
+#g-console-account.g-ov-wii .g-ov-user { width: auto; padding: 0; color: #565656; }
+#g-console-account.g-ov-wii .g-ov-user strong { font-size: calc(25 * var(--cpx)); }
+#g-console-account.g-ov-wii .g-ov-user small { color: #929292; }
+#g-console-account.g-ov-wii .g-ov-avatar { width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); border-radius: calc(12 * var(--cpx)); background: #d8e8f1; }
+#g-console-account.g-ov-wii .g-ov-user:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #34bdef !important; border-radius: calc(14 * var(--cpx)); }
+#g-console-account.g-ov-wii .g-ov-wii-title { color: #9a9a9a; font-size: calc(18 * var(--cpx)); letter-spacing: .2em; text-transform: uppercase; }
+#g-console-account.g-ov-wii .g-ov-wii-big { display: flex; justify-content: center; gap: calc(56 * var(--cpx)); padding: calc(8 * var(--cpx)) 0 calc(18 * var(--cpx)); }
+#g-console-account .g-ov-wii-pill {
+  width: calc(430 * var(--cpx)); height: calc(108 * var(--cpx)); padding: 0;
+  border: calc(3 * var(--cpx)) solid #d4d4d4; border-radius: calc(54 * var(--cpx));
+  background: linear-gradient(#ffffff, #f3f3f3); color: #6a6a6a; cursor: pointer;
+  font: 400 calc(34 * var(--cpx))/1 var(--g-font); box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 0, 0, .08);
+  transition: transform .16s cubic-bezier(.22, 1, .36, 1), box-shadow .16s ease;
+}
+#g-console-account .g-ov-wii-pill:is(.focused, :focus-visible) { transform: scale(1.035); box-shadow: 0 0 0 calc(4 * var(--cpx)) #34bdef, 0 0 calc(18 * var(--cpx)) rgba(52, 189, 239, .55) !important; }
+#g-console-account.g-ov-wii .g-ov-wii-remote { padding: calc(12 * var(--cpx)) calc(22 * var(--cpx)) calc(6 * var(--cpx)); border-radius: calc(18 * var(--cpx)); background: linear-gradient(#f7f7f7, #e3e3e3); box-shadow: inset 0 0 0 calc(1 * var(--cpx)) #d0d0d0; }
+#g-console-account.g-ov-wii .g-ov-wii-battery { display: flex; align-items: center; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(4 * var(--cpx)) calc(4 * var(--cpx)); }
+#g-console-account .g-ov-wii-remote-mark { color: #9a9a9a; font-size: calc(15 * var(--cpx)); letter-spacing: .16em; text-transform: uppercase; }
+#g-console-account .g-ov-battery { display: inline-flex; align-items: center; gap: calc(8 * var(--cpx)); color: #7d7d7d; font-size: calc(18 * var(--cpx)); }
+#g-console-account .g-ov-battery > :is(svg, .g-glyph) { width: calc(20 * var(--cpx)); height: calc(20 * var(--cpx)); }
+#g-console-account .g-ov-battery b { font-weight: 400; }
+#g-console-account.g-ov-wii .g-ov-row { color: #5d5d5d; font-family: var(--g-font); }
+#g-console-account.g-ov-wii .g-ov-row:is(.focused, :focus-visible), #g-console-account.g-ov-wii .g-ov-slider:is(.focused, :focus-visible) {
+  color: #2b2b2b !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #34bdef !important; background: #fff !important;
+}
+#g-console-account.g-ov-wii .g-ov-slider { color: #5d5d5d; }
+#g-console-account.g-ov-wii .g-ov-meter { background: #d9d9d9; box-shadow: inset 0 0 0 calc(1 * var(--cpx)) #c8c8c8; }
+#g-console-account.g-ov-wii .g-ov-meter i { background: linear-gradient(90deg, #42c8f7, #34bdef); }
+#g-console-account.g-ov-wii .g-ov-step { border-color: #c9c9c9; background: #fff; color: #6a6a6a; box-shadow: 0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .12); }
+#g-console-account.g-ov-wii .g-ov-hint { color: #8f8f8f; border-top-color: #d7d7d7; }
+#g-console-account.g-ov-wii .g-ov-key { border-color: #b8b8b8; color: #777; }
+#g-console-account.g-ov-wii .g-ov-wii-links { display: flex; justify-content: center; gap: calc(40 * var(--cpx)); padding: calc(6 * var(--cpx)) 0 0; }
+#g-console-account .g-ov-wii-link {
+  padding: calc(6 * var(--cpx)) calc(20 * var(--cpx)); border: 0; border-radius: calc(18 * var(--cpx));
+  background: none; color: #2a9fd6; font: 400 calc(19 * var(--cpx))/1 var(--g-font); cursor: pointer;
+}
+#g-console-account .g-ov-wii-link:is(.focused, :focus-visible) { background: #fff !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #34bdef !important; }
+#g-console-account.g-ov-wii .g-ov-notice { border-top-color: #ddd; color: #5d5d5d; }
+#g-console-account.g-ov-wii .g-ov-notice small { color: #999; }
+#g-console-account.g-ov-wii .g-ov-empty { color: #888; }
+
+/* Hide the Garrison focus ring on our rows; each console's own selection style is above. */
+#g-console-account .focusable.focused, #g-console-account .focusable:focus-visible { outline: none !important; }
+
+/* ---------- The shared power dialog, in each console's own language ---------- */
+/* PS3: a black XMB panel with the white selection bar and the SCE face. */
+body[data-g-theme="ps3"] #power-dialog {
+  width: calc(720 * var(--cpx)) !important; max-width: calc(92vw);
+  padding: calc(26 * var(--cpx)) !important;
+  border: 1px solid rgba(255, 255, 255, .48) !important; border-radius: calc(8 * var(--cpx)) !important;
+  background: rgba(3, 5, 8, .96) !important; color: #fff !important; font-family: var(--g-font) !important;
+  box-shadow: 0 calc(18 * var(--cpx)) calc(58 * var(--cpx)) rgba(0, 0, 0, .6) !important;
+}
+body[data-g-theme="ps3"] #power-dialog .power-header { border-bottom: 1px solid rgba(255, 255, 255, .22); padding-bottom: calc(14 * var(--cpx)); }
+body[data-g-theme="ps3"] #power-dialog :is(.eyebrow, .power-header p, .power-footer) { color: rgba(255, 255, 255, .5) !important; }
+body[data-g-theme="ps3"] #power-dialog h2 { font: 400 calc(34 * var(--cpx))/1.1 var(--g-font) !important; color: #fff !important; }
+body[data-g-theme="ps3"] #power-dialog .power-choice {
+  min-height: calc(66 * var(--cpx)) !important; border-radius: calc(4 * var(--cpx)) !important;
+  background: none !important; color: #fff !important; font-family: var(--g-font) !important;
+}
+body[data-g-theme="ps3"] #power-dialog .power-choice:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .95) !important; color: #111 !important; box-shadow: none !important; }
+body[data-g-theme="ps3"] #power-dialog .power-choice-icon { background: rgba(255, 255, 255, .14) !important; color: #fff !important; }
+body[data-g-theme="ps3"] #power-dialog .power-choice:is(.focused, :focus-visible) .power-choice-icon { background: #111 !important; color: #fff !important; }
+body[data-g-theme="ps3"] #power-dialog .power-choice small { color: rgba(255, 255, 255, .55) !important; }
+body[data-g-theme="ps3"] #power-dialog .power-choice:is(.focused, :focus-visible) small { color: rgba(0, 0, 0, .6) !important; }
+
+/* PS4: navy glass, sky-blue selection and the light SST weight. */
+body[data-g-theme="ps4"] #power-dialog {
+  width: calc(700 * var(--cpx)) !important; max-width: calc(92vw);
+  padding: calc(26 * var(--cpx)) !important;
+  border: 1px solid rgba(112, 190, 255, .3) !important; border-radius: calc(4 * var(--cpx)) !important;
+  background: linear-gradient(180deg, #0b1a33, #081226) !important; color: #fff !important; font-family: var(--g-font) !important;
+  box-shadow: 0 calc(20 * var(--cpx)) calc(60 * var(--cpx)) rgba(0, 0, 0, .55) !important;
+}
+body[data-g-theme="ps4"] #power-dialog .power-header { border-bottom: 1px solid rgba(112, 190, 255, .24); padding-bottom: calc(14 * var(--cpx)); }
+body[data-g-theme="ps4"] #power-dialog :is(.eyebrow, .power-header p, .power-footer) { color: rgba(160, 205, 255, .55) !important; }
+body[data-g-theme="ps4"] #power-dialog h2 { font: 300 calc(34 * var(--cpx))/1.1 var(--g-font) !important; color: #fff !important; }
+body[data-g-theme="ps4"] #power-dialog .power-choice {
+  min-height: calc(62 * var(--cpx)) !important; border-radius: calc(3 * var(--cpx)) !important;
+  background: none !important; color: rgba(255, 255, 255, .9) !important; font-family: var(--g-font) !important; font-weight: 300 !important;
+}
+body[data-g-theme="ps4"] #power-dialog .power-choice:is(.focused, :focus-visible) { background: #1d4f9e !important; color: #fff !important; box-shadow: inset calc(4 * var(--cpx)) 0 #6fc9ff !important; }
+body[data-g-theme="ps4"] #power-dialog .power-choice-icon { background: #1d4f9e !important; color: #bfe4ff !important; }
+body[data-g-theme="ps4"] #power-dialog .power-choice small { color: rgba(160, 205, 255, .6) !important; }
+
+/* Wii: the light, rounded, cyan-outlined settings panel. */
+body[data-g-theme="wii"] #power-dialog {
+  width: calc(760 * var(--cpx)) !important; max-width: calc(92vw);
+  padding: calc(24 * var(--cpx)) !important;
+  border: calc(4 * var(--cpx)) solid #39c1ef !important; border-radius: calc(26 * var(--cpx)) !important;
+  background: linear-gradient(#ffffff, #ececec) !important; color: #5d5d5d !important; font-family: var(--g-font) !important;
+  box-shadow: 0 calc(16 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 0, 0, .35) !important;
+}
+body[data-g-theme="wii"] #power-dialog .power-header { border-bottom: calc(2 * var(--cpx)) solid #e4e4e4; padding-bottom: calc(12 * var(--cpx)); }
+body[data-g-theme="wii"] #power-dialog :is(.eyebrow, .power-header p, .power-footer) { color: #9a9a9a !important; }
+body[data-g-theme="wii"] #power-dialog h2 { font: 400 calc(36 * var(--cpx))/1.1 var(--g-font) !important; color: #5d5d5d !important; }
+body[data-g-theme="wii"] #power-dialog .power-choice {
+  min-height: calc(64 * var(--cpx)) !important; margin-bottom: calc(8 * var(--cpx)) !important;
+  border-radius: calc(18 * var(--cpx)) !important; background: #fff !important; color: #5d5d5d !important;
+  box-shadow: inset 0 0 0 1px #e3e6e9, 0 calc(1 * var(--cpx)) calc(2 * var(--cpx)) rgba(0, 0, 0, .08) !important; font-family: var(--g-font) !important;
+}
+body[data-g-theme="wii"] #power-dialog .power-choice:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #39c1ef, 0 calc(1 * var(--cpx)) calc(2 * var(--cpx)) rgba(0, 0, 0, .08) !important; }
+body[data-g-theme="wii"] #power-dialog .power-choice-icon { background: #e6f7fd !important; color: #2aa7d8 !important; }
+body[data-g-theme="wii"] #power-dialog .power-choice small { color: #8a9095 !important; }
+body[data-g-theme="wii"] #power-dialog .power-confirm-actions :is(.primary, .secondary) { border-radius: calc(24 * var(--cpx)) !important; font-family: var(--g-font) !important; }
+
