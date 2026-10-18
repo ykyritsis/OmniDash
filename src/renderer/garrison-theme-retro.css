@@ -675,8 +675,83 @@ body[data-g-theme="3ds"] #g-retro:has(.ds-tool.sel) .ds-cursor { display: none; 
   #g-retro .ds-cursor { animation: none; }
 }
 
-/* Notifications and splash per console family. */
-body.garrison[data-g-theme="ps3"] #toast { left: auto !important; right: calc(110 * var(--cpx)) !important; top: calc(150 * var(--cpx)) !important; bottom: auto !important; transform: none !important; border-radius: calc(6 * var(--cpx)) !important; background-color: rgba(10, 10, 10, .72) !important; border: 1px solid rgba(255, 255, 255, .35) !important; font-family: var(--g-font) !important; }
+/* 3DS System Settings (task S3). The two-screen app the console used, adapted to this theme's single
+   widescreen: the top screen describes the focused option and the bottom screen holds large white buttons.
+   The root's four buttons are the registry pages the console grouped there — Internet Settings, Data
+   Management, Other Settings and Advanced (launcher). Parental Controls is absent because the launcher has no
+   parental-control capability to back it, not because it was forgotten. Sizes are 1080p console pixels. */
+body[data-g-theme="3ds"] #g-retro .ds-set-device { position: absolute; inset: 0; background:
+  radial-gradient(ellipse 72% 56% at 50% 38%, #242a2f 0%, #111417 56%, #07090b 100%); }
+#g-retro .ds-set { position: absolute; inset: calc(20 * var(--cpx)) calc(44 * var(--cpx)); z-index: 6; display: flex; flex-direction: column; gap: calc(14 * var(--cpx)); font-family: var(--g-font); }
+#g-retro .ds-set-top { position: relative; flex: 1 1 54%; min-height: 0; overflow: hidden; border-radius: calc(10 * var(--cpx)); background: linear-gradient(160deg, #fcfdff 0%, #eef5f9 62%, #e4eef4 100%); box-shadow: 0 calc(12 * var(--cpx)) calc(30 * var(--cpx)) rgba(0, 0, 0, .55), inset 0 0 0 calc(1 * var(--cpx)) rgba(255, 255, 255, .85); color: #33454f; }
+#g-retro .ds-set-topbar { display: flex; align-items: center; justify-content: space-between; height: calc(50 * var(--cpx)); padding: 0 calc(34 * var(--cpx)); background: linear-gradient(180deg, #2f9ade, #1c78b6); color: #fff; font: 400 calc(18 * var(--cpx))/1 var(--g-font); letter-spacing: .13em; text-transform: uppercase; text-shadow: 0 calc(1 * var(--cpx)) calc(2 * var(--cpx)) rgba(0, 0, 0, .2); }
+#g-retro .ds-set-copy { position: absolute; left: calc(44 * var(--cpx)); right: calc(360 * var(--cpx)); top: calc(78 * var(--cpx)); bottom: calc(24 * var(--cpx)); display: flex; flex-direction: column; justify-content: center; gap: calc(10 * var(--cpx)); }
+#g-retro .ds-set-kicker { color: #2f8fd6; font: 700 calc(15 * var(--cpx))/1 var(--g-font); letter-spacing: .16em; text-transform: uppercase; }
+#g-retro .ds-set-top h2 { margin: 0; overflow: hidden; color: #2b3b45; font: 400 calc(52 * var(--cpx))/1.04 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .ds-set-top p { max-width: calc(1000 * var(--cpx)); margin: 0; color: #5b6b74; font: 400 calc(25 * var(--cpx))/1.35 var(--g-font); }
+#g-retro .ds-set-readout { align-self: flex-start; margin-top: auto; padding: calc(10 * var(--cpx)) calc(24 * var(--cpx)); border-radius: calc(24 * var(--cpx)); background: #e2f4fc; color: #1b7fa8; font: 400 calc(24 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ds-set-art { position: absolute; right: calc(52 * var(--cpx)); top: 50%; display: grid; place-items: center; width: calc(250 * var(--cpx)); height: calc(250 * var(--cpx)); transform: translateY(-50%); border-radius: calc(34 * var(--cpx)); background: radial-gradient(circle at 38% 30%, #fff, #dcebf3 68%, #cfe0e9); box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .9), 0 calc(10 * var(--cpx)) calc(22 * var(--cpx)) rgba(40, 80, 110, .18); }
+#g-retro .ds-set-art-icon { display: grid; place-items: center; width: 62%; height: 62%; color: #3c9fd6; }
+#g-retro .ds-set-art-icon svg { width: 100%; height: 100%; }
+#g-retro .ds-set-bottom { position: relative; flex: 1 1 46%; min-height: 0; overflow: hidden; border-radius: calc(10 * var(--cpx)); background: linear-gradient(#fafcfd, #edf3f6 65%, #e6eef2); box-shadow: 0 calc(12 * var(--cpx)) calc(30 * var(--cpx)) rgba(0, 0, 0, .5), inset 0 0 0 calc(1 * var(--cpx)) rgba(255, 255, 255, .85); }
+#g-retro .ds-set-buttons { position: absolute; left: calc(32 * var(--cpx)); right: calc(32 * var(--cpx)); top: calc(26 * var(--cpx)); bottom: calc(80 * var(--cpx)); display: grid; gap: calc(16 * var(--cpx)); align-content: center; }
+#g-retro .ds-set-buttons.categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#g-retro .ds-set-buttons.other { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#g-retro .ds-set-buttons.rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#g-retro .ds-set-tile { position: relative; display: flex; align-items: center; gap: calc(16 * var(--cpx)); min-height: calc(88 * var(--cpx)); padding: calc(14 * var(--cpx)) calc(22 * var(--cpx)); border: calc(2 * var(--cpx)) solid #e0e8ec; border-radius: calc(14 * var(--cpx)); background: linear-gradient(#fff, #f5f9fb); color: #3f4f58; text-align: left; cursor: pointer; box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(60, 90, 110, .1); transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+#g-retro .ds-set-tile.category { flex-direction: column; justify-content: center; gap: calc(9 * var(--cpx)); min-height: calc(132 * var(--cpx)); padding: calc(14 * var(--cpx)); text-align: center; }
+#g-retro .ds-set-tile.category.small { min-height: calc(104 * var(--cpx)); }
+#g-retro .ds-set-tile.category.small .ds-set-tile-icon { width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); }
+#g-retro .ds-set-tile-icon { display: grid; place-items: center; flex: none; width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); border-radius: calc(11 * var(--cpx)); background: linear-gradient(#eaf6fd, #d7ecf8); color: #2f8fd6; }
+#g-retro .ds-set-tile.category .ds-set-tile-icon { width: calc(68 * var(--cpx)); height: calc(68 * var(--cpx)); border-radius: calc(15 * var(--cpx)); }
+#g-retro .ds-set-tile-icon svg { width: 74%; height: 74%; }
+#g-retro .ds-set-tile-copy { display: grid; gap: calc(3 * var(--cpx)); min-width: 0; }
+#g-retro .ds-set-tile strong { overflow: hidden; color: inherit; font: 400 calc(25 * var(--cpx))/1.12 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .ds-set-tile.category strong { font-size: calc(24 * var(--cpx)); }
+#g-retro .ds-set-tile small { overflow: hidden; color: #7b8a93; font: 400 calc(19 * var(--cpx))/1.1 var(--g-font); text-overflow: ellipsis; white-space: nowrap; }
+#g-retro .ds-set-tile .ds-set-chevron { margin-left: auto; color: #9fb0b9; font: 400 calc(26 * var(--cpx))/1 var(--g-font); }
+#g-retro .ds-set-tile .ds-set-check { position: absolute; right: calc(18 * var(--cpx)); top: 50%; display: grid; place-items: center; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); transform: translateY(-50%); border: calc(2 * var(--cpx)) solid #c3d1d8; border-radius: 50%; background: #fff; color: #fff; font: 700 calc(19 * var(--cpx))/1 var(--g-font); }
+#g-retro .ds-set-tile .ds-set-check.on { border-color: #43b02a; background: #43b02a; }
+#g-retro .ds-set-tile.sel { border-color: #63c7ee; background: linear-gradient(#f2fbff, #e2f5fd); box-shadow: 0 calc(6 * var(--cpx)) calc(16 * var(--cpx)) rgba(47, 167, 232, .22), 0 0 0 calc(3 * var(--cpx)) rgba(99, 226, 255, .85) !important; transform: translateY(calc(-2 * var(--cpx))); }
+#g-retro .ds-set-tile.sel .ds-set-tile-icon { background: linear-gradient(#d9f6ff, #bdeaff); color: #1b7fa8; }
+#g-retro .ds-set-note { grid-column: 1 / -1; margin: 0; padding: calc(26 * var(--cpx)); color: #8798a1; text-align: center; font: 400 calc(23 * var(--cpx))/1.35 var(--g-font); }
+#g-retro .ds-set-back { position: absolute; left: calc(32 * var(--cpx)); bottom: calc(18 * var(--cpx)); height: calc(50 * var(--cpx)); padding: 0 calc(26 * var(--cpx)); border: calc(2 * var(--cpx)) solid #dbe5ea; border-radius: calc(25 * var(--cpx)); background: linear-gradient(#fff, #eef4f7); color: #5d6d76; cursor: pointer; font: 400 calc(20 * var(--cpx))/1 var(--g-font); box-shadow: 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(60, 90, 110, .12); }
+#g-retro .ds-set-back:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #63c7ee !important; }
+#g-retro .ds-set-hint { position: absolute; right: calc(32 * var(--cpx)); bottom: calc(32 * var(--cpx)); color: #93a3ab; font: 400 calc(18 * var(--cpx))/1 var(--g-font); }
+/* The bottom screen's sub-screen: values as white buttons, the slider, Back and OK. */
+#g-retro .ds-set-sub { position: absolute; inset: calc(14 * var(--cpx)) calc(18 * var(--cpx)); z-index: 3; border-radius: calc(12 * var(--cpx)); background: linear-gradient(#fafcfd, #eef4f7); box-shadow: 0 calc(10 * var(--cpx)) calc(26 * var(--cpx)) rgba(40, 70, 90, .22); opacity: 0; pointer-events: none; transition: opacity .16s ease; }
+#g-retro .ds-set-sub.open { opacity: 1; pointer-events: auto; }
+#g-retro .ds-set-panel { display: flex; flex-direction: column; height: 100%; padding: calc(18 * var(--cpx)) calc(26 * var(--cpx)) calc(14 * var(--cpx)); }
+#g-retro .ds-set-panel h3 { display: flex; align-items: center; gap: calc(12 * var(--cpx)); margin: 0 0 calc(12 * var(--cpx)); padding-bottom: calc(10 * var(--cpx)); border-bottom: calc(2 * var(--cpx)) solid rgba(47, 143, 214, .2); color: #2b3b45; font: 400 calc(27 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ds-set-panel-icon { flex: none; width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); color: #2f8fd6; }
+#g-retro .ds-set-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(12 * var(--cpx)); overflow: auto; scrollbar-width: none; }
+#g-retro .ds-set-option { display: flex; align-items: center; justify-content: space-between; height: calc(64 * var(--cpx)); padding: 0 calc(22 * var(--cpx)); border: calc(2 * var(--cpx)) solid #e0e8ec; border-radius: calc(32 * var(--cpx)); background: linear-gradient(#fff, #f3f8fa); color: #3f4f58; text-align: left; cursor: pointer; font: 400 calc(23 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ds-set-option.on { border-color: #43b02a; background: linear-gradient(#f2fcef, #e3f8de); color: #2f7d23; }
+#g-retro .ds-set-option:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #63c7ee !important; }
+#g-retro .ds-set-option i { font-style: normal; }
+#g-retro .ds-set-slider { padding: calc(22 * var(--cpx)) calc(8 * var(--cpx)) calc(6 * var(--cpx)); cursor: pointer; outline: none; }
+#g-retro .ds-set-track { position: relative; display: block; height: calc(20 * var(--cpx)); border-radius: calc(10 * var(--cpx)); background: linear-gradient(#dfe9ee, #f4f9fb); box-shadow: inset 0 calc(2 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .1), 0 0 0 calc(2 * var(--cpx)) #d3e2e9; }
+#g-retro .ds-set-track i { position: absolute; inset: calc(3 * var(--cpx)) auto calc(3 * var(--cpx)) calc(3 * var(--cpx)); border-radius: inherit; background: linear-gradient(90deg, #8fe6ff, #35bdf0); }
+#g-retro .ds-set-track b { position: absolute; top: 50%; width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle at 40% 32%, #fff, #dbe6eb 70%); box-shadow: 0 calc(2 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 0, 0, .2), 0 0 0 calc(3 * var(--cpx)) #35bdf0; }
+#g-retro .ds-set-slider:is(.focused, :focus-visible) { box-shadow: none !important; outline: calc(2 * var(--cpx)) solid rgba(53, 189, 240, .5) !important; outline-offset: calc(5 * var(--cpx)); border-radius: calc(16 * var(--cpx)); }
+#g-retro .ds-set-slider-value { display: block; margin-top: calc(12 * var(--cpx)); text-align: center; color: #3f4f58; font: 400 calc(30 * var(--cpx))/1 var(--g-font); }
+#g-retro .ds-set-info { margin: calc(6 * var(--cpx)) 0; text-align: center; color: #2f8fd6; font: 400 calc(34 * var(--cpx))/1.1 var(--g-font); }
+#g-retro .ds-set-sub-error { min-height: calc(20 * var(--cpx)); margin: calc(4 * var(--cpx)) 0 0; color: #c0392b; text-align: center; font: 400 calc(18 * var(--cpx))/1.2 var(--g-font); }
+#g-retro .ds-set-panel-foot { display: flex; align-items: center; justify-content: flex-end; gap: calc(16 * var(--cpx)); margin-top: auto; padding-top: calc(10 * var(--cpx)); }
+#g-retro .ds-set-action { height: calc(52 * var(--cpx)); min-width: calc(150 * var(--cpx)); padding: 0 calc(30 * var(--cpx)); border: calc(2 * var(--cpx)) solid #dbe5ea; border-radius: calc(26 * var(--cpx)); background: linear-gradient(#fff, #eef4f7); color: #5d6d76; cursor: pointer; font: 400 calc(21 * var(--cpx))/1 var(--g-font); }
+#g-retro .ds-set-action.ok { border-color: #2f8fd6; background: linear-gradient(#3aa4e6, #1f7fbe); color: #fff; }
+#g-retro .ds-set-action:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #63c7ee !important; }
+#g-retro .ds-set-saving { color: #8798a1; font-size: calc(18 * var(--cpx)); }
+/* The real 3DS System Settings are this screen now (task S3); the decorative 3DS block stays in the source
+   for S5 but is hidden on this theme. */
+body[data-g-theme="3ds"] #settings-dialog .g-con-options { display: none; }
+/* Reduced motion: keep the layout, drop the movement. */
+html.reduce-motion #g-retro .ds-set-tile,
+html.reduce-motion #g-retro .ds-set-sub,
+html.reduce-motion #g-retro .ds-set-option { transition: none !important; }
+html.reduce-motion #g-retro .ds-set-tile.sel { transform: none !important; }
+
+/* Notifications and splash per console family. */body.garrison[data-g-theme="ps3"] #toast { left: auto !important; right: calc(110 * var(--cpx)) !important; top: calc(150 * var(--cpx)) !important; bottom: auto !important; transform: none !important; border-radius: calc(6 * var(--cpx)) !important; background-color: rgba(10, 10, 10, .72) !important; border: 1px solid rgba(255, 255, 255, .35) !important; font-family: var(--g-font) !important; }
 body.garrison[data-g-theme="ps4"] #toast { left: calc(90 * var(--cpx)) !important; right: auto !important; top: calc(70 * var(--cpx)) !important; bottom: auto !important; transform: none !important; border-radius: calc(4 * var(--cpx)) !important; background-color: rgba(18, 28, 46, .96) !important; border: 0 !important; font-family: var(--g-font) !important; }
 body.garrison:is([data-g-theme="ps3"], [data-g-theme="ps4"]) #toast::before { background-color: #fff; background-image: none; width: calc(10 * var(--cpx)); }
 body.garrison[data-g-theme="wii"] #toast { border-radius: calc(30 * var(--cpx)) !important; background-color: #fff !important; color: #555 !important; border: calc(4 * var(--cpx)) solid #34bdef !important; font-family: var(--g-font) !important; }

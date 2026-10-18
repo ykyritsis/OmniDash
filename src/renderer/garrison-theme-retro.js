@@ -1755,6 +1755,8 @@
   // One full-bleed screen after iiSU: three rows of large square icons under the selected app's banner.
   // Five columns are in view at a time; the rail slides one column at a time instead of being rebuilt.
   let dsFocus = 0, dsTool = -1, dsArtToken = 0;
+  // 3DS System Settings shell state (task S3).
+  let dsSet = null, dsSetScanToken = 0, dsSetRowsToken = 0, dsSetReloadTimer = 0;
   const DS_ROWS = 3, DS_COLS = 5, DS_PITCH = 300;
   const DS_TOOLS = [['settings', 'System Settings', 'home'], ['library', 'Game Notes', 'notes'], ['g-friends', 'Friend List', 'friends'], ['g-notifications', 'Notifications', 'notes2'], ['toggle-search', 'Internet Browser', 'web'], ['g-account', 'Miiverse', 'miiverse']];
   const DS_SVG = {
@@ -1784,6 +1786,7 @@
     return { cols, col, start: Math.max(0, Math.min(col - 2, cols - DS_COLS)), pad: Math.max(0, DS_COLS - cols) * DS_PITCH / 2 };
   }
   function renderDs() {
+    if (dsSet) { renderDsSettings(); return; }
     const list = dsList();
     dsFocus = Math.max(0, Math.min(dsFocus, list.length - 1));
     const rail = dsRail(list);
@@ -1856,6 +1859,7 @@
     }).catch(() => {});
   }
   function dsMove(direction) {
+    if (dsSet) { dsShellMove(direction); return; }
     const list = dsList();
     if (dsTool >= 0) {
       if (direction === 'left' || direction === 'right') { const next = Math.max(0, Math.min(DS_TOOLS.length - 1, dsTool + (direction === 'right' ? 1 : -1))); if (next === dsTool) return; dsTool = next; play('navigate'); }
@@ -1875,6 +1879,510 @@
     dsUpdate();
   }
 
+  // ---------- 3DS: System Settings, driven by gSettings (task S3) ----------
+  // The console's System Settings app, adapted to the theme's single widescreen: the top screen describes the
+  // focused option, the bottom screen holds the large white buttons. Its four root buttons are the registry pages
+  // the console grouped this way — Internet Settings, Data Management, Other Settings and Advanced (launcher);
+  // Parental Controls is not faked because the launcher has no parental-control capability to back it. Rows come
+  // from gSettings.layout('3ds'), and each one is a real registry setting.
+  const DS_SET_ICONS = {
+    internet: { svg: 'web' }, data: { svg: 'library' }, profile: { svg: 'mii' },
+    'date-time': { glyph: 'language' }, sound: { glyph: 'volume' }, display: { glyph: 'tv' }, theme: { glyph: 'color' },
+    controls: { glyph: 'controller' }, notifications: { glyph: 'bell' }, system: { glyph: 'settings' }, advanced: { glyph: 'settings' }
+  };
+  const DS_SET_COPY = {
+    internet: 'Set up and test this PC\'s Internet connection, and see who is online.',
+    data: 'See how much space is free and how many games and apps the launcher knows about.',
+    profile: 'Change the name and picture shown around the launcher.',
+    'date-time': 'Choose how the clock and dates are written everywhere.',
+    sound: 'Set the volume, mute the PC, and choose interface and menu music.',
+    display: 'Adjust screen brightness, interface size and the two-screen layout.',
+    theme: 'Choose the background picture behind the HOME Menu.',
+    controls: 'Set the button layout and vibration, and see the connected controller.',
+    notifications: 'Choose which friend, download and achievement notifications appear.',
+    system: 'See the version, check for updates and reset the launcher\'s data.',
+    advanced: 'Open the launcher\'s own settings for everything else.',
+    other: 'Profile, Date & Time, Sound, Display, Theme, Controls, Notifications and System live here.'
+  };
+  const dsSetIcon = pageId => {
+    const spec = DS_SET_ICONS[pageId] || {};
+    if (spec.svg && DS_SVG[spec.svg]) return DS_SVG[spec.svg];
+    return icon(spec.glyph || 'settings');
+  };
+  const dsSetPageCopy = page => DS_SET_COPY[page?.id] || 'Each row here changes something real in the launcher.';
+  const dsRootButtons = pages => {
+    const find = id => pages.find(page => page.id === id);
+    const list = [];
+    const internet = find('internet');
+    if (internet) list.push({ kind: 'page', page: internet, label: internet.title, copy: DS_SET_COPY.internet, icon: dsSetIcon('internet') });
+    const data = find('data');
+    if (data) list.push({ kind: 'page', page: data, label: data.title, copy: DS_SET_COPY.data, icon: dsSetIcon('data') });
+    if (pages.some(page => !['internet', 'data', 'advanced'].includes(page.id))) list.push({ kind: 'other', label: 'Other Settings', copy: DS_SET_COPY.other, icon: DS_SVG.wrench });
+    const advanced = find('advanced');
+    if (advanced) list.push({ kind: 'advanced', page: advanced, label: advanced.title, copy: DS_SET_COPY.advanced, icon: icon('settings') });
+    return list;
+  };
+  const dsOtherPages = pages => pages.filter(page => !['internet', 'data', 'advanced'].includes(page.id));
+  function dsOpenSettings() {
+    if (dsSet) return;
+    play('confirm');
+    dsSet = { pages: null, level: 'root', parent: 'root', pageId: null, rows: [], focus: 0, rootFocus: 0, otherFocus: 0, loading: true, error: '', sub: null };
+    renderDs();
+    dsScanSettings();
+  }
+  function dsCloseSettings() {
+    if (!dsSet) return;
+    play('back');
+    dsSet = null; dsSetReloadTimer && clearTimeout(dsSetReloadTimer); dsSetReloadTimer = 0;
+    dsTool = 0;
+    renderDs();
+  }
+  function dsScanSettings(force = false) {
+    if (!dsSet) return;
+    const token = ++dsSetScanToken;
+    scanShellLayout('3ds', force).then(pages => {
+      if (token !== dsSetScanToken || !dsSet) return;
+      const state = dsSet;
+      state.pages = pages;
+      state.loading = false;
+      if (state.level === 'page') {
+        const page = pages.find(item => item.id === state.pageId);
+        if (!page) {
+          state.level = state.parent; state.pageId = null; state.rows = []; state.sub = null;
+          state.focus = state.parent === 'other' ? state.otherFocus : state.rootFocus;
+          renderDs();
+        } else {
+          dsLoadRows(page, true);
+        }
+        return;
+      }
+      const count = state.level === 'other' ? dsOtherPages(pages).length : dsRootButtons(pages).length;
+      state.focus = Math.min(state.focus, Math.max(0, count - 1));
+      renderDs();
+    }).catch(error => {
+      if (token !== dsSetScanToken || !dsSet) return;
+      dsSet.loading = false;
+      dsSet.error = error?.message || 'Could not read the settings on this PC.';
+      renderDs();
+    });
+  }
+  async function dsLoadRows(page, preserveFocus = false) {
+    const state = dsSet;
+    if (!state) return;
+    const token = ++dsSetRowsToken;
+    state.pageId = page.id;
+    state.rows = [];
+    state.loading = true;
+    state.error = '';
+    if (!preserveFocus) state.focus = 0;
+    renderDs();
+    try {
+      const rows = await loadShellRows(page, '3ds');
+      if (token !== dsSetRowsToken || dsSet !== state) return;
+      state.rows = rows;
+      state.loading = false;
+      state.focus = Math.min(state.focus, Math.max(0, rows.length - 1));
+      renderDs();
+    } catch (error) {
+      if (token !== dsSetRowsToken || dsSet !== state) return;
+      state.loading = false;
+      state.error = error?.message || 'Could not read these settings.';
+      renderDs();
+    }
+  }
+  function dsOpenPage(page, parent) {
+    const state = dsSet;
+    if (!state || !page) return;
+    if (page.id === 'advanced') { dsRunLauncher(); return; }
+    if (parent === 'root') state.rootFocus = state.focus;
+    else state.otherFocus = state.focus;
+    play('confirm');
+    state.level = 'page'; state.parent = parent; state.pageId = page.id; state.sub = null;
+    dsLoadRows(page, false);
+  }
+  function dsRunLauncher() {
+    play('confirm');
+    dsSet = null; dsSetReloadTimer && clearTimeout(dsSetReloadTimer); dsSetReloadTimer = 0;
+    dsTool = 0;
+    renderDs();
+    Promise.resolve(window.gSettings?.set('launcherSettings', null)).catch(error => {
+      if (typeof showToast === 'function') showToast(error?.message || 'The launcher settings are unavailable.');
+    });
+  }
+  async function dsSetValue(id, value) {
+    const state = dsSet;
+    const row = state?.rows.find(item => item.id === id);
+    if (!state || !row) return;
+    const previous = row.value;
+    row.value = value;
+    renderDs();
+    try {
+      if (PS3_FORM_ROWS.has(id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(id, value);
+      const fresh = await window.gSettings.get(id).catch(() => value);
+      if (dsSet !== state) return;
+      row.value = fresh;
+      play('confirm');
+    } catch (error) {
+      if (dsSet !== state) return;
+      row.value = previous;
+      play('back');
+      if (typeof showToast === 'function') showToast(error?.message || 'Could not change this setting.');
+    }
+    if (dsSet === state) renderDs();
+  }
+  function dsRunRowAction(row) {
+    play('confirm');
+    Promise.resolve(window.gSettings.set(row.id, null)).catch(error => {
+      if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
+    }).then(() => window.gSettings.get(row.id).then(value => {
+      const state = dsSet;
+      const found = state?.rows?.find(item => item.id === row.id);
+      if (found) { found.value = value; renderDs(); }
+    }).catch(() => {}));
+  }
+  function dsActivate() {
+    const state = dsSet;
+    if (!state) return;
+    if (state.sub) { dsSubActivate(state.sub.focus); return; }
+    if (state.level === 'root') {
+      const button = dsRootButtons(state.pages || [])[state.focus];
+      if (!button) return;
+      if (button.kind === 'other') { state.rootFocus = state.focus; state.level = 'other'; state.focus = state.otherFocus; play('confirm'); renderDs(); return; }
+      if (button.kind === 'advanced') { dsRunLauncher(); return; }
+      dsOpenPage(button.page, 'root');
+      return;
+    }
+    if (state.level === 'other') {
+      const page = dsOtherPages(state.pages || [])[state.focus];
+      if (page) dsOpenPage(page, 'other');
+      return;
+    }
+    const row = state.rows[state.focus];
+    if (!row) return;
+    if (row.kind === 'action') { dsRunRowAction(row); return; }
+    if (row.kind === 'toggle') { dsSetValue(row.id, !row.value); return; }
+    if (row.kind === 'info') { play('confirm'); state.sub = { row, mode: 'info', options: [], selected: 0, focus: 0, saving: false, error: '' }; renderDs(); return; }
+    if (row.kind === 'slider') {
+      play('confirm');
+      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
+      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
+      const raw = Number(row.value);
+      state.sub = { row, mode: 'slider', options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, focus: 0, saving: false, error: '' };
+      renderDs();
+      return;
+    }
+    if (row.kind === 'choice') {
+      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
+      play('confirm');
+      const selected = Math.max(0, row.options.findIndex(option => option.value === row.value));
+      state.sub = { row, mode: 'choice', options: row.options, selected, focus: selected, saving: false, error: '' };
+      renderDs();
+    }
+  }
+  function dsBack() {
+    const state = dsSet;
+    if (!state) return false;
+    if (state.sub) { dsSubCancel(); return true; }
+    if (state.level === 'page') {
+      play('back');
+      state.level = state.parent; state.pageId = null; state.rows = []; state.sub = null;
+      state.focus = state.parent === 'other' ? state.otherFocus : state.rootFocus;
+      renderDs();
+      return true;
+    }
+    if (state.level === 'other') {
+      play('back');
+      state.level = 'root'; state.rows = []; state.sub = null; state.focus = state.rootFocus;
+      renderDs();
+      return true;
+    }
+    dsCloseSettings();
+    return true;
+  }
+  function dsGridInfo() {
+    const state = dsSet;
+    if (!state) return { count: 0, cols: 2 };
+    if (state.level === 'page') return { count: state.rows.length, cols: 2 };
+    if (state.level === 'other') return { count: dsOtherPages(state.pages || []).length, cols: 3 };
+    return { count: dsRootButtons(state.pages || []).length, cols: 2 };
+  }
+  function dsShellMove(direction) {
+    const state = dsSet;
+    if (!state) return;
+    if (state.sub) { dsSubMove(direction); return; }
+    const { count, cols } = dsGridInfo();
+    if (!count) return;
+    const col = state.focus % cols;
+    let next = state.focus;
+    if (direction === 'left') { if (col > 0) next = state.focus - 1; }
+    else if (direction === 'right') { if (col < cols - 1 && state.focus + 1 < count) next = state.focus + 1; }
+    else if (direction === 'up') { if (state.focus - cols >= 0) next = state.focus - cols; }
+    else if (direction === 'down') { if (state.focus + cols < count) next = state.focus + cols; }
+    else return;
+    if (next === state.focus) return;
+    state.focus = next;
+    play('navigate');
+    renderDs();
+  }
+  const dsSubCount = sub => sub.mode === 'info' ? 1 : sub.mode === 'slider' ? 3 : sub.options.length + 2;
+  function dsSubMove(direction) {
+    const state = dsSet;
+    const sub = state?.sub;
+    if (!sub || sub.saving) return;
+    if (sub.mode === 'info') return;
+    if (sub.mode === 'slider') {
+      if (sub.focus === 0) {
+        if (direction === 'left' || direction === 'right') {
+          const next = Math.max(sub.min, Math.min(sub.max, sub.value + (direction === 'right' ? sub.step : -sub.step)));
+          if (next === sub.value) return;
+          sub.value = Number(next.toFixed(6));
+          play('navigate'); renderDs(); return;
+        }
+        if (direction === 'down') { sub.focus = 1; play('navigate'); renderDs(); }
+        return;
+      }
+      if (direction === 'up') { sub.focus = Math.max(0, sub.focus - 1); play('navigate'); renderDs(); }
+      else if (direction === 'down') { sub.focus = Math.min(2, sub.focus + 1); play('navigate'); renderDs(); }
+      else if ((direction === 'left' || direction === 'right') && sub.focus >= 1) { sub.focus = sub.focus === 1 ? 2 : 1; play('navigate'); renderDs(); }
+      return;
+    }
+    const n = sub.options.length;
+    if (sub.focus < n) {
+      if (direction === 'left') { if (sub.focus % 2 === 1) { sub.focus -= 1; play('navigate'); renderDs(); } return; }
+      if (direction === 'right') { if (sub.focus % 2 === 0 && sub.focus + 1 < n) { sub.focus += 1; play('navigate'); renderDs(); } return; }
+      if (direction === 'up') { if (sub.focus - 2 >= 0) { sub.focus -= 2; play('navigate'); renderDs(); } return; }
+      if (direction === 'down') {
+        if (sub.focus + 2 < n) sub.focus += 2;
+        else sub.focus = n;
+        play('navigate'); renderDs();
+      }
+      return;
+    }
+    if (direction === 'up') { sub.focus = Math.max(0, n - 1); play('navigate'); renderDs(); return; }
+    if (direction === 'left' || direction === 'right') { sub.focus = sub.focus === n ? n + 1 : n; play('navigate'); renderDs(); }
+  }
+  function dsSubActivate(index) {
+    const state = dsSet;
+    const sub = state?.sub;
+    if (!sub || sub.saving) return;
+    if (sub.mode === 'info') { dsSubCancel(); return; }
+    if (sub.mode === 'slider') { if (index === 1) dsSubCancel(); else dsSubConfirm(); return; }
+    const n = sub.options.length;
+    if (index < n) { sub.selected = index; play('confirm'); renderDs(); return; }
+    if (index === n) { dsSubCancel(); return; }
+    dsSubConfirm();
+  }
+  function dsSubCancel() {
+    if (!dsSet?.sub || dsSet.sub.saving) return;
+    play('back');
+    dsSet.sub = null;
+    renderDs();
+  }
+  async function dsSubConfirm() {
+    const state = dsSet;
+    const sub = state?.sub;
+    if (!state || !sub || sub.saving) return;
+    if (sub.mode === 'info') { dsSubCancel(); return; }
+    const value = sub.mode === 'slider' ? sub.value : sub.options[sub.selected]?.value;
+    sub.saving = true; sub.error = '';
+    renderDs();
+    try {
+      if (PS3_FORM_ROWS.has(sub.row.id)) await ps3SyncLauncherForm();
+      await window.gSettings.set(sub.row.id, value);
+      if (dsSet !== state) return;
+      sub.row.value = await window.gSettings.get(sub.row.id).catch(() => value);
+      state.sub = null;
+      play('confirm');
+      renderDs();
+    } catch (error) {
+      if (dsSet !== state) return;
+      sub.saving = false;
+      sub.error = error?.message || 'Could not change this setting.';
+      play('back');
+      renderDs();
+    }
+  }
+  function dsSeek(event) {
+    const sub = dsSet?.sub;
+    const track = host.querySelector('.ds-set-track');
+    if (!sub || sub.mode !== 'slider' || !track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const step = sub.step || 1;
+    const value = sub.min + Math.round((fraction * (sub.max - sub.min)) / step) * step;
+    sub.value = Number(Math.max(sub.min, Math.min(sub.max, value)).toFixed(6));
+    play('navigate');
+    renderDs();
+  }
+  function dsQueueReload() {
+    if (!dsSet || dsSetReloadTimer) return;
+    dsSetReloadTimer = setTimeout(() => {
+      dsSetReloadTimer = 0;
+      if (!dsSet || theme() !== '3ds' || document.querySelector('dialog[open]')) return;
+      forgetShellScan('3ds');
+      dsScanSettings(true);
+    }, 180);
+  }
+  let dsSetButtonsKey = '', dsSetSubKey = '', dsSetArtKey = '';
+  function renderDsSettings() {
+    if (!dsSet) { renderDs(); return; }
+    chrome.innerHTML = '';
+    let shell = host.querySelector('.ds-set');
+    if (!shell) {
+      host.innerHTML = `<i class="ds-set-device" aria-hidden="true"></i>
+        <div class="ds-set">
+          <section class="ds-set-top" aria-label="System Settings description">
+            <div class="ds-set-topbar"><span class="ds-set-brand">System Settings</span><span class="ds-set-when"></span></div>
+            <div class="ds-set-copy"><span class="ds-set-kicker"></span><h2></h2><p></p><span class="ds-set-readout" hidden></span></div>
+            <div class="ds-set-art" aria-hidden="true"><span class="ds-set-art-icon"></span></div>
+          </section>
+          <section class="ds-set-bottom" aria-label="System Settings options">
+            <div class="ds-set-buttons"></div>
+            <button class="ds-set-back focusable" type="button" data-action="ds-set-back">‹ Back</button>
+            <span class="ds-set-hint">A Select · B Back</span>
+            <div class="ds-set-sub" aria-hidden="true"><div class="ds-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
+          </section>
+        </div>`;
+      dsSetButtonsKey = dsSetSubKey = dsSetArtKey = '';
+      shell = host.querySelector('.ds-set');
+    }
+    const state = dsSet;
+    const pages = state.pages || [];
+    const page = pages.find(item => item.id === state.pageId) || null;
+    const root = dsRootButtons(pages);
+    const other = dsOtherPages(pages);
+    const rows = state.rows || [];
+    const sub = state.sub;
+    // Top screen: the focused option in the console's own words.
+    let kicker = 'System Settings', title = 'System Settings', copy = '', readout = '', art = 'settings';
+    if (sub) {
+      kicker = page?.title || 'System Settings';
+      title = sub.row.label;
+      art = sub.row.id;
+      if (sub.mode === 'slider') { readout = settingText(sub.row, sub.value); copy = 'Use left and right to change the value, then press A on OK.'; }
+      else if (sub.mode === 'choice' || sub.mode === 'toggle') {
+        const chosen = sub.options[sub.selected];
+        readout = chosen?.label || '';
+        copy = sub.focus >= sub.options.length ? 'Press A on OK to keep this value, or Back to leave it as it was.' : 'Choose a value with A, then confirm with OK.';
+      } else {
+        readout = settingText(sub.row, sub.row.value) || 'Unavailable';
+        copy = 'This is read-only information from this PC. Press A or B to go back.';
+      }
+    } else if (state.level === 'page') {
+      kicker = page?.title || 'System Settings';
+      const row = rows[state.focus];
+      if (row) {
+        title = row.label;
+        art = row.id;
+        readout = settingText(row, row.value) || '';
+        copy = row.kind === 'toggle' ? 'Press A to turn it on or off.'
+          : row.kind === 'choice' ? 'Press A to choose a value.'
+            : row.kind === 'slider' ? 'Press A, then use left and right to change it.'
+              : row.kind === 'action' ? 'Press A to start. It opens the launcher\'s own control with all of its confirmation steps.'
+                : 'This is read-only information from this PC.';
+      } else {
+        title = page?.title || 'System Settings';
+        copy = state.loading ? 'Reading settings…' : state.error || 'Nothing on this page is available on this PC.';
+      }
+    } else if (state.level === 'other') {
+      kicker = 'Other Settings';
+      const target = other[state.focus];
+      if (target) { title = target.title; copy = dsSetPageCopy(target); art = target.id; }
+      else copy = 'Nothing else is available on this PC right now.';
+    } else {
+      const target = root[state.focus];
+      if (target) { title = target.label; copy = target.copy; art = target.kind === 'other' ? 'other' : target.kind === 'advanced' ? 'advanced' : target.page?.id; }
+      else copy = state.loading ? 'Reading settings…' : state.error || 'No settings are available on this PC right now.';
+    }
+    shell.querySelector('.ds-set-when').textContent = `${dayMonth()} ${time()}`;
+    shell.querySelector('.ds-set-kicker').textContent = kicker;
+    shell.querySelector('.ds-set-top h2').textContent = title;
+    shell.querySelector('.ds-set-top p').textContent = copy || '';
+    const readoutEl = shell.querySelector('.ds-set-readout');
+    readoutEl.hidden = !readout;
+    readoutEl.textContent = readout;
+    const artKey = String(art);
+    if (artKey !== dsSetArtKey) {
+      dsSetArtKey = artKey;
+      const artEl = shell.querySelector('.ds-set-art-icon');
+      artEl.innerHTML = DS_SET_ICONS[art]?.svg ? dsSetIcon(art) : DS_SET_ICONS[art]?.glyph ? icon(DS_SET_ICONS[art].glyph) : (SETTING_GLYPHS[art] ? icon(SETTING_GLYPHS[art]) : icon('settings'));
+    }
+    // Bottom screen: the buttons for this level.
+    const buttons = shell.querySelector('.ds-set-buttons');
+    const gridKey = [state.level, state.pageId || '', state.loading ? 1 : 0, state.error, state.focus,
+      state.level === 'page' ? rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|') : state.level === 'other' ? other.map(item => item.id).join('|') : root.map(item => item.kind + (item.page?.id || '')).join('|')].join('~');
+    if (gridKey !== dsSetButtonsKey) {
+      dsSetButtonsKey = gridKey;
+      buttons.className = `ds-set-buttons ${state.level === 'page' ? 'rows' : state.level === 'other' ? 'other' : 'categories'}`;
+      if (state.level === 'page') {
+        buttons.innerHTML = rows.length
+          ? rows.map((row, index) => `<button class="ds-set-tile row focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-row" data-row="${index}" aria-label="${esc(row.label)}${settingText(row, row.value) ? `, ${esc(settingText(row, row.value))}` : ''}">
+              <span class="ds-set-tile-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+              <span class="ds-set-tile-copy"><strong>${esc(row.label)}</strong>${settingText(row, row.value) ? `<small>${esc(settingText(row, row.value))}</small>` : ''}</span>
+              ${row.kind === 'toggle' ? `<span class="ds-set-check${row.value ? ' on' : ''}" aria-hidden="true">${row.value ? '✓' : ''}</span>` : ''}
+              ${row.kind === 'choice' || row.kind === 'action' ? '<span class="ds-set-chevron" aria-hidden="true">›</span>' : ''}
+            </button>`).join('')
+          : `<p class="ds-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`;
+      } else if (state.level === 'other') {
+        buttons.innerHTML = other.length
+          ? other.map((item, index) => `<button class="ds-set-tile category small focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-tile" data-kind="page" data-page="${esc(item.id)}" data-index="${index}" aria-label="${esc(item.title)}">
+              <span class="ds-set-tile-icon" aria-hidden="true">${dsSetIcon(item.id)}</span><strong>${esc(item.title)}</strong></button>`).join('')
+          : `<p class="ds-set-note">Nothing else is available on this PC right now.</p>`;
+      } else {
+        buttons.innerHTML = root.length
+          ? root.map((item, index) => `<button class="ds-set-tile category focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-tile" data-kind="${item.kind}" data-page="${esc(item.page?.id || '')}" data-index="${index}" aria-label="${esc(item.label)}">
+              <span class="ds-set-tile-icon" aria-hidden="true">${item.icon}</span><strong>${esc(item.label)}</strong></button>`).join('')
+          : `<p class="ds-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'No settings are available on this PC right now.')}</p>`;
+      }
+    }
+    const back = shell.querySelector('.ds-set-back');
+    back.textContent = state.level === 'root' ? '‹ Close' : '‹ Back';
+    // The sub-screen on the bottom screen: values, or the 3DS slider, with Back and OK.
+    const overlay = shell.querySelector('.ds-set-sub');
+    const panel = shell.querySelector('.ds-set-panel');
+    overlay.classList.toggle('open', Boolean(sub));
+    overlay.setAttribute('aria-hidden', String(!sub));
+    const subKey = sub ? [sub.row.id, sub.mode, sub.selected, sub.value, sub.focus, sub.saving ? 1 : 0, sub.error].join('|') : '';
+    if (subKey !== dsSetSubKey) {
+      dsSetSubKey = subKey;
+      if (!sub) panel.innerHTML = '';
+      else {
+        const n = sub.options.length;
+        let body = '';
+        if (sub.mode === 'choice' || sub.mode === 'toggle') {
+          body = `<div class="ds-set-options" role="listbox" aria-label="${esc(sub.row.label)}">${sub.options.map((option, index) => `<button class="ds-set-option focusable${index === sub.selected ? ' on' : ''}${index === sub.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === sub.selected}" data-action="ds-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === sub.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+        } else if (sub.mode === 'slider') {
+          body = `<div class="ds-set-slider focusable${sub.focus === 0 ? ' focused' : ''}" role="slider" tabindex="-1" data-action="ds-set-slider" aria-label="${esc(sub.row.label)}" aria-valuemin="${sub.min}" aria-valuemax="${sub.max}" aria-valuenow="${sub.value}"><span class="ds-set-track"><i style="width:${settingPercent(sub, sub.value)}%"></i><b style="left:${settingPercent(sub, sub.value)}%"></b></span></div><strong class="ds-set-slider-value">${esc(settingText(sub.row, sub.value))}</strong>`;
+        } else {
+          body = `<p class="ds-set-info">${esc(settingText(sub.row, sub.row.value) || 'Unavailable')}</p>`;
+        }
+        const backIndex = sub.mode === 'info' ? 0 : sub.mode === 'slider' ? 1 : n;
+        const okIndex = sub.mode === 'info' ? -1 : sub.mode === 'slider' ? 2 : n + 1;
+        panel.innerHTML = `<h3><span class="ds-set-panel-icon" aria-hidden="true">${icon(settingGlyph(sub.row.id))}</span>${esc(sub.row.label)}</h3>${body}
+          <p class="ds-set-sub-error">${sub.error ? esc(sub.error) : ''}</p>
+          <div class="ds-set-panel-foot">
+            <button class="ds-set-action focusable${sub.focus === backIndex ? ' focused' : ''}" type="button" data-action="ds-set-cancel">Back</button>
+            ${okIndex >= 0 ? `<button class="ds-set-action ok focusable${sub.focus === okIndex ? ' focused' : ''}" type="button" data-action="ds-set-commit">OK</button>` : ''}
+            ${sub.saving ? '<span class="ds-set-saving">Saving…</span>' : ''}</div>`;
+      }
+    }
+    // Focus: the sub-screen's own control, else the chosen button.
+    let target = null;
+    if (sub) {
+      if (sub.mode === 'choice' || sub.mode === 'toggle') {
+        if (sub.focus < sub.options.length) target = panel.querySelectorAll('.ds-set-option')[sub.focus];
+        else target = panel.querySelectorAll('.ds-set-action')[sub.focus - sub.options.length];
+      } else if (sub.mode === 'slider') {
+        target = sub.focus === 0 ? panel.querySelector('.ds-set-slider') : panel.querySelectorAll('.ds-set-action')[sub.focus - 1];
+      } else target = panel.querySelector('.ds-set-action');
+    } else {
+      target = buttons.querySelector('.ds-set-tile.sel') || back;
+    }
+    focusEl(target);
+  }
+
   // =========================== Rendering, navigation, sounds ===========================
   const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
   let renderedTheme = '', enterTimer = 0;
@@ -1885,6 +2393,7 @@
     // The other console settings shells are per-theme screens too; leaving the theme closes them.
     if (id !== 'ps4') ps4Set = null;
     if (id !== 'wii') wiiSet = null;
+    if (id !== '3ds') dsSet = null;
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
@@ -1940,6 +2449,7 @@
       // so re-read the shell's rows after it closes even when no g-setting-change fired.
       if (theme() === 'ps4' && ps4Set) { forgetShellScan('ps4'); ps4QueueReload(); }
       if (theme() === 'wii' && wiiSet) { forgetShellScan('wii'); wiiQueueReload(); }
+      if (theme() === '3ds' && dsSet) { forgetShellScan('3ds'); dsQueueReload(); }
     });
   }, true);
   const firstFocus = () => host.querySelector('.xmb-item.on, .ps4-tile.sel, .wii-pbtn[data-start], .wii-ch.focusable, .ds-icon.sel');
@@ -1968,6 +2478,29 @@
     if (action === 'settings' && el.closest('#g-retro, #g-retro-chrome')) {
       if (theme() === 'ps4' && !ps4Set) { stop(); ps4OpenSettings(); return; }
       if (theme() === 'wii' && !wiiSet) { stop(); wiiOpenSettings(); return; }
+      if (theme() === '3ds' && !dsSet) { stop(); dsOpenSettings(); return; }
+    }
+    // 3DS System Settings: the bottom-screen buttons, the sub-screen and its Back/OK.
+    if (theme() === '3ds' && dsSet) {
+      if (action === 'ds-set-back') { stop(); dsBack(); return; }
+      if (action === 'ds-set-tile' || action === 'ds-set-row') {
+        stop();
+        dsSet.focus = Number(el.dataset.index ?? el.dataset.row) || 0;
+        dsActivate();
+        return;
+      }
+      if (action === 'ds-set-option') {
+        stop();
+        const sub = dsSet.sub;
+        if (!sub || sub.saving) return;
+        sub.selected = Number(el.dataset.option) || 0;
+        play('confirm');
+        renderDs();
+        return;
+      }
+      if (action === 'ds-set-commit') { stop(); dsSubConfirm(); return; }
+      if (action === 'ds-set-cancel') { stop(); dsSubCancel(); return; }
+      if (action === 'ds-set-slider') { stop(); if (state.controllerClick || event.detail === 0) dsSubConfirm(); else dsSeek(event); return; }
     }
     // Wii Settings: page arrows, pills, the value sub-screen and its Back/Confirm.
     if (theme() === 'wii' && wiiSet) {
@@ -2049,6 +2582,7 @@
         }
         if (theme() === 'ps4' && ps4Set) { ps4SetBack(); return; }
         if (theme() === 'wii' && wiiSet) { wiiBack(); return; }
+        if (theme() === '3ds' && dsSet) { dsBack(); return; }
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
         if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
@@ -2065,6 +2599,23 @@
       if (on() && state.view === 'home' && action === 'settings' && source?.closest?.('#g-retro, #g-retro-chrome')) {
         if (theme() === 'ps4' && !ps4Set) { ps4OpenSettings(); return true; }
         if (theme() === 'wii' && !wiiSet) { wiiOpenSettings(); return true; }
+        if (theme() === '3ds' && !dsSet) { dsOpenSettings(); return true; }
+      }
+      if (on() && state.view === 'home' && theme() === '3ds' && dsSet) {
+        if (action === 'ds-set-back') { dsBack(); return true; }
+        if (action === 'ds-set-tile' || action === 'ds-set-row') {
+          dsSet.focus = Number(source?.dataset?.index ?? source?.dataset?.row) || 0;
+          dsActivate();
+          return true;
+        }
+        if (action === 'ds-set-option') {
+          const sub = dsSet.sub;
+          if (sub && !sub.saving) { sub.selected = Number(source?.dataset?.option) || 0; play('confirm'); renderDs(); }
+          return true;
+        }
+        if (action === 'ds-set-commit') { await dsSubConfirm(); return true; }
+        if (action === 'ds-set-cancel') { dsSubCancel(); return true; }
+        if (action === 'ds-set-slider') { await dsSubConfirm(); return true; }
       }
       if (on() && state.view === 'home' && theme() === 'wii' && wiiSet) {
         if (action === 'wii-set-back') { wiiCloseSettings(); return true; }
@@ -2153,6 +2704,16 @@
     forgetShellScan('wii');
     wiiQueueReload();
   });
+  // 3DS System Settings re-reads itself the same way.
+  document.addEventListener('g-setting-change', event => {
+    if (theme() !== '3ds' || !event.detail?.id) return;
+    dsQueueReload();
+  });
+  document.addEventListener('g-settings-ready', () => {
+    if (theme() !== '3ds' || !dsSet) return;
+    forgetShellScan('3ds');
+    dsQueueReload();
+  });
 
   // Sounds: the pack's recordings when present, otherwise short synthesised cues.
   let ctx;
@@ -2215,7 +2776,7 @@
     if (t === 'ps3') { const el = chrome.querySelector('.xmb-time'); if (el) el.textContent = `${dayMonth()} ${time()}`; }
     if (t === 'ps4') { const el = chrome.querySelector('.ps4-s.clock'); if (el) el.textContent = time(); }
     if (t === 'wii') { const el = chrome.querySelector('.wii-clock'); if (el) el.innerHTML = segClock(); }
-    if (t === '3ds') { const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>'); }
+    if (t === '3ds') { const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>'); const when = host.querySelector('.ds-set-when'); if (when) when.textContent = `${dayMonth()} ${time()}`; }
   }, 15000);
   new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   window.gRetro = { render, play, pack: () => pack };
