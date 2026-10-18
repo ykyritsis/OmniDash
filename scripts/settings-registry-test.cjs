@@ -346,5 +346,44 @@ function eventFor(events, name, id) {
   assert.match(settingsShell, /g-pack-section/, 'the console pack manager stays in the label file');
   assert.match(settingsShell, /const ERAS = \{/, 'the era label map stays in the label file');
 
-  console.log(`settings-registry tests passed: ${api.entries.length} entries, ${CONSOLES.length} console layouts`);
+  // ---------- Button glyphs (task G1) ----------
+  // The one glyph helper must cover every console with a complete drawn set, and every canonical hint row
+  // must name glyphs that exist. This is the guard that fails if a prompt is added without its picture.
+  const glyphs = require('../src/renderer/garrison-glyphs.js');
+  assert.ok(glyphs && glyphs.sets, 'garrison-glyphs.js exposes the drawn sets in plain node');
+  assert.deepEqual(Object.keys(glyphs.sets).sort(), CONSOLES.slice().sort(), 'every console has its own glyph set');
+  for (const console of CONSOLES) {
+    const set = glyphs.sets[console];
+    assert.ok(set && Object.keys(set).length >= 12, `${console} has a full glyph set`);
+    for (const name of glyphs.required[console]) assert.ok(glyphs.has(console, name), `${console} draws ${name}`);
+    assert.ok(!Object.prototype.hasOwnProperty.call(set, 'circle') || ['ps3', 'ps4'].includes(console), `${console} does not borrow the PlayStation symbols`);
+    const rows = glyphs.prompts?.[console]?.home;
+    assert.ok(Array.isArray(rows) && rows.length >= 3, `${console} has a canonical home prompt row`);
+    for (const item of rows) {
+      for (const token of item.buttons || [item.button]) {
+        const resolved = glyphs.name(console, token);
+        assert.ok(resolved, `${console} prompt "${token}" resolves to a glyph`);
+        assert.equal(glyphs.has(console, token), true, `${console} prompt "${token}" is in the drawn set`);
+        assert.match(glyphs.icon(console, token), new RegExp(`data-console="${console}"`), `${console} prompt "${token}" renders as ${console}'s own glyph`);
+      }
+      assert.ok(typeof item.label === 'string' && item.label.length, `${console} prompt "${item.button || item.buttons?.join('+')}" has wording`);
+    }
+    const face = glyphs.face(console);
+    assert.ok(face.confirm && face.back && face.confirmIndex !== face.backIndex, `${console} has a face mapping`);
+  }
+  // Xbox keeps A/B, PlayStation prints its shapes, Nintendo prints A/B: no cross-console borrowing.
+  assert.equal(glyphs.face('series').confirm, 'a');
+  assert.equal(glyphs.face('ps3').confirm, 'cross');
+  assert.equal(glyphs.face('wii').confirm, 'a');
+  assert.ok(!glyphs.sets.series.circle, 'Xbox does not print a PlayStation circle');
+  assert.ok(!glyphs.sets.ps3.a, 'PlayStation does not print Xbox A');
+  // Every skin hint row must name one of the seven consoles.
+  const retroSource = readRenderer('garrison-theme-retro.js');
+  const xboxSource = readRenderer('garrison-theme-360.js');
+  for (const [file, source] of [['garrison-theme-retro.js', retroSource], ['garrison-theme-360.js', xboxSource]]) {
+    for (const match of source.matchAll(/gRow\('([^']+)'/g)) assert.ok(CONSOLES.includes(match[1]), `${file} hint row names a real console (${match[1]})`);
+    for (const match of source.matchAll(/gGlyphs\?*\.row\?*\.?\('([^']+)'/g)) assert.ok(CONSOLES.includes(match[1]), `${file} glyph row names a real console (${match[1]})`);
+  }
+
+  console.log(`settings-registry tests passed: ${api.entries.length} entries, ${CONSOLES.length} console layouts, ${CONSOLES.length} glyph sets`);
 })().catch(error => { console.error(error); process.exit(1); });

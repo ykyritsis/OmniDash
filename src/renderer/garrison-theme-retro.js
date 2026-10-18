@@ -10,6 +10,12 @@
   const on = () => RETRO.includes(theme());
   const esc = text => (typeof escapeHtml === 'function' ? escapeHtml(text) : String(text ?? ''));
   const icon = name => (typeof gIcon === 'function' ? gIcon(name) : '');
+  // Every button prompt is drawn by the one glyph helper (garrison-glyphs.js, task G1), so the four retro skins
+  // and the shared settings shell can never print a different console's buttons.
+  const gRow = (id, items) => window.gGlyphs?.row?.(id, items) || '';
+  // Note: do not add a local binding named gIcon — `icon()` below delegates to the launcher's global gIcon, and
+  // a local binding with that name would shadow it for every existing call (drawn settings icons became keycaps).
+  const homePrompts = id => window.gGlyphs?.prompts?.[id]?.home || [];
   const games = () => (typeof homeRecentGames === 'function' ? homeRecentGames() : []).filter(game => !game.isApp && !game.remoteHostId);
   const allGames = () => (state.games || []).filter(game => !game.isApp && game.installed !== false);
   const cover = game => game?.artwork?.tile || game?.artwork?.grid || '';
@@ -42,6 +48,8 @@
   const img = (src, fallback, cls = '') => src ? `<img class="rp-img ${cls}" src="${esc(src)}" alt="" draggable="false">` : fallback;
   async function loadPack() {
     try { pack = await window.launcher?.getRetroPack?.() || pack; } catch { /* No packs. */ }
+    // Opt in to the pack's own button pictures when it hands over a glyph map; the drawn SVG is the fallback.
+    window.gGlyphs?.usePack?.(pack);
     const fonts = [['g-retro-xmb', P('ps3', 'ps3/PS3-Simulator-main/fonts/SCE-PS3-RD-R-LATIN2.woff')], ['g-retro-sst', P('ps4', 'ps4/Ps4-UI-master/assets/font/sst.ttf')],
       ['g-retro-rodin', P('wii', 'wii/Liink-main/fonts/FOT-RodinProN-DB.otf')], ['g-retro-rodin-b', P('wii', 'wii/Liink-main/fonts/FOT-RodinProN-B.otf')]];
     let css = fonts.filter(([, src]) => src).map(([family, src]) => `@font-face{font-family:"${family}";src:${cssUrl(src)};font-display:swap}`).join('');
@@ -209,7 +217,8 @@
       el.classList.toggle('on', i === sel);
       el.classList.toggle('above', i < sel);
     });
-    chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>`;
+    chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>
+      <div class="xmb-hints">${gRow('ps3', homePrompts('ps3'))}</div>`;
     // The shell paints its own sub-list/pop-up and owns the focus while it is open; otherwise the column item does.
     if (!window.gShell?.isOpen?.('ps3')) focusEl(list.querySelector('.xmb-item.on'));
     xmbBackdrop(items[sel]);
@@ -289,7 +298,7 @@
         <span class="xmb-sub-value">${esc(format(row))}</span>
         ${row.kind === 'action' ? '<span class="xmb-sub-open" aria-hidden="true">›</span>' : ''}
       </button>`).join('') : `<p class="xmb-sub-empty">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`}</div>
-      <p class="xmb-sub-hint"><span class="xmb-hint-open"><b class="xmb-glyph" aria-hidden="true">${glyphs.confirm}</b> Select</span><button class="xmb-pop-action focusable" type="button" data-action="gsh-back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button></p>`;
+      <p class="xmb-sub-hint"><span class="xmb-hint-open"><b class="xmb-glyph" data-g-role="confirm" aria-hidden="true">${glyphs.confirm}</b> Select</span><button class="xmb-pop-action focusable" type="button" data-action="gsh-back"><b class="xmb-glyph" data-g-role="back" aria-hidden="true">${glyphs.back}</b> Back</button></p>`;
   }
   function renderPs3Pop(state) {
     const panel = host.querySelector('.xmb-pop');
@@ -323,9 +332,9 @@
       body = `<p class="xmb-pop-info">${esc(window.gShell.valueText(row, row.value) || 'Unavailable')}</p>`;
     }
     const buttons = overlay.mode === 'info'
-      ? `<button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button>`
-      : `<button class="xmb-pop-action focusable" type="button" data-action="gsh-commit"><b class="xmb-glyph" aria-hidden="true">${glyphs.confirm}</b> Set</button>
-        <button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Cancel</button>`;
+      ? `<button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" data-g-role="back" aria-hidden="true">${glyphs.back}</b> Back</button>`
+      : `<button class="xmb-pop-action focusable" type="button" data-action="gsh-commit"><b class="xmb-glyph" data-g-role="confirm" aria-hidden="true">${glyphs.confirm}</b> Set</button>
+        <button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" data-g-role="back" aria-hidden="true">${glyphs.back}</b> Cancel</button>`;
     panel.innerHTML = `<div class="xmb-pop-head"><strong>${esc(row.label)}</strong><small>${esc(state.page?.title || '')}</small></div>${body}
       <p class="xmb-pop-hint">${overlay.error ? `<span class="xmb-pop-error">${esc(overlay.error)}</span>` : ''}${buttons}${overlay.saving ? '<span class="xmb-pop-saving">Saving…</span>' : ''}</p>`;
   }
@@ -557,7 +566,7 @@
       ps4SwapTimer = setTimeout(() => under.classList.remove('ps4-swap'), swapMs());
     }
     ps4LastUnder = ps4Focus;
-    host.querySelector('.ps4-hints').innerHTML = `<span><i class="ps4-x"></i>Enter</span>${sel.game ? '<span><i class="ps4-opt">OPTIONS</i></span>' : ''}`;
+    host.querySelector('.ps4-hints').innerHTML = gRow('ps4', homePrompts('ps4'));
     const online = state.gFriends?.online || 0;
     const alerts = online + (window.gDownloads?.active?.length || 0);
     const note = window.gDownloads?.active?.[0] ? `Downloading ${window.gDownloads.active[0].title}` : online ? `${online} friend${online === 1 ? ' is' : 's are'} online` : 'Welcome back';
@@ -713,9 +722,9 @@
     }
     [...rowsEl.querySelectorAll('.ps4-set-row')].forEach((el, index) => el.classList.toggle('sel', deep && index === state.focus));
     shell.querySelector('.ps4-set-load').textContent = state.error || '';
-    shell.querySelector('.ps4-set-hints').innerHTML = deep
-      ? `<span><b>${glyphs.confirm}</b> Select</span><span><b>${glyphs.back}</b> Back</span>`
-      : `<span><b>${glyphs.confirm}</b> Open</span><span><b>${glyphs.back}</b> Close</span>`;
+    shell.querySelector('.ps4-set-hints').innerHTML = gRow('ps4', deep
+      ? [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }]
+      : [{ button: '@confirm', label: 'Open' }, { button: '@back', label: 'Close' }]);
     // The option dialog
     const overlayEl = shell.querySelector('.ps4-set-overlay');
     const dialog = shell.querySelector('.ps4-set-dialog');
@@ -742,8 +751,8 @@
           body = `<p class="ps4-set-info">${esc(window.gShell.valueText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
         }
         const hint = overlay.mode === 'info'
-          ? `<button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b>${glyphs.back}</b> Back</button>`
-          : `<button class="ps4-set-action focusable" type="button" data-action="gsh-commit"><b>${glyphs.confirm}</b> Select</button><button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b>${glyphs.back}</b> Back</button>`;
+          ? `<button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b data-g-role="back">${glyphs.back}</b> Back</button>`
+          : `<button class="ps4-set-action focusable" type="button" data-action="gsh-commit"><b data-g-role="confirm">${glyphs.confirm}</b> Select</button><button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b data-g-role="back">${glyphs.back}</b> Back</button>`;
         dialog.innerHTML = `<h3>${esc(overlay.row.label)}</h3>${body}<p class="ps4-set-dialog-hint">${overlay.error ? `<span class="ps4-set-error">${esc(overlay.error)}</span>` : ''}${hint}${overlay.saving ? '<span class="ps4-set-saving">Saving…</span>' : ''}</p>`;
         if (overlay.mode === 'info') { dialog.setAttribute('tabindex', '-1'); dialog.dataset.action = 'gsh-cancel'; }
         else { dialog.removeAttribute('tabindex'); delete dialog.dataset.action; }
@@ -855,7 +864,8 @@
       <button class="wii-btn focusable${wiiBar === 0 ? ' sel' : ''}" type="button" data-action="settings" aria-label="Wii Options">${img(WIII('wii-button.png'), '<b>Wii</b>')}</button>
       <span class="wii-sd" aria-hidden="true"></span>
       <span class="wii-clock">${segClock()}</span><span class="wii-date">${esc(weekday())} ${esc(dayMonth())}</span>
-      <button class="wii-mail focusable${wiiBar === 1 ? ' sel' : ''}" type="button" data-action="g-notifications" aria-label="Wii Message Board">${img(WIII('mail-button.png'), '<i></i>')}</button></div>`;
+      <button class="wii-mail focusable${wiiBar === 1 ? ' sel' : ''}" type="button" data-action="g-notifications" aria-label="Wii Message Board">${img(WIII('mail-button.png'), '<i></i>')}</button></div>
+      <div class="wii-hints">${gRow('wii', homePrompts('wii'))}</div>`;
     const target = wiiBar >= 0 ? chrome.querySelector(wiiBar === 0 ? '.wii-btn' : '.wii-mail') : host.querySelector(`.wii-ch[data-wii-index="${wiiFocus}"].focusable`) || host.querySelector('.wii-ch.focusable');
     focusEl(target);
   }
@@ -939,7 +949,7 @@
       <div class="wii-set-grid"></div>
       <button class="wii-set-arrow right focusable" type="button" data-action="gsh-page-turn" data-dir="1" aria-label="Next page"></button>
       <div class="wii-set-foot"><button class="wii-pbtn wii-set-back focusable" type="button" data-action="gsh-back">${wiiPillParts()}<span>Back</span></button>
-        <span class="wii-set-dots" aria-hidden="true"></span><span class="wii-set-hint">A Select · B Back</span></div>
+        <span class="wii-set-dots" aria-hidden="true"></span><span class="wii-set-pages"></span><span class="wii-set-hint">${gRow('wii', homePrompts('wii').filter(item => item.label !== 'Page'))}</span></div>
       <div class="wii-set-sub" aria-hidden="true"><div class="wii-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>`;
     host.append(wall, shell);
     return shell;
@@ -971,7 +981,10 @@
     if (arrows[1]) arrows[1].hidden = state.pageIndex >= pages.length - 1;
     const dots = shell.querySelector('.wii-set-dots');
     dots.innerHTML = pages.map((item, index) => `<i${index === state.pageIndex ? ' class="on"' : ''}></i>`).join('');
-    shell.querySelector('.wii-set-hint').textContent = pages.length ? `Page ${state.pageIndex + 1} of ${pages.length} · A Select · B Back` : 'B Back';
+    shell.querySelector('.wii-set-pages').textContent = pages.length ? `Page ${state.pageIndex + 1} of ${pages.length}` : '';
+    shell.querySelector('.wii-set-hint').innerHTML = gRow('wii', pages.length
+      ? [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }]
+      : [{ button: '@back', label: 'Back' }]);
     // The value sub-screen: title, pill choices or the Wii bar, and Back / Confirm at the bottom.
     const overlayEl = shell.querySelector('.wii-set-sub');
     const panel = shell.querySelector('.wii-set-panel');
@@ -1095,7 +1108,7 @@
           ${item.game ? `<span class="ds-cover" style="background-image:${url(cover(item.game))}"></span>` : DS_SVG[item.svg] || icon('game')}</button>`).join('')}<span class="ds-cursor" style="--c:${rail.col};--r:${dsFocus % DS_ROWS}" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div></div>
         <div class="ds-bottom"><div class="ds-toolbar">${DS_TOOLS.map(([action, label, svg], i) => `<button class="ds-tool focusable${i === 0 ? ' tab' : ''}${dsTool === i ? ' sel' : ''}" type="button" data-action="${action}" data-ds-tool="${i}" aria-label="${label}">${DS_SVG[svg]}</button>`).join('')}</div>
           <span class="ds-gap"></span><span class="ds-size" aria-hidden="true"><i></i><i class="grid"></i></span>
-          <div class="ds-foot"><span class="ds-cam"></span><kbd>Y</kbd><span class="ds-cam"></span><kbd>L</kbd>+<kbd>R</kbd></div></div>
+          <div class="ds-foot">${gRow('3ds', homePrompts('3ds'))}</div></div>
         <div class="ds-scroll" aria-hidden="true"><i style="--p:${rail.cols > DS_COLS ? rail.start / (rail.cols - DS_COLS) : 0}"></i></div>`;
     chrome.innerHTML = '';
     dsBanner(list[dsFocus]);
@@ -1234,7 +1247,7 @@
       <section class="ds-set-bottom" aria-label="System Settings options">
         <div class="ds-set-buttons"></div>
         <button class="ds-set-back focusable" type="button" data-action="gsh-back">‹ Back</button>
-        <span class="ds-set-hint">A Select · B Back</span>
+        <span class="ds-set-hint">${gRow('3ds', [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }])}</span>
         <div class="ds-set-sub" aria-hidden="true"><div class="ds-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
       </section>`;
     host.append(device, shell);
@@ -1516,6 +1529,74 @@
       return back.apply(this, args);
     };
   }
+
+  // ---------- G1: each console's own Options / page buttons ----------
+  // The shared launcher maps Y (pad button 3) to search, but a PS3's triangle and a 3DS's X are that
+  // console's Options button. This keeps the prompt honest: the glyph on the hint bar and the pad do the
+  // same thing. The 3DS X is pad button 2, which the launcher does not read, so a tiny focused poll covers it.
+  function selectedHomeGameId() {
+    if (theme() === 'ps3') return document.querySelector('#g-retro .xmb-item.on[data-game-id]')?.dataset.gameId || '';
+    if (theme() === '3ds') return document.querySelector('#g-retro .ds-icon.sel[data-game-id]')?.dataset.gameId || '';
+    return '';
+  }
+  function openHomeOptions() {
+    const gameId = selectedHomeGameId();
+    if (!gameId || typeof openGameOptions !== 'function') return false;
+    if (!document.querySelector('#launch-overlay')?.hidden || document.querySelector('dialog[open]')) return false;
+    play('confirm');
+    openGameOptions(gameId);
+    return true;
+  }
+  if (typeof performAction === 'function') {
+    const performBase = performAction;
+    performAction = async function (action, source) {
+      // A controller press arrives without a source element; the XMB's own Internet Search tile passes one.
+      if (action === 'toggle-search' && !source && (theme() === 'ps3' || theme() === '3ds') && state.view === 'home') {
+        if (openHomeOptions()) return true;
+      }
+      return performBase.apply(this, arguments);
+    };
+  }
+  let dsOptionsTimer = 0, dsOptionsHeld = false;
+  function pollDsOptions() {
+    if (theme() !== '3ds' || document.hidden || !document.hasFocus() || state.view !== 'home' || document.querySelector('dialog[open]')) { dsOptionsHeld = false; return; }
+    const pads = navigator.getGamepads?.() || [];
+    const pad = [...pads].find(candidate => candidate?.connected);
+    const pressed = Boolean(pad?.buttons?.[2]?.pressed || pad?.buttons?.[2]?.value > .55);
+    if (pressed && !dsOptionsHeld) openHomeOptions();
+    dsOptionsHeld = pressed;
+  }
+  function syncDsOptionsPoll() {
+    const wanted = theme() === '3ds' && document.visibilityState === 'visible' && document.hasFocus();
+    if (wanted && !dsOptionsTimer) dsOptionsTimer = setInterval(pollDsOptions, 40);
+    else if (!wanted && dsOptionsTimer) { clearInterval(dsOptionsTimer); dsOptionsTimer = 0; dsOptionsHeld = false; }
+  }
+  syncDsOptionsPoll();
+  window.addEventListener('gamepadconnected', syncDsOptionsPoll);
+  window.addEventListener('focus', syncDsOptionsPoll);
+  window.addEventListener('blur', syncDsOptionsPoll);
+  document.addEventListener('visibilitychange', syncDsOptionsPoll);
+  document.addEventListener('keydown', event => {
+    if (!on() || document.querySelector('dialog[open]') || (typeof isTextEntry === 'function' && isTextEntry(event.target))) return;
+    const key = String(event.key || '');
+    if (theme() === '3ds' && key.toLowerCase() === 'x' && state.view === 'home') {
+      if (openHomeOptions()) { event.preventDefault(); event.stopImmediatePropagation(); }
+      return;
+    }
+    if (theme() === 'ps3' && key.toLowerCase() === 'y' && state.view === 'home') {
+      if (openHomeOptions()) { event.preventDefault(); event.stopImmediatePropagation(); }
+      return;
+    }
+    if (theme() === 'wii' && state.view === 'home' && !wiiPreview && !window.gShell?.isOpen?.()) {
+      const pages = Math.max(1, Math.ceil(wiiChannels().length / 12));
+      if (key === '+' || key === '=' || key === '−' || key === '-' || key === '_') {
+        const next = Math.max(0, Math.min(pages - 1, wiiPage + (key === '+' || key === '=' ? 1 : -1)));
+        if (next !== wiiPage) { wiiPage = next; wiiFocus = 0; play('category'); renderWii(); }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
+  }, true);
 
   // =========================== Shared audio engine (task A1, plan §2.3) ===========================
   // One engine for every theme. `window.gAudio.play(kind)` replaces the per-file synth wrappers; it picks the
@@ -2126,7 +2207,7 @@
     if (t === 'wii') { const el = chrome.querySelector('.wii-clock'); if (el) el.innerHTML = segClock(); }
     if (t === '3ds') { const el = host.querySelector('.ds-clock'); if (el) el.innerHTML = esc(time()).replace(':', '<b>:</b>'); const when = host.querySelector('.ds-set-when'); if (when) when.textContent = `${dayMonth()} ${time()}`; }
   }, 15000);
-  new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; gAudio.themeChanged(); render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+  new MutationObserver(() => { wiiPreview = null; ps4Area = 'row'; dsTool = -1; wiiBar = -1; syncDsOptionsPoll(); gAudio.themeChanged(); render(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   window.gRetro = { render, play: kind => gAudio.play(kind), pack: () => pack };
   render();
   packReadyPromise = loadPack();

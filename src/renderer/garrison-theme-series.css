@@ -290,3 +290,21 @@ body.garrison[data-g-theme="series"] .g-top-left > :not(#g-series-me) { display:
 html.reduce-motion body.garrison[data-g-theme="series"] :is(.dashboard-recent, #recent-row, #g-series-cards, .g-series-card, #g-series-me, .top-nav-button) { animation: none !important; transition: none !important; }
 html.reduce-motion body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer { animation: none !important; }
 html.reduce-motion body.garrison[data-g-theme="series"] .g-swirl-ribbons { animation: none !important; }
+
+/* Controller footprint (task G1): the shared bottom hint bar, restyled as the dashboard's own prompt row.
+   app.js still owns which prompts are live, so nothing here is a decorative control. */
+body.garrison[data-g-theme="series"].home-active #controller-prompts:not([hidden]) {
+  display: flex !important; position: fixed; left: calc(40 * var(--cpx)); right: auto; bottom: calc(22 * var(--cpx));
+  z-index: 42; gap: calc(30 * var(--cpx)); max-width: calc(100vw - 80 * var(--cpx)); padding: 0; border: 0;
+  background: none; box-shadow: none; backdrop-filter: none; color: #fff;
+  font: 300 calc(19 * var(--cpx))/1 var(--g-font); text-shadow: 0 calc(1 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 0, 0, .6);
+}
+body.garrison[data-g-theme="series"] #controller-prompts .control-action {
+  gap: calc(9 * var(--cpx)); height: auto; padding: 0; border-radius: 0; background: none; box-shadow: none;
+  color: #fff; font: inherit;
+}
+body.garrison[data-g-theme="series"] #controller-prompts :is(#prompt-a, #prompt-b) { display: inline-flex !important; }
+body.garrison[data-g-theme="series"] #controller-prompts kbd { display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto; min-width: 0; border: 0; background: none; color: #fff; }
+body.garrison[data-g-theme="series"] #controller-prompts .g-glyph { --gw: 1.45em; --gh: 1.45em; }
+body.garrison[data-g-theme="series"].g-xset-open #controller-prompts,
+body.garrison[data-g-theme="series"].g-console-account-open #controller-prompts { display: none !important; }

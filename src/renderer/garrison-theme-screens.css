@@ -449,3 +449,33 @@ body[data-g-theme="3ds"] #settings-dialog .g-pack-readme-missing { color: #8a6d1
 body[data-g-theme="wii"] #settings-dialog .g-pack-button,
 body[data-g-theme="3ds"] #settings-dialog .g-pack-button { background: #e8ebee; color: #3c3c3c; }
 
+/* ---------- Button glyphs (garrison-glyphs.js, task G1) ---------- */
+/* The glyph box is sized in em, so it follows whatever font the prompt container already uses. --gw is the
+   button's width in em (wide for OPTIONS/LB and words). The SVG is bigger than the text box so a PlayStation
+   symbol still reads at 19px; vertical-align keeps it on the label's baseline. */
+.g-glyph { display: inline-grid; place-items: center; flex: none; width: var(--gw, 1.5em); height: var(--gh, 1.5em); vertical-align: -.32em; line-height: 0; }
+.g-glyph > svg, .g-glyph > img { display: block; width: 100%; height: 100%; }
+.g-glyph > img { object-fit: contain; }
+.g-glyph.has-pack > svg { display: none; }
+.g-glyph-inline { vertical-align: -.22em; }
+.g-glyph-row { display: inline-flex; align-items: center; gap: .95em; max-width: 100%; }
+.g-glyph-item { display: inline-flex; align-items: center; gap: .42em; white-space: nowrap; }
+.g-glyph-buttons { display: inline-flex; align-items: center; gap: .22em; }
+.g-glyph-label { line-height: 1.1; }
+/* The shared bottom hint bar and the dialog footers keep their existing kbd/b sizing; only the glyph is swapped. */
+#controller-prompts .g-glyph { --gw: 1.35em; --gh: 1.35em; }
+#g-osk .g-osk-hints .g-glyph, .g-close-hint .g-glyph, .g-launch-hint .g-glyph { --gw: 1.35em; --gh: 1.35em; }
+.g-xset-hints .g-glyph, .g-xset-actions .g-glyph, .g-xset-action .g-glyph { --gw: 1.3em; --gh: 1.3em; }
+/* The old kbd/b chips drew their own circle or red key. Once a console glyph is inside, that ring is a second
+   button around the button; strip it so the drawn glyph is the whole prompt. */
+body[data-g-console] :is(.g-osk-hints, .g-close-hint, .g-add-hint, .g-launch-hint, .g-trailer-hints, .options-footer, .power-footer, #console-choice-dialog, #controller-prompts) kbd:has(.g-glyph) {
+  display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto; min-width: 0; padding: 0; border: 0; background: none; color: inherit;
+}
+body[data-g-console] #g-xset :is(.g-xset-hints b, .g-xset-action b):has(.g-glyph) {
+  display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto; min-width: 0; padding: 0; border: 0; background: none;
+}
+body[data-g-console] #g-console-account .g-ov-key:has(.g-glyph) { display: inline-flex; width: auto; height: auto; padding: 0; border: 0; background: none; }
+body[data-g-theme="ps3"] #g-retro .xmb-glyph:has(.g-glyph),
+body[data-g-theme="ps4"] #g-retro .xmb-glyph:has(.g-glyph) { display: inline-flex; width: auto; height: auto; padding: 0; border: 0; }
+body[data-g-theme="ps3"] #g-retro .ps4-set-action b:has(.g-glyph) { display: inline-flex; border: 0; }
+

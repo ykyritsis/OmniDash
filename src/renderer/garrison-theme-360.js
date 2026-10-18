@@ -50,7 +50,10 @@
   }
 
   // ---------- Bottom hints ----------
-  document.body.insertAdjacentHTML('beforeend', '<div id="g-360-hints" aria-hidden="true"><span><kbd class="a">A</kbd>Select</span><span><kbd class="y">Y</kbd>Search</span></div>'
+  // The console's own prompts, drawn from the one glyph helper so the 360, Series and One can never show
+  // another console's buttons. The 360's home row is A Select / B Back / Menu Options / Y Search.
+  const glyphPrompts = window.gGlyphs?.prompts?.x360?.home || [];
+  document.body.insertAdjacentHTML('beforeend', `<div id="g-360-hints" aria-hidden="true">${window.gGlyphs?.row?.('x360', glyphPrompts) || ''}</div>`
     + '<div id="g-360-peek-left" class="g-360-peek" aria-hidden="true"><i></i><i class="avatar"></i></div><div id="g-360-peek-right" class="g-360-peek" aria-hidden="true"><i></i><i></i></div>');
 
   // ---------- Home band ----------
@@ -190,6 +193,7 @@
     pack = await window.launcher?.getThemePack?.().catch(() => null);
     if (!pack?.available) return;
     window.gThemePack = pack;
+    window.gGlyphs?.usePack?.(pack);
     document.dispatchEvent(new CustomEvent('g-theme-pack', { detail: pack }));
     // The shared audio engine reads the pack's own sounds and music and routes them through its master gain.
     if (window.gAudio) { packSounds.context = null; return; }

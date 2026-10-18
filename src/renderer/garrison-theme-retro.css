@@ -880,3 +880,36 @@ body[data-g-theme="x360"] #startup-screen .g-m-xbox-sub { color: #8ed14a; }
 html.reduce-motion #startup-screen .g-m-boot *, html.reduce-motion #startup-screen .g-m-boot,
 html.reduce-motion .g-m-return, html.reduce-motion #launch-overlay .g-m-flash { animation: none !important; transition: none !important; }
 
+/* ---------- Button prompts (garrison-glyphs.js, task G1) ---------- */
+/* PS3 XMB: the row sits on the wave below the item column, the way the real XMB prints its button bar. */
+#g-retro-chrome .xmb-hints { position: fixed; left: calc(96 * var(--cpx)); bottom: calc(40 * var(--cpx)); z-index: 6; color: rgba(255, 255, 255, .84); font: 400 calc(22 * var(--cpx))/1 var(--g-font); text-shadow: 0 calc(1 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .55); pointer-events: none; }
+#g-retro-chrome .xmb-hints .g-glyph { --gw: 1.6em; --gh: 1.6em; }
+#g-retro-chrome .xmb-hints .g-glyph-label { letter-spacing: .01em; }
+/* PS4: Enter / Back / OPTIONS in the dark bar from y 944 at 1080p. */
+#g-retro .ps4-hints .g-glyph-row { gap: calc(52 * var(--cpx)); }
+#g-retro .ps4-hints .g-glyph-item { gap: calc(12 * var(--cpx)); }
+#g-retro .ps4-hints .g-glyph { --gw: 1.45em; --gh: 1.45em; }
+/* PS4 settings shell row and dialog buttons. */
+#g-retro .ps4-set-hints .g-glyph-row { gap: calc(52 * var(--cpx)); }
+#g-retro .ps4-set-hints .g-glyph-item { gap: calc(12 * var(--cpx)); }
+#g-retro .ps4-set-hints .g-glyph { --gw: 1.35em; --gh: 1.35em; }
+#g-retro .ps4-set-dialog-hint .g-glyph, #g-retro .ps4-set-action .g-glyph { --gw: 1.25em; --gh: 1.25em; }
+/* Wii: A Select / B Back / +− Page on the light menu bar, left of the clock dip. */
+#g-retro-chrome .wii-hints { position: fixed; right: calc(250 * var(--cpx)); bottom: calc(40 * var(--cpx)); z-index: 7; color: #666d72; font: 400 calc(20 * var(--cpx))/1 var(--g-font); pointer-events: none; }
+#g-retro-chrome .wii-hints .g-glyph { --gw: 1.55em; --gh: 1.55em; }
+#g-retro-chrome .wii-hints .g-glyph-row { gap: calc(18 * var(--cpx)); }
+#g-retro-chrome .wii-hints .g-glyph-item { gap: calc(7 * var(--cpx)); }
+/* Wii Settings: page counter then the same two prompts. */
+#g-retro .wii-set-foot .g-glyph-row { gap: calc(14 * var(--cpx)); }
+#g-retro .wii-set-foot .g-glyph-item { gap: calc(7 * var(--cpx)); }
+#g-retro .wii-set-foot .g-glyph { --gw: 1.4em; --gh: 1.4em; }
+#g-retro .wii-set-pages { flex: none; color: #8a9094; font: 400 calc(20 * var(--cpx))/1 var(--g-font); }
+/* 3DS: the bottom screen's prompt row. It replaces the old camera/shoulder keycaps, which now live on the
+   top screen in the banner (the 3DS prints those over the software's preview). */
+#g-retro .ds-foot { justify-content: flex-end; font: 400 calc(15 * var(--cpx))/1 var(--g-font); }
+#g-retro .ds-foot .g-glyph-row { gap: calc(14 * var(--cpx)); }
+#g-retro .ds-foot .g-glyph-item { gap: calc(6 * var(--cpx)); }
+#g-retro .ds-foot .g-glyph { --gw: 1.5em; --gh: 1.5em; }
+#g-retro .ds-set-hint .g-glyph-row { gap: calc(12 * var(--cpx)); }
+#g-retro .ds-set-hint .g-glyph { --gw: 1.35em; --gh: 1.35em; }
+
