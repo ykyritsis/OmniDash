@@ -523,6 +523,15 @@
       { id: 'account', title: 'Account Management', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
       { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
     ],
+    ps5: [
+      { id: 'display', title: 'Display', rows: [{ id: 'uiScale' }, { id: 'brightness' }, { id: 'fullscreen' }] },
+      { id: 'sound', title: 'Sound', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }] },
+      { id: 'network', title: 'Network', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
+      { id: 'system', title: 'System', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }, { id: 'appVersion' }, { id: 'freeDisk' }, { id: 'libraryCounts' }, { id: 'powerPlan' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },
+      { id: 'accessibility', title: 'Accessibility', rows: [{ id: 'textSize' }, { id: 'highContrastFocus' }, { id: 'reducedMotion' }] },
+      { id: 'account', title: 'Account', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
+      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
+    ],
     ps4: [
       { id: 'account', title: 'Account Management', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
       { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },

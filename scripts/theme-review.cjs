@@ -36,7 +36,14 @@ const SHOW = {
   // Controller steps on Home, chained in SCREENS (for example home,navR,navR,navU,press).
   navR: `navigateConsoleHome('right', document.activeElement)`, navL: `navigateConsoleHome('left', document.activeElement)`,
   navU: `navigateConsoleHome('up', document.activeElement)`, navD: `navigateConsoleHome('down', document.activeElement)`,
-  press: `(() => { const el = document.querySelector('#g-retro .focused, #g-retro-chrome .focused') || document.activeElement; window.__noLaunch = true; if (!el?.dataset?.retroBoot) el?.click(); })()`, back: `navigateBack()`
+  press: `(() => { const el = document.querySelector('#g-retro .focused, #g-retro-chrome .focused') || document.activeElement; window.__noLaunch = true; if (!el?.dataset?.retroBoot) el?.click(); })()`,
+  back: `navigateBack()`,
+  // PS5 surfaces (the screens are opened through the theme's real API, never by force-showing markup).
+  ps5hub: `(() => { const g = state.games.find(x => !x.isApp && x.installed !== false); window.gPs5?.openHub(g.id); })()`,
+  ps5cc: `(() => { window.gPs5?.openControlCenter(); })()`,
+  ps5trophies: `(() => { const g = state.games.find(x => !x.isApp && x.installed !== false); window.gPs5?.openTrophies(g.id); })()`,
+  ps5captures: `(() => { window.gPs5?.openCaptures(); })()`,
+  ps5settings: `(() => { window.gShell?.open('ps5'); })()`
 };
 app.on('browser-window-created', (_, win) => {
   const errors = []; win.webContents.on('console-message', e => { if (e.level === 'error') errors.push(e.message.slice(0, 200)); });

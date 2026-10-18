@@ -3038,7 +3038,7 @@ function swapsConfirmBack() {
     const settings = window.gSettings;
     if (!settings) return false;
     const theme = document.body.dataset.gTheme;
-    if (theme === 'ps3' || theme === 'ps4') return settings.cached('enterButton') === 'o';
+    if (theme === 'ps3' || theme === 'ps4' || theme === 'ps5') return settings.cached('enterButton') === 'o';
     if (theme === 'wii' || theme === '3ds') return settings.cached('nintendoLayout') === true;
   } catch { /* The registry may not be ready on the first frames. */ }
   return false;

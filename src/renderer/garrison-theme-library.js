@@ -36,7 +36,7 @@
       { id: 'groups', label: 'Collections', count: 'groups' }
     ]
   };
-  SECTIONS.x360 = SECTIONS.ps3 = SECTIONS.ps4 = SECTIONS.wii = SECTIONS["3ds"] = SECTIONS.one;
+  SECTIONS.x360 = SECTIONS.ps3 = SECTIONS.ps4 = SECTIONS.ps5 = SECTIONS.wii = SECTIONS["3ds"] = SECTIONS.one;
   const TITLES = { installed: 'Games', apps: 'Apps', groups: 'Groups', full: 'Full library', queue: 'Manage', ready: 'Ready to install', recent: 'Recently played' };
 
   const theme = () => document.body.dataset.gTheme || 'helix';

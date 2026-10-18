@@ -18,7 +18,7 @@
 // and, for the One, the game's colour, so they're handed to the launch screen as CSS variables.
 (() => {
   const theme = () => document.body.dataset.gTheme || 'helix';
-  const CONSOLES = ['series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'];
+  const CONSOLES = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
   const isConsole = () => CONSOLES.includes(theme());
   const prefersReduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const reduced = () => document.documentElement.classList.contains('reduce-motion') || prefersReduced();
@@ -41,6 +41,14 @@
       enter: 'depth', boot: { kind: 'ps', ms: 2500 },
       launch: { hold: 0, grow: 520, fade: 420 },
       return: { kind: 'depth', ms: 900 }
+    },
+    // PS5 (2020): the quickest, calmest PlayStation. 200 ms and one flat ease, no overshoot; pages dissolve with
+    // a slight scale, the tile grows and falls to black on launch, and the ambient layer fades back on return.
+    ps5: {
+      ms: 200, ease: 'cubic-bezier(.2, .9, .2, 1)', spring: 'cubic-bezier(.2, .9, .2, 1)',
+      enter: 'fade', boot: { kind: 'ps5', ms: 2500 },
+      launch: { hold: 0, grow: 520, fade: 420 },
+      return: { kind: 'ambient', ms: 900 }
     },
     wii: {
       ms: 300, ease: 'cubic-bezier(.2, .9, .3, 1.15)', spring: 'cubic-bezier(.2, .9, .3, 1.3)',
@@ -73,7 +81,7 @@
       return: { kind: 'metro', ms: 750 }
     }
   };
-  const WORDS = { series: 'Series X|S', one: 'One', x360: '360', ps3: 'PlayStation 3', ps4: 'PlayStation 4', wii: 'Wii', '3ds': 'Nintendo 3DS' };
+  const WORDS = { series: 'Series X|S', one: 'One', x360: '360', ps3: 'PlayStation 3', ps4: 'PlayStation 4', ps5: 'PlayStation 5', wii: 'Wii', '3ds': 'Nintendo 3DS' };
   const table = (id = theme()) => {
     const source = TABLES[id];
     if (!source) return null;
@@ -178,6 +186,7 @@
   const CURTAINS = {
     ps3: 'linear-gradient(100deg, #0a0a12 0 55%, #1a1830 78%, #0a0a12 100%)',
     ps4: 'linear-gradient(135deg, #0b1c38, #030a18 70%)',
+    ps5: 'linear-gradient(160deg, #0b1424, #02040a 72%)',
     wii: '#f4f8fb', '3ds': '#f6fbfe',
     series: '#070b07', one: '#0a0a0a', x360: '#121212'
   };
@@ -317,9 +326,126 @@
     };
     bootWaveFrame = requestAnimationFrame(loop);
   }
+  // PS5 coldboot: a wave of fine white particles drifts across the screen, then settles into a drawn "5" mark.
+  // Everything is computed here; no font, texture or vector asset from the console is involved. The particle
+  // layout is generated once per canvas size from a fixed seed, so the mark is identical on every start.
+  let ps5Particles = null, ps5ParticlesKey = '';
+  function buildPs5Particles(width, height) {
+    const key = `${Math.round(width)}x${Math.round(height)}`;
+    if (ps5Particles && ps5ParticlesKey === key) return ps5Particles;
+    const size = Math.min(height * .5, width * .17);
+    const cx = width / 2, cy = height * .43;
+    // The mark: a five, drawn as a polyline in mark-local units (-.5 … .5). It is our own geometry.
+    const path = [
+      [-.4, -.5], [.34, -.5], [-.4, -.5], [-.4, -.08], [-.4, -.08], [.3, -.08],
+      [.3, -.08], [.3, .34], [.3, .34], [.16, .5], [-.2, .5], [-.38, .38]
+    ].map(([x, y]) => [cx + x * size, cy + y * size]);
+    let total = 0;
+    const lengths = [];
+    for (let i = 1; i < path.length; i++) {
+      const length = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+      lengths.push(length);
+      total += length;
+    }
+    let seed = 0x5eed1234;
+    const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const count = Math.round(Math.min(430, (width * height) / 5200));
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      // Spread particles evenly along the polyline, with a little scatter that closes as they settle.
+      let distance = ((i + .5) / count) * total;
+      let segment = 0;
+      while (segment < lengths.length - 1 && distance > lengths[segment]) { distance -= lengths[segment]; segment++; }
+      const from = path[segment], to = path[segment + 1] || path[segment];
+      const t = lengths[segment] ? Math.min(1, distance / lengths[segment]) : 0;
+      points.push({
+        x: from[0] + (to[0] - from[0]) * t,
+        y: from[1] + (to[1] - from[1]) * t,
+        phase: random() * Math.PI * 2,
+        drift: .55 + random() * 1.5,
+        speed: .25 + random() * .9,
+        radius: .55 + random() * 1.35,
+        alpha: .32 + random() * .68,
+        jitter: random() * 2 - 1
+      });
+    }
+    ps5Particles = { points, size, cx, cy };
+    ps5ParticlesKey = key;
+    return ps5Particles;
+  }
+  function paintParticles(canvas, time, still) {
+    const ratio = Math.min(2, devicePixelRatio || 1);
+    const width = canvas.clientWidth || innerWidth, height = canvas.clientHeight || innerHeight;
+    if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+      canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+    }
+    const c = canvas.getContext('2d');
+    if (!c) return;
+    const data = buildPs5Particles(width, height);
+    c.setTransform(ratio, 0, 0, ratio, 0, 0);
+    c.clearRect(0, 0, width, height);
+    const t = still ? 2100 : time;
+    // 0.35 s of drift, 1.1 s of gathering, then the mark holds with a slow shimmer.
+    const progress = Math.max(0, Math.min(1, (t - 350) / 1100));
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const shimmer = still ? 0 : Math.sin(t * .0015) * .08;
+    // A few soft filaments behind the particles keep the wave readable before the mark exists.
+    c.save();
+    for (let band = 0; band < 3; band++) {
+      c.beginPath();
+      for (let x = 0; x <= width; x += 10) {
+        const y = height * (.42 + band * .055)
+          + Math.sin(x * .0045 + t * (.00018 + band * .00005) + band * 1.7) * height * (.05 - band * .011)
+          + Math.cos(x * .011 - t * .00012) * height * .014;
+        if (x === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.strokeStyle = `rgba(190, 214, 255, ${(.08 + band * .035) * (1 - ease * .55)})`;
+      c.lineWidth = 1;
+      c.stroke();
+    }
+    c.restore();
+    for (const point of data.points) {
+      const driftX = ((point.phase * 180 + t * .035 * point.speed) % (width + 240)) - 120;
+      const driftY = height * (.42 + Math.sin(driftX * .006 + point.phase + t * .0004 * point.speed) * .09)
+        + Math.cos(driftX * .013 - point.phase * 2) * height * .022;
+      const settle = ease * ease;
+      const x = driftX * (1 - ease) + point.x * ease + point.jitter * (1 - settle) * 26;
+      const y = driftY * (1 - ease) + point.y * ease + point.jitter * (1 - settle) * 18;
+      const alpha = point.alpha * (1 - ease * .18) * (1 + shimmer * point.speed);
+      c.beginPath();
+      c.arc(x, y, point.radius * (1 + ease * .25), 0, Math.PI * 2);
+      c.fillStyle = `rgba(240, 247, 255, ${Math.max(0, Math.min(1, alpha))})`;
+      c.fill();
+      if (ease > .35 && point.radius > 1.55) {
+        c.beginPath();
+        c.arc(x, y, point.radius * 3.4, 0, Math.PI * 2);
+        c.fillStyle = `rgba(120, 172, 255, ${.10 * ease})`;
+        c.fill();
+      }
+    }
+    if (!still && ease > .72) {
+      // A soft bloom around the centre once the mark has formed, like the console's boot glint.
+      const glow = c.createRadialGradient(data.cx, data.cy, 0, data.cx, data.cy, data.size * .85);
+      glow.addColorStop(0, `rgba(150, 194, 255, ${.10 * (ease - .72)})`);
+      glow.addColorStop(1, 'rgba(150, 194, 255, 0)');
+      c.fillStyle = glow;
+      c.fillRect(0, 0, width, height);
+    }
+  }
+  function runPs5Particles(canvas) {
+    if (!canvas) return;
+    if (reduced()) { paintParticles(canvas, 2100, true); return; }
+    const loop = now => {
+      if (!bootActive || document.hidden) { bootWaveFrame = 0; return; }
+      paintParticles(canvas, now, false);
+      bootWaveFrame = requestAnimationFrame(loop);
+    };
+    bootWaveFrame = requestAnimationFrame(loop);
+  }
   const BOOT_MARKUP = {
     ps3: `<div class="g-m-boot g-m-boot-ps3"><canvas class="g-m-wave" aria-hidden="true"></canvas><div class="g-m-ps3-mark" aria-hidden="true"><span>PlayStation</span><em>3</em></div><div class="g-m-hint" aria-hidden="true">Press any key</div></div>`,
     ps4: `<div class="g-m-boot g-m-boot-ps4"><div class="g-m-ps4-glow" aria-hidden="true"></div><div class="g-m-ps4-mark" aria-hidden="true">PS</div><div class="g-m-ps4-sub" aria-hidden="true">Press the PS button to use the controller</div></div>`,
+    ps5: `<div class="g-m-boot g-m-boot-ps5"><canvas class="g-m-p5-wave" aria-hidden="true"></canvas><div class="g-m-p5-mark" aria-hidden="true"><span>PlayStation</span><em>5</em></div><div class="g-m-hint" aria-hidden="true">Press any key</div></div>`,
     wii: `<div class="g-m-boot g-m-boot-wii"><div class="g-m-hs"><span class="g-m-hs-word" aria-hidden="true">Wii</span><h2>Health and Safety Information</h2><p>Take a 15-minute break every hour, even if you don't think you need it. Stop playing if you feel tired or uncomfortable.</p><div class="g-m-hs-a" aria-hidden="true"><kbd>A</kbd> Press A to continue</div></div></div>`,
     '3ds': `<div class="g-m-boot g-m-boot-3ds"><span class="g-m-3ds-word" aria-hidden="true">Nintendo 3DS</span><div class="g-m-3ds-menu" aria-hidden="true"><div class="g-m-3ds-bar"><i></i><i></i><i></i><i></i></div><div class="g-m-3ds-grid">${'<i></i>'.repeat(12)}</div></div></div>`,
     brand: `<div class="g-m-boot g-m-boot-xbox"><img class="g-m-xbox-mark" src="assets/xbox.svg" alt="" /><span class="g-m-xbox-word" aria-hidden="true">Xbox</span><span class="g-m-xbox-sub" aria-hidden="true"></span></div>`
@@ -420,6 +546,12 @@
         enter(screen.querySelector('.g-m-ps4-mark'), 'pop', { duration: Math.round(left * .4) });
         enter(screen.querySelector('.g-m-ps4-sub'), 'fade', { delay: Math.round(left * .38), duration: Math.round(left * .4) });
       }
+    } else if (theme() === 'ps5') {
+      runPs5Particles(screen.querySelector('.g-m-p5-wave'));
+      if (allowed()) {
+        enter(screen.querySelector('.g-m-p5-mark'), 'fade', { delay: Math.round(left * .52), duration: Math.round(left * .34) });
+        enter(screen.querySelector('.g-m-hint'), 'fade', { delay: Math.round(left * .72), duration: Math.round(left * .24) });
+      }
     } else if (theme() === 'wii') {
       if (allowed()) {
         enter(stage?.querySelector('.g-m-hs'), 'fade', { duration: Math.round(left * .2) });
@@ -488,6 +620,19 @@
         splash?.animate([{ opacity: 0, transform: 'scale(.58)' }, { opacity: 1, transform: 'scale(1.04)' }], { duration: src.grow, easing: value.springEase, fill: 'forwards' });
         exit(splash, 'fade', { delay: src.grow, duration: src.fade });
         if (art) enter(art, 'fade', { duration: src.grow + src.fade });
+      }
+    } else if (theme() === 'ps5') {
+      // The tile grows out of the row, then the screen falls to black.
+      const flash = document.createElement('span');
+      flash.className = 'g-m-flash p5-black';
+      overlay.append(flash);
+      if (live) {
+        splash?.animate([{ opacity: 0, transform: 'scale(.92)' }, { opacity: 1, transform: 'scale(1.045)' }], { duration: src.grow, easing: value.easing, fill: 'forwards' });
+        exit(splash, 'fade', { delay: src.grow, duration: src.fade });
+        flash.animate([{ opacity: 0, offset: 0 }, { opacity: 0, offset: .62 }, { opacity: 1, offset: 1 }], { duration: src.grow + src.fade, easing: value.easing, fill: 'forwards' });
+        if (art) enter(art, 'fade', { duration: src.grow });
+      } else {
+        flash.style.opacity = '1';
       }
     } else if (theme() === 'wii' || theme() === '3ds') {
       // The channel or icon zooms to fill the screen, then the screen goes white.
@@ -572,6 +717,7 @@
       depth: [{ opacity: 1, transform: 'scale(1.03)' }, { opacity: 0, transform: 'scale(1)' }],
       flash: [{ opacity: 1 }, { opacity: 0 }],
       wipe: [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(0 100% 0 0)' }],
+      ambient: [{ opacity: 1, transform: 'scale(1.02)' }, { opacity: 0, transform: 'scale(1)' }],
       fade: [{ opacity: 1 }, { opacity: 0 }],
       metro: [{ transform: 'translate3d(0,0,0)', opacity: 1 }, { transform: 'translate3d(-100%,0,0)', opacity: 1 }]
     }[value.kind] || [{ opacity: 1 }, { opacity: 0 }];

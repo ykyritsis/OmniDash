@@ -26,6 +26,7 @@
     { id: 'one', name: 'One', era: 'Xbox One, 2013', blurb: 'Flat Metro tiles, panorama headings and a wall of pins.' },
     { id: 'ps3', name: 'PS3', era: 'PlayStation 3 XMB', blurb: 'The XrossMediaBar: a glowing wave over the month\'s colour, categories across and items down.' },
     { id: 'ps4', name: 'PS4', era: 'PlayStation 4', blurb: 'The deep-blue home: a function row, then a row of square tiles with the game\'s art behind.' },
+    { id: 'ps5', name: 'PS5', era: 'PlayStation 5', blurb: 'The crisp PS5 home: one row of large tiles under a white glow, the game\'s art drifting behind, Activity Cards below.' },
     { id: 'wii', name: 'Wii', era: 'Wii Menu', blurb: 'The channel grid, the Wii button and clock bar, and the channel preview with Start.' },
     { id: '3ds', name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Both screens side by side on one display: the game\'s banner and status bar, and your icons on the touch screen.' },
     { id: 'x360', name: '360', era: 'Xbox 360 Metro, 2011', blurb: 'The lime-green Metro dashboard: lowercase pivots, a featured tile and the grey studio. With DashX360 assets by ZivvoZ when installed.' }
@@ -78,7 +79,9 @@
   tick(); setInterval(tick, 15000);
 
   // Picker cards, shared by onboarding and Settings. Each preview is a tiny drawing of that dashboard.
-  const preview = id => ['ps3', 'ps4', 'wii', '3ds'].includes(id) ? `<span class="g-tp g-tp-${id}"></span>` : id === 'x360'
+  const preview = id => ['ps3', 'ps4', 'wii', '3ds'].includes(id) ? `<span class="g-tp g-tp-${id}"></span>` : id === 'ps5'
+    ? '<span class="g-tp g-tp-ps5"><span class="row"><i></i><i></i><i class="on"></i><i></i><i></i></span><span class="bar"><b></b><b></b><b></b></span><i class="clock"></i></span>'
+    : id === 'x360'
     ? '<span class="g-tp g-tp-360"><b class="p"></b><b class="p on"></b><b class="p"></b><b class="p"></b><i class="g"></i><i class="g"></i><i class="big"></i><i class="ad"></i><i class="ad"></i></span>'
     : id === 'one'
     ? '<span class="g-tp g-tp-one"><b class="h"></b><b class="h dim"></b><b class="h dim"></b><i class="big"></i><i></i><i class="blue"></i><i></i><i></i><i class="blue"></i></span>'

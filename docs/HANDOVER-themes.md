@@ -92,7 +92,7 @@ The latest backup is `backup-0.6.0-test37` (the 3DS D1/D2 two-screen build, inst
 
 ## Theme system
 
-- `body[data-g-theme]` is one of `helix | series | one | x360 | ps3 | ps4 | wii | 3ds`. `body[data-g-console]` is set for every theme except Helix.
+- `body[data-g-theme]` is one of `helix | series | one | x360 | ps3 | ps4 | ps5 | wii | 3ds`. `body[data-g-console]` is set for every theme except Helix.
 - `body.home-active` marks the Home view, and every console dashboard's visibility (and the Series backdrop) is
   keyed on it. `showView()` is what sets it, but the app opens on Home *before* any `showView()` call, so `app.js`
   adds the class at start-up and the retro renderer keeps it in step. Without that the first frame shows the
@@ -109,7 +109,7 @@ The latest backup is `backup-0.6.0-test37` (the 3DS D1/D2 two-screen build, inst
   - If no wide art is found, the slot falls back to the cover on a blurred background.
   - The XMB item icons and the 3DS grid icons are **square slots**: they use `--cover`, never `data-g-wide-art`.
 - Garrison scripts are wrapped by later scripts that reassign globals: `renderRecentGames`, `showView`, `navigateConsoleHome`, `navigateBack`, `openNativeKeyboard`, `launchSelectedGame`, `showToast`, `gIcon`, `interfaceAudio.play`, `window.gPageScroll`.
-- Script order at the end of `index.html` matters: themes, library, motion, home, life, live, store, 360, backgrounds, hubs, art, extras, keyboard, settings registry, **settings shell**, prefs-era settings labels/packs, retro.
+- Script order at the end of `index.html` matters: themes, library, motion, home, life, live, store, 360, backgrounds, hubs, art, extras, keyboard, settings registry, **settings shell**, prefs-era settings labels/packs, retro, overlays, **ps5**.
 
 **Settings registry (2026-10-18, task S1).** `src/renderer/garrison-settings-registry.js` loads after `garrison-prefs.js` and exposes `window.gSettings`: 51 entries (`slider`, `toggle`, `choice`, `action`, `info`) wrapping only real capabilities — quick:get/set for volume, mute, brightness and power plan; the Settings form inputs plus `saveSettingsForm` for personalisation; `setPref` for saved prefs; and the launcher's existing buttons for updates, backup, reset, profile and account setup. Each entry has `get`/`set`/`available`, per-console wording through `label(id, console)`, and `gSettings.layouts` names each console's pages and row order by registry id; `set()` fires `g-setting-change` on `document`, and `formatClock`/`formatDate` are shared by the console clocks. The S2–S5 shells must render rows from `gSettings.layout(console)`, `options(id)` and `label(id, console)` and skip any row whose `available()` is false — no hand-written settings rows. New prefs live in `SETTINGS_DEFAULTS` and `PREF_KEYS` in `src/main.cjs`; menu music (A1) and the 3DS screen layout (D1) are wired to their consumers now — `window.gAudio` exists, and `window.g3dsLayout` in `garrison-theme-retro.js` reads and applies the layout, so `screenLayout3ds` is available in 3DS → Other Settings → Display. `scripts/settings-registry-test.cjs` checks the entries and layouts in plain node.
 
@@ -191,7 +191,86 @@ All three fit both sizes with `scrollWidth === innerWidth` and `scrollHeight ===
 
 **3DS verification (2026-10-18, D1/D2).** `THEMES=3ds SCREENS=home,navR,navD,press REVIEW_SIZE=1706,960` → `errors.json: []`; the same at `1280,720` → `[]`. Captures are `.visual-review/3ds/1706/` and `.visual-review/3ds/1280/`, with `side-1706`, `side-1280`, `large-1706`, `large-1280` for the two alternative layouts (each `errors.json: []`). Hidden eval `.visual-review/ds-eval.js` (`EXPR_FILE`, `EVAL_SIZE=1706,960`, `DEMO_ART=1`) returned `ok: true`: `screenLayout3ds` available, options `stacked/side-by-side/large-top`, `window.g3dsLayout` a function; stacked top ratio `1.667`, bottom `1.333`, above, centred, device `853×931` at `(426.5, 14.4)` filling `0.97` of the height; side by side top `888.5×533.1` at `(44.4, 213.4)` and bottom `710.8×533.1` at `(950.7, 213.4)`, same height, top left of bottom; large top `1475×885` with bottom `426.5×319.9` at `(1164, 602.6)` in the corner; all fit with no scroll overflow; setting switches read back and the root attribute changes each time; selection changed `Forza Horizon 5` → `Lies of P` on `navR`; zoom `44 → 52 → 44` with `aria-pressed` and storage; the selected game cell kept `select-game`/`data-retro-boot` and called `launchSelectedGame` once; `html.reduce-motion` gave `animationName: none` on the cursor and clock colon, `transitionDuration: 0s` on rail/cursor/art, and the layout still switched. `.visual-review/ds-settings-eval.js` walked the real app: System Settings → Other Settings → Display listed `brightness`, `uiScale`, `screenLayout3ds`; the row read "Screen Layout / Stacked" (kind `choice`, aria "Screen Layout, Stacked"); choosing **Side by side** committed, `gSettings.get('screenLayout3ds')` and `#g-retro.dataset.dsLayout` both read `side-by-side` while the shell was still open, and after close the top screen was at `(44, 213)` with the bottom at `(951, 213)` — the real side-by-side geometry. `.visual-review/ds-apps-eval.js` checked the 11 app icons/actions and a temporary custom collection: the folder cell opened `view: library` with `collectionFilter: custom:review-folder`; eShop gave `view: store`; System Settings opened the shell; Activity Log gave `view: library`; Sound opened the shell on `pageId: sound`. `scripts/settings-registry-test.cjs` and `scripts/pack-manager-test.cjs` still pass. **Not console-accurate:** the body is a drawn dark slab, not the 3DS shell (no hinge rings, speakers, stylus or physical buttons); the screens are the true 5:3/4:3 ratios but the device is centred in a 16:9 window rather than filling a handheld's outline; the fonts are the Wii pack's Rodin (or Segoe) rather than the 3DS system font; the clock/date and Play Coin count are the launcher's real values and an approximation (10 + library size, capped at 300), not the console's coins; the icons are drawn, because the pack has no icon files; the banner parallax is pointer-driven, not stereoscopic 3D; the title plate's wording and the Game Notes/Miiverse destinations are launcher adaptations; and Screen Layout does not restyle the separate System Settings app.
 
-**Shared audio engine (2026-10-18, task A1).** `garrison-theme-retro.js` now exposes `window.gAudio`: one Web Audio graph for Series, One, 360, PS3, PS4, Wii and 3DS. Helix keeps the launcher's original `interfaceAudio` sounds, and a player-installed custom sound pack still wins for every theme. `gAudio.play(kind)` maps `navigate`, `category`, `confirm`, `back`, `error`, `launch`, `notify`, `achievement`, `boot` and `powerOff` (plus the aliases the launcher already uses — `startup`, `select`, `pageLeft/pageRight`, `trophy`), choosing the theme's pack recording where one exists and an original synthesised cue otherwise. Every cue and all menu music feed one **master GainNode** connected to the destination; its value is the registry's Windows `volume` percent, or 0 when `mute` is on. `g-setting-change` applies Volume and Mute live (including while the context is suspended, by setting the AudioParam's intrinsic value), and `menuMusic`/`menuMusicVolume` are now `available() === true`: the registry's `enabled` predicate only checks that `gAudio.menuMusic`/`gAudio.gameAudio` exist. `gAudio.setOutputSilenced(true)` pins the master to 0 without changing settings — that is how the hidden harness tests the graph without any sound reaching the speakers.
+## PS5 (2026-10-18, the ninth theme)
+
+A new theme, **`ps5`**, built from scratch rather than recoloured from PS4. It lives in `garrison-theme-ps5.js`
+and `garrison-theme-ps5.css`; the settings screen is a ninth skin in `garrison-settings-shell.js` and its CSS
+(skin, OSK, shared dialogs) is at the end of `garrison-theme-screens.css`. Every mark is drawn: inline SVG icons,
+CSS ambience, a canvas particle wave for the boot and a synthesised cue map. No Sony font, icon, sound, texture or
+screenshot is in the repo, and the theme never requires one.
+
+**Home.** One horizontal row of large square tiles (196×196 console px, 28 px apart) for the eight most recent
+games, centred at 46% of the height. The selected tile scales 1.5× and lifts 28 px under a soft white glow with a
+thin white frame; its title (42 px, weight 400) sits beneath it and follows it sideways. Behind everything are two
+ambient layers of the focused game's wide art, blurred 60 px, dimmed to 52% brightness, drifting on a 48 s loop and
+crossfading over 700 ms on selection; the layer only commits if its game is still the selected one when the art
+arrives. `data-paused="1"` (window blurred/hidden) pauses both loops. A game with no wide art falls back to its
+cover, then to the optional `ps5/background.*` pack file, then to the base navy gradient.
+
+**Activity Cards.** Three real cards under the selected tile: **Continue** (play time and last played; launches the
+game through the existing `selectGame`/`launchSelectedGame` path), **Trophies** (real `getGameAchievements` progress
+with a meter; opens the Trophy view), **Captures** (counts from `listCaptures`; opens the Captures view). Nothing
+is a decorative control. The trophy card updates in place when the async achievement read lands.
+
+**Game Hub, Trophies and Captures.** Pressing a tile opens a full-bleed hub: wide hero art, game logo when the
+launcher has one (title otherwise), Play, Game details (the existing `openGameDetails` path), play time, last played,
+real trophy progress, the first three achievements and four related recent games. Related tiles switch the hub to
+that game. The trophy view lists every achievement the launcher returns with its icon, description and state; the
+captures view is a real thumbnail grid whose tiles call `launcher.openCapture(gameId, index)`. Both panels have a
+Back button and use the launcher's spatial focus; nothing is focusable unless it does something.
+
+**Control Center.** The avatar/clock cluster is the only top-right chrome (thin 27 px clock, 52 px avatar). Clicking
+it, pressing it, or the legacy `g-account` action opens the PS5 bottom bar: six vertical strips (Profile,
+Notifications, Sound, Network, Settings, Power). Sound reads real `gSettings` volume/mute, up/down on the focused
+sound strip steps the real Windows volume by 5 and the strip shows the new percentage (the value comes from the
+`g-setting-change` payload, so it stays right even when a machine's quick-settings read-back lags), and confirm
+toggles the real mute. Network shows the real SSID/signal from `gSettings.get('wifi')` and opens PS5 Settings →
+Network; Notifications opens the existing notifications flyout; Profile opens the real profile editor; Power opens
+the real power dialog. Up closes the bar, Back/○ closes it, and Home is dimmed and `inert` while it is open.
+
+**Settings.** `gSettings.layout('ps5')` has seven pages — Display, Sound, Network, System, Accessibility, Account,
+Advanced (launcher) — and the PS5 skin in `garrison-settings-shell.js` lists them as a clean single column. Entering
+a page shows its registry rows with icons, right-aligned values, a real meter for sliders and a check box for
+toggles; choices and sliders use the PS5 option card, actions run through `gSettings.set`, unavailable rows never
+render, and Advanced leaves for the launcher's own dialog. Focus is a white row with a blue edge; the hint line
+prints `✕`/`○` through `gGlyphs` and follows the Enter Button pref. `body.g-shell-screen` hides the PS5 chrome and
+Home while the shell is open.
+
+**Boot, launch, return, sound and glyphs.** `gMotion` has a `ps5` table (200 ms, `cubic-bezier(.2,.9,.2,1)`, no
+overshoot, page grammar `fade`), a 2500 ms boot that draws a particle wave settling into our own "5" mark with the
+"PlayStation 5" wordmark, a launch where the tile grows then the screen falls to black, and an `ambient` return.
+`gAudio` has a PS5 cue map for all ten kinds and a drawn PS5 menu loop; the optional `ps5/music/menu.*` slot is read
+by the renderer (see `docs/theme-packs.md`) and goes through the same master gain. `gGlyphs` has a full PS5 set
+(PlayStation shapes, OPTIONS) and its canonical home row is `✕ Enter  ○ Back  OPTIONS Options`; `app.js`'s
+`swapsConfirmBack` now includes ps5, so Enter Button swaps the printed glyph and the pad together. `reduce-motion`
+removes every transition/animation in the theme, keeps the layout and shows the boot's formed mark as a still.
+
+**Integration points touched.** `garrison-themes.js` (catalogue entry + picker swatch), `index.html` (stylesheet and
+script), `garrison-settings-registry.js` (`ps5` layout), `garrison-settings-shell.js` (`ps5` in `THEMES` and the
+skin), `garrison-theme-motion.js` (table, boot markup/branch, launch, return), `garrison-glyphs.js` (PS5 set,
+prompt row, `@options`), `garrison-theme-retro.js` (the gAudio map entry only: PS5 in `THEMES`, `PROFILES`,
+`FALLBACK_MUSIC` and the optional pack-music probe; no PS5 visual code), `app.js` (one-line Enter Button condition),
+`garrison-theme-library.js` (PS5 library sections), `garrison-theme-screens.css`, and
+`scripts/settings-registry-test.cjs` (eight console layouts/sets, PS5 skin guard).
+
+**Verification.** `THEMES=ps5 SCREENS=home,navR,navU,press,launch,boot,page-personalization REVIEW_SIZE=1706,960`
+and `1280,720`: `errors.json` is `[]` at both sizes. Extra review screens `ps5hub`, `ps5cc`, `ps5trophies`,
+`ps5captures`, `ps5settings` were added to `scripts/theme-review.cjs` and captured at both sizes. The hidden eval
+(`.visual-review/ps5-eval.js`, `EXPR_FILE`, `EVAL_SIZE=1706,960`) returned `ok: true`, `errors: []`: theme switches
+to ps5 and back; the row focuses and moves a tile; the three cards are Continue/Trophies/Captures and the last two
+open their real views; a tile opens the hub with a focused Play action; the Control Center opens with six strips, the
+sound strip focus steps real volume 45→50 and the label follows, confirm toggles mute; the settings skin lists all
+seven `gSettings.layout('ps5')` pages and renders registry rows; `gMotion.table('ps5')` is 200 ms with the PS5 ease;
+reduced motion removes animations; Home and the hub fit the viewport.
+
+**Known caveat: theme persistence.** `PREF_KEYS.theme` in `src/main.cjs` still lists the original eight theme ids,
+and this task may not edit `main.cjs`, so `prefs:set('theme','ps5')` is rejected. The theme therefore mirrors the
+selection in `localStorage` (which `garrison-themes.js` already uses) and re-applies it once after start-up when the
+saved main-process theme overrides it, unless the player has already touched an input. Adding `'ps5'` to that one
+array is the clean fix and makes the localStorage shim unnecessary. The optional PS5 pack folder is read by the
+renderer for the same reason (`RETRO_PACKS`/`RETRO_MUSIC` in `main.cjs` also predate the theme).
+
+**Shared audio engine (2026-10-18, task A1).** `garrison-theme-retro.js` now exposes `window.gAudio`: one Web Audio graph for Series, One, 360, PS3, PS4, PS5, Wii and 3DS. Helix keeps the launcher's original `interfaceAudio` sounds, and a player-installed custom sound pack still wins for every theme. `gAudio.play(kind)` maps `navigate`, `category`, `confirm`, `back`, `error`, `launch`, `notify`, `achievement`, `boot` and `powerOff` (plus the aliases the launcher already uses — `startup`, `select`, `pageLeft/pageRight`, `trophy`), choosing the theme's pack recording where one exists and an original synthesised cue otherwise. Every cue and all menu music feed one **master GainNode** connected to the destination; its value is the registry's Windows `volume` percent, or 0 when `mute` is on. `g-setting-change` applies Volume and Mute live (including while the context is suspended, by setting the AudioParam's intrinsic value), and `menuMusic`/`menuMusicVolume` are now `available() === true`: the registry's `enabled` predicate only checks that `gAudio.menuMusic`/`gAudio.gameAudio` exist. `gAudio.setOutputSilenced(true)` pins the master to 0 without changing settings — that is how the hidden harness tests the graph without any sound reaching the speakers.
 
 Menu music loops one track per theme. It fades in after the first pointer/key/controller action while the window is focused, never starts while the document is hidden or unfocused, fades out on game launch and on blur, and fades back in when the window returns. PS3, PS4 and Wii use their pack's track; Series, One, 360 and 3DS play an 8-second drawn loop built from periodic partials (so it loops without a click) unless a drop-in track exists. `docs/theme-packs.md` lists every file name. Music is independent of the interface-sounds switch: only Volume and Mute gate it. Theme switches stop the old loop and start the new one; `gAudio.themeChanged()` is called from the existing theme MutationObserver.
 
@@ -200,7 +279,7 @@ On `blur`/`visibilitychange` the engine stops every oscillator and buffer voice,
 **PS3 SND0 (2026-10-18, task A1).** `ps3GameAudio` is a new saved pref (default **off**) with the row "Game Audio (SND0)" in the XMB Sound Settings page. With it on, resting on a game in the XMB for 1.5 s asks `getGameDetails()` for the game's trailer stream, then plays that HLS stream's audio through a gain of 0.3 and the master gain, with the video element off-screen (`createMediaElementSource`; no picture). Moving off the game, leaving Home, blurring, hiding or launching cancels the wait and tears the stream down; a token guard stops a late details response from reviving audio after the player moved on. The demo library has no playable trailer streams, so the hidden harness can only verify the gate (disabled → `reason: 'disabled'`; enabled with a game that has no trailer → `no-trailer-audio`) — audible SND0 needs a real Steam/Xbox trailer on a normal run.
 
 **One motion system (2026-10-18, tasks M1 and M2).** `garrison-theme-motion.js` now owns every console duration and every boot/launch/return sequence. Use **`window.gMotion`** only: the bare name `gMotion` in `garrison-motion.js` is that file's scroll-spring `Map`, a separate global binding, so a bare `gMotion.enter` would throw.
-- **The table.** One entry per console, the single source of truth for CSS and JS: PS3 **180 ms** `cubic-bezier(.22,1,.36,1)`, PS4 **250 ms**, Wii **300 ms** springy `cubic-bezier(.2,.9,.3,1.15)`, 3DS **120 ms**, Series **200 ms**, One **200 ms**, 360 **160 ms**. `gMotion.table(id)` returns `{ duration, easing, springEase, page, enter, fast, slow, fade, boot, launch, return }`; `fast = .65×`, `slow = 1.8×`, `fade = 3.6×` the base. `gMotion.ms('page'|'fast'|'slow'|'fade')` is what JS timers read (the XMB/PS4 swap timers and the `retro-enter` removal in retro.js no longer carry hand-typed milliseconds). Helix has no table and keeps every original transition.
+- **The table.** One entry per console, the single source of truth for CSS and JS: PS3 **180 ms** `cubic-bezier(.22,1,.36,1)`, PS4 **250 ms**, PS5 **200 ms** `cubic-bezier(.2,.9,.2,1)`, Wii **300 ms** springy `cubic-bezier(.2,.9,.3,1.15)`, 3DS **120 ms**, Series **200 ms**, One **200 ms**, 360 **160 ms**. `gMotion.table(id)` returns `{ duration, easing, springEase, page, enter, fast, slow, fade, boot, launch, return }`; `fast = .65×`, `slow = 1.8×`, `fade = 3.6×` the base. `gMotion.ms('page'|'fast'|'slow'|'fade')` is what JS timers read (the XMB/PS4 swap timers and the `retro-enter` removal in retro.js no longer carry hand-typed milliseconds). Helix has no table and keeps every original transition.
 - **CSS variables.** On load the file writes `--m-dur`, `--m-dur-fast`, `--m-dur-slow`, `--m-dur-page`, `--m-fade`, `--m-ease`, `--m-ease-page` and `--m-spring` onto `body[data-g-theme="…"]` from that table; a fallback copy sits at the top of the appended block in `garrison-theme-retro.css`. All four retro/Xbox stylesheets now use those tokens for their interactive transitions and entrance animations (the long ambience — the 18–38 s wave/drift loops — is deliberately left alone). The per-console page animations that series/one/360 used to declare were dead (they were overridden by `garrison-themes.css`'s reduce/console rule) and are removed.
 - **Page grammar.** `showView()` is wrapped: a page change places a console-coloured curtain (`#g-m-curtain`, `z-index: 8500`) that wipes away over the base duration, while the incoming `#home-view`/`#library-view`/`#game-detail-view`/`#store-view` enters with the console's grammar — PS3 **column slide**, PS4 **depth push** (scale + blur), Wii **zoom from the focused channel** (transform-origin from the pressed tile), 3DS **screen wipe** (clip-path), Series/One **crossfade**, 360 **Metro slide**. On retro themes the separate `#g-retro-chrome` (clock/hints) moves with `#home-view`, so Home travels as one picture. `gMotion.enter(el, kind)` / `.exit(el, kind)` expose the same primitives (`page`, `fade`, `slide`, `zoom`, `wipe`, `depth`, `pop`). `html.reduce-motion` skips all of it (CSS `transition-duration:.01ms` and the WAAPI guard), and a hidden document returns no animation; running animations are also paused on `visibilitychange`.
 - **Boot (M2).** `runStartupSequence` is wrapped for console themes: PS3 **2700 ms** coldboot (a drawn canvas wave forming under the "PlayStation 3" wordmark), PS4 **2500 ms** "PS" splash with the `gAudio` boot chime, Wii **2750 ms** Health and Safety screen with "Press A" (any key or pad button advances) then the Wii Menu, 3DS **2200 ms** HOME Menu slide-in, Series/One/360 **2300/2300/2200 ms** branded splash (`assets/xbox.svg` + wordmark). Every one is under 4 s, any key/pointer/pad press skips it, `.g-m-booting` is the screen state, and the original OmniDash boot markup is restored afterwards (Helix still uses it untouched). Reduced motion shows a still frame and dismisses after 250 ms. A theme switch during a boot tears the old splash down immediately instead of letting its hide timer fight the new one.
@@ -240,10 +319,11 @@ The Appearance section restyles itself in `--cpx` on PS3/PS4/Wii/3DS (`calc(21 *
 | garrison-theme-extras.js | Accent colours, friend and download toasts, welcome back, achievements on return, controller-lost screen, Quick Resume |
 | garrison-theme-keyboard.js | On-screen keyboard per console |
 | garrison-settings-registry.js | `window.gSettings`: entries wrapping every real capability, per-console labels, layouts, clocks/dates (do not edit for skin work) |
-| garrison-settings-shell.js | `window.gShell`: one settings model + focus/value/back grammar for all seven consoles; Series/One/360 skins and `#g-xset` |
+| garrison-settings-shell.js | `window.gShell`: one settings model + focus/value/back grammar for all eight consoles; Series/One/360 skins, `#g-xset`, and the PS5 skin |
 | garrison-theme-settings.js | Launcher Settings era labels + the Appearance → Console packs manager; no console shell code |
-| garrison-theme-screens.css | Keyboard, settings groups, the pack manager cards, Xbox settings shells (still used by the shell's Xbox skins), profile, achievements, search and power menu per console |
-| garrison-theme-retro.js/.css | PS3 XMB, PS4, Wii, 3DS Home screens and their four settings skins (chrome only), plus their library, boot, toast and splash rules |
+| garrison-theme-screens.css | Keyboard, settings groups, the pack manager cards, Xbox settings shells (still used by the shell's Xbox skins), the PS5 settings/OSK/dialog skin, profile, achievements, search and power menu per console |
+| garrison-theme-retro.js/.css | PS3 XMB, PS4, Wii, 3DS Home screens and their four settings skins (chrome only), plus their library, boot, toast and splash rules and the shared `gAudio` engine (PS5's map lives here too) |
+| garrison-theme-ps5.js/.css | PS5 Home (tile row, drifting ambient, Activity Cards), Game Hub, Trophies, Captures, Control Center, and its boot/launch/return hooks in gMotion |
 
 `src/support.cjs` owns `PACK_REGISTRY` and the pack scan/credit/README helpers (directly testable in plain node);
 `src/main.cjs` serves them as `theme:packs`, `theme:pack-open` and `theme:pack-readme`; `src/preload.cjs` maps those
@@ -260,6 +340,9 @@ Packs live in `%APPDATA%\xbox-preview-ui\theme-packs\`. They're for the owner's 
 - `wii/Wii.JS-gh-pages/`: github.com/andrewplus/Wii.JS (GPL-3). Channel frames, bottom bar, buttons, cursor and sounds in `assets/audio`.
 - `wii/Liink-main/`: github.com/aica7/Liink (GPL-2). Rodin fonts.
 - `*/ref/`: reference screenshots from Wikipedia, used to match layouts.
+- `ps5/` (new): an OmniDash drop-in slot, read by the renderer rather than the main process. Optional
+  `music/menu.mp3`/`.ogg`/`.wav` and `background.jpg`/`.png`; everything else the theme draws itself. See
+  `docs/theme-packs.md`.
 
 ## Retro themes: current state
 
@@ -317,4 +400,13 @@ reference screenshots on 2026-10-17 and now measure up to them. The numbers belo
   The UI flows that would exercise the cues were reviewed as compiled code, not by ear.
 - PS3 SND0 could not be played end-to-end in the hidden harness: the demo library has no trailer stream, so
   only the setting gate and the "no trailer" path are covered.
-- Release 0.6.0 is drafted in `docs/release-0.6.0.md` and now lists all eight themes. It hasn't been built or published.
+- **PS5 theme persistence is a shim until `main.cjs` is allowed to change.** `PREF_KEYS.theme` still lists the
+  original eight ids, so `prefs:set('theme','ps5')` is rejected; the theme re-applies its `localStorage` choice once
+  after start-up. Add `'ps5'` to the `PREF_KEYS.theme` array (and, if the optional pack folder should appear in the
+  Console packs manager, a `RETRO_PACKS`/`RETRO_MUSIC` entry) to retire the shim. The PS5 theme's own review is at
+  `.visual-review/ps5-eval.js` and the extra captures are `ps5hub`, `ps5cc`, `ps5trophies`, `ps5captures`,
+  `ps5settings` in the usual `.visual-review/themes/` folder.
+- The PS5 Game Hub and Trophies views look sparse on a demo library with no achievement data; with a real Steam/Xbox
+  library the rows, icons and progress fill them. Hero art and logos come from the library, so they are only as good
+  as the artwork the launcher has cached.
+- Release 0.6.0 is drafted in `docs/release-0.6.0.md` and now lists all nine themes. It hasn't been built or published.

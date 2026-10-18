@@ -38,7 +38,7 @@
   'use strict';
 
   const root = window;
-  const THEMES = ['series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'];
+  const THEMES = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
   // The launcher's Settings form saves every field at once. Before a form-backed row is read or written, fill the
   // form from disk, or saveSettingsForm would write its unopened defaults over the player's accounts and display
   // settings. (This helper used to exist twice, once per shell family.)
@@ -287,7 +287,7 @@
   function render() {
     const current = state;
     if (!current) return;
-    document.body.classList.toggle('g-shell-screen', ['ps4', 'wii', '3ds'].includes(current.console));
+    document.body.classList.toggle('g-shell-screen', ['ps4', 'ps5', 'wii', '3ds'].includes(current.console));
     try { current.skin.render?.(current); } catch (error) {
       // A broken skin must never leave the console Home hidden behind an empty overlay.
       console.error('Settings shell failed to paint:', error);
@@ -1058,6 +1058,178 @@
   define('series', { root: 'rail', backOnLeft: true, inlineToggles: true, container: xsetContainer, render: renderXbox, target: xsetTarget, leave: xsetLeave, returnFocus: xsetReturnFocus, launcherPages: XSET_LAUNCHER_PAGES.series });
   define('one', { root: 'rail', backOnLeft: true, inlineToggles: true, container: xsetContainer, render: renderXbox, target: xsetTarget, leave: xsetLeave, returnFocus: xsetReturnFocus, launcherPages: XSET_LAUNCHER_PAGES.one });
   define('x360', { root: 'pages', backOnLeft: true, inlineToggles: true, container: xsetContainer, render: renderXbox, target: xsetTarget, leave: xsetLeave, returnFocus: xsetReturnFocus, launcherPages: XSET_LAUNCHER_PAGES.x360 });
+
+  // ---------- PS5 skin ----------
+  // The PS5 Settings app: a calm white-on-black screen, the registry's pages down the left with line icons, the
+  // page's rows on the right. It is deliberately simpler than the PS4 skin: one focus language (a white bar with
+  // a blue edge), check boxes for toggles, and the same option dialog for choices and sliders. The shared shell
+  // owns every value, availability check, commit and Back, exactly as it does for the other seven skins.
+  const PS5_PAGE_GLYPHS = { display: 'tv', sound: 'volume', network: 'globe', system: 'settings', accessibility: 'ease', account: 'contact', advanced: 'settings' };
+  const ps5SetGlyphs = () => (root.gSettings?.cached?.('enterButton') === 'o' ? { confirm: '○', back: '✕' } : { confirm: '✕', back: '○' });
+  const ps5Row = items => root.gGlyphs?.row?.('ps5', items) || '';
+  function ps5BuildShell() {
+    let shell = document.querySelector('#g-ps5-set');
+    if (shell) return shell;
+    shell = document.createElement('section');
+    shell.id = 'g-ps5-set';
+    shell.hidden = true;
+    shell.setAttribute('aria-label', 'Settings');
+    shell.innerHTML = `<div class="p5-set-wall" aria-hidden="true"><i></i><i></i><i></i></div>
+      <header class="p5-set-head"><div class="p5-set-brand"><span>PlayStation 5</span><h1 class="p5-set-title">Settings</h1></div><time class="p5-set-clock"></time></header>
+      <div class="p5-set-body">
+        <nav class="p5-set-pages" aria-label="Settings pages"></nav>
+        <div class="p5-set-main">
+          <header class="p5-set-pagehead"><button class="p5-set-back focusable" type="button" data-action="gsh-back" aria-label="Back"><span aria-hidden="true">‹</span></button><h2 class="p5-set-page-title"></h2></header>
+          <div class="p5-set-rows" role="list"></div>
+          <p class="p5-set-note" role="status"></p>
+        </div>
+      </div>
+      <footer class="p5-set-hints" aria-hidden="true"></footer>
+      <div class="p5-set-overlay" hidden><div class="p5-set-dialog" role="dialog" aria-modal="true" aria-label="Setting"></div></div>`;
+    document.body.append(shell);
+    return shell;
+  }
+  let ps5SetPageKey = '', ps5SetRowKey = '', ps5SetOverlayKey = '', ps5SetClockTimer = 0;
+  function renderPs5Settings(current) {
+    const shell = ps5BuildShell();
+    const pages = current.pages || [];
+    const rows = current.rows || [];
+    const deep = current.level === 'page';
+    const page = current.page || pages[current.pageIndex] || null;
+    shell.hidden = false;
+    shell.dataset.level = current.level;
+    shell.dataset.anim = current.anim || '';
+    document.body.classList.add('g-shell-screen');
+    document.querySelector('main')?.setAttribute('inert', '');
+    document.querySelector('.topbar')?.setAttribute('inert', '');
+    const clock = () => { const node = shell.querySelector('.p5-set-clock'); if (node) node.textContent = root.gSettings?.formatClock ? root.gSettings.formatClock() : ''; };
+    clock();
+    if (!ps5SetClockTimer) ps5SetClockTimer = setInterval(() => { if (document.querySelector('#g-ps5-set')?.hidden === false) clock(); }, 15000);
+    shell.querySelector('.p5-set-title').textContent = 'Settings';
+    shell.querySelector('.p5-set-back').setAttribute('aria-label', deep ? 'Back to Settings' : 'Close Settings');
+    const pageEl = shell.querySelector('.p5-set-pages');
+    const pageKey = `${current.loading && !pages.length ? 'load' : ''}|${current.error}|${pages.map(item => `${item.id}:${item.title}`).join('|')}`;
+    if (pageKey !== ps5SetPageKey) {
+      ps5SetPageKey = pageKey;
+      const scroll = pageEl.scrollTop;
+      pageEl.innerHTML = pages.length
+        ? pages.map((item, index) => `<button class="p5-set-page focusable${!deep && index === current.focus ? ' sel' : ''}${page && item.id === page.id ? ' on' : ''}" type="button" data-action="gsh-page" data-page="${esc(item.id)}" data-index="${index}" role="listitem" aria-label="${esc(item.title)}">
+            <span class="p5-set-page-icon" aria-hidden="true">${icon(PS5_PAGE_GLYPHS[item.id] || 'settings')}</span>
+            <span class="p5-set-page-label">${esc(item.title)}</span>
+            <span class="p5-set-chevron" aria-hidden="true">›</span>
+          </button>`).join('')
+        : `<p class="p5-set-note">${current.loading ? 'Reading settings…' : esc(current.error || 'No settings are available on this PC right now.')}</p>`;
+      pageEl.scrollTop = scroll;
+    }
+    [...pageEl.querySelectorAll('.p5-set-page')].forEach((el, index) => el.classList.toggle('sel', !deep && index === current.focus));
+    const rowsEl = shell.querySelector('.p5-set-rows');
+    const rowKey = `${page?.id || ''}|${current.loading ? 'load' : ''}|${current.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
+    if (rowKey !== ps5SetRowKey) {
+      ps5SetRowKey = rowKey;
+      const scroll = rowsEl.scrollTop;
+      rowsEl.innerHTML = rows.length
+        ? rows.map((row, index) => {
+          const value = valueText(row, row.value);
+          const meter = row.kind === 'slider' ? `<span class="p5-set-meter" aria-hidden="true"><i style="width:${percent(row, row.value)}%"></i></span>` : '';
+          const check = row.kind === 'toggle' ? `<span class="p5-set-check${row.value ? ' on' : ''}" aria-hidden="true"><i></i></span>` : '';
+          const chevron = row.kind === 'choice' || row.kind === 'action' ? '<span class="p5-set-chevron" aria-hidden="true">›</span>' : '';
+          return `<button class="p5-set-row focusable" type="button" data-action="gsh-row" data-row="${index}" data-setting-id="${esc(row.id)}" data-kind="${row.kind}" role="listitem" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+            <span class="p5-set-row-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+            <span class="p5-set-row-label">${esc(row.label)}</span>
+            ${meter}${value && row.kind !== 'toggle' ? `<span class="p5-set-row-value">${esc(value)}</span>` : ''}${check}${chevron}
+          </button>`;
+        }).join('')
+        : `<p class="p5-set-note">${current.loading ? 'Reading settings…' : esc(current.error || 'Nothing on this page is available on this PC.')}</p>`;
+      rowsEl.scrollTop = scroll;
+    }
+    [...rowsEl.querySelectorAll('.p5-set-row')].forEach((el, index) => el.classList.toggle('sel', deep && index === current.focus));
+    shell.querySelector('.p5-set-page-title').textContent = page?.title || 'Settings';
+    shell.querySelector('.p5-set-note').textContent = current.error || '';
+    shell.querySelector('.p5-set-hints').innerHTML = ps5Row(deep
+      ? [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }]
+      : [{ button: '@confirm', label: 'Open' }, { button: '@back', label: 'Close' }]);
+    const overlayEl = shell.querySelector('.p5-set-overlay');
+    const dialog = shell.querySelector('.p5-set-dialog');
+    const overlay = current.overlay;
+    overlayEl.hidden = !overlay;
+    overlayEl.classList.toggle('open', Boolean(overlay));
+    const overlayKey = overlay ? `${overlay.mode}|${overlay.row.id}|${overlay.selected}|${overlay.value}|${overlay.focus}|${overlay.saving ? 1 : 0}|${overlay.error}` : '';
+    if (overlayKey !== ps5SetOverlayKey) {
+      ps5SetOverlayKey = overlayKey;
+      if (!overlay) {
+        dialog.innerHTML = '';
+        dialog.removeAttribute('tabindex');
+        delete dialog.dataset.action;
+      } else {
+        const glyphs = ps5SetGlyphs();
+        let body = '';
+        if (overlay.mode === 'choice') {
+          body = `<div class="p5-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="p5-set-option focusable${index === overlay.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="gsh-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+        } else if (overlay.mode === 'slider') {
+          const p = percent({ min: overlay.min, max: overlay.max }, overlay.value);
+          body = `<div class="p5-set-slider focusable${overlay.focus === 0 ? ' focused' : ''}" role="slider" data-action="gsh-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
+            <span class="p5-set-slider-arrow" aria-hidden="true">◀</span><span class="p5-set-slider-track" data-gsh-track><i style="width:${p}%"></i><b style="left:${p}%"></b></span><span class="p5-set-slider-arrow" aria-hidden="true">▶</span>
+          </div><strong class="p5-set-slider-value">${esc(valueText(overlay.row, overlay.value))}</strong>`;
+        } else {
+          body = `<p class="p5-set-info">${esc(valueText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
+        }
+        const isInfo = overlay.mode === 'info';
+        dialog.innerHTML = `<h3>${esc(overlay.row.label)}</h3>${body}
+          <p class="p5-set-dialog-note">${overlay.error ? `<span class="p5-set-error">${esc(overlay.error)}</span>` : ''}${overlay.saving ? '<span class="p5-set-saving">Saving…</span>' : ''}</p>
+          <div class="p5-set-actions">${isInfo
+            ? `<button class="p5-set-action focusable${overlay.focus === 0 ? ' focused' : ''}" type="button" data-action="gsh-cancel"><b data-g-role="back">${glyphs.back}</b> Back</button>`
+            : `<button class="p5-set-action focusable${overlay.focus === (overlay.mode === 'slider' ? 2 : overlay.options.length + 1) ? ' focused' : ''}" type="button" data-action="gsh-commit"><b data-g-role="confirm">${glyphs.confirm}</b> ${overlay.mode === 'slider' ? 'Set' : 'Select'}</button>
+               <button class="p5-set-action focusable${overlay.focus === (overlay.mode === 'slider' ? 1 : overlay.options.length) ? ' focused' : ''}" type="button" data-action="gsh-cancel"><b data-g-role="back">${glyphs.back}</b> Back</button>`}</div>`;
+        if (isInfo) { dialog.setAttribute('tabindex', '-1'); dialog.dataset.action = 'gsh-cancel'; }
+        else { dialog.removeAttribute('tabindex'); delete dialog.dataset.action; }
+      }
+    }
+    const target = ps5SetTarget(current);
+    const pane = overlay ? null : deep ? rowsEl : pageEl;
+    if (pane && target) {
+      const top = target.offsetTop, bottom = top + target.offsetHeight;
+      if (top < pane.scrollTop) pane.scrollTop = top;
+      else if (bottom > pane.scrollTop + pane.clientHeight) pane.scrollTop = bottom - pane.clientHeight;
+    }
+  }
+  function ps5SetTarget(current) {
+    const shell = document.querySelector('#g-ps5-set');
+    if (!shell) return null;
+    if (current.overlay) {
+      const overlay = current.overlay;
+      if (overlay.mode === 'info') return shell.querySelector('.p5-set-dialog');
+      const buttons = shell.querySelectorAll('.p5-set-actions .p5-set-action');
+      if (overlay.mode === 'slider') {
+        if (overlay.focus === 0) return shell.querySelector('.p5-set-slider');
+        return overlay.focus === 1 ? (buttons[1] || buttons[0]) : buttons[0];
+      }
+      const options = shell.querySelectorAll('.p5-set-option');
+      const count = overlay.options.length;
+      if (overlay.focus < count) return options[overlay.focus] || options[overlay.selected];
+      return overlay.focus === count ? (buttons[1] || buttons[0]) : buttons[0];
+    }
+    if (current.level === 'page') return shell.querySelector('.p5-set-row.sel') || shell.querySelector('.p5-set-back');
+    return shell.querySelector('.p5-set-page.sel') || shell.querySelector('.p5-set-back');
+  }
+  function ps5SetLeave() {
+    const shell = document.querySelector('#g-ps5-set');
+    if (shell) {
+      shell.hidden = true;
+      shell.dataset.anim = '';
+      shell.querySelector('.p5-set-overlay').hidden = true;
+      shell.querySelectorAll('.p5-set-dialog').forEach(node => { node.innerHTML = ''; });
+    }
+    clearInterval(ps5SetClockTimer); ps5SetClockTimer = 0;
+    ps5SetPageKey = ps5SetRowKey = ps5SetOverlayKey = '';
+    document.querySelector('main')?.removeAttribute('inert');
+    document.querySelector('.topbar')?.removeAttribute('inert');
+  }
+  define('ps5', {
+    root: 'pages', backOnLeft: true, inlineToggles: true, glyphs: ps5SetGlyphs,
+    container: () => document.querySelector('#g-ps5-set'),
+    render: renderPs5Settings, target: ps5SetTarget, leave: ps5SetLeave,
+    returnFocus: () => document.querySelector('#g-ps5 .p5-me') || document.querySelector('#g-ps5 .p5-tile.sel')
+  });
 
   // ---------- Launcher integration ----------
   // One wrapper for each input route. Every console screen (and the launcher's own gear) reaches these globals, so
