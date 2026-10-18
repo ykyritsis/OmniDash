@@ -11,28 +11,28 @@ body.garrison.g-retro.home-active #g-retro { display: block; position: fixed; in
 body.garrison.g-retro.home-active #g-retro-chrome { display: block; }
 #g-retro .rp-img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
 #g-retro :is(.focused, :focus-visible), #g-retro-chrome :is(.focused, :focus-visible) { outline: none; }
-body.garrison.g-retro #library-view:not([hidden]) { background: #111; }
-body.garrison:is([data-g-theme="ps3"], [data-g-theme="ps4"], [data-g-theme="wii"], [data-g-theme="3ds"]) { --g-radius: calc(6 * var(--cpx)); --g-lib-side: calc(400 * var(--cpx)); }
-body.garrison.g-retro #g-lib-side { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); padding: calc(56 * var(--cpx)) calc(24 * var(--cpx)) calc(36 * var(--cpx)); background: rgba(0, 0, 0, .35); }
-body.garrison.g-retro .g-lib-nav { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); }
-body.garrison.g-retro .g-lib-item { display: flex; align-items: center; width: 100%; height: calc(54 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; background: transparent; color: inherit; font: 400 calc(22 * var(--cpx))/1 var(--g-font); text-align: left; }
-body.garrison.g-retro .g-lib-item.active { background: var(--r-accent, #2a6bd6); color: #fff; }
-body.garrison.g-retro .g-lib-item:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) rgba(255, 255, 255, .9) !important; }
-body.garrison.g-retro .g-lib-item em { margin-left: auto; font-style: normal; opacity: .55; }
-body.garrison.g-retro .g-lib-sort { margin-top: calc(20 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); border: 0; background: transparent; color: rgba(255, 255, 255, .65); font: 400 calc(20 * var(--cpx))/1.2 var(--g-font); text-align: left; }
-body.garrison.g-retro .g-lib-sort span { color: #fff; }
-body.garrison.g-retro .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); font: 400 calc(18 * var(--cpx))/1.35 var(--g-font); }
-body.garrison.g-retro .g-lib-storage strong { display: block; font-weight: 400; }
-body.garrison.g-retro .g-lib-storage small { display: block; opacity: .55; }
-body.garrison.g-retro .g-lib-ring { display: grid; place-items: center; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); border-radius: 50%; background: conic-gradient(var(--r-accent, #3a6fc4) calc(var(--used) * 1%), rgba(255, 255, 255, .14) 0); }
-body.garrison.g-retro .g-lib-ring b { display: grid; place-items: center; width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); border-radius: 50%; background: #0b0b0c; font-size: calc(13 * var(--cpx)); font-weight: 400; }
-body.garrison.g-retro #g-lib-side h2, body.garrison.g-retro #g-lib-title h1 { font-size: calc(36 * var(--cpx)); font-weight: 400; }
-body.garrison.g-retro #g-lib-title { display: flex; align-items: baseline; gap: calc(16 * var(--cpx)); margin-bottom: calc(26 * var(--cpx)); }
-body.garrison.g-retro #g-lib-title small { font-size: calc(20 * var(--cpx)); opacity: .6; }
-body.garrison.g-retro #library-view:not([hidden]) { background: #0b0b0c; }
-body.garrison.g-retro .console-library-content { padding: calc(56 * var(--cpx)) calc(90 * var(--cpx)) calc(100 * var(--cpx)) calc(36 * var(--cpx)); }
-body.garrison.g-retro .library-grid { grid-template-columns: repeat(auto-fill, minmax(calc(190 * var(--cpx)), 1fr)) !important; gap: calc(12 * var(--cpx)) !important; }
-body.garrison.g-retro .g-library-toolbar { display: none !important; }
+body.garrison:is(.g-retro, .g-ps5) #library-view:not([hidden]) { background: #111; }
+body.garrison:is([data-g-theme="ps3"], [data-g-theme="ps4"], [data-g-theme="wii"], [data-g-theme="3ds"], [data-g-theme="ps5"]) { --g-radius: calc(6 * var(--cpx)); --g-lib-side: calc(400 * var(--cpx)); }
+body.garrison:is(.g-retro, .g-ps5) #g-lib-side { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); padding: calc(56 * var(--cpx)) calc(24 * var(--cpx)) calc(36 * var(--cpx)); background: rgba(0, 0, 0, .35); }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-nav { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-item { display: flex; align-items: center; width: 100%; height: calc(54 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; background: transparent; color: inherit; font: 400 calc(22 * var(--cpx))/1 var(--g-font); text-align: left; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-item.active { background: var(--r-accent, #2a6bd6); color: #fff; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-item:is(.focused, :focus-visible) { box-shadow: inset 0 0 0 calc(3 * var(--cpx)) rgba(255, 255, 255, .9) !important; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-item em { margin-left: auto; font-style: normal; opacity: .55; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-sort { margin-top: calc(20 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); border: 0; background: transparent; color: rgba(255, 255, 255, .65); font: 400 calc(20 * var(--cpx))/1.2 var(--g-font); text-align: left; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-sort span { color: #fff; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-storage { display: flex; align-items: center; gap: calc(14 * var(--cpx)); margin-top: auto; padding: calc(12 * var(--cpx)) calc(14 * var(--cpx)); font: 400 calc(18 * var(--cpx))/1.35 var(--g-font); }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-storage strong { display: block; font-weight: 400; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-storage small { display: block; opacity: .55; }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-ring { display: grid; place-items: center; width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); border-radius: 50%; background: conic-gradient(var(--r-accent, #3a6fc4) calc(var(--used) * 1%), rgba(255, 255, 255, .14) 0); }
+body.garrison:is(.g-retro, .g-ps5) .g-lib-ring b { display: grid; place-items: center; width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); border-radius: 50%; background: #0b0b0c; font-size: calc(13 * var(--cpx)); font-weight: 400; }
+body.garrison:is(.g-retro, .g-ps5) #g-lib-side h2, body.garrison:is(.g-retro, .g-ps5) #g-lib-title h1 { font-size: calc(36 * var(--cpx)); font-weight: 400; }
+body.garrison:is(.g-retro, .g-ps5) #g-lib-title { display: flex; align-items: baseline; gap: calc(16 * var(--cpx)); margin-bottom: calc(26 * var(--cpx)); }
+body.garrison:is(.g-retro, .g-ps5) #g-lib-title small { font-size: calc(20 * var(--cpx)); opacity: .6; }
+body.garrison:is(.g-retro, .g-ps5) #library-view:not([hidden]) { background: #0b0b0c; }
+body.garrison:is(.g-retro, .g-ps5) .console-library-content { padding: calc(56 * var(--cpx)) calc(90 * var(--cpx)) calc(100 * var(--cpx)) calc(36 * var(--cpx)); }
+body.garrison:is(.g-retro, .g-ps5) .library-grid { grid-template-columns: repeat(auto-fill, minmax(calc(190 * var(--cpx)), 1fr)) !important; gap: calc(12 * var(--cpx)) !important; }
+body.garrison:is(.g-retro, .g-ps5) .g-library-toolbar { display: none !important; }
 body.garrison.g-retro:not(.home-active) #g-retro-chrome { display: none !important; }
 /* A full-screen settings skin (PS4, Wii, 3DS) covers Home; its status bar/clock belongs to Home, not Settings.
    The Home screen underneath is kept in the DOM (so the opener element and the focus restore stay real) but made
@@ -133,6 +133,10 @@ body.retro-enter[data-g-theme="ps3"] #g-retro-chrome .xmb-clock { animation: xmb
   transition: opacity var(--m-dur) var(--m-ease), transform var(--m-dur) var(--m-ease);
 }
 #g-retro.sub-open .xmb-sub { opacity: 1; transform: none; pointer-events: auto; }
+/* Inside a page the other categories step back, as the XMB dims everything but the open column, so the panel
+   never sits on top of their icons; the open value pop-up in turn dims the page behind it. */
+#g-retro.sub-open .xmb-cat:not(.on) { opacity: 0; }
+#g-retro:has(.xmb-pop.open) .xmb-sub { opacity: .28; }
 #g-retro .xmb-sub-head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(20 * var(--cpx)); padding: 0 calc(8 * var(--cpx)) calc(10 * var(--cpx)); border-bottom: 1px solid rgba(255, 255, 255, .24); }
 #g-retro .xmb-sub-kicker { font: 400 calc(33 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 calc(2 * var(--cpx)) calc(7 * var(--cpx)) rgba(0, 0, 0, .55); }
 #g-retro .xmb-sub-head small { color: rgba(255, 255, 255, .62); font: 400 calc(19 * var(--cpx))/1 var(--g-font); }
@@ -784,6 +788,8 @@ html.reduce-motion #g-retro .ds-set-tile.sel { transform: none !important; }
 /* Notifications and splash per console family. */body.garrison[data-g-theme="ps3"] #toast { left: auto !important; right: calc(110 * var(--cpx)) !important; top: calc(150 * var(--cpx)) !important; bottom: auto !important; transform: none !important; border-radius: calc(6 * var(--cpx)) !important; background-color: rgba(10, 10, 10, .72) !important; border: 1px solid rgba(255, 255, 255, .35) !important; font-family: var(--g-font) !important; }
 body.garrison[data-g-theme="ps4"] #toast { left: calc(90 * var(--cpx)) !important; right: auto !important; top: calc(70 * var(--cpx)) !important; bottom: auto !important; transform: none !important; border-radius: calc(4 * var(--cpx)) !important; background-color: rgba(18, 28, 46, .96) !important; border: 0 !important; font-family: var(--g-font) !important; }
 body.garrison:is([data-g-theme="ps3"], [data-g-theme="ps4"]) #toast::before { background-color: #fff; background-image: none; width: calc(10 * var(--cpx)); }
+/* The shared console toast is centred with translate(-50%) once shown; PS3 and PS4 pin theirs to a corner instead. */
+body.garrison:is([data-g-theme="ps3"], [data-g-theme="ps4"]) #toast.show { transform: none !important; }
 body.garrison[data-g-theme="wii"] #toast { border-radius: calc(30 * var(--cpx)) !important; background-color: #fff !important; color: #555 !important; border: calc(4 * var(--cpx)) solid #34bdef !important; font-family: var(--g-font) !important; }
 body.garrison[data-g-theme="wii"] #toast::before { background-color: #34bdef; border-radius: 50%; width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); align-self: center; margin-left: calc(10 * var(--cpx)); }
 body.garrison[data-g-theme="3ds"] #toast { border-radius: calc(10 * var(--cpx)) !important; background-color: #f4f4f4 !important; color: #333 !important; border: calc(3 * var(--cpx)) solid #43e0ad !important; font-family: var(--g-font) !important; }
@@ -839,7 +845,7 @@ body.garrison.g-retro[data-g-theme="3ds"] #startup-screen .g-boot-mark::before {
 
 /* ---------- Boot ---------- */
 #startup-screen.g-m-booting { display: block; padding: 0; background: #000; }
-#startup-screen .g-m-boot { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; }
+#startup-screen .g-m-boot { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; /* rows pack in the middle instead of splitting the screen */ overflow: hidden; }
 #startup-screen .g-m-hint { position: absolute; left: 0; right: 0; bottom: calc(84 * var(--cpx)); text-align: center; font: 300 calc(17 * var(--cpx))/1 var(--g-font); letter-spacing: .24em; text-transform: uppercase; color: rgba(255, 255, 255, .45); }
 
 /* PS3 coldboot: the wave forms, then the wordmark. */
@@ -906,7 +912,7 @@ html.reduce-motion .g-m-return, html.reduce-motion #launch-overlay .g-m-flash { 
 
 /* ---------- Button prompts (garrison-glyphs.js, task G1) ---------- */
 /* PS3 XMB: the row sits on the wave below the item column, the way the real XMB prints its button bar. */
-#g-retro-chrome .xmb-hints { position: fixed; left: calc(96 * var(--cpx)); bottom: calc(40 * var(--cpx)); z-index: 6; color: rgba(255, 255, 255, .84); font: 400 calc(22 * var(--cpx))/1 var(--g-font); text-shadow: 0 calc(1 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .55); pointer-events: none; }
+#g-retro-chrome .xmb-hints { position: fixed; right: calc(96 * var(--cpx)); bottom: calc(40 * var(--cpx)); z-index: 6; color: rgba(255, 255, 255, .84); font: 400 calc(22 * var(--cpx))/1 var(--g-font); text-shadow: 0 calc(1 * var(--cpx)) calc(5 * var(--cpx)) rgba(0, 0, 0, .55); pointer-events: none; }
 #g-retro-chrome .xmb-hints .g-glyph { --gw: 1.6em; --gh: 1.6em; }
 #g-retro-chrome .xmb-hints .g-glyph-label { letter-spacing: .01em; }
 /* PS4: Enter / Back / OPTIONS in the dark bar from y 944 at 1080p. */
@@ -936,3 +942,12 @@ html.reduce-motion .g-m-return, html.reduce-motion #launch-overlay .g-m-flash { 
 #g-retro .ds-set-hint .g-glyph-row { gap: calc(12 * var(--cpx)); }
 #g-retro .ds-set-hint .g-glyph { --gw: 1.35em; --gh: 1.35em; }
 
+
+/* The Store is one of the launcher's dark pages: on the light Wii and 3DS walls its white headings and tabs
+   disappeared, so those two themes darken the wall while the Store is showing, as they do for the library. */
+body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]).store-active #g-theme-wall { background: #0b0b0c !important; }
+body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]).store-active #store-view { color: #fff; }
+/* The Wii and 3DS launch screens are white, so the launch copy, game logo shadow and the Cancel button take the
+   consoles' grey text instead of the launcher's white. */
+body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay :is(.launch-copy, .launch-copy strong, .launch-copy small, .g-launch-cancel) { color: #5a5a5a !important; text-shadow: none !important; }
+body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay .g-launch-cancel { border-color: rgba(0, 0, 0, .18) !important; background: rgba(255, 255, 255, .7) !important; }

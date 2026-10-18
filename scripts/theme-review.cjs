@@ -36,7 +36,16 @@ const SHOW = {
   // Controller steps on Home, chained in SCREENS (for example home,navR,navR,navU,press).
   navR: `navigateConsoleHome('right', document.activeElement)`, navL: `navigateConsoleHome('left', document.activeElement)`,
   navU: `navigateConsoleHome('up', document.activeElement)`, navD: `navigateConsoleHome('down', document.activeElement)`,
-  press: `(() => { const el = document.querySelector('#g-retro .focused, #g-retro-chrome .focused') || document.activeElement; window.__noLaunch = true; if (!el?.dataset?.retroBoot) el?.click(); })()`, back: `navigateBack()`
+  press: `(() => { const el = document.querySelector('#g-retro .focused, #g-retro-chrome .focused') || document.activeElement; window.__noLaunch = true; if (!el?.dataset?.retroBoot) el?.click(); })()`,
+  back: `navigateBack()`,
+  // PS5 surfaces (the screens are opened through the theme's real API, never by force-showing markup).
+  ps5hub: `(() => { const g = state.games.find(x => !x.isApp && x.installed !== false); window.gPs5?.openHub(g.id); })()`,
+  ps5cc: `(() => { window.gPs5?.openControlCenter(); })()`,
+  ps5trophies: `(() => { const g = state.games.find(x => !x.isApp && x.installed !== false); window.gPs5?.openTrophies(g.id); })()`,
+  ps5captures: `(() => { window.gPs5?.openCaptures(); })()`,
+  ps5settings: `(() => { window.gShell?.open('ps5'); })()`,
+  // The console Settings shell as the Settings action opens it, then steps inside it (dialogs stay open).
+  shell: `openSettings()`, shD: `gShell.move('down')`, shU: `gShell.move('up')`, shR: `gShell.move('right')`, shA: `gShell.activate()`, shB: `gShell.back()`
 };
 app.on('browser-window-created', (_, win) => {
   const errors = []; win.webContents.on('console-message', e => { if (e.level === 'error') errors.push(e.message.slice(0, 200)); });
@@ -64,9 +73,10 @@ app.on('browser-window-created', (_, win) => {
         const show = screen.startsWith('hub-') ? `(() => { showView('home'); window.gHub && gHub.go(${JSON.stringify(screen.slice(4))}); })()`
           : screen.startsWith('page-') ? `(() => { settingsDialog.showModal(); showSettingsPage(${JSON.stringify(screen.slice(5))}); })()`
           : SHOW[screen];
-        await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); ${show || `showView('home')`}; })()`).catch(e => errors.push(screen + ': ' + e));
+        const keepDialogs = /^sh[DURAB]$/.test(screen);
+        await win.webContents.executeJavaScript(`(() => { ${keepDialogs ? '' : "for (const d of document.querySelectorAll('dialog[open]')) d.close();"} ${show || `showView('home')`}; })()`).catch(e => errors.push(screen + ': ' + e));
         await new Promise(r => setTimeout(r, screen === 'boot' ? 1100 : screen === 'saver' ? 2600 : screen === 'store' ? 6000 : 1800));
-        await fs.writeFile(path.join(output, `${theme}-${/^(nav[RLUD]|press|back)$/.test(screen) ? si + "-" : ""}${screen}.png`), (await win.webContents.capturePage()).toPNG());
+        await fs.writeFile(path.join(output, `${theme}-${/^(nav[RLUD]|press|back|sh[DURAB])$/.test(screen) ? si + "-" : ""}${screen}.png`), (await win.webContents.capturePage()).toPNG());
       }
     }
     await fs.writeFile(path.join(output, 'errors.json'), JSON.stringify(errors, null, 2));

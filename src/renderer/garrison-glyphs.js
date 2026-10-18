@@ -32,8 +32,8 @@
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this), function (win, doc) {
   'use strict';
 
-  const CONSOLES = ['ps3', 'ps4', 'wii', '3ds', 'series', 'one', 'x360'];
-  const PLAYSTATION = ['ps3', 'ps4'];
+  const CONSOLES = ['ps3', 'ps4', 'ps5', 'wii', '3ds', 'series', 'one', 'x360'];
+  const PLAYSTATION = ['ps3', 'ps4', 'ps5'];
   const NINTENDO = ['wii', '3ds'];
   const XBOX = ['series', 'one', 'x360'];
   const GHOST = 'rgba(255,255,255,.16)';
@@ -116,6 +116,7 @@
   const SETS = {
     ps3: { ...PS },
     ps4: { ...PS },
+    ps5: { ...PS },
     wii: { ...NINTENDO_COMMON },
     '3ds': { ...NINTENDO_COMMON },
     series: { ...XBOX_SET },
@@ -133,6 +134,7 @@
   const REQUIRED = {
     ps3: ['cross', 'circle', 'triangle', 'square', 'l1', 'r1', 'l2', 'r2', 'options', 'share', 'ps', 'dpad'],
     ps4: ['cross', 'circle', 'triangle', 'square', 'l1', 'r1', 'l2', 'r2', 'options', 'share', 'ps', 'dpad'],
+    ps5: ['cross', 'circle', 'triangle', 'square', 'l1', 'r1', 'l2', 'r2', 'options', 'share', 'ps', 'dpad'],
     wii: ['a', 'b', 'x', 'y', 'plus', 'minus', 'home', 'l', 'r', 'zl', 'zr', 'dpad'],
     '3ds': ['a', 'b', 'x', 'y', 'plus', 'minus', 'home', 'l', 'r', 'zl', 'zr', 'dpad'],
     series: ['a', 'b', 'x', 'y', 'lb', 'rb', 'view', 'menu', 'lt', 'rt', 'dpad'],
@@ -145,6 +147,7 @@
   const PROMPTS = {
     ps3: { home: [{ button: '@confirm', label: 'Enter' }, { button: '@back', label: 'Back' }, { button: '@options', label: 'Options' }] },
     ps4: { home: [{ button: '@confirm', label: 'Enter' }, { button: '@back', label: 'Back' }, { button: '@options', label: 'Options' }] },
+    ps5: { home: [{ button: '@confirm', label: 'Enter' }, { button: '@back', label: 'Back' }, { button: '@options', label: 'Options' }] },
     wii: { home: [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }, { buttons: ['plus', 'minus'], label: 'Page' }] },
     '3ds': { home: [{ button: '@confirm', label: 'OK' }, { button: '@back', label: 'Back' }, { button: '@options', label: 'Options' }] },
     series: { home: [{ button: '@confirm', label: 'Select' }, { button: '@back', label: 'Back' }, { button: 'menu', label: 'Options' }] },
@@ -204,7 +207,7 @@
     if (t[0] === '@') {
       if (t === '@confirm') return face(id).confirm;
       if (t === '@back') return face(id).back;
-      if (t === '@options') return id === 'ps3' ? 'triangle' : id === 'ps4' ? 'options' : id === '3ds' ? 'x' : id === 'wii' ? 'plus' : 'menu';
+      if (t === '@options') return id === 'ps3' ? 'triangle' : id === 'ps4' || id === 'ps5' ? 'options' : id === '3ds' ? 'x' : id === 'wii' ? 'plus' : 'menu';
       if (t === '@menu') return 'menu';
       if (t === '@search') return id === 'x360' ? 'y' : 'view';
       if (t === '@page') return 'plus';

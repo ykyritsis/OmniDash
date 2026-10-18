@@ -955,6 +955,13 @@ function gGameMenuMarkup(game) {
     ${gRow('g-game-hide', 'hide', 'Hide game')}`;
 }
 
+// The element showing this game, for anchoring its menu: the focused one first, then any visible card or console
+// tile (XMB item, PS4/PS5 tile, Wii channel, 3DS icon), so the menu never falls back to the window's corner.
+function gGameAnchor(gameId) {
+  if (document.activeElement?.dataset?.gameId === gameId) return document.activeElement;
+  const shown = [...document.querySelectorAll('[data-game-id]')].filter(item => item.dataset.gameId === gameId && item.offsetParent !== null && item.getBoundingClientRect().width > 0);
+  return shown.find(item => item.classList.contains('focused')) || shown.find(item => item.classList.contains('game-card')) || shown[0] || null;
+}
 const gOpenGameOptions = openGameOptions;
 openGameOptions = function (gameId = state.selectedGameId) {
   const game = state.games.find(item => item.id === gameId);
@@ -962,14 +969,14 @@ openGameOptions = function (gameId = state.selectedGameId) {
   state.optionsGameId = game.id;
   // Apps get the same Xbox menu: Open, and Hide for anything you added.
   if (game.isApp) {
-    const anchor = document.activeElement?.dataset?.gameId === game.id ? document.activeElement : [...document.querySelectorAll('.game-card[data-game-id]')].find(item => item.dataset.gameId === game.id && item.offsetParent !== null);
+    const anchor = gGameAnchor(game.id);
     openGFlyout(gGameMenu, anchor || document.activeElement, `<header class="g-menu-head g-menu-head-plain"><h2>${escapeHtml(game.title)}</h2></header>
       <div class="g-menu-group">${gRow('g-game-play', 'open', 'Open')}${game.isLauncher ? '' : gRow('g-game-hide', 'hide', 'Hide app')}</div>`, anchor);
     return;
   }
   const card = document.activeElement?.dataset?.gameId === game.id ? document.activeElement
     : state.view === 'detail' ? document.querySelector('#detail-options-button')
-      : [...document.querySelectorAll('.game-card[data-game-id]')].find(item => item.dataset.gameId === game.id && item.offsetParent !== null);
+      : gGameAnchor(game.id);
   if (state.view === 'detail' && card?.id === 'detail-options-button') { openManageGame(game, card); return; }
   openGFlyout(gGameMenu, card || document.activeElement, gGameMenuMarkup(game), card);
 };

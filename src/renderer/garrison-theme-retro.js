@@ -1752,12 +1752,16 @@
     dsSizeHeld = both;
   }
   function syncDsOptionsPoll() {
-    const wanted = theme() === '3ds' && document.visibilityState === 'visible' && document.hasFocus();
+    // Only while the 3DS is the theme, the window is in use and a controller is actually connected.
+    const padConnected = [...(navigator.getGamepads?.() || [])].some(pad => pad?.connected);
+    const wanted = theme() === '3ds' && document.visibilityState === 'visible' && document.hasFocus() && padConnected;
     if (wanted && !dsOptionsTimer) dsOptionsTimer = setInterval(pollDsOptions, 40);
     else if (!wanted && dsOptionsTimer) { clearInterval(dsOptionsTimer); dsOptionsTimer = 0; dsOptionsHeld = dsSizeHeld = false; }
   }
   syncDsOptionsPoll();
   window.addEventListener('gamepadconnected', syncDsOptionsPoll);
+  window.addEventListener('gamepaddisconnected', syncDsOptionsPoll);
+  new MutationObserver(syncDsOptionsPoll).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   window.addEventListener('focus', syncDsOptionsPoll);
   window.addEventListener('blur', syncDsOptionsPoll);
   document.addEventListener('visibilitychange', syncDsOptionsPoll);
@@ -1794,7 +1798,7 @@
   // The per-theme maps cover navigate, category/page, confirm, back, error, launch, notify, achievement/trophy,
   // boot and power-off. Helix deliberately keeps the launcher's original interface sounds.
   const gAudio = (() => {
-    const THEMES = ['series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'];
+    const THEMES = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
     const KINDS = ['navigate', 'category', 'confirm', 'back', 'error', 'launch', 'notify', 'achievement', 'boot', 'powerOff'];
     // The launcher asks for a few names that mean the same sound; map them onto the map's own names.
     const ALIASES = {
@@ -1811,6 +1815,9 @@
       x360: { type: 'triangle', nav: [880, 830], cat: [740, 660], ok: [988, 1319], back: [659, 523], err: [330, 247], launch: [587, 880, 1175], notify: [659, 988, 1319], trophy: [784, 1046, 1319, 1568], boot: [123, 246, 370, 494], off: [659, 494, 330], gain: .04, filter: 3200 },
       ps3: { type: 'sine', nav: [1320, 1180], cat: [880, 784], ok: [660, 990], back: [520, 390], err: [440, 294], launch: [440, 880], notify: [1175, 1568], trophy: [1046, 1318, 1760], boot: [130, 196, 261, 392], off: [523, 392, 261], gain: .03, filter: 0 },
       ps4: { type: 'sine', nav: [1760, 1580], cat: [1320, 1175], ok: [1047, 1568], back: [784, 587], err: [523, 349], launch: [523, 1047], notify: [1319, 1760], trophy: [1047, 1319, 1760], boot: [131, 196, 262, 392], off: [660, 440, 262], gain: .035, filter: 0 },
+      // PS5: the same glassy family, tighter and a little higher — short ticks, a clean rising confirm, and a
+      // boot chord built on a low pedal that rises through the mark.
+      ps5: { type: 'sine', nav: [1760, 1660], cat: [1480, 1320], ok: [1174.7, 1760], back: [880, 659.3], err: [523.25, 349.23], launch: [587.33, 880, 1174.7], notify: [1318.5, 1760, 2217.5], trophy: [1046.5, 1318.5, 1760, 2093], boot: [110, 164.81, 220, 329.63], off: [987.77, 659.25, 440], gain: .028, filter: 0 },
       wii: { type: 'triangle', nav: [1568, 1480], cat: [1175, 1046], ok: [988, 1319], back: [784, 523], err: [523, 392], launch: [523, 1047], notify: [1319, 1760], trophy: [988, 1319, 1568], boot: [262, 392, 523, 659], off: [784, 523, 349], gain: .04, filter: 0 },
       '3ds': { type: 'square', nav: [2093, 1975], cat: [1568, 1400], ok: [1319, 1760], back: [1047, 784], err: [880, 659], launch: [784, 1568], notify: [1760, 2349], trophy: [1568, 2093, 2637], boot: [523, 784, 1047, 1319], off: [1047, 784, 523], gain: .012, filter: 0 }
     };
@@ -1823,6 +1830,8 @@
       x360: { root: 131, chord: [1, 1.25, 1.5, 2], notes: [262, 330, 392, 523] },
       ps3: { root: 130.81, chord: [1, 1.5, 2, 3], notes: [261.63, 392, 523.25, 392] },
       ps4: { root: 87.31, chord: [1, 1.5, 2, 2.5], notes: [174.61, 220, 261.63, 220] },
+      // PS5: a slow, airy pad with a soft fifth; the loop is deliberately quieter than the consoles' themes.
+      ps5: { root: 98, chord: [1, 1.5, 2, 3], notes: [196, 293.66, 392, 293.66] },
       wii: { root: 130.81, chord: [1, 1.25, 1.5, 2], notes: [261.63, 329.63, 392, 329.63] },
       '3ds': { root: 130.81, chord: [1, 1.5, 2, 2.5], notes: [523.25, 659.25, 783.99, 659.25] }
     };
@@ -2074,6 +2083,22 @@
               return await ensureContext().decodeAudioData(bytes.buffer);
             }
           } catch { /* A pack track that won't decode falls back to the drawn loop. */ }
+          // PS5's optional drop-in slot: %APPDATA%\xbox-preview-ui\theme-packs\ps5\music\menu.*. The main-process
+          // pack lists cannot know this folder without a main.cjs entry, so the renderer reads it itself. It is
+          // optional: a missing file costs one failed request and the drawn loop below plays instead.
+          if (id === 'ps5' && pack.base) {
+            try {
+              const base = pack.base;
+              for (const name of ['menu.mp3', 'menu.ogg', 'menu.wav']) {
+                let response;
+                try { response = await fetch(`${base}ps5/music/${name}`); } catch { continue; }
+                if (!response.ok) continue;
+                const bytes = new Uint8Array(await response.arrayBuffer());
+                if (!bytes.length) continue;
+                return await ensureContext().decodeAudioData(bytes.buffer);
+              }
+            } catch { /* No optional track. */ }
+          }
           return buildFallbackMusic(id);
         })());
       }

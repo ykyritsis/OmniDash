@@ -36,6 +36,7 @@ fresh clone the directory simply will not exist and the themes fall back to thei
 | `wii/Wii.JS-gh-pages/` | github.com/andrewplus/Wii.JS (GPL-3) | channel frames, cursor, bottom bar, sounds, menu music `assets/audio/bg-music.mp3` |
 | `wii/Liink-main/` | github.com/aica7/Liink (GPL-2) | Rodin fonts |
 | `3ds/` | owner-supplied / reference | 3DS HOME Menu assets if present, including optional `music/menu.*` |
+| `ps5/` | OmniDash drop-in slot (read by the renderer, no upstream pack) | Optional `music/menu.mp3`/`.ogg`/`.wav` and `background.jpg`/`.png`; the theme draws everything else |
 | `series/`, `one/` | OmniDash drop-in slots (no upstream pack) | Optional menu music in `music/menu.*`; OmniDash draws a loop without it |
 | `*/ref/` | Wikipedia/reference captures | small reference screenshots for measuring only |
 
@@ -52,6 +53,7 @@ There is no need to know the pack path by heart any more. The launcher's own Set
 | Nintendo 3DS | `3ds/` | `music/menu.mp3` or `music/menu.ogg` |
 | Xbox 360 | `dashx360/` | `Boot/Boot Screen.mp4`, five sounds, `Audio/Music/*`, `Custom Files/Themes/<name>/theme.json` |
 | Xbox Series X\|S, Xbox One | `series/`, `one/` | `music/menu.mp3` or `music/menu.ogg` (drop-in slots) |
+| PlayStation 5 | `ps5/` | `music/menu.mp3`/`.ogg`/`.wav`, `background.jpg`/`.png` (read by the renderer; see below) |
 
 Each row reports:
 
@@ -79,6 +81,22 @@ hidden demo harness (`NEBULA_DEMO=1`), so reviews never open Explorer or write i
 `scripts/pack-manager-test.cjs` checks that the registry covers every pack folder `main.cjs` reads, that every
 renderer row has an action, and that the scan, credit and README rules work against a temporary folder.
 
+## PS5's optional folder (never required)
+
+The PS5 theme is complete without any pack. Two kinds of file may be dropped into
+`%APPDATA%\xbox-preview-ui\theme-packs\ps5\` at any time:
+
+| File | What it does |
+|---|---|
+| `music/menu.mp3`, `music/menu.ogg` or `music/menu.wav` | Replaces the drawn 8-second menu loop. The first existing name wins; the track goes through the same Volume/Mute master gain as every other theme's music. |
+| `background.jpg`, `background.png` or `background.jpeg` | Ambient fallback behind the tile row for a game whose library has no wide art. |
+
+The PS5 folder is read by the renderer itself (`fetch` against the pack base URL returned by
+`theme:retro-pack`), because `RETRO_PACKS`/`RETRO_MUSIC` in `main.cjs` predate the ninth theme and this task may not
+edit that file. A missing folder or file is normal: it costs one failed request at start-up, never a console error,
+and the drawn loop/pure CSS ambience takes over. The Console packs manager does not list this folder yet for the same
+reason; its expected names are the two rows above.
+
 ## Menu music (BGM) per theme
 
 The shared audio engine (`window.gAudio`, task A1) looks for the first existing file in each theme's list. A
@@ -93,6 +111,7 @@ and `theme:pack-sound('music')`.
 | PS4 | `ps4/music/menu.mp3`, `ps4/music/menu.ogg`, `ps4/Ps4-UI-master/assets/js/all.mp3` | pack `all.mp3` |
 | Wii | `wii/music/menu.mp3`, `wii/music/menu.ogg`, `wii/Wii.JS-gh-pages/assets/audio/bg-music.mp3` | pack `bg-music.mp3` |
 | 3DS | `3ds/music/menu.mp3`, `3ds/music/menu.ogg` | none — the engine plays its drawn loop |
+| PS5 | `ps5/music/menu.mp3`, `ps5/music/menu.ogg`, `ps5/music/menu.wav` | none — drawn loop until a file is dropped in |
 | Series, One | `<theme>/music/menu.mp3`, `<theme>/music/menu.ogg` | none — drawn loop until a file is dropped in |
 | 360 | `dashx360/Audio/Music/menu music.mp3`, `menu.mp3`, `menu.ogg`, `bgm.mp3`, `bgm.ogg` | none — drawn loop until a file is dropped in |
 

@@ -479,3 +479,106 @@ body[data-g-theme="ps3"] #g-retro .xmb-glyph:has(.g-glyph),
 body[data-g-theme="ps4"] #g-retro .xmb-glyph:has(.g-glyph) { display: inline-flex; width: auto; height: auto; padding: 0; border: 0; }
 body[data-g-theme="ps3"] #g-retro .ps4-set-action b:has(.g-glyph) { display: inline-flex; border: 0; }
 
+
+/* =========================== PS5 (the ninth theme) =========================== */
+/* Settings: a calm white-on-black screen. Left column of registry pages with line icons; the page's rows on the
+   right. One focus language: a white bar with a blue edge. Toggles are check boxes. Sizes are 1080p console
+   pixels (--cpx), like the rest of this file. */
+#g-ps5-set { position: fixed; inset: 0; z-index: 8600; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; color: #fff; background: radial-gradient(100% 70% at 50% 0%, rgba(22, 44, 84, .38), transparent 70%), #04070d; font-family: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif; animation: p5-set-in .2s cubic-bezier(.2, .9, .2, 1) both; }
+#g-ps5-set[hidden] { display: none !important; }
+@keyframes p5-set-in { from { opacity: 0; transform: scale(1.012); } to { opacity: 1; transform: none; } }
+#g-ps5-set .p5-set-wall, #g-ps5-set .p5-set-wall i { position: absolute; pointer-events: none; }
+#g-ps5-set .p5-set-wall { inset: 0; overflow: hidden; }
+#g-ps5-set .p5-set-wall i { inset: -20% -10%; opacity: .4; background: radial-gradient(1.4px 1.4px at 18% 22%, rgba(255, 255, 255, .45), transparent 60%), radial-gradient(1px 1px at 62% 74%, rgba(160, 200, 255, .4), transparent 60%); background-size: 48% 52%, 42% 46%; }
+#g-ps5-set .p5-set-wall i:nth-child(2) { transform: scale(1.3) rotate(2deg); opacity: .25; }
+#g-ps5-set .p5-set-head { position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: calc(24 * var(--cpx)); padding: calc(52 * var(--cpx)) calc(96 * var(--cpx)) calc(22 * var(--cpx)); }
+#g-ps5-set .p5-set-brand { display: grid; gap: calc(6 * var(--cpx)); }
+#g-ps5-set .p5-set-brand span { font-size: calc(14 * var(--cpx)); font-weight: 300; letter-spacing: .2em; color: rgba(255, 255, 255, .5); text-transform: uppercase; }
+#g-ps5-set .p5-set-title { margin: 0; font-size: calc(54 * var(--cpx)); font-weight: 300; line-height: 1; }
+#g-ps5-set .p5-set-clock { font-size: calc(24 * var(--cpx)); font-weight: 300; color: rgba(255, 255, 255, .8); }
+#g-ps5-set .p5-set-body { position: relative; z-index: 2; min-height: 0; padding: 0 calc(96 * var(--cpx)) calc(20 * var(--cpx)); }
+#g-ps5-set[data-level="root"] .p5-set-main { display: none; }
+#g-ps5-set[data-level="page"] .p5-set-pages { display: none; }
+#g-ps5-set .p5-set-pages { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); width: min(100%, calc(980 * var(--cpx))); max-height: calc(720 * var(--cpx)); overflow-y: auto; padding: calc(10 * var(--cpx)) 0; }
+#g-ps5-set .p5-set-page { display: flex; align-items: center; gap: calc(18 * var(--cpx)); width: 100%; height: calc(72 * var(--cpx)); padding: 0 calc(20 * var(--cpx)); border: 0; border-radius: calc(12 * var(--cpx)); background: transparent; color: rgba(255, 255, 255, .82); text-align: left; cursor: pointer; transition: background .16s var(--m-ease, ease), color .16s var(--m-ease, ease), transform .16s var(--m-ease, ease); }
+#g-ps5-set .p5-set-page:hover { background: rgba(255, 255, 255, .07); }
+#g-ps5-set .p5-set-page.on:not(.sel) { color: #fff; background: rgba(0, 112, 209, .22); }
+#g-ps5-set .p5-set-page.sel { background: rgba(255, 255, 255, .95); color: #0a0d13; transform: translateX(calc(4 * var(--cpx))); box-shadow: 0 calc(4 * var(--cpx)) calc(18 * var(--cpx)) rgba(0, 0, 0, .3); }
+#g-ps5-set .p5-set-page-icon { display: grid; place-items: center; flex: none; width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); }
+#g-ps5-set .p5-set-page-icon svg { width: 100%; height: 100%; }
+#g-ps5-set .p5-set-page-label { overflow: hidden; font-size: calc(22 * var(--cpx)); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+#g-ps5-set .p5-set-chevron { margin-left: auto; color: currentColor; font-size: calc(26 * var(--cpx)); font-weight: 300; opacity: .45; }
+#g-ps5-set .p5-set-page.sel .p5-set-chevron { opacity: .7; }
+#g-ps5-set .p5-set-main { display: flex; flex-direction: column; width: min(100%, calc(1280 * var(--cpx))); height: 100%; min-height: 0; min-width: 0; }
+#g-ps5-set .p5-set-pagehead { display: flex; align-items: center; gap: calc(16 * var(--cpx)); min-height: calc(64 * var(--cpx)); margin-bottom: calc(6 * var(--cpx)); }
+#g-ps5-set .p5-set-pagehead h2 { margin: 0; overflow: hidden; font-size: calc(24 * var(--cpx)); font-weight: 300; color: rgba(255, 255, 255, .74); text-overflow: ellipsis; white-space: nowrap; }
+#g-ps5-set .p5-set-back { display: grid; place-items: center; flex: none; width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .1); color: #fff; cursor: pointer; }
+#g-ps5-set .p5-set-back span { margin-top: calc(-3 * var(--cpx)); font-size: calc(30 * var(--cpx)); line-height: 1; }
+#g-ps5-set .p5-set-back:is(.focused, :focus-visible) { background: #fff; color: #0a0d13; }
+#g-ps5-set .p5-set-rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: calc(8 * var(--cpx)) 0 calc(18 * var(--cpx)); }
+#g-ps5-set .p5-set-row { position: relative; display: flex; align-items: center; gap: calc(16 * var(--cpx)); width: 100%; min-height: calc(68 * var(--cpx)); padding: calc(8 * var(--cpx)) calc(18 * var(--cpx)); border: 0; border-radius: calc(12 * var(--cpx)); background: transparent; color: #fff; text-align: left; cursor: pointer; transition: background .16s var(--m-ease, ease), color .16s var(--m-ease, ease); }
+#g-ps5-set .p5-set-row + .p5-set-row { box-shadow: inset 0 1px rgba(255, 255, 255, .06); }
+#g-ps5-set .p5-set-row:hover { background: rgba(255, 255, 255, .06); }
+#g-ps5-set .p5-set-row.sel { background: rgba(255, 255, 255, .95); color: #0a0d13; box-shadow: inset calc(4 * var(--cpx)) 0 0 #0070d1; }
+#g-ps5-set .p5-set-row-icon { display: grid; place-items: center; flex: none; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); opacity: .8; }
+#g-ps5-set .p5-set-row.sel .p5-set-row-icon { opacity: 1; color: #0070d1; }
+#g-ps5-set .p5-set-row-icon svg { width: 100%; height: 100%; }
+#g-ps5-set .p5-set-row-label { flex: 1 1 auto; overflow: hidden; font-size: calc(22 * var(--cpx)); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+#g-ps5-set .p5-set-row-value { flex: none; max-width: calc(320 * var(--cpx)); overflow: hidden; color: rgba(255, 255, 255, .58); font-size: calc(18 * var(--cpx)); font-weight: 300; text-overflow: ellipsis; white-space: nowrap; }
+#g-ps5-set .p5-set-row.sel .p5-set-row-value { color: rgba(10, 13, 19, .62); }
+#g-ps5-set .p5-set-meter { flex: none; width: calc(150 * var(--cpx)); height: calc(4 * var(--cpx)); border-radius: calc(2 * var(--cpx)); background: rgba(255, 255, 255, .18); overflow: hidden; }
+#g-ps5-set .p5-set-meter i { display: block; height: 100%; background: #5aa9ff; }
+#g-ps5-set .p5-set-row.sel .p5-set-meter { background: rgba(10, 13, 19, .18); }
+#g-ps5-set .p5-set-row.sel .p5-set-meter i { background: #0070d1; }
+#g-ps5-set .p5-set-check { display: grid; place-items: center; flex: none; width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); border: calc(1.5 * var(--cpx)) solid rgba(255, 255, 255, .42); border-radius: calc(5 * var(--cpx)); }
+#g-ps5-set .p5-set-check.on { border-color: #5aa9ff; background: #5aa9ff; }
+#g-ps5-set .p5-set-check i { display: none; width: calc(8 * var(--cpx)); height: calc(13 * var(--cpx)); margin-top: calc(-2 * var(--cpx)); border-right: calc(2.4 * var(--cpx)) solid #06101f; border-bottom: calc(2.4 * var(--cpx)) solid #06101f; transform: rotate(42deg); }
+#g-ps5-set .p5-set-check.on i { display: block; }
+#g-ps5-set .p5-set-row.sel .p5-set-check { border-color: rgba(10, 13, 19, .4); }
+#g-ps5-set .p5-set-row.sel .p5-set-check.on { border-color: #0070d1; background: #0070d1; }
+#g-ps5-set .p5-set-row.sel .p5-set-check.on i { border-color: #fff; }
+#g-ps5-set .p5-set-note { margin: 0; padding: calc(10 * var(--cpx)) calc(18 * var(--cpx)); color: rgba(255, 255, 255, .55); font-size: calc(18 * var(--cpx)); font-weight: 300; }
+#g-ps5-set .p5-set-hints { position: relative; z-index: 2; display: flex; align-items: center; gap: calc(26 * var(--cpx)); padding: calc(16 * var(--cpx)) calc(96 * var(--cpx)) calc(30 * var(--cpx)); color: rgba(255, 255, 255, .7); font-size: calc(18 * var(--cpx)); font-weight: 300; }
+#g-ps5-set .p5-set-hints .g-glyph-row { gap: calc(26 * var(--cpx)); }
+#g-ps5-set .p5-set-overlay { position: absolute; inset: 0; z-index: 5; display: none; place-items: center; background: rgba(2, 4, 8, .58); backdrop-filter: blur(calc(6 * var(--cpx))); }
+#g-ps5-set .p5-set-overlay.open { display: grid; }
+#g-ps5-set .p5-set-overlay[hidden] { display: none !important; }
+#g-ps5-set .p5-set-dialog { width: calc(720 * var(--cpx)); max-width: 86vw; padding: calc(26 * var(--cpx)) calc(30 * var(--cpx)); border: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .18); border-radius: calc(18 * var(--cpx)); background: #0c1420; box-shadow: 0 calc(24 * var(--cpx)) calc(80 * var(--cpx)) rgba(0, 0, 0, .65); animation: p5-dialog-in .18s cubic-bezier(.2, .9, .2, 1) both; }
+@keyframes p5-dialog-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+#g-ps5-set .p5-set-dialog h3 { margin: 0 0 calc(16 * var(--cpx)); font-size: calc(30 * var(--cpx)); font-weight: 400; }
+#g-ps5-set .p5-set-options { display: grid; gap: calc(2 * var(--cpx)); }
+#g-ps5-set .p5-set-option { display: flex; align-items: center; justify-content: space-between; width: 100%; height: calc(54 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; border-radius: calc(8 * var(--cpx)); background: transparent; color: #fff; font-size: calc(21 * var(--cpx)); text-align: left; cursor: pointer; }
+#g-ps5-set .p5-set-option:hover { background: rgba(255, 255, 255, .07); }
+#g-ps5-set .p5-set-option.on { background: rgba(255, 255, 255, .95); color: #0a0d13; }
+#g-ps5-set .p5-set-option i { font-style: normal; color: #0070d1; }
+#g-ps5-set .p5-set-option.on i { color: #0070d1; }
+#g-ps5-set .p5-set-slider { display: flex; align-items: center; gap: calc(14 * var(--cpx)); padding: calc(24 * var(--cpx)) calc(2 * var(--cpx)) calc(12 * var(--cpx)); cursor: pointer; }
+#g-ps5-set .p5-set-slider-arrow { color: rgba(255, 255, 255, .6); font-size: calc(18 * var(--cpx)); }
+#g-ps5-set .p5-set-slider-track { position: relative; flex: 1; height: calc(6 * var(--cpx)); border-radius: calc(3 * var(--cpx)); background: rgba(255, 255, 255, .18); }
+#g-ps5-set .p5-set-slider-track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: #5aa9ff; }
+#g-ps5-set .p5-set-slider-track b { position: absolute; top: 50%; width: calc(18 * var(--cpx)); height: calc(18 * var(--cpx)); border-radius: 50%; background: #fff; transform: translate(-50%, -50%); }
+#g-ps5-set .p5-set-slider:is(.focused, :focus-visible) .p5-set-slider-track b { box-shadow: 0 0 calc(16 * var(--cpx)) rgba(90, 169, 255, .8); }
+#g-ps5-set .p5-set-slider-value { display: block; padding: calc(4 * var(--cpx)) 0 calc(10 * var(--cpx)); color: #fff; font-size: calc(24 * var(--cpx)); font-weight: 300; }
+#g-ps5-set .p5-set-info { margin: 0; padding: calc(8 * var(--cpx)) 0 calc(16 * var(--cpx)); font-size: calc(24 * var(--cpx)); font-weight: 300; }
+#g-ps5-set .p5-set-dialog-note { min-height: calc(20 * var(--cpx)); margin: 0; color: #ffb4b4; font-size: calc(16 * var(--cpx)); }
+#g-ps5-set .p5-set-saving { color: rgba(255, 255, 255, .6); }
+#g-ps5-set .p5-set-actions { display: flex; justify-content: flex-end; gap: calc(12 * var(--cpx)); margin-top: calc(10 * var(--cpx)); }
+#g-ps5-set .p5-set-action { display: inline-flex; align-items: center; gap: calc(7 * var(--cpx)); height: calc(46 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border: calc(1 * var(--cpx)) solid rgba(255, 255, 255, .2); border-radius: calc(23 * var(--cpx)); background: rgba(255, 255, 255, .07); color: #fff; font-size: calc(17 * var(--cpx)); cursor: pointer; }
+#g-ps5-set .p5-set-action:is(.focused, :focus-visible) { background: #fff; color: #0a0d13; }
+#g-ps5-set .p5-set-action .g-glyph { width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); }
+
+/* PS5 on-screen keyboard: the same calm dark screen as Settings. */
+body[data-g-theme="ps5"] #g-osk { background: rgba(5, 9, 15, .98); color: #fff; font-family: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif; }
+body[data-g-theme="ps5"] #g-osk::backdrop { background: rgba(0, 0, 0, .6); }
+body[data-g-theme="ps5"] #g-osk .g-osk-field { border-radius: calc(10 * var(--cpx)); background: #101a28; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+body[data-g-theme="ps5"] #g-osk .g-osk-key { border-radius: calc(8 * var(--cpx)); background: #16202f; }
+body[data-g-theme="ps5"] #g-osk .g-osk-key:hover { background: #1e2b3d; }
+body[data-g-theme="ps5"] #g-osk .g-osk-key.done { background: #0070d1; }
+body[data-g-theme="ps5"] #g-osk .g-osk-key:is(.focused, :focus-visible) { background: #fff; color: #0a0d13; box-shadow: 0 0 0 calc(2 * var(--cpx)) #fff; }
+body[data-g-theme="ps5"] #g-osk .g-osk-hints { color: rgba(255, 255, 255, .7); }
+
+/* The launcher's own dialogs (profile, achievements, search, power), reached from PS5's Settings/Control Center. */
+body[data-g-theme="ps5"] :is(#settings-dialog, #avatar-dialog, #achievement-dialog, #console-search-dialog, #power-dialog) { color: #fff; background: #05070c !important; border-color: rgba(255, 255, 255, .12) !important; }
+body[data-g-theme="ps5"] #settings-dialog .settings-sidebar { background: #080d16 !important; }
+body[data-g-theme="ps5"] .settings-tab, body[data-g-theme="ps5"] #settings-dialog :is(h1, h2, h3) { font-family: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif; font-weight: 300; }
+body[data-g-theme="ps5"] #settings-dialog .settings-tab.active { background: #0070d1 !important; }

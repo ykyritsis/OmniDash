@@ -11,7 +11,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/garrison-settings-registry.js'), 'utf8');
 const KINDS = ['slider', 'toggle', 'choice', 'action', 'info'];
-const CONSOLES = ['series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'];
+const CONSOLES = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
 const FORM_INPUTS = {
   'ui-scale': { value: '100' }, 'text-size': { value: '100' }, 'tile-radius': { value: '8' },
   'reduced-motion-toggle': { checked: false }, 'high-contrast-focus-toggle': { checked: false },
@@ -340,6 +340,7 @@ function eventFor(events, name, id) {
     assert.match(sharedShell, new RegExp(`define\\('${console}'`), `the ${console} screen is a shell skin`);
     assert.doesNotMatch(settingsShell, new RegExp(`\\b${console}\\b[^\\n]*gSettings`), `the ${console} shell is not still in the label file`);
   }
+  assert.match(sharedShell, /define\('ps5'/, 'the PS5 screen is a shell skin in the shared shell');
   assert.doesNotMatch(retroShell, /\b(ps3Open|ps3Popup|ps4Set|wiiSet|dsSet)\b/, 'the old per-console shell state machines stay deleted');
   assert.doesNotMatch(retroShell, /scanShellLayout|loadShellRows/, 'the old duplicated scan/load helpers stay deleted');
   assert.doesNotMatch(settingsShell, /gSettings|#g-xset|XSET_|xsetEscape/, 'garrison-theme-settings.js is labels + packs only');
@@ -356,7 +357,7 @@ function eventFor(events, name, id) {
     const set = glyphs.sets[console];
     assert.ok(set && Object.keys(set).length >= 12, `${console} has a full glyph set`);
     for (const name of glyphs.required[console]) assert.ok(glyphs.has(console, name), `${console} draws ${name}`);
-    assert.ok(!Object.prototype.hasOwnProperty.call(set, 'circle') || ['ps3', 'ps4'].includes(console), `${console} does not borrow the PlayStation symbols`);
+    assert.ok(!Object.prototype.hasOwnProperty.call(set, 'circle') || ['ps3', 'ps4', 'ps5'].includes(console), `${console} does not borrow the PlayStation symbols`);
     const rows = glyphs.prompts?.[console]?.home;
     assert.ok(Array.isArray(rows) && rows.length >= 3, `${console} has a canonical home prompt row`);
     for (const item of rows) {

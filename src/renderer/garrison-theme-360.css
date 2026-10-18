@@ -111,7 +111,7 @@ body.garrison[data-g-theme="x360"] #g-360-hints span { display: inline-flex; ali
 body.garrison[data-g-theme="x360"] #g-360-hints kbd { display: inline-grid; place-items: center; width: calc(33 * var(--cpx)); height: calc(33 * var(--cpx)); border-radius: 50%; color: #fff; font: 700 calc(19 * var(--cpx))/1 var(--g-font); }
 body.garrison[data-g-theme="x360"] #g-360-hints kbd.a { background: radial-gradient(circle at 40% 35%, #8be05a, #3c9a1c); }
 body.garrison[data-g-theme="x360"] #g-360-hints kbd.y { background: radial-gradient(circle at 40% 35%, #ffd84a, #c9930a); }
-body.garrison[data-g-theme="x360"].library-active #g-360-hints { display: none; }
+body.garrison[data-g-theme="x360"]:not(.home-active) #g-360-hints { display: none; }
 
 /* ---------- My Games (the console's games library): grey, lime selection ---------- */
 body.garrison[data-g-theme="x360"] #library-view:not([hidden]) { background: rgba(30, 30, 30, .9); }
