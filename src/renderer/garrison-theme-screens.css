@@ -213,6 +213,163 @@ body[data-g-theme="3ds"] #settings-dialog .dialog-header .eyebrow { color: #8f8f
 body[data-g-theme="3ds"] #settings-dialog .close-button { background: #ecece8 !important; color: #555 !important; border-radius: 50% !important; }
 body[data-g-theme="3ds"] #settings-dialog .close-button:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #43e0ad !important; }
 
+/* ---------- Xbox era settings: Series, One and the 360 (task S4) ----------
+   One full-screen console screen per era, drawn from gSettings.layout('series'|'one'|'x360'). Series and One
+   keep the launcher's two-pane Garrison list: the console's page rail on the left and the page's registry rows
+   on the right. The 360 uses the blade-free Metro "System Settings" screen instead: a single light grey list of
+   pages, then that page's rows. Every measurement is a 1080p console pixel (--cpx), so the same screen fits the
+   owner's 1706x960 layout and a 1280x720 one without scrolling the frame. Rows scroll inside the body, never out
+   of the screen. */
+#g-xset { position: fixed; inset: 0; z-index: 96; display: block; overscroll-behavior: contain; color: #fff; font-family: var(--g-font, "Segoe UI", system-ui, sans-serif); }
+#g-xset[hidden] { display: none; }
+#g-xset .g-xset-bg { position: absolute; inset: 0; }
+#g-xset .g-xset-frame { position: relative; display: grid; grid-template-columns: calc(400 * var(--cpx)) minmax(0, 1fr); height: 100%; }
+#g-xset .g-xset-rail { display: flex; flex-direction: column; min-height: 0; padding: calc(56 * var(--cpx)) calc(30 * var(--cpx)) calc(40 * var(--cpx)); overflow: hidden; }
+#g-xset .g-xset-brand { display: flex; align-items: center; gap: calc(16 * var(--cpx)); margin: 0 0 calc(34 * var(--cpx)); padding: 0 calc(12 * var(--cpx)); }
+#g-xset .g-xset-mark { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); flex: none; }
+#g-xset .g-xset-brand strong { display: block; font: 600 calc(23 * var(--cpx))/1.15 var(--g-font); letter-spacing: .01em; }
+#g-xset .g-xset-brand small { display: block; margin-top: calc(3 * var(--cpx)); font: 400 calc(14 * var(--cpx))/1.2 var(--g-font); letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+#g-xset .g-xset-pages { display: flex; flex-direction: column; gap: calc(3 * var(--cpx)); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#g-xset .g-xset-page { display: flex; align-items: center; gap: calc(14 * var(--cpx)); flex: none; width: 100%; min-height: calc(56 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 0; background: transparent; color: inherit; font: 400 calc(22 * var(--cpx))/1.2 var(--g-font); text-align: left; cursor: pointer; }
+#g-xset .g-xset-page .g-xset-icon { opacity: .62; }
+#g-xset .g-xset-page .g-xset-pagelabel { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#g-xset .g-xset-page .g-xset-chevron { opacity: .45; }
+#g-xset .g-xset-page.on { background: rgba(255, 255, 255, .1); }
+#g-xset .g-xset-page:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff; outline: none !important; }
+#g-xset .g-xset-railnote { margin: auto 0 0; padding: calc(18 * var(--cpx)) calc(12 * var(--cpx)) 0; border-top: 1px solid rgba(255, 255, 255, .1); font: 400 calc(13 * var(--cpx))/1.2 var(--g-font); letter-spacing: .16em; text-transform: uppercase; opacity: .4; }
+#g-xset .g-xset-main { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; height: 100%; overflow: hidden; z-index: 0; padding: calc(52 * var(--cpx)) calc(64 * var(--cpx)) calc(30 * var(--cpx)); }
+#g-xset .g-xset-head { display: flex; align-items: center; gap: calc(20 * var(--cpx)); margin: 0 0 calc(22 * var(--cpx)); }
+#g-xset .g-xset-back { display: grid; place-items: center; flex: none; width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .12); color: inherit; font: 400 calc(30 * var(--cpx))/1 var(--g-font); cursor: pointer; }
+#g-xset .g-xset-back:is(.focused, :focus-visible) { background: #fff; color: #111; outline: none !important; }
+#g-xset .g-xset-heading { flex: 1 1 auto; min-width: 0; }
+#g-xset .g-xset-kicker { margin: 0 0 calc(4 * var(--cpx)); font: 600 calc(14 * var(--cpx))/1.2 var(--g-font); letter-spacing: .16em; text-transform: uppercase; opacity: .55; }
+#g-xset .g-xset-title { margin: 0; color: inherit; font: 600 calc(42 * var(--cpx))/1.1 var(--g-font); letter-spacing: .005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#g-xset .g-xset-clock { flex: none; font: 400 calc(24 * var(--cpx))/1 var(--g-font); font-variant-numeric: tabular-nums; opacity: .8; }
+#g-xset .g-xset-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+#g-xset .g-xset-rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+#g-xset .g-xset-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: calc(16 * var(--cpx)); width: 100%; min-height: calc(64 * var(--cpx)); padding: 0 calc(16 * var(--cpx)); border: 0; background: transparent; color: inherit; font: 400 calc(24 * var(--cpx))/1.2 var(--g-font); text-align: left; cursor: pointer; }
+#g-xset .g-xset-row + .g-xset-row { border-top: 1px solid rgba(255, 255, 255, .09); }
+#g-xset .g-xset-icon { display: grid; place-items: center; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); flex: none; }
+#g-xset .g-xset-icon .g-glyph { width: calc(27 * var(--cpx)); height: calc(27 * var(--cpx)); }
+#g-xset .g-xset-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#g-xset .g-xset-value { max-width: calc(420 * var(--cpx)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(20 * var(--cpx)); opacity: .62; text-align: right; }
+#g-xset .g-xset-value:empty { display: none; }
+#g-xset .g-xset-chevron { font: 400 calc(26 * var(--cpx))/1 var(--g-font); opacity: .42; }
+#g-xset .g-xset-meter { width: calc(124 * var(--cpx)); height: calc(6 * var(--cpx)); overflow: hidden; border-radius: calc(3 * var(--cpx)); background: rgba(255, 255, 255, .2); }
+#g-xset .g-xset-meter i { display: block; height: 100%; background: currentColor; opacity: .8; }
+#g-xset .g-xset-switch { position: relative; width: calc(44 * var(--cpx)); height: calc(24 * var(--cpx)); border-radius: calc(12 * var(--cpx)); background: rgba(255, 255, 255, .26); }
+#g-xset .g-xset-switch i { position: absolute; top: calc(3 * var(--cpx)); left: calc(3 * var(--cpx)); width: calc(18 * var(--cpx)); height: calc(18 * var(--cpx)); border-radius: 50%; background: #fff; transition: transform .18s ease; }
+#g-xset .g-xset-switch.on { background: var(--g-green, #107c10); }
+#g-xset .g-xset-switch.on i { transform: translateX(calc(20 * var(--cpx))); }
+#g-xset .g-xset-hints { display: flex; justify-content: flex-end; gap: calc(26 * var(--cpx)); padding: calc(18 * var(--cpx)) 0 0; font: 400 calc(17 * var(--cpx))/1 var(--g-font); opacity: .72; }
+#g-xset .g-xset-hints span { display: inline-flex; align-items: center; }
+#g-xset .g-xset-hints b { display: inline-grid; place-items: center; width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); margin-right: calc(8 * var(--cpx)); border: 1px solid currentColor; border-radius: 50%; font: 600 calc(14 * var(--cpx))/1 var(--g-font); }
+#g-xset .g-xset-overlay { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: calc(40 * var(--cpx)); background: rgba(0, 0, 0, .58); }
+#g-xset .g-xset-overlay[hidden] { display: none; }
+#g-xset .g-xset-dialog { width: calc(720 * var(--cpx)); max-height: calc(780 * var(--cpx)); overflow-y: auto; padding: calc(30 * var(--cpx)) calc(32 * var(--cpx)) calc(24 * var(--cpx)); background: #1b1d1f; color: #fff; box-shadow: 0 calc(26 * var(--cpx)) calc(70 * var(--cpx)) rgba(0, 0, 0, .62); }
+#g-xset .g-xset-dialog h3 { margin: 0 0 calc(20 * var(--cpx)); font: 600 calc(30 * var(--cpx))/1.15 var(--g-font); }
+#g-xset .g-xset-options { display: flex; flex-direction: column; gap: calc(2 * var(--cpx)); }
+#g-xset .g-xset-option { display: flex; align-items: center; justify-content: space-between; gap: calc(14 * var(--cpx)); width: 100%; min-height: calc(56 * var(--cpx)); padding: 0 calc(18 * var(--cpx)); border: 0; background: transparent; color: inherit; font: 400 calc(23 * var(--cpx))/1.2 var(--g-font); text-align: left; cursor: pointer; }
+#g-xset .g-xset-option.on { background: rgba(16, 124, 16, .4); }
+#g-xset .g-xset-option.on i { font-style: normal; }
+#g-xset .g-xset-option:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #fff; outline: none !important; }
+#g-xset .g-xset-slider { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: calc(20 * var(--cpx)); padding: calc(8 * var(--cpx)) 0 calc(4 * var(--cpx)); }
+#g-xset .g-xset-track { position: relative; display: block; height: calc(10 * var(--cpx)); border-radius: calc(5 * var(--cpx)); background: rgba(255, 255, 255, .22); cursor: pointer; }
+#g-xset .g-xset-track i { display: block; height: 100%; border-radius: inherit; background: currentColor; opacity: .8; }
+#g-xset .g-xset-track b { position: absolute; top: 50%; width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); border-radius: 50%; background: #fff; transform: translate(-50%, -50%); pointer-events: none; }
+#g-xset .g-xset-slider strong { min-width: calc(110 * var(--cpx)); font: 400 calc(24 * var(--cpx))/1 var(--g-font); text-align: right; font-variant-numeric: tabular-nums; }
+#g-xset .g-xset-info { margin: calc(6 * var(--cpx)) 0; font: 400 calc(26 * var(--cpx))/1.35 var(--g-font); }
+#g-xset .g-xset-dialog-note { min-height: calc(20 * var(--cpx)); margin: calc(8 * var(--cpx)) 0 0; font: 400 calc(16 * var(--cpx))/1.3 var(--g-font); }
+#g-xset .g-xset-error { color: #ff9b9b; }
+#g-xset .g-xset-saving { opacity: .6; }
+#g-xset .g-xset-actions { display: flex; justify-content: flex-end; gap: calc(12 * var(--cpx)); margin-top: calc(16 * var(--cpx)); }
+#g-xset .g-xset-action { min-width: calc(120 * var(--cpx)); min-height: calc(46 * var(--cpx)); padding: 0 calc(20 * var(--cpx)); border: 0; background: rgba(255, 255, 255, .14); color: inherit; font: 400 calc(20 * var(--cpx))/1 var(--g-font); cursor: pointer; }
+#g-xset .g-xset-action b { margin-right: calc(8 * var(--cpx)); font-weight: 600; }
+#g-xset .g-xset-action:is(.focused, :focus-visible) { background: #fff; color: #111; outline: none !important; }
+#g-xset .g-xset-row:is(.focused, :focus-visible) { outline: none !important; }
+body.g-xset-open #controller-prompts { display: none !important; }
+
+/* Series: Fluent card, a white selected row, the green accent and the round back button. */
+body[data-g-theme="series"] #g-xset .g-xset-bg { background: radial-gradient(ellipse 80% 70% at 58% 18%, rgba(63, 191, 63, .18), transparent 62%), linear-gradient(155deg, #0c130c 0%, #070a07 52%, #030503 100%); }
+body[data-g-theme="series"] #g-xset .g-xset-frame { grid-template-columns: calc(420 * var(--cpx)) minmax(0, 1fr); }
+body[data-g-theme="series"] #g-xset .g-xset-rail { background: rgba(9, 13, 9, .72); border-right: 1px solid rgba(255, 255, 255, .08); }
+body[data-g-theme="series"] #g-xset .g-xset-page { border-radius: calc(4 * var(--cpx)); }
+body[data-g-theme="series"] #g-xset .g-xset-page.on { background: rgba(16, 124, 16, .3); box-shadow: inset calc(4 * var(--cpx)) 0 var(--g-green, #107c10); }
+body[data-g-theme="series"] #g-xset .g-xset-row { margin: 0 0 calc(2 * var(--cpx)); border-radius: calc(4 * var(--cpx)); }
+body[data-g-theme="series"] #g-xset .g-xset-row + .g-xset-row { border-top: 0; }
+body[data-g-theme="series"] #g-xset .g-xset-row:is(.focused, :focus-visible) { background: #f3f3f3; color: #101010; box-shadow: none; }
+body[data-g-theme="series"] #g-xset .g-xset-row:is(.focused, :focus-visible) .g-xset-icon { color: var(--g-green, #107c10); }
+/* The Series printed a switch for a toggle; the One printed On/Off as a row value. */
+body[data-g-theme="series"] #g-xset .g-xset-row[data-kind="toggle"] .g-xset-value { display: none; }
+body[data-g-theme="one"] #g-xset .g-xset-switch { display: none; }
+body[data-g-theme="series"] #g-xset .g-xset-switch:not(.on) { background: rgba(255, 255, 255, .3); }
+body[data-g-theme="series"] #g-xset .g-xset-switch.on { background: var(--g-green, #107c10); }
+body[data-g-theme="series"] #g-xset .g-xset-row.focused .g-xset-switch:not(.on) { background: rgba(0, 0, 0, .24); }
+body[data-g-theme="series"] #g-xset .g-xset-overlay { background: rgba(2, 5, 2, .7); }
+body[data-g-theme="series"] #g-xset .g-xset-dialog { border-radius: calc(8 * var(--cpx)); }
+
+/* One: 2013 Metro, no radii, light type and the green selection bar. */
+body[data-g-theme="one"] #g-xset .g-xset-bg { background: radial-gradient(ellipse 90% 70% at 70% 0%, #14294a 0, #070d18 55%, #03050a 100%); }
+body[data-g-theme="one"] #g-xset .g-xset-frame { grid-template-columns: calc(390 * var(--cpx)) minmax(0, 1fr); }
+body[data-g-theme="one"] #g-xset .g-xset-rail { background: rgba(5, 8, 13, .8); border-right: 1px solid rgba(255, 255, 255, .08); }
+body[data-g-theme="one"] #g-xset .g-xset-brand strong,
+body[data-g-theme="one"] #g-xset .g-xset-title,
+body[data-g-theme="one"] #g-xset .g-xset-label { font-family: var(--g-display, var(--g-font)); font-weight: 300; }
+body[data-g-theme="one"] #g-xset .g-xset-page.on { background: #24282c; box-shadow: inset calc(4 * var(--cpx)) 0 #6abf3a; }
+body[data-g-theme="one"] #g-xset .g-xset-row { background: #17191c; }
+body[data-g-theme="one"] #g-xset .g-xset-row + .g-xset-row { border-top: 1px solid rgba(255, 255, 255, .06); }
+body[data-g-theme="one"] #g-xset .g-xset-row:is(.focused, :focus-visible) { background: #24282c; box-shadow: inset calc(4 * var(--cpx)) 0 #6abf3a; }
+body[data-g-theme="one"] #g-xset .g-xset-dialog,
+body[data-g-theme="one"] #g-xset .g-xset-action,
+body[data-g-theme="one"] #g-xset .g-xset-option { border-radius: 0; }
+
+/* 360: the blade-free Metro System Settings list on the light grey panel. No rail; the frame is one column. */
+body[data-g-theme="x360"] #g-xset { color: #2b2b2b; }
+body[data-g-theme="x360"] #g-xset .g-xset-bg { background: linear-gradient(180deg, #f7f7f7 0%, #ededed 46%, #d9d9d9 100%); }
+body[data-g-theme="x360"] #g-xset .g-xset-frame { grid-template-columns: minmax(0, 1fr); }
+body[data-g-theme="x360"] #g-xset .g-xset-rail { display: none; }
+body[data-g-theme="x360"] #g-xset .g-xset-main { padding: calc(76 * var(--cpx)) calc(300 * var(--cpx)) calc(56 * var(--cpx)); grid-template-rows: auto minmax(0, 1fr) auto; }
+body[data-g-theme="x360"] #g-xset .g-xset-head { margin: 0 0 calc(30 * var(--cpx)); }
+body[data-g-theme="x360"] #g-xset .g-xset-back { width: calc(50 * var(--cpx)); height: calc(50 * var(--cpx)); background: #fff; box-shadow: 0 calc(2 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 0, 0, .22); color: #3a3a3a; }
+body[data-g-theme="x360"] #g-xset .g-xset-kicker { margin: 0 0 calc(6 * var(--cpx)); color: #8a8a8a; font: 300 calc(16 * var(--cpx))/1.2 var(--g-display); letter-spacing: .14em; }
+body[data-g-theme="x360"] #g-xset .g-xset-title { color: #262626; font: 300 calc(52 * var(--cpx))/1.05 var(--g-display); text-transform: lowercase; letter-spacing: .005em; }
+body[data-g-theme="x360"] #g-xset .g-xset-clock { color: #5f5f5f; font: 300 calc(26 * var(--cpx))/1 var(--g-display); }
+body[data-g-theme="x360"] #g-xset .g-xset-body { border-top: 1px solid #c9c9c9; }
+body[data-g-theme="x360"] #g-xset .g-xset-row { min-height: calc(72 * var(--cpx)); padding: 0 calc(22 * var(--cpx)); border-bottom: 1px solid #cfcfcf; color: #333; font: 300 calc(27 * var(--cpx))/1.2 var(--g-display); }
+body[data-g-theme="x360"] #g-xset .g-xset-row + .g-xset-row { border-top: 0; }
+body[data-g-theme="x360"] #g-xset .g-xset-row:is(.focused, :focus-visible) { background: linear-gradient(180deg, #86c25a, #5a9e35); color: #fff; box-shadow: none; }
+body[data-g-theme="x360"] #g-xset .g-xset-row:is(.focused, :focus-visible) .g-xset-value,
+body[data-g-theme="x360"] #g-xset .g-xset-row:is(.focused, :focus-visible) .g-xset-chevron,
+body[data-g-theme="x360"] #g-xset .g-xset-row:is(.focused, :focus-visible) .g-xset-icon { color: #fff; opacity: .9; }
+body[data-g-theme="x360"] #g-xset .g-xset-icon { color: #6b6b6b; }
+body[data-g-theme="x360"] #g-xset .g-xset-value { color: #6a6a6a; opacity: 1; }
+body[data-g-theme="x360"] #g-xset .g-xset-meter { background: #c4c4c4; }
+body[data-g-theme="x360"] #g-xset .g-xset-switch { display: none; }
+body[data-g-theme="x360"] #g-xset .g-xset-note { color: #777; }
+body[data-g-theme="x360"] #g-xset .g-xset-hints { color: #555; }
+body[data-g-theme="x360"] #g-xset .g-xset-hints b { border-color: #777; }
+body[data-g-theme="x360"] #g-xset .g-xset-overlay { background: rgba(40, 40, 40, .5); }
+body[data-g-theme="x360"] #g-xset .g-xset-dialog { background: linear-gradient(180deg, #ffffff, #ececec); color: #333; box-shadow: 0 calc(18 * var(--cpx)) calc(54 * var(--cpx)) rgba(0, 0, 0, .45); }
+body[data-g-theme="x360"] #g-xset .g-xset-dialog h3 { color: #333; font: 300 calc(30 * var(--cpx))/1.15 var(--g-display); }
+body[data-g-theme="x360"] #g-xset .g-xset-option { color: #333; font-family: var(--g-display); font-weight: 300; }
+body[data-g-theme="x360"] #g-xset .g-xset-option.on { background: linear-gradient(180deg, #86c25a, #5a9e35); color: #fff; }
+body[data-g-theme="x360"] #g-xset .g-xset-option:is(.focused, :focus-visible) { background: #dcdcdc; box-shadow: inset 0 0 0 calc(3 * var(--cpx)) #5a9e35; color: #222; }
+body[data-g-theme="x360"] #g-xset .g-xset-track { background: #cfcfcf; box-shadow: inset 0 calc(1 * var(--cpx)) calc(2 * var(--cpx)) rgba(0, 0, 0, .18); }
+body[data-g-theme="x360"] #g-xset .g-xset-track i { background: #5a9e35; opacity: 1; }
+body[data-g-theme="x360"] #g-xset .g-xset-track b { background: #fff; box-shadow: 0 calc(1 * var(--cpx)) calc(3 * var(--cpx)) rgba(0, 0, 0, .4); }
+body[data-g-theme="x360"] #g-xset .g-xset-action { background: #dedede; color: #333; font-family: var(--g-display); font-weight: 300; }
+body[data-g-theme="x360"] #g-xset .g-xset-action:is(.focused, :focus-visible) { background: #5a9e35; color: #fff; }
+
+/* Opening and page-change motion; the reduced-motion rule keeps the screens and removes the movement. */
+#g-xset[data-anim="in"] .g-xset-frame { animation: g-xset-in .3s cubic-bezier(.2, .8, .2, 1) both; }
+#g-xset[data-anim="deep"] .g-xset-rows { animation: g-xset-deep .28s cubic-bezier(.2, .8, .2, 1) both; }
+#g-xset[data-anim="back"] .g-xset-rows { animation: g-xset-back .24s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes g-xset-in { from { opacity: 0; transform: translateY(calc(14 * var(--cpx))); } to { opacity: 1; transform: none; } }
+@keyframes g-xset-deep { from { opacity: 0; transform: translateX(calc(34 * var(--cpx))); } to { opacity: 1; transform: none; } }
+@keyframes g-xset-back { from { opacity: 0; transform: translateX(calc(-26 * var(--cpx))); } to { opacity: 1; transform: none; } }
+html.reduce-motion #g-xset,
+html.reduce-motion #g-xset * { animation: none !important; transition: none !important; }
+
 /* ---------- Console options: the decorative rows garrison-theme-settings.js prepends to every settings page ----------
    One `.g-con-options` block per page: a console wordmark, the console's own page name, its system version, then
    that page's real options as icon / label / value rows. The block is aria-hidden and pointer-events:none, so
