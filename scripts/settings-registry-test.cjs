@@ -304,15 +304,47 @@ function eventFor(events, name, id) {
   // Anchored so the surviving `XSET_CONSOLES` (the Xbox-era list) does not count as the deleted table.
   assert.doesNotMatch(settingsShell, /^\s*(?:const|let|var)\s+CONSOLES\s*=|function conBlock|paintConsole/m, 'the hard-coded console option table stays deleted');
   assert.doesNotMatch(readRenderer('garrison-theme-screens.css'), /#settings-dialog \.g-con-option/, 'the decorative console option CSS stays deleted');
-  // The Xbox shell must render registry rows (with their registry id in the DOM) and cover exactly the three
-  // Xbox eras; the retro shells read the same registry through gSettings.layout/scanShellLayout.
-  assert.match(settingsShell, /XSET_CONSOLES = \['series', 'one', 'x360'\]/, 'the Xbox shell covers Series, One and 360');
-  assert.match(settingsShell, /data-setting-id="\$\{xsetEscape\(row\.id\)\}"/, 'every rendered Xbox settings row carries its registry id');
-  const retroShell = readRenderer('garrison-theme-retro.js');
-  for (const console of ['ps3', 'ps4', 'wii', '3ds']) {
-    // `layout('ps4')` and `scanShellLayout('ps4', force)` both count: the shells may pass extra arguments.
-    assert.match(retroShell, new RegExp(`(?:layout\\(|scanShellLayout\\()['"]${console}['"][,)]`), `the ${console} shell reads its pages from the registry`);
+
+  // ---------- One shared settings shell, seven console skins (this task) ----------
+  // guard 1: the shell is loaded, and it reads the registry for pages, rows, values, wording and changes. This
+  // fails if someone replaces the registry-driven model with another hand-written list.
+  const html = readRenderer('index.html');
+  const registryAt = html.indexOf('garrison-settings-registry.js');
+  const shellAt = html.indexOf('garrison-settings-shell.js');
+  const retroAt = html.indexOf('garrison-theme-retro.js');
+  assert.ok(registryAt >= 0 && shellAt > registryAt, 'the shared settings shell loads after the registry');
+  assert.ok(shellAt >= 0 && retroAt > shellAt, 'the shared settings shell loads before the retro skins');
+  const sharedShell = readRenderer('garrison-settings-shell.js');
+  assert.match(sharedShell, /api\.layout\(consoleId\)/, 'the shared shell reads each console layout from gSettings.layout');
+  assert.match(sharedShell, /api\.available\(row\.id\)/, 'the shared shell asks gSettings.available per row');
+  assert.match(sharedShell, /api\.get\(row\.id\)/, 'the shared shell reads values through gSettings.get');
+  assert.match(sharedShell, /api\.options\(row\.id\)/, 'the shared shell reads choice lists through gSettings.options');
+  assert.match(sharedShell, /api\.label\(row\.id, consoleId\)/, 'the shared shell asks the registry for each console wording');
+  assert.match(sharedShell, /root\.gSettings\.set\(/, 'the shared shell writes every value through gSettings.set');
+  for (const name of ['open', 'pages', 'rows', 'move', 'activate', 'back', 'close', 'refresh']) {
+    assert.match(sharedShell, new RegExp(`\\b${name}[,(]`), `the shared shell exposes ${name}()`);
   }
+  // guard 2: every rendered row still carries the registry id it came from. (The Xbox skin and the four retro
+  // skins each have their own row template; a row that loses data-setting-id is no longer traceable to the registry.)
+  const dataIds = (sharedShell.match(/data-setting-id="\$\{esc\(row\.id\)\}"/g) || []).length;
+  assert.ok(dataIds >= 1, 'the shared shell keeps each rendered row tied to its registry id');
+  const retroShell = readRenderer('garrison-theme-retro.js');
+  const retroDataIds = (retroShell.match(/data-setting-id="\$\{esc\(row\.id\)\}"/g) || []).length;
+  assert.ok(retroDataIds >= 4, `all four retro skins keep their registry ids on rendered rows (found ${retroDataIds})`);
+  assert.doesNotMatch(retroShell, /data-setting-id="\$\{row\.id\}"/, 'production rows escape the registry id');
+  // guard 3: each console is a skin on the one model, and no shell keeps a second state machine.
+  for (const console of ['ps3', 'ps4', 'wii', '3ds']) {
+    assert.match(retroShell, new RegExp(`gShell\\.define\\('${console}'`), `the ${console} screen is a shell skin`);
+  }
+  for (const console of ['series', 'one', 'x360']) {
+    assert.match(sharedShell, new RegExp(`define\\('${console}'`), `the ${console} screen is a shell skin`);
+    assert.doesNotMatch(settingsShell, new RegExp(`\\b${console}\\b[^\\n]*gSettings`), `the ${console} shell is not still in the label file`);
+  }
+  assert.doesNotMatch(retroShell, /\b(ps3Open|ps3Popup|ps4Set|wiiSet|dsSet)\b/, 'the old per-console shell state machines stay deleted');
+  assert.doesNotMatch(retroShell, /scanShellLayout|loadShellRows/, 'the old duplicated scan/load helpers stay deleted');
+  assert.doesNotMatch(settingsShell, /gSettings|#g-xset|XSET_|xsetEscape/, 'garrison-theme-settings.js is labels + packs only');
+  assert.match(settingsShell, /g-pack-section/, 'the console pack manager stays in the label file');
+  assert.match(settingsShell, /const ERAS = \{/, 'the era label map stays in the label file');
 
   console.log(`settings-registry tests passed: ${api.entries.length} entries, ${CONSOLES.length} console layouts`);
 })().catch(error => { console.error(error); process.exit(1); });

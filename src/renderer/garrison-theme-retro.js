@@ -78,7 +78,6 @@
   const gameLine = (game, extra = '') => [extra, playtime(game), game?.installed === false ? 'Not installed' : game?.provider === 'PC' ? '' : game?.provider]
     .filter(Boolean).join(' · ');
   const gameItem = game => ({ label: game.title, sub: gameLine(game), action: 'select-game', data: { 'game-id': game.id }, game, boot: true });
-  const settingsItem = (label, page, file, glyph) => ({ label, action: 'g-retro-settings', data: { page }, file, glyph });
 
   // Achievements for the PS4 content cards and the 3DS banner, cached per game.
   const achCache = new Map();
@@ -129,8 +128,8 @@
       // The Settings column is the registry's PS3 layout (task S2): one XMB item per settings page, each row
       // backed by a real gSettings entry. Nothing here is hand-written; gSettings.layout('ps3') owns the order.
       { id: 'settings', label: 'Settings', file: 'settings', glyph: 'settings', items: ps3SettingsItems() },
-      { id: 'photo', label: 'Photo', file: 'photo', glyph: 'photo', items: [settingsItem('Backgrounds', 'personalization', 'photo-gallery', 'color'), ...captureItems('photo')] },
-      { id: 'music', label: 'Music', file: 'music', glyph: 'music', items: [settingsItem('Menu Sounds', 'audio', 'playlist', 'volume')] },
+      { id: 'photo', label: 'Photo', file: 'photo', glyph: 'photo', items: [{ label: 'Backgrounds', action: 'gsh-page', data: { page: 'theme' }, file: 'photo-gallery', glyph: 'color' }, ...captureItems('photo')] },
+      { id: 'music', label: 'Music', file: 'music', glyph: 'music', items: [{ label: 'Menu Sounds', action: 'gsh-page', data: { page: 'sound' }, file: 'playlist', glyph: 'volume' }] },
       { id: 'video', label: 'Video', file: 'video', glyph: 'video', items: [{ label: 'Game Clips', sub: captures?.some(item => item.kind === 'video') ? 'Recorded from your games' : 'No clips yet', action: 'g-retro-captures', file: 'video', glyph: 'video' }, ...captureItems('video')] },
       { id: 'tv', label: 'TV/Video Services', file: 'remote', glyph: 'tv', items: [{ label: 'Game Pass', sub: 'Stream and download', action: 'dashboard-gamepass', file: 'remote', glyph: 'game' }] },
       { id: 'game', label: 'Game', file: 'play', glyph: 'game', start: 2, items: [{ label: 'Trophy Collection', action: 'g-account', file: 'trophy', glyph: 'trophy' }, { label: 'Game Data Utility', sub: 'All games and apps', action: 'library', file: 'folder-game', glyph: 'library' }, ...list.map(gameItem)] },
@@ -154,9 +153,14 @@
     const cats = xmbCategories();
     xmbCat = Math.max(0, Math.min(xmbCat, cats.length - 1));
     const cat = cats[xmbCat], items = cat.items;
-    // A settings page only belongs to the Settings column; a library refresh that lands on another category
-    // closes the sub-list instead of leaving it floating over a different column.
-    if (ps3Open && cat.id !== 'settings') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
+    // The Settings column's items do not depend on the library or its artwork, so a refresh keeps the existing
+    // nodes while the shared shell is open. That keeps the opener element (and the focus handed back on close)
+    // alive instead of detaching it under the open sub-list.
+    if (cat.id === 'settings' && window.gShell?.isOpen?.('ps3')) rebuild = false;
+    // While the shared shell owns the Settings page, the XMB column follows the shell's own page cursor, so a page
+    // opened from a press and a page opened by a move land on the same highlight.
+    const shellState = window.gShell?.state?.();
+    if (cat.id === 'settings' && shellState?.console === 'ps3') xmbItem.settings = shellState.level === 'page' ? shellState.pageIndex : shellState.focus;
     if (xmbItem[cat.id] == null) xmbItem[cat.id] = Math.min(cat.start || 0, items.length - 1);
     const sel = xmbItem[cat.id] = Math.max(0, Math.min(xmbItem[cat.id], items.length - 1));
     document.body.style.setProperty('--xmb-tint', xmbTint());
@@ -206,14 +210,8 @@
       el.classList.toggle('above', i < sel);
     });
     chrome.innerHTML = `<div class="xmb-clock"><span class="xmb-me"><i></i>${esc(name())}</span><span class="xmb-time">${esc(dayMonth())} ${esc(time())}</span><i class="xmb-dial"></i></div>`;
-    renderXmbSub();
-    renderXmbPop();
-    // The Settings column's own pop-up owns the focus while it is open; otherwise the selected row or item.
-    const focusTarget = ps3Popup
-      ? (ps3Popup.mode === 'info' ? host.querySelector('.xmb-pop') : ps3Popup.mode === 'slider' ? host.querySelector('.xmb-bar-dialog') : host.querySelector('.xmb-pop-option.on'))
-      : ps3Open ? host.querySelector('.xmb-sub-item.on') : list.querySelector('.xmb-item.on');
-    focusEl(focusTarget);
-    if (cat.id === 'settings') scanPs3Settings();
+    // The shell paints its own sub-list/pop-up and owns the focus while it is open; otherwise the column item does.
+    if (!window.gShell?.isOpen?.('ps3')) focusEl(list.querySelector('.xmb-item.on'));
     xmbBackdrop(items[sel]);
     loadCaptures();
     xmbWave.start();
@@ -237,13 +235,11 @@
       host.classList.add('pic-on');
     }).catch(() => {}), 900);
   }
-  // ---------- PS3: Settings, driven by gSettings (task S2) ----------
-  // The Settings column is the registry's PS3 layout: one XMB item per settings page, in the layout's order.
-  // Choosing a page slides the XMB column left and opens that page's rows in the XMB's right-hand panel. Choosing
-  // a row opens the console's option pop-up: a translucent black panel of values for a choice, On/Off for a
-  // toggle, and the horizontal bar dialog for a slider. Actions run as soon as they are chosen; read-only facts
-  // open a panel showing the real value. Only rows whose available() is true are listed, and every value comes
-  // from gSettings, so nothing on this screen can drift from what the launcher can actually do.
+  // ---------- PS3: Settings, the XMB skin (garrison-settings-shell.js owns the model) ----------
+  // The Settings column is the registry's PS3 layout: one XMB item per page. Choosing a page slides the column
+  // left and opens that page's rows in the XMB's right-hand panel; choosing a row opens the console's option
+  // pop-up. The shared shell owns the page/row/value state, availability, Back grammar and focus restore; this
+  // block only paints the XMB's own chrome and moves its column.
   const PS3_PAGE_ICONS = { display: 'display-settings', sound: 'sound-settings', theme: 'theme-settings', time: 'time-settings', system: 'system-settings', accessory: 'acc-settings', network: 'network-settings', notifications: 'chat-settings', game: 'game-settings', account: 'psn', advanced: 'settings' };
   const PS3_PAGE_GLYPHS = { display: 'tv', sound: 'volume', theme: 'color', time: 'language', system: 'settings', accessory: 'controller', network: 'globe', notifications: 'bell', game: 'game', account: 'contact', advanced: 'settings' };
   const PS3_ROW_ICONS = {
@@ -264,317 +260,41 @@
     notifyFriends: 'bell', notifyDownloads: 'bell', notifyAchievements: 'bell', pauseDownloadsWhilePlaying: 'download', libraryCounts: 'library',
     profile: 'contact', steamAccount: 'shop', epicAccount: 'shop', artworkKey: 'photo', launcherSettings: 'settings'
   };
-  // The launcher's Settings form is only filled from disk when its dialog opens, but saveSettingsForm() saves
-  // every field at once. A console form row must not show (or save) those defaults over the player's real
-  // account and display settings, so fill the form from disk once before the XMB reads or writes a form row.
-  const PS3_FORM_ROWS = new Set(['uiScale', 'textSize', 'tileRadius', 'reducedMotion', 'highContrastFocus', 'fullscreen', 'startupAnimation', 'soundEffects', 'showUninstalledSteam', 'showUninstalledEpic', 'shuffleHomeScreenshots', 'randomScreenshotBackground']);
-  let ps3FormReady = null;
-  function ps3SyncLauncherForm() {
-    if (ps3FormReady) return ps3FormReady;
-    ps3FormReady = (async () => {
-      if (typeof window.launcher?.getSettings !== 'function') return;
-      const settings = await window.launcher.getSettings();
-      const value = (id, input) => { const el = document.getElementById(id); if (el) { el.value = String(input); return el; } return null; };
-      const checked = (id, on) => { const el = document.getElementById(id); if (el) el.checked = Boolean(on); return el; };
-      const region = document.getElementById('player-region');
-      if (region) {
-        const savedRegion = settings.region || 'auto';
-        if (![...region.options].some(option => option.value === savedRegion)) region.add(new Option(savedRegion, savedRegion));
-        region.value = savedRegion;
-      }
-      value('sgdb-key', settings.steamGridDbKey || '');
-      value('steam-api-key', settings.steamApiKey || '');
-      value('steam-id64', settings.steamId64 || '');
-      checked('show-uninstalled-toggle', settings.showUninstalledSteam);
-      checked('steam-family-toggle', settings.includeSteamFamily !== false);
-      checked('show-uninstalled-epic-toggle', settings.showUninstalledEpic);
-      checked('uninstalled-ubisoft', settings.showUninstalledUbisoft);
-      checked('uninstalled-ea', settings.showUninstalledEA);
-      checked('uninstalled-battlenet', settings.showUninstalledBattleNet);
-      value('legendary-path', settings.legendaryPath || '');
-      checked('fullscreen-toggle', settings.fullscreen);
-      checked('sound-toggle', settings.soundEffects !== false);
-      checked('startup-toggle', settings.startupAnimation !== false);
-      value('ui-scale', Math.round((settings.uiScale || 1) * 100));
-      value('tile-radius', settings.tileRadius ?? 8);
-      checked('reduced-motion-toggle', settings.reducedMotion);
-      value('text-size', Math.round((settings.textScale || 1) * 100));
-      checked('high-contrast-focus-toggle', settings.highContrastFocus);
-      checked('random-screenshot-background-toggle', settings.useRandomScreenshotBackground !== false);
-      checked('shuffle-home-screenshots-toggle', settings.shuffleHomeScreenshots !== false);
-      if (typeof renderDuplicateSettings === 'function') renderDuplicateSettings(settings);
-      // The launcher's previews and its "did this field change?" baseline follow the values now in the form.
-      try { if (typeof previewPersonalization === 'function') previewPersonalization(); } catch { /* Preview only. */ }
-      try {
-        if (typeof state !== 'undefined' && state) state.settingsOriginal = {
-          uiScale: Number(document.querySelector('#ui-scale')?.value) / 100,
-          tileRadius: Number(document.querySelector('#tile-radius')?.value),
-          reducedMotion: Boolean(document.querySelector('#reduced-motion-toggle')?.checked),
-          textScale: Number(document.querySelector('#text-size')?.value) / 100,
-          highContrastFocus: Boolean(document.querySelector('#high-contrast-focus-toggle')?.checked),
-          steamGridDbKey: document.querySelector('#sgdb-key')?.value.trim() || '',
-          libraryKey: typeof librarySettingsKey === 'function' ? librarySettingsKey() : ''
-        };
-      } catch { /* The launcher's own state is optional here. */ }
-    })().catch(() => { ps3FormReady = null; });
-    return ps3FormReady;
-  }
-  // Percent, milliseconds and console words, as the console printed them beside a value.
-  const PS3_UNITS = { uiScale: '%', textSize: '%', volume: '%', brightness: '%', menuMusicVolume: '%', tileRadius: ' px', screensaverDelay: ' min' };
-  // The Enter Button setting swaps the PlayStation face buttons the same way the input layer already does.
-  const ps3Glyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { enter: '○', back: '✕' } : { enter: '✕', back: '○' });
-  const ps3LayoutPages = () => (window.gSettings?.layout ? window.gSettings.layout('ps3') : []);
-  let ps3Layout = null, ps3LayoutAt = 0, ps3LayoutPromise = null, ps3ScanSeq = 0, ps3RowsSeq = 0;
-  let ps3Open = null, ps3Sub = 0, ps3Popup = null;
-  const ps3PageList = () => ps3Layout || ps3LayoutPages();
+  // The Enter Button pref swaps the PlayStation face buttons the same way the input layer already does.
+  const ps3Glyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { confirm: '○', back: '✕' } : { confirm: '✕', back: '○' });
   function ps3SettingsItems() {
-    return ps3PageList().map(page => ({
-      label: page.title, action: 'xmb-settings-page', data: { page: page.id },
+    return window.gShell.pageList('ps3').map(page => ({
+      label: page.title, action: 'gsh-page', data: { page: page.id },
       file: PS3_PAGE_ICONS[page.id] || 'settings', glyph: PS3_PAGE_GLYPHS[page.id] || 'settings'
     }));
   }
-  // Find out which rows this PC can really honour. The Settings column only lists a page that still has at
-  // least one live row (Advanced always stays, even if every other row were unavailable).
-  function scanPs3Settings(force = false) {
-    if (!window.gSettings) return;
-    if (!force && ps3Layout && Date.now() - ps3LayoutAt < 30000) return;
-    if (ps3LayoutPromise) return ps3LayoutPromise;
-    const layout = ps3LayoutPages();
-    if (!layout.length) return;
-    const token = ++ps3ScanSeq;
-    const selectedId = ps3Layout?.[Number(xmbItem.settings)]?.id;
-    ps3LayoutPromise = (async () => {
-      const pages = [];
-      for (const page of layout) {
-        const rows = [];
-        for (const row of page.rows) {
-          let available = false;
-          try { available = await window.gSettings.available(row.id); } catch { available = false; }
-          rows.push({ id: row.id, available });
-        }
-        pages.push({ id: page.id, title: page.title, rows });
-      }
-      if (token !== ps3ScanSeq) return;
-      ps3Layout = pages.filter(page => page.rows.some(row => row.available) || page.id === 'advanced');
-      ps3LayoutAt = Date.now();
-      if (selectedId) {
-        const index = ps3Layout.findIndex(page => page.id === selectedId);
-        if (index >= 0) xmbItem.settings = index;
-      }
-      if (theme() === 'ps3' && state.view === 'home') {
-        const cat = xmbCategories()[xmbCat];
-        if (cat?.id === 'settings' && ps3Open && !ps3PageList().some(page => page.id === ps3Open.id)) ps3ClosePage();
-        else renderXmb(false);
-      }
-    })().catch(() => {}).finally(() => { ps3LayoutPromise = null; });
-    return ps3LayoutPromise;
-  }
-  // Read one page's real rows: availability first, then the value and (for a choice) the list of values.
-  async function ps3LoadPageRows(page) {
-    const rows = [];
-    const g = window.gSettings;
-    if (page.rows.some(row => PS3_FORM_ROWS.has(row.id))) await ps3SyncLauncherForm();
-    for (const row of page.rows) {
-      let available = row.available !== false;
-      if (row.available === undefined) { try { available = await g.available(row.id); } catch { available = false; } }
-      if (!available) continue;
-      const entry = g.entry(row.id);
-      if (!entry) continue;
-      let value = null;
-      try { value = await g.get(row.id); } catch { value = null; }
-      let options = [];
-      if (entry.kind === 'choice') { try { options = await g.options(row.id); } catch { options = []; } }
-      rows.push({ id: row.id, kind: entry.kind, label: g.label(row.id, 'ps3'), min: entry.min, max: entry.max, step: entry.step, value, options });
-    }
-    return rows;
-  }
-  // The console printed a number and its unit, On/Off, or the chosen value's own wording.
-  function ps3Format(row, value) {
-    if (value === null || value === undefined || value === '') return '';
-    if (row.kind === 'slider') return `${Math.round(Number(value))}${PS3_UNITS[row.id] || ''}`;
-    if (row.kind === 'toggle') return value ? 'On' : 'Off';
-    if (row.kind === 'choice') {
-      const option = (row.options || []).find(item => String(item.value) === String(value));
-      return option?.label || String(value);
-    }
-    return String(value);
-  }
-  function ps3Hint(mode) {
-    const glyphs = ps3Glyphs();
-    if (mode === 'info') return `<button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-cancel" aria-label="Back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button>`;
-    return `<button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-commit"><b class="xmb-glyph" aria-hidden="true">${glyphs.enter}</b> Set</button>
-      <button class="xmb-pop-action focusable" type="button" data-action="xmb-pop-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Cancel</button>`;
-  }
-  function ps3OpenPage(id) {
-    const pages = ps3PageList();
-    const index = pages.findIndex(page => page.id === id);
-    const page = pages[index];
-    if (!page) return;
-    // Advanced (launcher) is one real action: run it instead of opening a page with a single row.
-    if (page.rows.length === 1 && page.rows[0].id === 'launcherSettings') { ps3RunAction('launcherSettings'); return; }
-    play('confirm');
-    const token = ++ps3RowsSeq;
-    ps3Open = {
-      id: page.id, title: page.title, loading: true, error: '',
-      rows: page.rows.filter(row => row.available !== false).map(row => ({
-        id: row.id, kind: window.gSettings?.entry(row.id)?.kind || 'info', label: window.gSettings?.label(row.id, 'ps3') || row.id, value: null, options: [], pending: true
-      }))
-    };
-    ps3Sub = 0;
-    ps3Popup = null;
-    renderXmb(false);
-    ps3LoadPageRows(page).then(rows => {
-      if (token !== ps3RowsSeq || ps3Open?.id !== page.id) return;
-      ps3Open.rows = rows;
-      ps3Open.loading = false;
-      ps3Sub = Math.min(ps3Sub, Math.max(0, rows.length - 1));
-      renderXmb(false);
-    }).catch(error => {
-      if (token !== ps3RowsSeq || ps3Open?.id !== page.id) return;
-      ps3Open.loading = false;
-      ps3Open.error = error?.message || 'Could not read these settings.';
-      renderXmb(false);
-    });
-  }
-  function ps3ClosePage() {
-    if (!ps3Open) return;
-    play('back');
-    ps3Open = null; ps3Sub = 0; ps3Popup = null;
-    renderXmb(false);
-  }
-  function ps3RunAction(id) {
-    play('confirm');
-    // Open the launcher's own dialog from the XMB's normal state, so closing it lands back on the pages list.
-    if (id === 'launcherSettings') { ps3Open = null; ps3Sub = 0; ps3Popup = null; renderXmb(false); }
-    Promise.resolve(window.gSettings?.set(id, null)).catch(error => {
-      if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
-    }).then(() => {
-      const row = ps3Open?.rows?.find(item => item.id === id);
-      if (!row) return;
-      window.gSettings.get(id).then(value => { row.value = value; if (ps3Open) renderXmb(false); }).catch(() => {});
-    });
-  }
-  function ps3OpenRow(index) {
-    const row = ps3Open?.rows?.[index];
-    if (!row || row.pending) return;
-    if (row.kind === 'action') { ps3RunAction(row.id); return; }
-    if (row.kind === 'info') {
-      play('confirm');
-      ps3Popup = { mode: 'info', row };
-    } else if (row.kind === 'toggle') {
-      play('confirm');
-      ps3Popup = { mode: 'toggle', row, options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }], selected: row.value ? 0 : 1, saving: false, error: '' };
-    } else if (row.kind === 'slider') {
-      play('confirm');
-      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
-      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
-      const raw = Number(row.value);
-      const value = Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min;
-      ps3Popup = { mode: 'slider', row, min, max, step: Number(row.step) || 1, value, original: value, saving: false, error: '' };
-    } else if (row.kind === 'choice') {
-      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
-      play('confirm');
-      ps3Popup = { mode: 'choice', row, options: row.options, selected: Math.max(0, row.options.findIndex(option => option.value === row.value)), saving: false, error: '' };
-    } else return;
-    renderXmb(false);
-  }
-  function ps3SubMove(direction) {
-    if (direction === 'left') { ps3ClosePage(); return; }
-    if (direction !== 'up' && direction !== 'down') return;
-    const count = ps3Open?.rows?.length || 0;
-    if (!count) return;
-    const next = Math.max(0, Math.min(count - 1, ps3Sub + (direction === 'down' ? 1 : -1)));
-    if (next === ps3Sub) return;
-    ps3Sub = next;
-    play('navigate');
-    renderXmb(false);
-  }
-  function ps3PopupMove(direction) {
-    const popup = ps3Popup;
-    if (!popup || popup.saving || popup.mode === 'info') return;
-    if (popup.mode === 'slider') {
-      if (direction !== 'left' && direction !== 'right') return;
-      const next = Math.max(popup.min, Math.min(popup.max, popup.value + (direction === 'right' ? popup.step : -popup.step)));
-      if (next === popup.value) return;
-      popup.value = Number(next.toFixed(6));
-      play('navigate');
-      renderXmb(false);
-      return;
-    }
-    if (direction !== 'up' && direction !== 'down') return;
-    const next = Math.max(0, Math.min(popup.options.length - 1, popup.selected + (direction === 'down' ? 1 : -1)));
-    if (next === popup.selected) return;
-    popup.selected = next;
-    play('navigate');
-    renderXmb(false);
-  }
-  function ps3CancelPopup() {
-    if (!ps3Popup || ps3Popup.saving) return;
-    play('back');
-    ps3Popup = null;
-    renderXmb(false);
-  }
-  async function ps3ConfirmPopup() {
-    const popup = ps3Popup;
-    if (!popup || popup.saving) return;
-    if (popup.mode === 'info') { ps3CancelPopup(); return; }
-    const value = popup.mode === 'slider' ? popup.value : popup.options[popup.selected]?.value;
-    popup.saving = true; popup.error = '';
-    renderXmb(false);
-    try {
-      if (PS3_FORM_ROWS.has(popup.row.id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(popup.row.id, value);
-      popup.row.value = await window.gSettings.get(popup.row.id).catch(() => value);
-      ps3Popup = null;
-      play('confirm');
-      renderXmb(false);
-    } catch (error) {
-      popup.saving = false;
-      popup.error = error?.message || 'Could not change this setting.';
-      play('back');
-      renderXmb(false);
-    }
-  }
-  function ps3Seek(event) {
-    const popup = ps3Popup;
-    const track = host.querySelector('.xmb-bar-track');
-    if (!popup || popup.mode !== 'slider' || !track) return;
-    const rect = track.getBoundingClientRect();
-    if (!rect.width) return;
-    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const step = popup.step || 1;
-    const value = popup.min + Math.round((fraction * (popup.max - popup.min)) / step) * step;
-    popup.value = Number(Math.max(popup.min, Math.min(popup.max, value)).toFixed(6));
-    play('navigate');
-    renderXmb(false);
-  }
-  function renderXmbSub() {
+  function renderPs3Sub(state) {
     const panel = host.querySelector('.xmb-sub');
-    if (!panel) return;
-    const open = Boolean(ps3Open);
+    if (!panel) { renderXmb(true); return; }
+    const open = state.level === 'page';
     host.classList.toggle('sub-open', open);
     panel.classList.toggle('open', open);
     panel.setAttribute('aria-hidden', String(!open));
     if (!open) { panel.innerHTML = ''; panel.removeAttribute('data-key'); return; }
-    const page = ps3Open;
-    const rows = page.rows || [];
+    const rows = state.rows || [];
     const glyphs = ps3Glyphs();
-    const key = [page.id, page.loading ? 1 : 0, page.error, ps3Sub, glyphs.enter, glyphs.back, rows.map(row => `${row.id}:${row.kind}:${row.pending ? 1 : 0}:${row.value}`).join(',')].join('|');
+    const format = row => window.gShell.valueText(row, row.value);
+    const key = [state.page?.id, state.loading ? 1 : 0, state.error, state.focus, glyphs.confirm, glyphs.back, rows.map(row => `${row.id}:${row.kind}:${row.value}`).join(',')].join('|');
     if (panel.dataset.key === key) return;
     panel.dataset.key = key;
-    panel.innerHTML = `<div class="xmb-sub-head"><span class="xmb-sub-kicker">${esc(page.title)}</span><small>${rows.length ? `${ps3Sub + 1} / ${rows.length}` : ''}</small></div>
-      <div class="xmb-sub-list">${rows.length ? rows.map((row, index) => `<button class="xmb-sub-item focusable${index === ps3Sub ? ' on' : ''}" type="button" data-action="xmb-settings-row" data-row="${index}" aria-label="${esc(row.label)}${row.pending ? '' : `, ${esc(ps3Format(row, row.value))}`}">
-        <span class="xmb-sub-icon" aria-hidden="true">${row.pending ? '' : img(PS3I(PS3_ROW_ICONS[row.id] || 'settings'), icon(PS3_ROW_GLYPHS[row.id] || 'settings'))}</span>
+    panel.innerHTML = `<div class="xmb-sub-head"><span class="xmb-sub-kicker">${esc(state.page?.title || 'Settings')}</span><small>${rows.length ? `${state.focus + 1} / ${rows.length}` : ''}</small></div>
+      <div class="xmb-sub-list">${rows.length ? rows.map((row, index) => `<button class="xmb-sub-item focusable${index === state.focus ? ' on' : ''}" type="button" data-action="gsh-row" data-row="${index}" data-setting-id="${esc(row.id)}" data-kind="${row.kind}" aria-label="${esc(row.label)}${format(row) ? `, ${esc(format(row))}` : ''}">
+        <span class="xmb-sub-icon" aria-hidden="true">${img(PS3I(PS3_ROW_ICONS[row.id] || 'settings'), icon(PS3_ROW_GLYPHS[row.id] || 'settings'))}</span>
         <span class="xmb-sub-label">${esc(row.label)}</span>
-        <span class="xmb-sub-value">${row.pending ? '…' : esc(ps3Format(row, row.value))}</span>
+        <span class="xmb-sub-value">${esc(format(row))}</span>
         ${row.kind === 'action' ? '<span class="xmb-sub-open" aria-hidden="true">›</span>' : ''}
-      </button>`).join('') : `<p class="xmb-sub-empty">${page.loading ? 'Reading settings…' : esc(page.error || 'Nothing on this page is available on this PC.')}</p>`}</div>
-      <p class="xmb-sub-hint"><span class="xmb-hint-open"><b class="xmb-glyph" aria-hidden="true">${glyphs.enter}</b> Open</span><button class="xmb-pop-action focusable" type="button" data-action="xmb-settings-back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button></p>`;
+      </button>`).join('') : `<p class="xmb-sub-empty">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`}</div>
+      <p class="xmb-sub-hint"><span class="xmb-hint-open"><b class="xmb-glyph" aria-hidden="true">${glyphs.confirm}</b> Select</span><button class="xmb-pop-action focusable" type="button" data-action="gsh-back"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button></p>`;
   }
-  function renderXmbPop() {
+  function renderPs3Pop(state) {
     const panel = host.querySelector('.xmb-pop');
-    if (!panel) return;
-    const open = Boolean(ps3Popup);
+    if (!panel) { renderXmb(true); return; }
+    const open = Boolean(state.overlay);
     host.classList.toggle('pop-open', open);
     panel.classList.toggle('open', open);
     panel.setAttribute('aria-hidden', String(!open));
@@ -585,38 +305,131 @@
       delete panel.dataset.action;
       return;
     }
-    const popup = ps3Popup, row = popup.row;
-    const glyphs = ps3Glyphs();
-    const key = [row.id, popup.mode, popup.selected, popup.value, popup.saving ? 1 : 0, popup.error, glyphs.enter, glyphs.back].join('|');
+    const overlay = state.overlay, row = overlay.row, glyphs = ps3Glyphs();
+    const key = [row.id, overlay.mode, overlay.selected, overlay.value, overlay.focus, overlay.saving ? 1 : 0, overlay.error, glyphs.confirm, glyphs.back].join('|');
     if (panel.dataset.key === key) return;
     panel.dataset.key = key;
-    // The read-only panel is its own close target; the others focus their value list.
-    if (popup.mode === 'info') { panel.setAttribute('tabindex', '-1'); panel.dataset.action = 'xmb-pop-close'; }
+    if (overlay.mode === 'info') { panel.setAttribute('tabindex', '-1'); panel.dataset.action = 'gsh-cancel'; }
     else { panel.removeAttribute('tabindex'); delete panel.dataset.action; }
     let body = '';
-    if (popup.mode === 'slider') {
-      const span = popup.max - popup.min || 1;
-      const percent = Math.max(0, Math.min(100, ((popup.value - popup.min) / span) * 100));
-      body = `<div class="xmb-bar-dialog" role="slider" tabindex="-1" data-action="xmb-bar" aria-label="${esc(row.label)}" aria-valuemin="${popup.min}" aria-valuemax="${popup.max}" aria-valuenow="${popup.value}">
-        <span class="xmb-bar-arrow" aria-hidden="true">◀</span><span class="xmb-bar-track"><i style="width:${percent}%"></i><b style="left:${percent}%"></b></span><span class="xmb-bar-arrow" aria-hidden="true">▶</span></div>
-        <strong class="xmb-bar-value">${esc(ps3Format(row, popup.value))}</strong>`;
-    } else if (popup.mode === 'toggle' || popup.mode === 'choice') {
-      body = `<div class="xmb-pop-list" role="listbox" aria-label="${esc(row.label)}">${popup.options.map((option, index) => `<button class="xmb-pop-option focusable${index === popup.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === popup.selected}" data-action="xmb-pop-option" data-option="${index}"><span>${esc(option.label)}</span>${index === popup.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+    if (overlay.mode === 'slider') {
+      const p = window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value);
+      body = `<div class="xmb-bar-dialog focusable" role="slider" data-action="gsh-slider" aria-label="${esc(row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
+        <span class="xmb-bar-arrow" aria-hidden="true">◀</span><span class="xmb-bar-track" data-gsh-track><i style="width:${p}%"></i><b style="left:${p}%"></b></span><span class="xmb-bar-arrow" aria-hidden="true">▶</span></div>
+        <strong class="xmb-bar-value">${esc(window.gShell.valueText(row, overlay.value))}</strong>`;
+    } else if (overlay.mode === 'choice') {
+      body = `<div class="xmb-pop-list" role="listbox" aria-label="${esc(row.label)}">${overlay.options.map((option, index) => `<button class="xmb-pop-option focusable${index === overlay.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="gsh-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
     } else {
-      body = `<p class="xmb-pop-info">${esc(ps3Format(row, row.value) || 'Unavailable')}</p>`;
+      body = `<p class="xmb-pop-info">${esc(window.gShell.valueText(row, row.value) || 'Unavailable')}</p>`;
     }
-    panel.innerHTML = `<div class="xmb-pop-head"><strong>${esc(row.label)}</strong><small>${esc(ps3Open?.title || '')}</small></div>${body}
-      <p class="xmb-pop-hint">${popup.error ? `<span class="xmb-pop-error">${esc(popup.error)}</span>` : ''}${ps3Hint(popup.mode)}${popup.saving ? '<span class="xmb-pop-saving">Saving…</span>' : ''}</p>`;
+    const buttons = overlay.mode === 'info'
+      ? `<button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Back</button>`
+      : `<button class="xmb-pop-action focusable" type="button" data-action="gsh-commit"><b class="xmb-glyph" aria-hidden="true">${glyphs.confirm}</b> Set</button>
+        <button class="xmb-pop-action focusable" type="button" data-action="gsh-cancel"><b class="xmb-glyph" aria-hidden="true">${glyphs.back}</b> Cancel</button>`;
+    panel.innerHTML = `<div class="xmb-pop-head"><strong>${esc(row.label)}</strong><small>${esc(state.page?.title || '')}</small></div>${body}
+      <p class="xmb-pop-hint">${overlay.error ? `<span class="xmb-pop-error">${esc(overlay.error)}</span>` : ''}${buttons}${overlay.saving ? '<span class="xmb-pop-saving">Saving…</span>' : ''}</p>`;
+  }
+  function ps3MoveRoot(state, direction) {
+    const cats = xmbCategories();
+    if (direction === 'left' || direction === 'right') {
+      const next = Math.max(0, Math.min(cats.length - 1, xmbCat + (direction === 'right' ? 1 : -1)));
+      if (next === xmbCat) return false;
+      xmbCat = next;
+      if (xmbItem[cats[next].id] == null) xmbItem[cats[next].id] = Math.min(cats[next].start || 0, cats[next].items.length - 1);
+      play('category');
+      if (cats[next].id !== 'settings') {
+        window.gShell.close({ silent: true, sound: false, restore: false });
+        renderXmb(false);
+        return true;
+      }
+      renderXmb(false);
+      return true;
+    }
+    if (direction !== 'up' && direction !== 'down') return false;
+    const count = ps3SettingsItems().length;
+    if (!count) return false;
+    const focus = Math.max(0, Math.min(count - 1, state.focus + (direction === 'down' ? 1 : -1)));
+    if (focus === state.focus) return false;
+    state.focus = focus;
+    xmbItem.settings = focus;
+    play('navigate');
+    renderXmb(false);
+    try { setFocusedElement(host.querySelector('.xmb-item.on'), { scroll: false }); } catch { /* Focus model mid-paint. */ }
+    return true;
+  }
+  function ps3Target(state) {
+    if (state.overlay) {
+      const overlay = state.overlay;
+      if (overlay.mode === 'info') return host.querySelector('.xmb-pop');
+      // The hint order is Set then Cancel; the shell's footer order is Back then Confirm.
+      const buttons = host.querySelectorAll('.xmb-pop-hint .xmb-pop-action');
+      if (overlay.mode === 'slider') {
+        if (overlay.focus === 0) return host.querySelector('.xmb-bar-dialog');
+        return overlay.focus === 1 ? buttons[1] || buttons[0] : buttons[0];
+      }
+      const count = overlay.options.length;
+      if (overlay.focus < count) return host.querySelector(`.xmb-pop-option[data-option="${overlay.focus}"]`);
+      if (overlay.focus === count) return buttons[1] || buttons[0];
+      return buttons[0];
+    }
+    if (state.level === 'page') return host.querySelector('.xmb-sub-item.on') || host.querySelector('.xmb-sub [data-action="gsh-back"]');
+    return host.querySelector('.xmb-item.on');
+  }
+  gShell.define('ps3', {
+    root: 'pages',
+    backOnLeft: true,
+    inlineToggles: false,
+    glyphs: ps3Glyphs,
+    container: () => host,
+    enter(state) {
+      xmbCat = Math.max(0, xmbCategories().findIndex(cat => cat.id === 'settings'));
+      xmbItem.settings = state.focus;
+    },
+    render(state) {
+      if (!host.querySelector('.xmb-list')) renderXmb(true);
+      else renderXmb(false);
+      renderPs3Sub(state);
+      renderPs3Pop(state);
+    },
+    target: ps3Target,
+    leave(state) {
+      // The column highlight follows the item the focus is handed back to, so a rebuilt list cannot show one page
+      // selected while the focus sits on another.
+      const openerPage = state.opener?.dataset?.page;
+      const openerIndex = openerPage ? ps3SettingsItems().findIndex(item => item.data?.page === openerPage) : -1;
+      xmbItem.settings = openerIndex >= 0 ? openerIndex : (state.level === 'root' ? state.focus : state.pageIndex);
+      host.classList.remove('sub-open', 'pop-open');
+      const sub = host.querySelector('.xmb-sub'), pop = host.querySelector('.xmb-pop');
+      if (sub) { sub.innerHTML = ''; sub.classList.remove('open'); sub.setAttribute('aria-hidden', 'true'); sub.removeAttribute('data-key'); }
+      if (pop) { pop.innerHTML = ''; pop.classList.remove('open'); pop.setAttribute('aria-hidden', 'true'); pop.removeAttribute('data-key'); }
+      renderXmb(false);
+    },
+    returnFocus(previous) {
+      // If a library/artwork refresh rebuilt the XMB list while Settings was open, the original node is gone; put
+      // the focus back on the same page's item, or the selected one, instead of leaving it inside the closed shell.
+      const page = previous?.opener?.dataset?.page;
+      if (page) {
+        const match = [...host.querySelectorAll('.xmb-item')].find(item => item.dataset.page === page);
+        if (match) return match;
+      }
+      return host.querySelector('.xmb-item.on');
+    }
+  });
+
+  // Entering the Settings column opens the shared shell at its root; pressing a page item then opens that page.
+  function openPs3Shell() {
+    const shell = window.gShell;
+    if (!shell || shell.isOpen('ps3')) return;
+    const opener = host.querySelector('.xmb-item.on') || document.activeElement;
+    Promise.resolve(shell.open('ps3', { opener, silent: true })).catch(() => {});
   }
   function xmbMove(direction) {
-    if (ps3Popup) { ps3PopupMove(direction); return; }
-    if (ps3Open) { ps3SubMove(direction); return; }
+    if (window.gShell?.isOpen?.('ps3')) { window.gShell.move(direction); return; }
     const cats = xmbCategories();
     if (direction === 'left' || direction === 'right') {
       const next = Math.max(0, Math.min(cats.length - 1, xmbCat + (direction === 'right' ? 1 : -1)));
       if (next === xmbCat) return;
       xmbCat = next; play('category');
-      if (cats[xmbCat].id === 'settings') scanPs3Settings();
     } else {
       const cat = cats[xmbCat];
       const current = xmbItem[cat.id] ?? (cat.start || 0);
@@ -625,6 +438,7 @@
       xmbItem[cat.id] = next; play('navigate');
     }
     renderXmb(false);
+    if (cats[xmbCat].id === 'settings') openPs3Shell();
   }
   // The wave: translucent ribbons with a bright crest and drifting sparkles, drawn at 30fps on half-size
   // canvas. The crest glow is a wide faint stroke under a thin bright one rather than a canvas shadow, which
@@ -677,79 +491,8 @@
   addEventListener('focus', () => { if (theme() === 'ps3') xmbWave.start(); });
   document.addEventListener('visibilitychange', () => { if (theme() === 'ps3') xmbWave.start(); });
 
-  // ---------- Settings shells: registry plumbing shared by PS4, Wii and 3DS (task S3) ----------
-  // The three shells read the same registry as the PS3's: rows come from gSettings.layout(console), a row is only
-  // drawn while gSettings.available(id) is true, and every value is read and written through gSettings. These
-  // helpers hold the parts all three need, so each shell below owns only its own layout and navigation.
-  const SETTING_GLYPHS = {
-    volume: 'volume', mute: 'volume', soundEffects: 'volume', menuMusic: 'stream', menuMusicVolume: 'volume',
-    brightness: 'tv', uiScale: 'fullscreen', textSize: 'language', tileRadius: 'grid', reducedMotion: 'ease',
-    highContrastFocus: 'show', fullscreen: 'fullscreen', startupAnimation: 'play', powerPlan: 'power',
-    showUninstalledSteam: 'library', showUninstalledEpic: 'library', shuffleHomeScreenshots: 'photo',
-    randomScreenshotBackground: 'photo', theme: 'color', accent: 'color', background: 'photo', ps3ThemeColour: 'color',
-    clockFormat: 'language', dateOrder: 'language', screensaverDelay: 'tv', notifyFriends: 'bell', notifyDownloads: 'bell',
-    notifyAchievements: 'bell', controllerVibration: 'controller', pauseDownloadsWhilePlaying: 'download',
-    enterButton: 'controller', nintendoLayout: 'controller', screenLayout3ds: 'fullscreen', profile: 'contact',
-    steamAccount: 'shop', epicAccount: 'shop', artworkKey: 'photo', checkForUpdates: 'refresh', copyDiagnostics: 'info',
-    exportSettings: 'download', importSettings: 'download', resetLauncherData: 'delete', launcherSettings: 'settings',
-    wifi: 'globe', battery: 'power', appVersion: 'info', freeDisk: 'drive', libraryCounts: 'library',
-    friendsOnline: 'friends', controllerStatus: 'controller'
-  };
-  const settingGlyph = id => SETTING_GLYPHS[id] || 'settings';
-  // Availability is asked once per console and cached for a few seconds: a screen with thirty rows would
-  // otherwise ask Windows about the volume thirty times while it paints.
-  const shellScans = new Map();
-  async function scanShellLayout(id, force = false) {
-    const g = window.gSettings;
-    if (!g?.layout) return [];
-    const cached = shellScans.get(id);
-    if (!force && cached && Date.now() - cached.at < 30000) return cached.pages;
-    const pages = [];
-    for (const page of g.layout(id)) {
-      const rows = [];
-      for (const row of page.rows) {
-        let available = false;
-        try { available = await g.available(row.id); } catch { available = false; }
-        rows.push({ id: row.id, available });
-      }
-      pages.push({ id: page.id, title: page.title, rows });
-    }
-    // A page none of whose rows can do anything here is not a place the player can go.
-    const live = pages.filter(page => page.rows.some(row => row.available));
-    shellScans.set(id, { at: Date.now(), pages: live });
-    return live;
-  }
-  function forgetShellScan(id) { shellScans.delete(id); }
-  // Read one page's real rows: availability first, then the value and, for a choice, the list of values. The
-  // launcher's Settings form is filled from disk before a form-backed row is read, so saveSettingsForm cannot
-  // save the dialog's unopened defaults over the player's accounts and display settings.
-  async function loadShellRows(page, consoleId) {
-    const rows = [];
-    const g = window.gSettings;
-    if (page.rows.some(row => PS3_FORM_ROWS.has(row.id))) await ps3SyncLauncherForm();
-    for (const row of page.rows) {
-      let available = row.available !== false;
-      if (row.available === undefined) { try { available = await g.available(row.id); } catch { available = false; } }
-      if (!available) continue;
-      const entry = g.entry(row.id);
-      if (!entry) continue;
-      let value = null;
-      try { value = await g.get(row.id); } catch { value = null; }
-      let options = [];
-      if (entry.kind === 'choice') { try { options = await g.options(row.id); } catch { options = []; } }
-      rows.push({ id: row.id, kind: entry.kind, label: g.label(row.id, consoleId), min: entry.min, max: entry.max, step: entry.step, value, options });
-    }
-    return rows;
-  }
-  // A slider's filled fraction, for the small meters the shells draw beside a value.
-  function settingPercent(row, value) {
-    const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
-    const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
-    const span = max - min || 1;
-    return Math.max(0, Math.min(100, ((Number(value) - min) / span) * 100));
-  }
-  // "40%", "On", "24-hour": the registry's value in the console's own words (PS3's formatter).
-  const settingText = (row, value) => ps3Format(row, value);
+  // The shared settings shell (garrison-settings-shell.js) owns the registry plumbing these four consoles used
+  // to repeat here. The skins below are pure presentation.
 
   // =========================== PS4: the home screen ===========================
   // Measured from the 2013 home: the status/function row sits 78px down, square tiles are 214px from y 222,
@@ -770,7 +513,7 @@
   // classes and offsets change, so the tiles can grow and slide and the function area can drop in.
   let ps4BuiltTiles = '';
   function renderPs4(rebuild = true) {
-    if (ps4Set) { renderPs4Settings(); return; }
+    if (window.gShell?.isOpen?.('ps4')) { window.gShell.render(); return; }
     const list = ps4List();
     ps4Focus = Math.max(0, Math.min(ps4Focus, list.length - 1));
     const sel = list[ps4Focus];
@@ -867,7 +610,7 @@
     }).catch(() => {});
   }
   function ps4Move(direction) {
-    if (ps4Set) { ps4SetMove(direction); return; }
+    if (window.gShell?.isOpen?.('ps4')) { window.gShell.move(direction); return; }
     const list = ps4List();
     if (ps4Area === 'fn') {
       if (direction === 'down') { ps4Area = 'row'; play('back'); }
@@ -894,277 +637,42 @@
     renderPs4(false);
   }
 
-  // ---------- PS4: Settings, driven by gSettings (task S3) ----------
-  // The console's Settings app: a full-screen list of registry pages with their icons down the left and a blue
-  // focus bar. Choosing a page slides the category column away and brings its rows in from the right; choosing a
-  // row with a value opens the PS4 option dialog, while a toggle is a check box that changes in place. The
-  // layout's last page, Advanced (launcher), runs the launcher's own Settings dialog — nothing here is fake.
+  // ---------- PS4: Settings, the full-screen list skin ----------
+  // The console's Settings app: registry pages with icons down the left and a blue focus bar, then the page's rows
+  // sliding in from the right. The shared shell owns pages, values, availability, option dialogs and Back; this
+  // block paints the PS4 screen.
   const PS4_PAGE_GLYPHS = { account: 'contact', notifications: 'bell', devices: 'controller', 'sound-screen': 'volume', network: 'globe', themes: 'color', system: 'settings', accessibility: 'ease', advanced: 'settings' };
-  let ps4Set = null, ps4ScanToken = 0, ps4RowsToken = 0, ps4ReloadTimer = 0;
-  const ps4SetGlyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { enter: '○', back: '✕' } : { enter: '✕', back: '○' });
-  function ps4OpenSettings() {
-    if (ps4Set) return;
-    play('confirm');
-    ps4Set = { level: 'pages', pages: null, page: null, rows: [], focus: 0, loading: true, error: '', overlay: null, anim: 'in' };
-    renderPs4(false);
-    ps4ScanSettings();
-  }
-  function ps4CloseSettings() {
-    if (!ps4Set) return;
-    play('back');
-    ps4Set = null; ps4ReloadTimer && clearTimeout(ps4ReloadTimer); ps4ReloadTimer = 0;
-    // Land back on the Settings function that opened it, not on a tile.
-    ps4Area = 'fn'; ps4Fn = PS4_FUNCTIONS.findIndex(item => item[0] === 'settings');
-    if (ps4Fn < 0) ps4Fn = 0;
-    renderPs4(false);
-  }
-  function ps4ScanSettings(force = false) {
-    if (!ps4Set) return;
-    const token = ++ps4ScanToken;
-    scanShellLayout('ps4', force).then(pages => {
-      if (token !== ps4ScanToken || !ps4Set || ps4Set.level !== 'pages') return;
-      ps4Set.pages = pages;
-      ps4Set.loading = false;
-      ps4Set.focus = Math.min(ps4Set.focus, Math.max(0, pages.length - 1));
-      renderPs4(false);
-    }).catch(error => {
-      if (token !== ps4ScanToken || !ps4Set) return;
-      ps4Set.loading = false;
-      ps4Set.error = error?.message || 'Could not read the settings on this PC.';
-      renderPs4(false);
-    });
-  }
-  function ps4SetBack() {
-    if (!ps4Set) return false;
-    if (ps4Set.overlay) { ps4CancelOverlay(); return true; }
-    if (ps4Set.level === 'rows') {
-      play('back');
-      ps4Set.level = 'pages'; ps4Set.page = null; ps4Set.rows = []; ps4Set.anim = 'back';
-      ps4Set.focus = Math.max(0, Math.min(ps4Set.pageIndex || 0, (ps4Set.pages?.length || 1) - 1));
-      renderPs4(false);
-      return true;
-    }
-    ps4CloseSettings();
-    return true;
-  }
-  async function ps4OpenPage(id) {
-    const page = ps4Set?.pages?.find(item => item.id === id);
-    if (!page) return;
-    // Advanced (launcher) is one real action, not a page with a single row to open.
-    if (page.rows.length === 1 && page.rows[0].id === 'launcherSettings') { ps4RunLauncher(); return; }
-    play('confirm');
-    ps4Set.pageIndex = ps4Set.focus;
-    ps4Set.level = 'rows'; ps4Set.page = page; ps4Set.rows = []; ps4Set.focus = 0;
-    ps4Set.loading = true; ps4Set.error = ''; ps4Set.overlay = null; ps4Set.anim = 'deep';
-    renderPs4(false);
-    const token = ++ps4RowsToken;
-    try {
-      const rows = await loadShellRows(page, 'ps4');
-      if (token !== ps4RowsToken || !ps4Set || ps4Set.page !== page) return;
-      ps4Set.rows = rows;
-      ps4Set.loading = false;
-      ps4Set.focus = Math.min(ps4Set.focus, Math.max(0, rows.length - 1));
-      renderPs4(false);
-    } catch (error) {
-      if (token !== ps4RowsToken || !ps4Set || ps4Set.page !== page) return;
-      ps4Set.loading = false;
-      ps4Set.error = error?.message || 'Could not read these settings.';
-      renderPs4(false);
-    }
-  }
-  function ps4RunLauncher() {
-    play('confirm');
-    ps4Set = null; ps4ReloadTimer && clearTimeout(ps4ReloadTimer); ps4ReloadTimer = 0;
-    renderPs4(false);
-    Promise.resolve(window.gSettings?.set('launcherSettings', null)).catch(error => {
-      if (typeof showToast === 'function') showToast(error?.message || 'The launcher settings are unavailable.');
-    });
-  }
-  async function ps4SetValue(id, value) {
-    const state = ps4Set;
-    const row = state?.rows.find(item => item.id === id);
-    if (!state || !row) return;
-    const previous = row.value;
-    row.value = value;
-    renderPs4(false);
-    try {
-      if (PS3_FORM_ROWS.has(id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(id, value);
-      const fresh = await window.gSettings.get(id).catch(() => value);
-      if (ps4Set !== state) return;
-      row.value = fresh;
-      play('confirm');
-    } catch (error) {
-      if (ps4Set !== state) return;
-      row.value = previous;
-      play('back');
-      if (typeof showToast === 'function') showToast(error?.message || 'Could not change this setting.');
-    }
-    if (ps4Set === state) renderPs4(false);
-  }
-  function ps4OpenRow(index) {
-    const row = ps4Set?.rows?.[index];
-    if (!row) return;
-    if (row.kind === 'action') {
-      play('confirm');
-      Promise.resolve(window.gSettings.set(row.id, null)).catch(error => {
-        if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
-      }).then(() => window.gSettings.get(row.id).then(value => {
-        if (ps4Set?.rows[index] === row) { row.value = value; renderPs4(false); }
-      }).catch(() => {}));
-      return;
-    }
-    if (row.kind === 'toggle') { ps4SetValue(row.id, !row.value); return; }
-    if (row.kind === 'info') {
-      play('confirm');
-      ps4Set.overlay = { mode: 'info', row, options: [], selected: 0, value: null, saving: false, error: '' };
-    } else if (row.kind === 'slider') {
-      play('confirm');
-      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
-      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
-      const raw = Number(row.value);
-      ps4Set.overlay = { mode: 'slider', row, options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, saving: false, error: '' };
-    } else if (row.kind === 'choice') {
-      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
-      play('confirm');
-      ps4Set.overlay = { mode: 'choice', row, options: row.options, selected: Math.max(0, row.options.findIndex(option => option.value === row.value)), value: null, saving: false, error: '' };
-    } else return;
-    renderPs4(false);
-  }
-  function ps4CancelOverlay() {
-    if (!ps4Set?.overlay || ps4Set.overlay.saving) return;
-    play('back');
-    ps4Set.overlay = null;
-    renderPs4(false);
-  }
-  async function ps4ConfirmOverlay() {
-    const state = ps4Set;
-    const overlay = state?.overlay;
-    if (!state || !overlay || overlay.saving) return;
-    if (overlay.mode === 'info') { ps4CancelOverlay(); return; }
-    const value = overlay.mode === 'slider' ? overlay.value : overlay.options[overlay.selected]?.value;
-    overlay.saving = true; overlay.error = '';
-    renderPs4(false);
-    try {
-      if (PS3_FORM_ROWS.has(overlay.row.id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(overlay.row.id, value);
-      const fresh = await window.gSettings.get(overlay.row.id).catch(() => value);
-      if (ps4Set !== state) return;
-      overlay.row.value = fresh;
-      ps4Set.overlay = null;
-      play('confirm');
-    } catch (error) {
-      if (ps4Set !== state) return;
-      overlay.saving = false;
-      overlay.error = error?.message || 'Could not change this setting.';
-      play('back');
-    }
-    if (ps4Set === state) renderPs4(false);
-  }
-  function ps4OverlayMove(direction) {
-    const overlay = ps4Set?.overlay;
-    if (!overlay || overlay.saving || overlay.mode === 'info') return;
-    if (overlay.mode === 'slider') {
-      if (direction !== 'left' && direction !== 'right') return;
-      const next = Math.max(overlay.min, Math.min(overlay.max, overlay.value + (direction === 'right' ? overlay.step : -overlay.step)));
-      if (next === overlay.value) return;
-      overlay.value = Number(next.toFixed(6));
-      play('navigate');
-      renderPs4(false);
-      return;
-    }
-    if (direction !== 'up' && direction !== 'down') return;
-    const next = Math.max(0, Math.min(overlay.options.length - 1, overlay.selected + (direction === 'down' ? 1 : -1)));
-    if (next === overlay.selected) return;
-    overlay.selected = next;
-    play('navigate');
-    renderPs4(false);
-  }
-  function ps4Seek(event) {
-    const overlay = ps4Set?.overlay;
-    const track = host.querySelector('.ps4-set-track');
-    if (!overlay || overlay.mode !== 'slider' || !track) return;
-    const rect = track.getBoundingClientRect();
-    if (!rect.width) return;
-    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const step = overlay.step || 1;
-    const value = overlay.min + Math.round((fraction * (overlay.max - overlay.min)) / step) * step;
-    overlay.value = Number(Math.max(overlay.min, Math.min(overlay.max, value)).toFixed(6));
-    play('navigate');
-    renderPs4(false);
-  }
-  function ps4SetMove(direction) {
-    if (!ps4Set) return;
-    if (ps4Set.overlay) { ps4OverlayMove(direction); return; }
-    const count = ps4Set.level === 'pages' ? (ps4Set.pages?.length || 0) : ps4Set.rows.length;
-    if (!count) return;
-    if (ps4Set.level === 'rows' && direction === 'left') { ps4SetBack(); return; }
-    if (direction !== 'up' && direction !== 'down') return;
-    const next = Math.max(0, Math.min(count - 1, ps4Set.focus + (direction === 'down' ? 1 : -1)));
-    if (next === ps4Set.focus) return;
-    ps4Set.focus = next;
-    ps4Set.anim = '';
-    play('navigate');
-    renderPs4(false);
-  }
-  function ps4QueueReload() {
-    if (!ps4Set || ps4ReloadTimer) return;
-    ps4ReloadTimer = setTimeout(() => {
-      ps4ReloadTimer = 0;
-      if (!ps4Set || theme() !== 'ps4' || document.querySelector('dialog[open]')) return;
-      forgetShellScan('ps4');
-      const state = ps4Set;
-      if (state.level === 'rows' && state.page) {
-        const page = state.page, focus = state.focus, token = ++ps4RowsToken;
-        loadShellRows(page, 'ps4').then(rows => {
-          if (token !== ps4RowsToken || ps4Set !== state) return;
-          state.rows = rows;
-          state.loading = false;
-          state.focus = Math.min(focus, Math.max(0, rows.length - 1));
-          if (!rows.length) { state.level = 'pages'; state.page = null; ps4ScanSettings(true); }
-          renderPs4(false);
-        }).catch(() => {});
-      } else if (state.level === 'pages') {
-        ps4ScanSettings(true);
-      }
-    }, 180);
-  }
-  let ps4SetPageKey = '', ps4SetRowKey = '', ps4SetOverlayKey = '', ps4SetAnimTimer = 0;
-  function renderPs4Settings() {
-    if (!ps4Set) { renderPs4(); return; }
-    chrome.innerHTML = '';
+  const ps4SetGlyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { confirm: '○', back: '✕' } : { confirm: '✕', back: '○' });
+  function ps4BuildShell() {
     let shell = host.querySelector('.ps4-set');
-    if (!shell) {
-      host.innerHTML = `<i class="ps4-set-bg" aria-hidden="true"></i>
-        <div class="ps4-set">
-          <div class="ps4-set-head"><button class="ps4-set-back focusable" type="button" data-action="ps4-set-back" aria-label="Back"><span aria-hidden="true">‹</span></button><span class="ps4-set-kicker"></span><strong class="ps4-set-title"></strong></div>
-          <div class="ps4-set-pages" role="list"></div>
-          <div class="ps4-set-rows" role="list"></div>
-          <div class="ps4-set-load" role="status"></div>
-          <div class="ps4-set-hints"></div>
-          <div class="ps4-set-overlay" aria-hidden="true"><div class="ps4-set-dialog" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
-        </div>`;
-      ps4SetPageKey = ps4SetRowKey = ps4SetOverlayKey = '';
-      shell = host.querySelector('.ps4-set');
-    }
-    const state = ps4Set;
+    if (shell) return shell;
+    const background = document.createElement('i');
+    background.className = 'ps4-set-bg';
+    background.setAttribute('aria-hidden', 'true');
+    shell = document.createElement('div');
+    shell.className = 'ps4-set';
+    shell.innerHTML = `<div class="ps4-set-head"><button class="ps4-set-back focusable" type="button" data-action="gsh-back" aria-label="Back"><span aria-hidden="true">‹</span></button><span class="ps4-set-kicker"></span><strong class="ps4-set-title"></strong></div>
+      <div class="ps4-set-pages" role="list"></div>
+      <div class="ps4-set-rows" role="list"></div>
+      <div class="ps4-set-load" role="status"></div>
+      <div class="ps4-set-hints"></div>
+      <div class="ps4-set-overlay" aria-hidden="true"><div class="ps4-set-dialog" role="dialog" aria-modal="false" aria-label="Setting"></div></div>`;
+    host.append(background, shell);
+    return shell;
+  }
+  let ps4SetPageKey = '', ps4SetRowKey = '', ps4SetOverlayKey = '';
+  function renderPs4Settings(state) {
+    const shell = ps4BuildShell();
+    const glyphs = ps4SetGlyphs();
     const pages = state.pages || [];
     const rows = state.rows || [];
+    const deep = state.level === 'page';
+    const current = state.page || pages[state.pageIndex] || null;
     shell.dataset.level = state.level;
-    shell.classList.toggle('is-deep', state.level === 'rows');
+    shell.classList.toggle('is-deep', deep);
     shell.dataset.anim = state.anim || '';
-    if (state.anim) {
-      clearTimeout(ps4SetAnimTimer);
-      ps4SetAnimTimer = setTimeout(() => {
-        if (!ps4Set) return;
-        ps4Set.anim = '';
-        const node = host.querySelector('.ps4-set');
-        if (node) node.dataset.anim = '';
-      }, 420);
-    }
-    const deep = state.level === 'rows';
     shell.querySelector('.ps4-set-kicker').textContent = deep ? 'Settings' : 'PlayStation 4';
-    shell.querySelector('.ps4-set-title').textContent = deep ? (state.page?.title || 'Settings') : 'Settings';
+    shell.querySelector('.ps4-set-title').textContent = deep ? (current?.title || 'Settings') : 'Settings';
     shell.querySelector('.ps4-set-back').setAttribute('aria-label', deep ? 'Back to Settings' : 'Close Settings');
     // Pages
     const pageEl = shell.querySelector('.ps4-set-pages');
@@ -1173,7 +681,7 @@
       ps4SetPageKey = pageKey;
       const scroll = pageEl.scrollTop;
       pageEl.innerHTML = pages.length
-        ? pages.map((page, index) => `<button class="ps4-set-item focusable" type="button" data-action="ps4-set-page" data-page="${esc(page.id)}" data-index="${index}" role="listitem" aria-label="${esc(page.title)}">
+        ? pages.map((page, index) => `<button class="ps4-set-item focusable${index === state.focus && !deep ? ' sel' : ''}${current && page.id === current.id ? ' on' : ''}" type="button" data-action="gsh-page" data-page="${esc(page.id)}" data-index="${index}" role="listitem" aria-label="${esc(page.title)}">
             <span class="ps4-set-icon" aria-hidden="true">${icon(PS4_PAGE_GLYPHS[page.id] || 'settings')}</span>
             <span class="ps4-set-label">${esc(page.title)}</span>
             <span class="ps4-set-chevron" aria-hidden="true">›</span>
@@ -1184,17 +692,17 @@
     [...pageEl.querySelectorAll('.ps4-set-item')].forEach((el, index) => el.classList.toggle('sel', !deep && index === state.focus));
     // Rows
     const rowsEl = shell.querySelector('.ps4-set-rows');
-    const rowKey = `${state.page?.id || ''}|${state.loading ? 'load' : ''}|${state.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
+    const rowKey = `${current?.id || ''}|${state.loading ? 'load' : ''}|${state.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
     if (rowKey !== ps4SetRowKey) {
       ps4SetRowKey = rowKey;
       const scroll = rowsEl.scrollTop;
       rowsEl.innerHTML = rows.length
         ? rows.map((row, index) => {
-          const value = settingText(row, row.value);
-          const meter = row.kind === 'slider' ? `<span class="ps4-set-meter" aria-hidden="true"><i style="width:${settingPercent(row, row.value)}%"></i></span>` : '';
+          const value = window.gShell.valueText(row, row.value);
+          const meter = row.kind === 'slider' ? `<span class="ps4-set-meter" aria-hidden="true"><i style="width:${window.gShell.percent(row, row.value)}%"></i></span>` : '';
           const check = row.kind === 'toggle' ? `<span class="ps4-set-check${row.value ? ' on' : ''}" aria-hidden="true">${row.value ? '✓' : ''}</span>` : '';
-          return `<button class="ps4-set-row focusable" type="button" data-action="ps4-set-row" data-row="${index}" role="listitem" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
-            <span class="ps4-set-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+          return `<button class="ps4-set-row focusable" type="button" data-action="gsh-row" data-row="${index}" data-setting-id="${esc(row.id)}" data-kind="${row.kind}" role="listitem" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+            <span class="ps4-set-icon" aria-hidden="true">${icon(window.gShell.settingGlyph(row.id))}</span>
             <span class="ps4-set-label">${esc(row.label)}</span>
             ${meter}${value ? `<span class="ps4-set-value">${esc(value)}</span>` : ''}${check}
             ${row.kind === 'choice' || row.kind === 'action' ? '<span class="ps4-set-chevron" aria-hidden="true">›</span>' : ''}
@@ -1205,18 +713,16 @@
     }
     [...rowsEl.querySelectorAll('.ps4-set-row')].forEach((el, index) => el.classList.toggle('sel', deep && index === state.focus));
     shell.querySelector('.ps4-set-load').textContent = state.error || '';
-    // Hints
-    const glyphs = ps4SetGlyphs();
     shell.querySelector('.ps4-set-hints').innerHTML = deep
-      ? `<span><b>${glyphs.enter}</b> Select</span><span><b>${glyphs.back}</b> Back</span>`
-      : `<span><b>${glyphs.enter}</b> Open</span><span><b>${glyphs.back}</b> Close</span>`;
+      ? `<span><b>${glyphs.confirm}</b> Select</span><span><b>${glyphs.back}</b> Back</span>`
+      : `<span><b>${glyphs.confirm}</b> Open</span><span><b>${glyphs.back}</b> Close</span>`;
     // The option dialog
     const overlayEl = shell.querySelector('.ps4-set-overlay');
     const dialog = shell.querySelector('.ps4-set-dialog');
     const overlay = state.overlay;
     overlayEl.classList.toggle('open', Boolean(overlay));
     overlayEl.setAttribute('aria-hidden', String(!overlay));
-    const overlayKey = overlay ? `${overlay.mode}|${overlay.row.id}|${overlay.selected}|${overlay.value}|${overlay.saving ? 1 : 0}|${overlay.error}` : '';
+    const overlayKey = overlay ? `${overlay.mode}|${overlay.row.id}|${overlay.selected}|${overlay.value}|${overlay.focus}|${overlay.saving ? 1 : 0}|${overlay.error}` : '';
     if (overlayKey !== ps4SetOverlayKey) {
       ps4SetOverlayKey = overlayKey;
       if (!overlay) {
@@ -1226,29 +732,25 @@
       } else {
         let body = '';
         if (overlay.mode === 'slider') {
-          body = `<div class="ps4-set-slider focusable" role="slider" tabindex="-1" data-action="ps4-set-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
-            <span class="ps4-set-arrow" aria-hidden="true">◀</span><span class="ps4-set-track"><i style="width:${settingPercent(overlay, overlay.value)}%"></i><b style="left:${settingPercent(overlay, overlay.value)}%"></b></span><span class="ps4-set-arrow" aria-hidden="true">▶</span></div>
-            <strong class="ps4-set-slider-value">${esc(settingText(overlay.row, overlay.value))}</strong>`;
+          const p = window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value);
+          body = `<div class="ps4-set-slider focusable" role="slider" data-action="gsh-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
+            <span class="ps4-set-arrow" aria-hidden="true">◀</span><span class="ps4-set-track" data-gsh-track><i style="width:${p}%"></i><b style="left:${p}%"></b></span><span class="ps4-set-arrow" aria-hidden="true">▶</span></div>
+            <strong class="ps4-set-slider-value">${esc(window.gShell.valueText(overlay.row, overlay.value))}</strong>`;
         } else if (overlay.mode === 'choice') {
-          body = `<div class="ps4-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="ps4-set-option focusable${index === overlay.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="ps4-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+          body = `<div class="ps4-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="ps4-set-option focusable${index === overlay.selected ? ' on' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="gsh-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
         } else {
-          body = `<p class="ps4-set-info">${esc(settingText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
+          body = `<p class="ps4-set-info">${esc(window.gShell.valueText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
         }
         const hint = overlay.mode === 'info'
-          ? `<button class="ps4-set-action focusable" type="button" data-action="ps4-set-cancel"><b>${glyphs.back}</b> Back</button>`
-          : `<button class="ps4-set-action focusable" type="button" data-action="ps4-set-commit"><b>${glyphs.enter}</b> Select</button><button class="ps4-set-action focusable" type="button" data-action="ps4-set-cancel"><b>${glyphs.back}</b> Back</button>`;
+          ? `<button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b>${glyphs.back}</b> Back</button>`
+          : `<button class="ps4-set-action focusable" type="button" data-action="gsh-commit"><b>${glyphs.confirm}</b> Select</button><button class="ps4-set-action focusable" type="button" data-action="gsh-cancel"><b>${glyphs.back}</b> Back</button>`;
         dialog.innerHTML = `<h3>${esc(overlay.row.label)}</h3>${body}<p class="ps4-set-dialog-hint">${overlay.error ? `<span class="ps4-set-error">${esc(overlay.error)}</span>` : ''}${hint}${overlay.saving ? '<span class="ps4-set-saving">Saving…</span>' : ''}</p>`;
-        if (overlay.mode === 'info') { dialog.setAttribute('tabindex', '-1'); dialog.dataset.action = 'ps4-set-cancel'; }
+        if (overlay.mode === 'info') { dialog.setAttribute('tabindex', '-1'); dialog.dataset.action = 'gsh-cancel'; }
         else { dialog.removeAttribute('tabindex'); delete dialog.dataset.action; }
       }
     }
-    // Focus: the open dialog's own control, else the chosen row, else the chosen page.
-    let target = null;
-    if (overlay) target = overlay.mode === 'slider' ? shell.querySelector('.ps4-set-slider') : overlay.mode === 'info' ? dialog : shell.querySelector('.ps4-set-option.on');
-    else if (deep) target = rowsEl.querySelector('.ps4-set-row.sel');
-    else target = pageEl.querySelector('.ps4-set-item.sel');
-    focusEl(target || shell.querySelector('.ps4-set-back'));
     // The console's list scrolls under the focus bar; keep the chosen row in view without moving the page.
+    const target = ps4SetTarget(state);
     const pane = overlay ? null : deep ? rowsEl : pageEl;
     if (pane && target) {
       const top = target.offsetTop, bottom = top + target.offsetHeight;
@@ -1256,22 +758,47 @@
       else if (bottom > pane.scrollTop + pane.clientHeight) pane.scrollTop = bottom - pane.clientHeight;
     }
   }
-  function ps4SetEnter() {
-    if (!ps4Set) return false;
-    if (ps4Set.overlay) { if (ps4Set.overlay.mode === 'info') ps4CancelOverlay(); else ps4ConfirmOverlay(); return true; }
-    if (ps4Set.level === 'rows') { ps4OpenRow(ps4Set.focus); return true; }
-    const page = ps4Set.pages?.[ps4Set.focus];
-    if (page) ps4OpenPage(page.id);
-    return true;
+  function ps4SetTarget(state) {
+    const shell = host.querySelector('.ps4-set');
+    if (!shell) return null;
+    if (state.overlay) {
+      const overlay = state.overlay;
+      if (overlay.mode === 'info') return shell.querySelector('.ps4-set-dialog');
+      // The dialog's action order is Select then Back; the shell's footer order is Back then Confirm.
+      const buttons = shell.querySelectorAll('.ps4-set-dialog-hint .ps4-set-action');
+      if (overlay.mode === 'slider') {
+        if (overlay.focus === 0) return shell.querySelector('.ps4-set-slider');
+        return overlay.focus === 1 ? buttons[1] || buttons[0] : buttons[0];
+      }
+      const options = shell.querySelectorAll('.ps4-set-option');
+      const count = overlay.options.length;
+      if (overlay.focus < count) return options[overlay.focus] || options[overlay.selected];
+      if (overlay.focus === count) return buttons[1] || buttons[0];
+      return buttons[0] || options[overlay.selected] || shell.querySelector('.ps4-set-back');
+    }
+    if (state.level === 'page') return shell.querySelector('.ps4-set-row.sel') || shell.querySelector('.ps4-set-back');
+    return shell.querySelector('.ps4-set-item.sel') || shell.querySelector('.ps4-set-back');
   }
+  gShell.define('ps4', {
+    root: 'pages',
+    backOnLeft: true,
+    inlineToggles: true,
+    glyphs: ps4SetGlyphs,
+    container: () => host,
+    render: renderPs4Settings,
+    target: ps4SetTarget,
+    leave() {
+      host.querySelectorAll('.ps4-set, .ps4-set-bg').forEach(node => node.remove());
+      ps4SetPageKey = ps4SetRowKey = ps4SetOverlayKey = '';
+    },
+    returnFocus() { return host.querySelector('.ps4-fn[data-action="settings"]') || host.querySelector('.ps4-tile.sel'); }
+  });
 
   // =========================== Wii: the Wii Menu ===========================
   // Measured from the Wii Menu at 1080p: 4×3 channels of 384×206 from (160, 91), 18px apart; the bottom bar
   // starts at 780 and dips to 896 under the clock; the Wii and mail buttons are centred at 908.
   let wiiPage = 0, wiiFocus = 0, wiiPreview = null, wiiBar = -1;
   let wiiShownPage = -1, wiiPageDir = 0;
-  // Wii Settings shell state (task S3): the open page, its registry rows and an open value sub-screen.
-  let wiiSet = null, wiiSetScanToken = 0, wiiSetRowsToken = 0, wiiSetReloadTimer = 0;
   function wiiChannels() {
     const recent = games();
     return [
@@ -1294,7 +821,7 @@
     game: ''
   })[ch.kind] || '';
   function renderWii() {
-    if (wiiSet) { renderWiiSettings(); return; }
+    if (window.gShell?.isOpen?.('wii')) { window.gShell.render(); return; }
     if (wiiPreview) { renderWiiPreview(); return; }
     const channels = wiiChannels();
     const pages = Math.max(1, Math.ceil(channels.length / 12));
@@ -1370,7 +897,7 @@
     focusEl(host.querySelector('.wii-pbtn[data-start]'));
   }
   function wiiMove(direction) {
-    if (wiiSet) { wiiShellMove(direction); return; }
+    if (window.gShell?.isOpen?.('wii')) { window.gShell.move(direction); return; }
     if (wiiPreview) { const buttons = [...host.querySelectorAll('.wii-pbtn')]; const index = buttons.indexOf(document.activeElement.closest?.('.wii-pbtn')); const next = buttons[Math.max(0, Math.min(buttons.length - 1, index + (direction === 'right' ? 1 : direction === 'left' ? -1 : 0)))]; if (next && next !== buttons[index]) { play('navigate'); focusEl(next); } return; }
     const channels = wiiChannels(), pages = Math.max(1, Math.ceil(channels.length / 12));
     const filled = index => index < Math.max(0, channels.length - wiiPage * 12);
@@ -1391,310 +918,39 @@
     focusEl(host.querySelector(`.wii-ch[data-wii-index="${wiiFocus}"]`));
   }
 
-  // ---------- Wii: Wii Settings, driven by gSettings (task S3) ----------
-  // The console's three-page Wii Settings, extended with the rest of the registry layout. The pages are
-  // gSettings.layout('wii'), each row is a large rounded pill, and the blue arrows (or left/right at the edge
-  // of the grid) turn the page with the pack's zip sound. A value opens a sub-screen of pill choices with
-  // Back and Confirm at the bottom; a toggle is an On/Off choice, a slider is the Wii's bar, and an action runs
-  // through gSettings.set(). No page, row or value is written by hand.
-  const WII_PAGE_GLYPHS = { 'page-1': 'settings', 'page-2': 'language', 'page-3': 'controller', internet: 'globe', 'message-board': 'bell', system: 'settings', advanced: 'settings' };
-  const wiiUnits = PS3_UNITS;
+  // ---------- Wii: Wii Settings, the light pill-page skin ----------
+  // The console's three Wii Settings pages, extended with the rest of the registry layout. Pages are turned with
+  // the blue arrows (or left/right at the edge of the grid); a value opens the light sub-screen with pill choices
+  // and Back / Confirm. The shared shell owns the model, values, availability and Back; this block paints the Wii.
   const wiiPillParts = () => WIII('btn-texture.png')
     ? `<i class="cap l" style="background-image:${url(WIII('btn-left.png'))}"></i><i class="mid" style="background-image:${url(WIII('btn-texture.png'))}"></i><i class="cap r" style="background-image:${url(WIII('btn-right.png'))}"></i>`
     : '';
-  function wiiOpenSettings() {
-    if (wiiSet) return;
-    play('confirm');
-    wiiSet = { pages: null, pageIndex: 0, page: null, rows: [], focus: 0, loading: true, error: '', sub: null, anim: '' };
-    renderWii();
-    wiiScanSettings();
-  }
-  function wiiCloseSettings() {
-    if (!wiiSet) return;
-    play('back');
-    wiiSet = null; wiiSetReloadTimer && clearTimeout(wiiSetReloadTimer); wiiSetReloadTimer = 0;
-    wiiBar = 0;
-    renderWii();
-  }
-  function wiiScanSettings(force = false) {
-    if (!wiiSet) return;
-    const token = ++wiiSetScanToken;
-    scanShellLayout('wii', force).then(pages => {
-      if (token !== wiiSetScanToken || !wiiSet) return;
-      const wanted = wiiSet.page?.id;
-      wiiSet.pages = pages;
-      wiiSet.loading = false;
-      if (wanted) {
-        const found = pages.findIndex(page => page.id === wanted);
-        if (found >= 0) wiiSet.pageIndex = found;
-      }
-      wiiSet.pageIndex = Math.max(0, Math.min(wiiSet.pageIndex, Math.max(0, pages.length - 1)));
-      wiiLoadPage(true);
-    }).catch(error => {
-      if (token !== wiiSetScanToken || !wiiSet) return;
-      wiiSet.loading = false;
-      wiiSet.error = error?.message || 'Could not read the settings on this PC.';
-      renderWii();
-    });
-  }
-  async function wiiLoadPage(preserveFocus = false) {
-    const state = wiiSet;
-    if (!state || !state.pages) return;
-    const page = state.pages[state.pageIndex];
-    if (!page) { state.rows = []; state.page = null; renderWii(); return; }
-    const token = ++wiiSetRowsToken;
-    state.page = page;
-    state.rows = [];
-    state.loading = true;
-    state.error = '';
-    if (!preserveFocus) state.focus = 0;
-    renderWii();
-    try {
-      const rows = await loadShellRows(page, 'wii');
-      if (token !== wiiSetRowsToken || wiiSet !== state) return;
-      state.rows = rows;
-      state.loading = false;
-      state.focus = Math.min(state.focus, Math.max(0, rows.length - 1));
-      renderWii();
-    } catch (error) {
-      if (token !== wiiSetRowsToken || wiiSet !== state) return;
-      state.loading = false;
-      state.error = error?.message || 'Could not read these settings.';
-      renderWii();
-    }
-  }
-  function wiiTurnPage(direction) {
-    const state = wiiSet;
-    const pages = state?.pages || [];
-    if (!state || !pages.length) return;
-    const next = Math.max(0, Math.min(pages.length - 1, state.pageIndex + direction));
-    if (next === state.pageIndex) return;
-    state.pageIndex = next;
-    state.focus = 0;
-    state.sub = null;
-    state.anim = direction > 0 ? 'next' : 'prev';
-    play('category');
-    wiiLoadPage(false);
-  }
-  function wiiBack() {
-    if (!wiiSet) return false;
-    if (wiiSet.sub) { wiiSubCancel(); return true; }
-    wiiCloseSettings();
-    return true;
-  }
-  function wiiShellMove(direction) {
-    const state = wiiSet;
-    if (!state) return;
-    if (state.sub) { wiiSubMove(direction); return; }
-    const count = state.rows.length;
-    if (!count) {
-      if (direction === 'left') wiiTurnPage(-1);
-      else if (direction === 'right') wiiTurnPage(1);
-      return;
-    }
-    const col = state.focus % 3;
-    let next = state.focus;
-    if (direction === 'left') {
-      if (col > 0) next = state.focus - 1;
-      else { wiiTurnPage(-1); return; }
-    } else if (direction === 'right') {
-      if (col < 2 && state.focus + 1 < count) next = state.focus + 1;
-      else { wiiTurnPage(1); return; }
-    } else if (direction === 'up') {
-      if (state.focus - 3 >= 0) next = state.focus - 3;
-      else return;
-    } else if (direction === 'down') {
-      if (state.focus + 3 < count) next = state.focus + 3;
-      else return;
-    } else return;
-    if (next === state.focus) return;
-    state.focus = next;
-    play('navigate');
-    renderWii();
-  }
-  const wiiSubCount = sub => sub.mode === 'info' ? 1 : sub.mode === 'action' ? 2 : sub.mode === 'slider' ? 3 : sub.options.length + 2;
-  function wiiOpenSub(index) {
-    const state = wiiSet;
-    const row = state?.rows?.[index];
-    if (!state || !row) return;
-    play('confirm');
-    if (row.kind === 'info') {
-      state.sub = { row, mode: 'info', options: [], selected: 0, focus: 0, saving: false, error: '' };
-    } else if (row.kind === 'toggle') {
-      state.sub = { row, mode: 'toggle', options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }], selected: row.value ? 0 : 1, focus: row.value ? 0 : 1, saving: false, error: '' };
-    } else if (row.kind === 'choice') {
-      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
-      const selected = Math.max(0, row.options.findIndex(option => option.value === row.value));
-      state.sub = { row, mode: 'choice', options: row.options, selected, focus: selected, saving: false, error: '' };
-    } else if (row.kind === 'slider') {
-      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
-      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
-      const raw = Number(row.value);
-      state.sub = { row, mode: 'slider', options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, focus: 0, saving: false, error: '' };
-    } else if (row.kind === 'action') {
-      state.sub = { row, mode: 'action', options: [], selected: 0, focus: 1, saving: false, error: '' };
-    } else return;
-    renderWii();
-  }
-  function wiiSubMove(direction) {
-    const state = wiiSet;
-    const sub = state?.sub;
-    if (!sub || sub.saving) return;
-    if (sub.mode === 'slider' && sub.focus === 0) {
-      if (direction === 'left' || direction === 'right') {
-        const next = Math.max(sub.min, Math.min(sub.max, sub.value + (direction === 'right' ? sub.step : -sub.step)));
-        if (next === sub.value) return;
-        sub.value = Number(next.toFixed(6));
-        play('navigate');
-        renderWii();
-        return;
-      }
-      if (direction === 'down') { sub.focus = 1; play('navigate'); renderWii(); return; }
-      return;
-    }
-    if (sub.mode === 'info') return;
-    const count = wiiSubCount(sub);
-    if (sub.mode === 'choice' || sub.mode === 'toggle') {
-      const n = sub.options.length;
-      if (direction === 'left' || direction === 'right') {
-        if (sub.focus >= n) { const next = sub.focus === n ? n + 1 : n; sub.focus = next; play('navigate'); renderWii(); }
-        return;
-      }
-      if (direction === 'up') {
-        if (sub.focus === n) { sub.focus = Math.max(0, n - 1); play('navigate'); renderWii(); }
-        else if (sub.focus === n + 1) { sub.focus = n; play('navigate'); renderWii(); }
-        else if (sub.focus > 0) { sub.focus -= 1; play('navigate'); renderWii(); }
-        return;
-      }
-      if (direction === 'down') {
-        if (sub.focus < n - 1) { sub.focus += 1; play('navigate'); renderWii(); }
-        else if (sub.focus === n - 1) { sub.focus = n; play('navigate'); renderWii(); }
-        else if (sub.focus === n) { sub.focus = n + 1; play('navigate'); renderWii(); }
-        return;
-      }
-      return;
-    }
-    // Action: Back / Confirm. Slider: the bar, then Back / Confirm.
-    if (sub.mode === 'slider') {
-      if (direction === 'up') { sub.focus = Math.max(0, sub.focus - 1); play('navigate'); renderWii(); return; }
-      if (direction === 'down') { sub.focus = Math.min(2, sub.focus + 1); play('navigate'); renderWii(); return; }
-      if (sub.focus >= 1 && (direction === 'left' || direction === 'right')) {
-        sub.focus = sub.focus === 1 ? 2 : 1; play('navigate'); renderWii();
-      }
-      return;
-    }
-    if (direction === 'left' || direction === 'right' || direction === 'up' || direction === 'down') {
-      const next = sub.focus === 0 ? 1 : 0;
-      sub.focus = next;
-      play('navigate');
-      renderWii();
-    }
-  }
-  function wiiSubCancel() {
-    if (!wiiSet?.sub || wiiSet.sub.saving) return;
-    play('back');
-    wiiSet.sub = null;
-    renderWii();
-  }
-  async function wiiSubConfirm() {
-    const state = wiiSet;
-    const sub = state?.sub;
-    if (!state || !sub || sub.saving) return;
-    if (sub.mode === 'info') { wiiSubCancel(); return; }
-    const value = sub.mode === 'slider' ? sub.value : sub.mode === 'action' ? null : sub.options[sub.selected]?.value;
-    sub.saving = true; sub.error = '';
-    renderWii();
-    try {
-      // Advanced (launcher) leaves the Wii screen and opens the launcher's own dialog over Home, so closing it
-      // returns to the Wii Menu rather than to a settings page behind a just-closed dialog.
-      if (sub.mode === 'action' && sub.row.id === 'launcherSettings') { wiiSet = null; wiiBar = 0; renderWii(); }
-      if (sub.mode !== 'action' && PS3_FORM_ROWS.has(sub.row.id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(sub.row.id, value);
-      if (wiiSet !== state) return;
-      if (sub.mode !== 'action') {
-        sub.row.value = await window.gSettings.get(sub.row.id).catch(() => value);
-      }
-      state.sub = null;
-      play('confirm');
-      renderWii();
-      if (sub.mode === 'action') wiiLoadPage(true);
-    } catch (error) {
-      if (wiiSet !== state) return;
-      sub.saving = false;
-      sub.error = error?.message || 'Could not change this setting.';
-      play('back');
-      renderWii();
-    }
-  }
-  function wiiSubActivate(index) {
-    const sub = wiiSet?.sub;
-    if (!sub || sub.saving) return;
-    if (sub.mode === 'choice' || sub.mode === 'toggle') {
-      const n = sub.options.length;
-      if (index < n) { sub.selected = index; play('confirm'); renderWii(); return; }
-      if (index === n) { wiiSubCancel(); return; }
-      wiiSubConfirm();
-      return;
-    }
-    if (sub.mode === 'info') { wiiSubCancel(); return; }
-    if (sub.mode === 'action') { if (index === 0) wiiSubCancel(); else wiiSubConfirm(); return; }
-    if (sub.mode === 'slider') { if (index === 1) wiiSubCancel(); else wiiSubConfirm(); }
-  }
-  function wiiSeek(event) {
-    const sub = wiiSet?.sub;
-    const track = host.querySelector('.wii-set-track');
-    if (!sub || sub.mode !== 'slider' || !track) return;
-    const rect = track.getBoundingClientRect();
-    if (!rect.width) return;
-    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const step = sub.step || 1;
-    const value = sub.min + Math.round((fraction * (sub.max - sub.min)) / step) * step;
-    sub.value = Number(Math.max(sub.min, Math.min(sub.max, value)).toFixed(6));
-    play('navigate');
-    renderWii();
-  }
-  function wiiQueueReload() {
-    if (!wiiSet || wiiSetReloadTimer) return;
-    wiiSetReloadTimer = setTimeout(() => {
-      wiiSetReloadTimer = 0;
-      if (!wiiSet || theme() !== 'wii' || document.querySelector('dialog[open]')) return;
-      forgetShellScan('wii');
-      wiiScanSettings(true);
-    }, 180);
-  }
-  let wiiSetGridKey = '', wiiSetSubKey = '', wiiSetAnimTimer = 0;
-  function renderWiiSettings() {
-    if (!wiiSet) { renderWii(); return; }
-    chrome.innerHTML = '';
+  const wiiSetGlyphs = () => ({ confirm: 'A', back: 'B' });
+  function wiiBuildShell() {
     let shell = host.querySelector('.wii-set');
-    if (!shell) {
-      host.innerHTML = `<i class="wii-set-wall" aria-hidden="true"></i>
-        <div class="wii-set">
-          <div class="wii-set-head"><span class="wii-set-icon" aria-hidden="true">${img(WIII('settings-icon.png'), icon('repair'))}</span><span class="wii-set-head-copy"><strong>Wii Settings</strong><small class="wii-set-page-name"></small></span></div>
-          <button class="wii-set-arrow left focusable" type="button" data-action="wii-set-page" data-dir="-1" aria-label="Previous page"></button>
-          <div class="wii-set-grid"></div>
-          <button class="wii-set-arrow right focusable" type="button" data-action="wii-set-page" data-dir="1" aria-label="Next page"></button>
-          <div class="wii-set-foot"><button class="wii-pbtn wii-set-back focusable" type="button" data-action="wii-set-back">${wiiPillParts()}<span>Back</span></button>
-            <span class="wii-set-dots" aria-hidden="true"></span><span class="wii-set-hint">A Select · B Back</span></div>
-          <div class="wii-set-sub" aria-hidden="true"><div class="wii-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
-        </div>`;
-      wiiSetGridKey = wiiSetSubKey = '';
-      shell = host.querySelector('.wii-set');
-    }
-    const state = wiiSet;
+    if (shell) return shell;
+    const wall = document.createElement('i');
+    wall.className = 'wii-set-wall';
+    wall.setAttribute('aria-hidden', 'true');
+    shell = document.createElement('div');
+    shell.className = 'wii-set';
+    shell.innerHTML = `<div class="wii-set-head"><span class="wii-set-icon" aria-hidden="true">${img(WIII('settings-icon.png'), icon('repair'))}</span><span class="wii-set-head-copy"><strong>Wii Settings</strong><small class="wii-set-page-name"></small></span></div>
+      <button class="wii-set-arrow left focusable" type="button" data-action="gsh-page-turn" data-dir="-1" aria-label="Previous page"></button>
+      <div class="wii-set-grid"></div>
+      <button class="wii-set-arrow right focusable" type="button" data-action="gsh-page-turn" data-dir="1" aria-label="Next page"></button>
+      <div class="wii-set-foot"><button class="wii-pbtn wii-set-back focusable" type="button" data-action="gsh-back">${wiiPillParts()}<span>Back</span></button>
+        <span class="wii-set-dots" aria-hidden="true"></span><span class="wii-set-hint">A Select · B Back</span></div>
+      <div class="wii-set-sub" aria-hidden="true"><div class="wii-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>`;
+    host.append(wall, shell);
+    return shell;
+  }
+  let wiiSetGridKey = '', wiiSetSubKey = '';
+  function renderWiiSettings(state) {
+    const shell = wiiBuildShell();
     const pages = state.pages || [];
     const page = state.page || pages[state.pageIndex] || null;
     const rows = state.rows || [];
     shell.dataset.anim = state.anim || '';
-    if (state.anim) {
-      clearTimeout(wiiSetAnimTimer);
-      wiiSetAnimTimer = setTimeout(() => {
-        if (!wiiSet) return;
-        wiiSet.anim = '';
-        const node = host.querySelector('.wii-set');
-        if (node) node.dataset.anim = '';
-      }, 460);
-    }
     shell.querySelector('.wii-set-page-name').textContent = page ? page.title.replace(/^Wii Settings · /, '') : '';
     const grid = shell.querySelector('.wii-set-grid');
     const gridKey = `${page?.id || ''}|${state.loading ? 'load' : ''}|${state.error}|${rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|')}`;
@@ -1702,9 +958,9 @@
       wiiSetGridKey = gridKey;
       grid.innerHTML = rows.length
         ? rows.map((row, index) => {
-          const value = settingText(row, row.value);
-          return `<button class="wii-set-pill focusable" type="button" data-action="wii-set-pill" data-row="${index}" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
-            ${wiiPillParts()}<span class="wii-set-pill-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
+          const value = window.gShell.valueText(row, row.value);
+          return `<button class="wii-set-pill focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="gsh-row" data-row="${index}" data-setting-id="${esc(row.id)}" data-kind="${row.kind}" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+            ${wiiPillParts()}<span class="wii-set-pill-icon" aria-hidden="true">${icon(window.gShell.settingGlyph(row.id))}</span>
             <span class="wii-set-pill-copy"><strong>${esc(row.label)}</strong>${value ? `<small>${esc(value)}</small>` : ''}</span></button>`;
         }).join('')
         : `<p class="wii-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`;
@@ -1716,61 +972,86 @@
     const dots = shell.querySelector('.wii-set-dots');
     dots.innerHTML = pages.map((item, index) => `<i${index === state.pageIndex ? ' class="on"' : ''}></i>`).join('');
     shell.querySelector('.wii-set-hint').textContent = pages.length ? `Page ${state.pageIndex + 1} of ${pages.length} · A Select · B Back` : 'B Back';
-    // The sub-screen: title, pill choices or the Wii bar, and Back / Confirm at the bottom.
-    const overlay = shell.querySelector('.wii-set-sub');
+    // The value sub-screen: title, pill choices or the Wii bar, and Back / Confirm at the bottom.
+    const overlayEl = shell.querySelector('.wii-set-sub');
     const panel = shell.querySelector('.wii-set-panel');
-    const sub = state.sub;
-    overlay.classList.toggle('open', Boolean(sub));
-    overlay.setAttribute('aria-hidden', String(!sub));
-    const subKey = sub ? [sub.row.id, sub.mode, sub.selected, sub.value, sub.focus, sub.saving ? 1 : 0, sub.error].join('|') : '';
+    const overlay = state.overlay;
+    overlayEl.classList.toggle('open', Boolean(overlay));
+    overlayEl.setAttribute('aria-hidden', String(!overlay));
+    const subKey = overlay ? [overlay.row.id, overlay.mode, overlay.selected, overlay.value, overlay.focus, overlay.saving ? 1 : 0, overlay.error].join('|') : '';
     if (subKey !== wiiSetSubKey) {
       wiiSetSubKey = subKey;
-      if (!sub) panel.innerHTML = '';
+      if (!overlay) panel.innerHTML = '';
       else {
-        const valueText = sub.mode === 'slider' ? settingText(sub.row, sub.value) : sub.mode === 'info' ? (settingText(sub.row, sub.row.value) || 'Unavailable') : '';
+        const valueText = overlay.mode === 'slider' ? window.gShell.valueText(overlay.row, overlay.value)
+          : overlay.mode === 'info' ? (window.gShell.valueText(overlay.row, overlay.row.value) || 'Unavailable') : '';
         let body = '';
-        if (sub.mode === 'choice' || sub.mode === 'toggle') {
-          const n = sub.options.length;
-          body = `<div class="wii-set-options" role="listbox" aria-label="${esc(sub.row.label)}">${sub.options.map((option, index) => `<button class="wii-set-opt focusable${index === sub.selected ? ' on' : ''}${index === sub.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === sub.selected}" data-action="wii-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === sub.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
-        } else if (sub.mode === 'slider') {
-          body = `<div class="wii-set-slider focusable${sub.focus === 0 ? ' focused' : ''}" role="slider" tabindex="-1" data-action="wii-set-slider" aria-label="${esc(sub.row.label)}" aria-valuemin="${sub.min}" aria-valuemax="${sub.max}" aria-valuenow="${sub.value}">
-            <span class="wii-set-track"><i style="width:${settingPercent(sub, sub.value)}%"></i><b style="left:${settingPercent(sub, sub.value)}%"></b></span></div>
+        if (overlay.mode === 'choice') {
+          const n = overlay.options.length;
+          const footer = { back: n, confirm: n + 1 };
+          body = `<div class="wii-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="wii-set-opt focusable${index === overlay.selected ? ' on' : ''}${index === overlay.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="gsh-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+          panel.dataset.footerBack = String(footer.back);
+          panel.dataset.footerConfirm = String(footer.confirm);
+        } else if (overlay.mode === 'slider') {
+          body = `<div class="wii-set-slider focusable${overlay.focus === 0 ? ' focused' : ''}" role="slider" data-action="gsh-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}">
+            <span class="wii-set-track" data-gsh-track><i style="width:${window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value)}%"></i><b style="left:${window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value)}%"></b></span></div>
             <strong class="wii-set-slider-value">${esc(valueText)}</strong>`;
-        } else if (sub.mode === 'action') {
-          body = `<p class="wii-set-sub-copy">Run ${esc(sub.row.label)}? It opens the launcher's own control, with all of its confirmation steps.</p>`;
+          panel.dataset.footerBack = '1';
+          panel.dataset.footerConfirm = '2';
         } else {
           body = `<p class="wii-set-sub-value">${esc(valueText)}</p><p class="wii-set-sub-copy">This is read-only information from this PC.</p>`;
+          panel.dataset.footerBack = '0';
+          panel.dataset.footerConfirm = '-1';
         }
-        const footerIndex = sub.mode === 'info' ? 0 : sub.mode === 'slider' ? 1 : sub.mode === 'action' ? 0 : sub.options.length;
-        const confirmIndex = sub.mode === 'info' ? -1 : sub.mode === 'slider' ? 2 : sub.mode === 'action' ? 1 : sub.options.length + 1;
-        panel.innerHTML = `<h3><span class="wii-set-panel-icon" aria-hidden="true">${icon(settingGlyph(sub.row.id))}</span>${esc(sub.row.label)}</h3>${body}
-          <p class="wii-set-sub-error">${sub.error ? esc(sub.error) : ''}</p>
-          <div class="wii-set-panel-foot"><button class="wii-pbtn focusable${sub.focus === footerIndex ? ' focused' : ''}" type="button" data-action="wii-set-cancel">${wiiPillParts()}<span>Back</span></button>
-            ${confirmIndex >= 0 ? `<button class="wii-pbtn focusable${sub.focus === confirmIndex ? ' focused' : ''}" type="button" data-action="wii-set-commit">${wiiPillParts()}<span>Confirm</span></button>` : ''}
-            ${sub.saving ? '<span class="wii-set-saving">Saving…</span>' : ''}</div>`;
-        // The footer's own focused class is applied above; the option / bar focus is drawn by their state.
+        const backIndex = Number(panel.dataset.footerBack);
+        const confirmIndex = Number(panel.dataset.footerConfirm);
+        panel.innerHTML = `<h3><span class="wii-set-panel-icon" aria-hidden="true">${icon(window.gShell.settingGlyph(overlay.row.id))}</span>${esc(overlay.row.label)}</h3>${body}
+          <p class="wii-set-sub-error">${overlay.error ? esc(overlay.error) : ''}</p>
+          <div class="wii-set-panel-foot"><button class="wii-pbtn focusable${overlay.focus === backIndex ? ' focused' : ''}" type="button" data-action="gsh-cancel">${wiiPillParts()}<span>Back</span></button>
+            ${confirmIndex >= 0 ? `<button class="wii-pbtn focusable${overlay.focus === confirmIndex ? ' focused' : ''}" type="button" data-action="gsh-commit">${wiiPillParts()}<span>Confirm</span></button>` : ''}
+            ${overlay.saving ? '<span class="wii-set-saving">Saving…</span>' : ''}</div>`;
       }
     }
-    let target = null;
-    if (sub) {
-      if (sub.mode === 'choice' || sub.mode === 'toggle') {
-        if (sub.focus < sub.options.length) target = panel.querySelectorAll('.wii-set-opt')[sub.focus];
-        else target = panel.querySelectorAll('.wii-pbtn')[sub.focus - sub.options.length];
-      } else if (sub.mode === 'slider') {
-        target = sub.focus === 0 ? panel.querySelector('.wii-set-slider') : panel.querySelectorAll('.wii-pbtn')[sub.focus - 1];
-      } else target = panel.querySelectorAll('.wii-pbtn')[sub.focus] || panel;
-    } else {
-      target = grid.querySelector('.wii-set-pill.sel') || shell.querySelector('.wii-set-back');
-    }
-    focusEl(target);
   }
+  function wiiSetTarget(state) {
+    const shell = host.querySelector('.wii-set');
+    if (!shell) return null;
+    if (state.overlay) {
+      const overlay = state.overlay;
+      const panel = shell.querySelector('.wii-set-panel');
+      if (!panel) return shell.querySelector('.wii-set-back');
+      if (overlay.mode === 'choice') {
+        if (overlay.focus < overlay.options.length) return panel.querySelectorAll('.wii-set-opt')[overlay.focus];
+        return panel.querySelectorAll('.wii-pbtn')[overlay.focus - overlay.options.length] || panel.querySelector('.wii-pbtn');
+      }
+      if (overlay.mode === 'slider') {
+        if (overlay.focus === 0) return panel.querySelector('.wii-set-slider');
+        return panel.querySelectorAll('.wii-pbtn')[overlay.focus - 1] || panel.querySelector('.wii-pbtn');
+      }
+      return panel.querySelector('.wii-pbtn');
+    }
+    return shell.querySelector('.wii-set-pill.sel') || shell.querySelector('.wii-set-back');
+  }
+  gShell.define('wii', {
+    root: 'rows',
+    pageCols: 3,
+    paged: true,
+    inlineToggles: false,
+    glyphs: wiiSetGlyphs,
+    container: () => host,
+    render: renderWiiSettings,
+    target: wiiSetTarget,
+    leave() {
+      host.querySelectorAll('.wii-set, .wii-set-wall').forEach(node => node.remove());
+      wiiSetGridKey = wiiSetSubKey = '';
+    },
+    returnFocus() { return chrome.querySelector('.wii-btn') || host.querySelector('.wii-ch.focusable'); }
+  });
 
   // =========================== 3DS: the HOME Menu ===========================
   // One full-bleed screen after iiSU: three rows of large square icons under the selected app's banner.
   // Five columns are in view at a time; the rail slides one column at a time instead of being rebuilt.
   let dsFocus = 0, dsTool = -1, dsArtToken = 0;
-  // 3DS System Settings shell state (task S3).
-  let dsSet = null, dsSetScanToken = 0, dsSetRowsToken = 0, dsSetReloadTimer = 0;
   const DS_ROWS = 3, DS_COLS = 5, DS_PITCH = 300;
   const DS_TOOLS = [['settings', 'System Settings', 'home'], ['library', 'Game Notes', 'notes'], ['g-friends', 'Friend List', 'friends'], ['g-notifications', 'Notifications', 'notes2'], ['toggle-search', 'Internet Browser', 'web'], ['g-account', 'Miiverse', 'miiverse']];
   const DS_SVG = {
@@ -1800,7 +1081,7 @@
     return { cols, col, start: Math.max(0, Math.min(col - 2, cols - DS_COLS)), pad: Math.max(0, DS_COLS - cols) * DS_PITCH / 2 };
   }
   function renderDs() {
-    if (dsSet) { renderDsSettings(); return; }
+    if (window.gShell?.isOpen?.('3ds')) { window.gShell.render(); return; }
     const list = dsList();
     dsFocus = Math.max(0, Math.min(dsFocus, list.length - 1));
     const rail = dsRail(list);
@@ -1873,7 +1154,7 @@
     }).catch(() => {});
   }
   function dsMove(direction) {
-    if (dsSet) { dsShellMove(direction); return; }
+    if (window.gShell?.isOpen?.('3ds')) { window.gShell.move(direction); return; }
     const list = dsList();
     if (dsTool >= 0) {
       if (direction === 'left' || direction === 'right') { const next = Math.max(0, Math.min(DS_TOOLS.length - 1, dsTool + (direction === 'right' ? 1 : -1))); if (next === dsTool) return; dsTool = next; play('navigate'); }
@@ -1893,12 +1174,11 @@
     dsUpdate();
   }
 
-  // ---------- 3DS: System Settings, driven by gSettings (task S3) ----------
-  // The console's System Settings app, adapted to the theme's single widescreen: the top screen describes the
-  // focused option, the bottom screen holds the large white buttons. Its four root buttons are the registry pages
-  // the console grouped this way — Internet Settings, Data Management, Other Settings and Advanced (launcher);
-  // Parental Controls is not faked because the launcher has no parental-control capability to back it. Rows come
-  // from gSettings.layout('3ds'), and each one is a real registry setting.
+  // ---------- 3DS: System Settings, the two-screen skin ----------
+  // The top screen describes the focused option; the bottom screen holds the console's large white buttons. Its
+  // root is the four buttons the console grouped there — Internet Settings, Data Management, Other Settings and
+  // Advanced (launcher); Other Settings lists the rest of the registry layout. The shared shell owns the model,
+  // values, availability and Back grammar; this block paints the two screens.
   const DS_SET_ICONS = {
     internet: { svg: 'web' }, data: { svg: 'library' }, profile: { svg: 'mii' },
     'date-time': { glyph: 'language' }, sound: { glyph: 'volume' }, display: { glyph: 'tv' }, theme: { glyph: 'color' },
@@ -1924,364 +1204,64 @@
     return icon(spec.glyph || 'settings');
   };
   const dsSetPageCopy = page => DS_SET_COPY[page?.id] || 'Each row here changes something real in the launcher.';
-  const dsRootButtons = pages => {
+  const dsSetGlyphs = () => ({ confirm: 'A', back: 'B' });
+  function dsRootItems(state) {
+    const pages = state.pages || [];
     const find = id => pages.find(page => page.id === id);
     const list = [];
     const internet = find('internet');
-    if (internet) list.push({ kind: 'page', page: internet, label: internet.title, copy: DS_SET_COPY.internet, icon: dsSetIcon('internet') });
+    if (internet) list.push({ kind: 'page', id: 'internet', pageId: 'internet', label: internet.title, copy: DS_SET_COPY.internet, icon: dsSetIcon('internet') });
     const data = find('data');
-    if (data) list.push({ kind: 'page', page: data, label: data.title, copy: DS_SET_COPY.data, icon: dsSetIcon('data') });
-    if (pages.some(page => !['internet', 'data', 'advanced'].includes(page.id))) list.push({ kind: 'other', label: 'Other Settings', copy: DS_SET_COPY.other, icon: DS_SVG.wrench });
+    if (data) list.push({ kind: 'page', id: 'data', pageId: 'data', label: data.title, copy: DS_SET_COPY.data, icon: dsSetIcon('data') });
+    if (pages.some(page => !['internet', 'data', 'advanced'].includes(page.id))) list.push({ kind: 'other', id: 'other', label: 'Other Settings', copy: DS_SET_COPY.other, icon: DS_SVG.wrench });
     const advanced = find('advanced');
-    if (advanced) list.push({ kind: 'advanced', page: advanced, label: advanced.title, copy: DS_SET_COPY.advanced, icon: icon('settings') });
+    if (advanced) list.push({ kind: 'advanced', id: 'advanced', pageId: 'advanced', label: advanced.title, copy: DS_SET_COPY.advanced, icon: icon('settings') });
     return list;
-  };
-  const dsOtherPages = pages => pages.filter(page => !['internet', 'data', 'advanced'].includes(page.id));
-  function dsOpenSettings() {
-    if (dsSet) return;
-    play('confirm');
-    dsSet = { pages: null, level: 'root', parent: 'root', pageId: null, rows: [], focus: 0, rootFocus: 0, otherFocus: 0, loading: true, error: '', sub: null };
-    renderDs();
-    dsScanSettings();
   }
-  function dsCloseSettings() {
-    if (!dsSet) return;
-    play('back');
-    dsSet = null; dsSetReloadTimer && clearTimeout(dsSetReloadTimer); dsSetReloadTimer = 0;
-    dsTool = 0;
-    renderDs();
-  }
-  function dsScanSettings(force = false) {
-    if (!dsSet) return;
-    const token = ++dsSetScanToken;
-    scanShellLayout('3ds', force).then(pages => {
-      if (token !== dsSetScanToken || !dsSet) return;
-      const state = dsSet;
-      state.pages = pages;
-      state.loading = false;
-      if (state.level === 'page') {
-        const page = pages.find(item => item.id === state.pageId);
-        if (!page) {
-          state.level = state.parent; state.pageId = null; state.rows = []; state.sub = null;
-          state.focus = state.parent === 'other' ? state.otherFocus : state.rootFocus;
-          renderDs();
-        } else {
-          dsLoadRows(page, true);
-        }
-        return;
-      }
-      const count = state.level === 'other' ? dsOtherPages(pages).length : dsRootButtons(pages).length;
-      state.focus = Math.min(state.focus, Math.max(0, count - 1));
-      renderDs();
-    }).catch(error => {
-      if (token !== dsSetScanToken || !dsSet) return;
-      dsSet.loading = false;
-      dsSet.error = error?.message || 'Could not read the settings on this PC.';
-      renderDs();
-    });
-  }
-  async function dsLoadRows(page, preserveFocus = false) {
-    const state = dsSet;
-    if (!state) return;
-    const token = ++dsSetRowsToken;
-    state.pageId = page.id;
-    state.rows = [];
-    state.loading = true;
-    state.error = '';
-    if (!preserveFocus) state.focus = 0;
-    renderDs();
-    try {
-      const rows = await loadShellRows(page, '3ds');
-      if (token !== dsSetRowsToken || dsSet !== state) return;
-      state.rows = rows;
-      state.loading = false;
-      state.focus = Math.min(state.focus, Math.max(0, rows.length - 1));
-      renderDs();
-    } catch (error) {
-      if (token !== dsSetRowsToken || dsSet !== state) return;
-      state.loading = false;
-      state.error = error?.message || 'Could not read these settings.';
-      renderDs();
-    }
-  }
-  function dsOpenPage(page, parent) {
-    const state = dsSet;
-    if (!state || !page) return;
-    if (page.id === 'advanced') { dsRunLauncher(); return; }
-    if (parent === 'root') state.rootFocus = state.focus;
-    else state.otherFocus = state.focus;
-    play('confirm');
-    state.level = 'page'; state.parent = parent; state.pageId = page.id; state.sub = null;
-    dsLoadRows(page, false);
-  }
-  function dsRunLauncher() {
-    play('confirm');
-    dsSet = null; dsSetReloadTimer && clearTimeout(dsSetReloadTimer); dsSetReloadTimer = 0;
-    dsTool = 0;
-    renderDs();
-    Promise.resolve(window.gSettings?.set('launcherSettings', null)).catch(error => {
-      if (typeof showToast === 'function') showToast(error?.message || 'The launcher settings are unavailable.');
-    });
-  }
-  async function dsSetValue(id, value) {
-    const state = dsSet;
-    const row = state?.rows.find(item => item.id === id);
-    if (!state || !row) return;
-    const previous = row.value;
-    row.value = value;
-    renderDs();
-    try {
-      if (PS3_FORM_ROWS.has(id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(id, value);
-      const fresh = await window.gSettings.get(id).catch(() => value);
-      if (dsSet !== state) return;
-      row.value = fresh;
-      play('confirm');
-    } catch (error) {
-      if (dsSet !== state) return;
-      row.value = previous;
-      play('back');
-      if (typeof showToast === 'function') showToast(error?.message || 'Could not change this setting.');
-    }
-    if (dsSet === state) renderDs();
-  }
-  function dsRunRowAction(row) {
-    play('confirm');
-    Promise.resolve(window.gSettings.set(row.id, null)).catch(error => {
-      if (typeof showToast === 'function') showToast(error?.message || 'That action is unavailable.');
-    }).then(() => window.gSettings.get(row.id).then(value => {
-      const state = dsSet;
-      const found = state?.rows?.find(item => item.id === row.id);
-      if (found) { found.value = value; renderDs(); }
-    }).catch(() => {}));
-  }
-  function dsActivate() {
-    const state = dsSet;
-    if (!state) return;
-    if (state.sub) { dsSubActivate(state.sub.focus); return; }
-    if (state.level === 'root') {
-      const button = dsRootButtons(state.pages || [])[state.focus];
-      if (!button) return;
-      if (button.kind === 'other') { state.rootFocus = state.focus; state.level = 'other'; state.focus = state.otherFocus; play('confirm'); renderDs(); return; }
-      if (button.kind === 'advanced') { dsRunLauncher(); return; }
-      dsOpenPage(button.page, 'root');
-      return;
-    }
-    if (state.level === 'other') {
-      const page = dsOtherPages(state.pages || [])[state.focus];
-      if (page) dsOpenPage(page, 'other');
-      return;
-    }
-    const row = state.rows[state.focus];
-    if (!row) return;
-    if (row.kind === 'action') { dsRunRowAction(row); return; }
-    if (row.kind === 'toggle') { dsSetValue(row.id, !row.value); return; }
-    if (row.kind === 'info') { play('confirm'); state.sub = { row, mode: 'info', options: [], selected: 0, focus: 0, saving: false, error: '' }; renderDs(); return; }
-    if (row.kind === 'slider') {
-      play('confirm');
-      const min = Number.isFinite(Number(row.min)) ? Number(row.min) : 0;
-      const max = Number.isFinite(Number(row.max)) ? Number(row.max) : 100;
-      const raw = Number(row.value);
-      state.sub = { row, mode: 'slider', options: [], selected: 0, min, max, step: Number(row.step) || 1, value: Number.isFinite(raw) ? Math.max(min, Math.min(max, raw)) : min, focus: 0, saving: false, error: '' };
-      renderDs();
-      return;
-    }
-    if (row.kind === 'choice') {
-      if (!row.options?.length) { if (typeof showToast === 'function') showToast('That setting has no choices right now.'); return; }
-      play('confirm');
-      const selected = Math.max(0, row.options.findIndex(option => option.value === row.value));
-      state.sub = { row, mode: 'choice', options: row.options, selected, focus: selected, saving: false, error: '' };
-      renderDs();
-    }
-  }
-  function dsBack() {
-    const state = dsSet;
-    if (!state) return false;
-    if (state.sub) { dsSubCancel(); return true; }
-    if (state.level === 'page') {
-      play('back');
-      state.level = state.parent; state.pageId = null; state.rows = []; state.sub = null;
-      state.focus = state.parent === 'other' ? state.otherFocus : state.rootFocus;
-      renderDs();
-      return true;
-    }
-    if (state.level === 'other') {
-      play('back');
-      state.level = 'root'; state.rows = []; state.sub = null; state.focus = state.rootFocus;
-      renderDs();
-      return true;
-    }
-    dsCloseSettings();
-    return true;
-  }
-  function dsGridInfo() {
-    const state = dsSet;
-    if (!state) return { count: 0, cols: 2 };
-    if (state.level === 'page') return { count: state.rows.length, cols: 2 };
-    if (state.level === 'other') return { count: dsOtherPages(state.pages || []).length, cols: 3 };
-    return { count: dsRootButtons(state.pages || []).length, cols: 2 };
-  }
-  function dsShellMove(direction) {
-    const state = dsSet;
-    if (!state) return;
-    if (state.sub) { dsSubMove(direction); return; }
-    const { count, cols } = dsGridInfo();
-    if (!count) return;
-    const col = state.focus % cols;
-    let next = state.focus;
-    if (direction === 'left') { if (col > 0) next = state.focus - 1; }
-    else if (direction === 'right') { if (col < cols - 1 && state.focus + 1 < count) next = state.focus + 1; }
-    else if (direction === 'up') { if (state.focus - cols >= 0) next = state.focus - cols; }
-    else if (direction === 'down') { if (state.focus + cols < count) next = state.focus + cols; }
-    else return;
-    if (next === state.focus) return;
-    state.focus = next;
-    play('navigate');
-    renderDs();
-  }
-  const dsSubCount = sub => sub.mode === 'info' ? 1 : sub.mode === 'slider' ? 3 : sub.options.length + 2;
-  function dsSubMove(direction) {
-    const state = dsSet;
-    const sub = state?.sub;
-    if (!sub || sub.saving) return;
-    if (sub.mode === 'info') return;
-    if (sub.mode === 'slider') {
-      if (sub.focus === 0) {
-        if (direction === 'left' || direction === 'right') {
-          const next = Math.max(sub.min, Math.min(sub.max, sub.value + (direction === 'right' ? sub.step : -sub.step)));
-          if (next === sub.value) return;
-          sub.value = Number(next.toFixed(6));
-          play('navigate'); renderDs(); return;
-        }
-        if (direction === 'down') { sub.focus = 1; play('navigate'); renderDs(); }
-        return;
-      }
-      if (direction === 'up') { sub.focus = Math.max(0, sub.focus - 1); play('navigate'); renderDs(); }
-      else if (direction === 'down') { sub.focus = Math.min(2, sub.focus + 1); play('navigate'); renderDs(); }
-      else if ((direction === 'left' || direction === 'right') && sub.focus >= 1) { sub.focus = sub.focus === 1 ? 2 : 1; play('navigate'); renderDs(); }
-      return;
-    }
-    const n = sub.options.length;
-    if (sub.focus < n) {
-      if (direction === 'left') { if (sub.focus % 2 === 1) { sub.focus -= 1; play('navigate'); renderDs(); } return; }
-      if (direction === 'right') { if (sub.focus % 2 === 0 && sub.focus + 1 < n) { sub.focus += 1; play('navigate'); renderDs(); } return; }
-      if (direction === 'up') { if (sub.focus - 2 >= 0) { sub.focus -= 2; play('navigate'); renderDs(); } return; }
-      if (direction === 'down') {
-        if (sub.focus + 2 < n) sub.focus += 2;
-        else sub.focus = n;
-        play('navigate'); renderDs();
-      }
-      return;
-    }
-    if (direction === 'up') { sub.focus = Math.max(0, n - 1); play('navigate'); renderDs(); return; }
-    if (direction === 'left' || direction === 'right') { sub.focus = sub.focus === n ? n + 1 : n; play('navigate'); renderDs(); }
-  }
-  function dsSubActivate(index) {
-    const state = dsSet;
-    const sub = state?.sub;
-    if (!sub || sub.saving) return;
-    if (sub.mode === 'info') { dsSubCancel(); return; }
-    if (sub.mode === 'slider') { if (index === 1) dsSubCancel(); else dsSubConfirm(); return; }
-    const n = sub.options.length;
-    if (index < n) { sub.selected = index; play('confirm'); renderDs(); return; }
-    if (index === n) { dsSubCancel(); return; }
-    dsSubConfirm();
-  }
-  function dsSubCancel() {
-    if (!dsSet?.sub || dsSet.sub.saving) return;
-    play('back');
-    dsSet.sub = null;
-    renderDs();
-  }
-  async function dsSubConfirm() {
-    const state = dsSet;
-    const sub = state?.sub;
-    if (!state || !sub || sub.saving) return;
-    if (sub.mode === 'info') { dsSubCancel(); return; }
-    const value = sub.mode === 'slider' ? sub.value : sub.options[sub.selected]?.value;
-    sub.saving = true; sub.error = '';
-    renderDs();
-    try {
-      if (PS3_FORM_ROWS.has(sub.row.id)) await ps3SyncLauncherForm();
-      await window.gSettings.set(sub.row.id, value);
-      if (dsSet !== state) return;
-      sub.row.value = await window.gSettings.get(sub.row.id).catch(() => value);
-      state.sub = null;
-      play('confirm');
-      renderDs();
-    } catch (error) {
-      if (dsSet !== state) return;
-      sub.saving = false;
-      sub.error = error?.message || 'Could not change this setting.';
-      play('back');
-      renderDs();
-    }
-  }
-  function dsSeek(event) {
-    const sub = dsSet?.sub;
-    const track = host.querySelector('.ds-set-track');
-    if (!sub || sub.mode !== 'slider' || !track) return;
-    const rect = track.getBoundingClientRect();
-    if (!rect.width) return;
-    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const step = sub.step || 1;
-    const value = sub.min + Math.round((fraction * (sub.max - sub.min)) / step) * step;
-    sub.value = Number(Math.max(sub.min, Math.min(sub.max, value)).toFixed(6));
-    play('navigate');
-    renderDs();
-  }
-  function dsQueueReload() {
-    if (!dsSet || dsSetReloadTimer) return;
-    dsSetReloadTimer = setTimeout(() => {
-      dsSetReloadTimer = 0;
-      if (!dsSet || theme() !== '3ds' || document.querySelector('dialog[open]')) return;
-      forgetShellScan('3ds');
-      dsScanSettings(true);
-    }, 180);
+  function dsBuildShell() {
+    let shell = host.querySelector('.ds-set');
+    if (shell) return shell;
+    const device = document.createElement('i');
+    device.className = 'ds-set-device';
+    device.setAttribute('aria-hidden', 'true');
+    shell = document.createElement('div');
+    shell.className = 'ds-set';
+    shell.innerHTML = `<section class="ds-set-top" aria-label="System Settings description">
+        <div class="ds-set-topbar"><span class="ds-set-brand">System Settings</span><span class="ds-set-when"></span></div>
+        <div class="ds-set-copy"><span class="ds-set-kicker"></span><h2></h2><p></p><span class="ds-set-readout" hidden></span></div>
+        <div class="ds-set-art" aria-hidden="true"><span class="ds-set-art-icon"></span></div>
+      </section>
+      <section class="ds-set-bottom" aria-label="System Settings options">
+        <div class="ds-set-buttons"></div>
+        <button class="ds-set-back focusable" type="button" data-action="gsh-back">‹ Back</button>
+        <span class="ds-set-hint">A Select · B Back</span>
+        <div class="ds-set-sub" aria-hidden="true"><div class="ds-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
+      </section>`;
+    host.append(device, shell);
+    return shell;
   }
   let dsSetButtonsKey = '', dsSetSubKey = '', dsSetArtKey = '';
-  function renderDsSettings() {
-    if (!dsSet) { renderDs(); return; }
-    chrome.innerHTML = '';
-    let shell = host.querySelector('.ds-set');
-    if (!shell) {
-      host.innerHTML = `<i class="ds-set-device" aria-hidden="true"></i>
-        <div class="ds-set">
-          <section class="ds-set-top" aria-label="System Settings description">
-            <div class="ds-set-topbar"><span class="ds-set-brand">System Settings</span><span class="ds-set-when"></span></div>
-            <div class="ds-set-copy"><span class="ds-set-kicker"></span><h2></h2><p></p><span class="ds-set-readout" hidden></span></div>
-            <div class="ds-set-art" aria-hidden="true"><span class="ds-set-art-icon"></span></div>
-          </section>
-          <section class="ds-set-bottom" aria-label="System Settings options">
-            <div class="ds-set-buttons"></div>
-            <button class="ds-set-back focusable" type="button" data-action="ds-set-back">‹ Back</button>
-            <span class="ds-set-hint">A Select · B Back</span>
-            <div class="ds-set-sub" aria-hidden="true"><div class="ds-set-panel" role="dialog" aria-modal="false" aria-label="Setting"></div></div>
-          </section>
-        </div>`;
-      dsSetButtonsKey = dsSetSubKey = dsSetArtKey = '';
-      shell = host.querySelector('.ds-set');
-    }
-    const state = dsSet;
+  function renderDsSettings(state) {
+    const shell = dsBuildShell();
     const pages = state.pages || [];
-    const page = pages.find(item => item.id === state.pageId) || null;
-    const root = dsRootButtons(pages);
-    const other = dsOtherPages(pages);
+    const page = state.page || null;
+    const root = dsRootItems(state);
+    const other = pages.filter(item => !['internet', 'data', 'advanced'].includes(item.id));
     const rows = state.rows || [];
-    const sub = state.sub;
+    const overlay = state.overlay;
     // Top screen: the focused option in the console's own words.
     let kicker = 'System Settings', title = 'System Settings', copy = '', readout = '', art = 'settings';
-    if (sub) {
+    if (overlay) {
       kicker = page?.title || 'System Settings';
-      title = sub.row.label;
-      art = sub.row.id;
-      if (sub.mode === 'slider') { readout = settingText(sub.row, sub.value); copy = 'Use left and right to change the value, then press A on OK.'; }
-      else if (sub.mode === 'choice' || sub.mode === 'toggle') {
-        const chosen = sub.options[sub.selected];
+      title = overlay.row.label;
+      art = overlay.row.id;
+      if (overlay.mode === 'slider') { readout = window.gShell.valueText(overlay.row, overlay.value); copy = 'Use left and right to change the value, then press A on OK.'; }
+      else if (overlay.mode === 'choice') {
+        const chosen = overlay.options[overlay.selected];
         readout = chosen?.label || '';
-        copy = sub.focus >= sub.options.length ? 'Press A on OK to keep this value, or Back to leave it as it was.' : 'Choose a value with A, then confirm with OK.';
+        copy = overlay.focus >= overlay.options.length ? 'Press A on OK to keep this value, or Back to leave it as it was.' : 'Choose a value with A, then confirm with OK.';
       } else {
-        readout = settingText(sub.row, sub.row.value) || 'Unavailable';
+        readout = window.gShell.valueText(overlay.row, overlay.row.value) || 'Unavailable';
         copy = 'This is read-only information from this PC. Press A or B to go back.';
       }
     } else if (state.level === 'page') {
@@ -2290,7 +1270,7 @@
       if (row) {
         title = row.label;
         art = row.id;
-        readout = settingText(row, row.value) || '';
+        readout = window.gShell.valueText(row, row.value) || '';
         copy = row.kind === 'toggle' ? 'Press A to turn it on or off.'
           : row.kind === 'choice' ? 'Press A to choose a value.'
             : row.kind === 'slider' ? 'Press A, then use left and right to change it.'
@@ -2307,7 +1287,7 @@
       else copy = 'Nothing else is available on this PC right now.';
     } else {
       const target = root[state.focus];
-      if (target) { title = target.label; copy = target.copy; art = target.kind === 'other' ? 'other' : target.kind === 'advanced' ? 'advanced' : target.page?.id; }
+      if (target) { title = target.label; copy = target.copy; art = target.kind === 'other' ? 'other' : target.kind === 'advanced' ? 'advanced' : target.pageId; }
       else copy = state.loading ? 'Reading settings…' : state.error || 'No settings are available on this PC right now.';
     }
     shell.querySelector('.ds-set-when').textContent = `${dayMonth()} ${time()}`;
@@ -2321,32 +1301,35 @@
     if (artKey !== dsSetArtKey) {
       dsSetArtKey = artKey;
       const artEl = shell.querySelector('.ds-set-art-icon');
-      artEl.innerHTML = DS_SET_ICONS[art]?.svg ? dsSetIcon(art) : DS_SET_ICONS[art]?.glyph ? icon(DS_SET_ICONS[art].glyph) : (SETTING_GLYPHS[art] ? icon(SETTING_GLYPHS[art]) : icon('settings'));
+      artEl.innerHTML = DS_SET_ICONS[art]?.svg ? dsSetIcon(art) : DS_SET_ICONS[art]?.glyph ? icon(DS_SET_ICONS[art].glyph) : icon(window.gShell.settingGlyph(art));
     }
     // Bottom screen: the buttons for this level.
     const buttons = shell.querySelector('.ds-set-buttons');
-    const gridKey = [state.level, state.pageId || '', state.loading ? 1 : 0, state.error, state.focus,
-      state.level === 'page' ? rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|') : state.level === 'other' ? other.map(item => item.id).join('|') : root.map(item => item.kind + (item.page?.id || '')).join('|')].join('~');
+    const gridKey = [state.level, state.page?.id || '', state.loading ? 1 : 0, state.error, state.focus,
+      state.level === 'page' ? rows.map(row => `${row.id}:${row.kind}:${row.value}`).join('|') : state.level === 'other' ? other.map(item => item.id).join('|') : root.map(item => item.kind + (item.pageId || '')).join('|')].join('~');
     if (gridKey !== dsSetButtonsKey) {
       dsSetButtonsKey = gridKey;
       buttons.className = `ds-set-buttons ${state.level === 'page' ? 'rows' : state.level === 'other' ? 'other' : 'categories'}`;
       if (state.level === 'page') {
         buttons.innerHTML = rows.length
-          ? rows.map((row, index) => `<button class="ds-set-tile row focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-row" data-row="${index}" aria-label="${esc(row.label)}${settingText(row, row.value) ? `, ${esc(settingText(row, row.value))}` : ''}">
-              <span class="ds-set-tile-icon" aria-hidden="true">${icon(settingGlyph(row.id))}</span>
-              <span class="ds-set-tile-copy"><strong>${esc(row.label)}</strong>${settingText(row, row.value) ? `<small>${esc(settingText(row, row.value))}</small>` : ''}</span>
+          ? rows.map((row, index) => {
+            const value = window.gShell.valueText(row, row.value);
+            return `<button class="ds-set-tile row focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="gsh-row" data-row="${index}" data-setting-id="${esc(row.id)}" data-kind="${row.kind}" aria-label="${esc(row.label)}${value ? `, ${esc(value)}` : ''}">
+              <span class="ds-set-tile-icon" aria-hidden="true">${icon(window.gShell.settingGlyph(row.id))}</span>
+              <span class="ds-set-tile-copy"><strong>${esc(row.label)}</strong>${value ? `<small>${esc(value)}</small>` : ''}</span>
               ${row.kind === 'toggle' ? `<span class="ds-set-check${row.value ? ' on' : ''}" aria-hidden="true">${row.value ? '✓' : ''}</span>` : ''}
               ${row.kind === 'choice' || row.kind === 'action' ? '<span class="ds-set-chevron" aria-hidden="true">›</span>' : ''}
-            </button>`).join('')
+            </button>`;
+          }).join('')
           : `<p class="ds-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'Nothing on this page is available on this PC.')}</p>`;
       } else if (state.level === 'other') {
         buttons.innerHTML = other.length
-          ? other.map((item, index) => `<button class="ds-set-tile category small focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-tile" data-kind="page" data-page="${esc(item.id)}" data-index="${index}" aria-label="${esc(item.title)}">
+          ? other.map((item, index) => `<button class="ds-set-tile category small focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="gsh-page" data-page="${esc(item.id)}" data-index="${index}" aria-label="${esc(item.title)}">
               <span class="ds-set-tile-icon" aria-hidden="true">${dsSetIcon(item.id)}</span><strong>${esc(item.title)}</strong></button>`).join('')
           : `<p class="ds-set-note">Nothing else is available on this PC right now.</p>`;
       } else {
         buttons.innerHTML = root.length
-          ? root.map((item, index) => `<button class="ds-set-tile category focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="ds-set-tile" data-kind="${item.kind}" data-page="${esc(item.page?.id || '')}" data-index="${index}" aria-label="${esc(item.label)}">
+          ? root.map((item, index) => `<button class="ds-set-tile category focusable${index === state.focus ? ' sel' : ''}" type="button" data-action="gsh-root" data-index="${index}" aria-label="${esc(item.label)}">
               <span class="ds-set-tile-icon" aria-hidden="true">${item.icon}</span><strong>${esc(item.label)}</strong></button>`).join('')
           : `<p class="ds-set-note">${state.loading ? 'Reading settings…' : esc(state.error || 'No settings are available on this PC right now.')}</p>`;
       }
@@ -2354,60 +1337,79 @@
     const back = shell.querySelector('.ds-set-back');
     back.textContent = state.level === 'root' ? '‹ Close' : '‹ Back';
     // The sub-screen on the bottom screen: values, or the 3DS slider, with Back and OK.
-    const overlay = shell.querySelector('.ds-set-sub');
+    const overlayEl = shell.querySelector('.ds-set-sub');
     const panel = shell.querySelector('.ds-set-panel');
-    overlay.classList.toggle('open', Boolean(sub));
-    overlay.setAttribute('aria-hidden', String(!sub));
-    const subKey = sub ? [sub.row.id, sub.mode, sub.selected, sub.value, sub.focus, sub.saving ? 1 : 0, sub.error].join('|') : '';
+    overlayEl.classList.toggle('open', Boolean(overlay));
+    overlayEl.setAttribute('aria-hidden', String(!overlay));
+    const subKey = overlay ? [overlay.row.id, overlay.mode, overlay.selected, overlay.value, overlay.focus, overlay.saving ? 1 : 0, overlay.error].join('|') : '';
     if (subKey !== dsSetSubKey) {
       dsSetSubKey = subKey;
-      if (!sub) panel.innerHTML = '';
+      if (!overlay) panel.innerHTML = '';
       else {
-        const n = sub.options.length;
+        const n = overlay.options.length;
         let body = '';
-        if (sub.mode === 'choice' || sub.mode === 'toggle') {
-          body = `<div class="ds-set-options" role="listbox" aria-label="${esc(sub.row.label)}">${sub.options.map((option, index) => `<button class="ds-set-option focusable${index === sub.selected ? ' on' : ''}${index === sub.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === sub.selected}" data-action="ds-set-option" data-option="${index}"><span>${esc(option.label)}</span>${index === sub.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
-        } else if (sub.mode === 'slider') {
-          body = `<div class="ds-set-slider focusable${sub.focus === 0 ? ' focused' : ''}" role="slider" tabindex="-1" data-action="ds-set-slider" aria-label="${esc(sub.row.label)}" aria-valuemin="${sub.min}" aria-valuemax="${sub.max}" aria-valuenow="${sub.value}"><span class="ds-set-track"><i style="width:${settingPercent(sub, sub.value)}%"></i><b style="left:${settingPercent(sub, sub.value)}%"></b></span></div><strong class="ds-set-slider-value">${esc(settingText(sub.row, sub.value))}</strong>`;
+        if (overlay.mode === 'choice') {
+          body = `<div class="ds-set-options" role="listbox" aria-label="${esc(overlay.row.label)}">${overlay.options.map((option, index) => `<button class="ds-set-option focusable${index === overlay.selected ? ' on' : ''}${index === overlay.focus ? ' focused' : ''}" type="button" role="option" aria-selected="${index === overlay.selected}" data-action="gsh-option" data-option="${index}"><span>${esc(option.label)}</span>${index === overlay.selected ? '<i aria-hidden="true">✓</i>' : ''}</button>`).join('')}</div>`;
+        } else if (overlay.mode === 'slider') {
+          body = `<div class="ds-set-slider focusable${overlay.focus === 0 ? ' focused' : ''}" role="slider" data-action="gsh-slider" aria-label="${esc(overlay.row.label)}" aria-valuemin="${overlay.min}" aria-valuemax="${overlay.max}" aria-valuenow="${overlay.value}"><span class="ds-set-track" data-gsh-track><i style="width:${window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value)}%"></i><b style="left:${window.gShell.percent({ min: overlay.min, max: overlay.max }, overlay.value)}%"></b></span></div><strong class="ds-set-slider-value">${esc(window.gShell.valueText(overlay.row, overlay.value))}</strong>`;
         } else {
-          body = `<p class="ds-set-info">${esc(settingText(sub.row, sub.row.value) || 'Unavailable')}</p>`;
+          body = `<p class="ds-set-info">${esc(window.gShell.valueText(overlay.row, overlay.row.value) || 'Unavailable')}</p>`;
         }
-        const backIndex = sub.mode === 'info' ? 0 : sub.mode === 'slider' ? 1 : n;
-        const okIndex = sub.mode === 'info' ? -1 : sub.mode === 'slider' ? 2 : n + 1;
-        panel.innerHTML = `<h3><span class="ds-set-panel-icon" aria-hidden="true">${icon(settingGlyph(sub.row.id))}</span>${esc(sub.row.label)}</h3>${body}
-          <p class="ds-set-sub-error">${sub.error ? esc(sub.error) : ''}</p>
+        const backIndex = overlay.mode === 'slider' ? 1 : overlay.mode === 'choice' ? n : 0;
+        const okIndex = overlay.mode === 'info' ? -1 : overlay.mode === 'slider' ? 2 : n + 1;
+        panel.innerHTML = `<h3><span class="ds-set-panel-icon" aria-hidden="true">${icon(window.gShell.settingGlyph(overlay.row.id))}</span>${esc(overlay.row.label)}</h3>${body}
+          <p class="ds-set-sub-error">${overlay.error ? esc(overlay.error) : ''}</p>
           <div class="ds-set-panel-foot">
-            <button class="ds-set-action focusable${sub.focus === backIndex ? ' focused' : ''}" type="button" data-action="ds-set-cancel">Back</button>
-            ${okIndex >= 0 ? `<button class="ds-set-action ok focusable${sub.focus === okIndex ? ' focused' : ''}" type="button" data-action="ds-set-commit">OK</button>` : ''}
-            ${sub.saving ? '<span class="ds-set-saving">Saving…</span>' : ''}</div>`;
+            <button class="ds-set-action focusable${overlay.focus === backIndex ? ' focused' : ''}" type="button" data-action="gsh-cancel">Back</button>
+            ${okIndex >= 0 ? `<button class="ds-set-action ok focusable${overlay.focus === okIndex ? ' focused' : ''}" type="button" data-action="gsh-commit">OK</button>` : ''}
+            ${overlay.saving ? '<span class="ds-set-saving">Saving…</span>' : ''}</div>`;
       }
     }
-    // Focus: the sub-screen's own control, else the chosen button.
-    let target = null;
-    if (sub) {
-      if (sub.mode === 'choice' || sub.mode === 'toggle') {
-        if (sub.focus < sub.options.length) target = panel.querySelectorAll('.ds-set-option')[sub.focus];
-        else target = panel.querySelectorAll('.ds-set-action')[sub.focus - sub.options.length];
-      } else if (sub.mode === 'slider') {
-        target = sub.focus === 0 ? panel.querySelector('.ds-set-slider') : panel.querySelectorAll('.ds-set-action')[sub.focus - 1];
-      } else target = panel.querySelector('.ds-set-action');
-    } else {
-      target = buttons.querySelector('.ds-set-tile.sel') || back;
-    }
-    focusEl(target);
   }
+  function dsSetTarget(state) {
+    const shell = host.querySelector('.ds-set');
+    if (!shell) return null;
+    if (state.overlay) {
+      const overlay = state.overlay;
+      const panel = shell.querySelector('.ds-set-panel');
+      if (!panel) return shell.querySelector('.ds-set-back');
+      if (overlay.mode === 'choice') {
+        if (overlay.focus < overlay.options.length) return panel.querySelectorAll('.ds-set-option')[overlay.focus];
+        return panel.querySelectorAll('.ds-set-action')[overlay.focus - overlay.options.length] || panel.querySelector('.ds-set-action');
+      }
+      if (overlay.mode === 'slider') {
+        if (overlay.focus === 0) return panel.querySelector('.ds-set-slider');
+        return panel.querySelectorAll('.ds-set-action')[overlay.focus - 1] || panel.querySelector('.ds-set-action');
+      }
+      return panel.querySelector('.ds-set-action');
+    }
+    return shell.querySelector('.ds-set-tile.sel') || shell.querySelector('.ds-set-back');
+  }
+  gShell.define('3ds', {
+    root: 'tiles',
+    rootCols: 2,
+    otherCols: 4,
+    pageCols: 2,
+    inlineToggles: true,
+    glyphs: dsSetGlyphs,
+    container: () => host,
+    rootItems: dsRootItems,
+    render: renderDsSettings,
+    target: dsSetTarget,
+    leave() {
+      host.querySelectorAll('.ds-set, .ds-set-device').forEach(node => node.remove());
+      dsSetButtonsKey = dsSetSubKey = dsSetArtKey = '';
+    },
+    returnFocus() { return host.querySelector('.ds-tool[data-ds-tool="0"]') || host.querySelector('.ds-icon.sel'); }
+  });
 
   // =========================== Rendering, navigation, sounds ===========================
   const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
   let renderedTheme = '', enterTimer = 0;
   function render(rebuild = true) {
     const id = theme();
-    // Leaving PS3 gives up its open settings page and pop-up; coming back starts from the column again.
-    if (id !== 'ps3') { ps3Open = null; ps3Sub = 0; ps3Popup = null; }
-    // The other console settings shells are per-theme screens too; leaving the theme closes them.
-    if (id !== 'ps4') ps4Set = null;
-    if (id !== 'wii') wiiSet = null;
-    if (id !== '3ds') dsSet = null;
+    // A settings shell belongs to one console; leaving that console closes it (the shell also watches the theme).
+    if (window.gShell?.isOpen() && !window.gShell.isOpen(id)) window.gShell.close({ restore: false, silent: true, sound: false });
     document.body.classList.toggle('g-retro', on());
     // The dashboard's visibility is keyed on .home-active, which only showView() sets; keep it honest when
     // the theme changes while the launcher is already sitting on Home.
@@ -2452,24 +1454,18 @@
   }
   window.launcher?.onLibraryArtwork?.(() => scheduleRefresh());
   window.launcher?.onLibraryInitial?.(() => scheduleRefresh(600));
-  // Closing Settings after picking a theme leaves the focus on the closed dialog's own controls; put it back
-  // on the console screen so the first press does something.
+  // Closing a dialog returns the focus to the console screen. The shell's own close listener reloads its rows.
   document.addEventListener('close', event => {
     if (!on() || state.view !== 'home' || !event.target?.matches?.('dialog')) return;
     requestAnimationFrame(() => {
       if (!on() || state.view !== 'home') return;
       render();
-      // A dialog can change what a console settings shell shows (the profile name, an account key, a reset),
-      // so re-read the shell's rows after it closes even when no g-setting-change fired.
-      if (theme() === 'ps4' && ps4Set) { forgetShellScan('ps4'); ps4QueueReload(); }
-      if (theme() === 'wii' && wiiSet) { forgetShellScan('wii'); wiiQueueReload(); }
-      if (theme() === '3ds' && dsSet) { forgetShellScan('3ds'); dsQueueReload(); }
     });
   }, true);
-  const firstFocus = () => host.querySelector('.xmb-item.on, .ps4-tile.sel, .wii-pbtn[data-start], .wii-ch.focusable, .ds-icon.sel');
   if (typeof navigateConsoleHome === 'function') {
     const base = navigateConsoleHome;
     navigateConsoleHome = function (direction, focused) {
+      if (window.gShell?.isOpen()) { window.gShell.move(direction); return true; }
       if (!on() || state.view !== 'home') return base.call(this, direction, focused);
       ({ ps3: xmbMove, ps4: ps4Move, wii: wiiMove, '3ds': dsMove })[theme()](direction);
       return true;
@@ -2482,97 +1478,19 @@
     if (t === 'ps4' && el.closest('.ps4-tile') && Number(el.dataset.ps4Index) !== ps4Focus) { ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; renderPs4(false); }
     if (t === 'wii' && el.closest('.wii-ch')) { wiiFocus = Number(el.dataset.wiiIndex); wiiBar = -1; }
   });
+  // Mouse and touch on the console Home. The settings shell's own controls (gsh-*) are left to the global action
+  // dispatcher, so a click and Enter take exactly the same path through gShell.
   document.addEventListener('click', event => {
     if (!on()) return;
     const el = event.target.closest?.('[data-action]');
     if (!el) return;
     const action = el.dataset.action;
+    if (action.startsWith('gsh-')) return;
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
-    // A console's own Settings entry opens its registry-driven shell, not the launcher's dialog.
-    if (action === 'settings' && el.closest('#g-retro, #g-retro-chrome')) {
-      if (theme() === 'ps4' && !ps4Set) { stop(); ps4OpenSettings(); return; }
-      if (theme() === 'wii' && !wiiSet) { stop(); wiiOpenSettings(); return; }
-      if (theme() === '3ds' && !dsSet) { stop(); dsOpenSettings(); return; }
-    }
-    // 3DS System Settings: the bottom-screen buttons, the sub-screen and its Back/OK.
-    if (theme() === '3ds' && dsSet) {
-      if (action === 'ds-set-back') { stop(); dsBack(); return; }
-      if (action === 'ds-set-tile' || action === 'ds-set-row') {
-        stop();
-        dsSet.focus = Number(el.dataset.index ?? el.dataset.row) || 0;
-        dsActivate();
-        return;
-      }
-      if (action === 'ds-set-option') {
-        stop();
-        const sub = dsSet.sub;
-        if (!sub || sub.saving) return;
-        sub.selected = Number(el.dataset.option) || 0;
-        play('confirm');
-        renderDs();
-        return;
-      }
-      if (action === 'ds-set-commit') { stop(); dsSubConfirm(); return; }
-      if (action === 'ds-set-cancel') { stop(); dsSubCancel(); return; }
-      if (action === 'ds-set-slider') { stop(); if (state.controllerClick || event.detail === 0) dsSubConfirm(); else dsSeek(event); return; }
-    }
-    // Wii Settings: page arrows, pills, the value sub-screen and its Back/Confirm.
-    if (theme() === 'wii' && wiiSet) {
-      if (action === 'wii-set-back') { stop(); wiiCloseSettings(); return; }
-      if (action === 'wii-set-page') { stop(); wiiTurnPage(Number(el.dataset.dir) || 1); return; }
-      if (action === 'wii-set-pill') { stop(); wiiSet.focus = Number(el.dataset.row) || 0; wiiOpenSub(wiiSet.focus); return; }
-      if (action === 'wii-set-option') {
-        stop();
-        const sub = wiiSet.sub;
-        if (!sub || sub.saving) return;
-        sub.selected = Number(el.dataset.option) || 0;
-        play('confirm');
-        renderWii();
-        return;
-      }
-      if (action === 'wii-set-commit') { stop(); wiiSubConfirm(); return; }
-      if (action === 'wii-set-cancel') { stop(); wiiSubCancel(); return; }
-      if (action === 'wii-set-slider') { stop(); if (state.controllerClick || event.detail === 0) wiiSubConfirm(); else wiiSeek(event); return; }
-    }
-    // PS4 Settings: its rows, pages and option dialog are real controls.
-    if (theme() === 'ps4' && ps4Set) {
-      if (action === 'ps4-set-back') { stop(); ps4SetBack(); return; }
-      if (action === 'ps4-set-page') { stop(); ps4Set.focus = Number(el.dataset.index) || 0; ps4OpenPage(el.dataset.page); return; }
-      if (action === 'ps4-set-row') { stop(); ps4Set.focus = Number(el.dataset.row); ps4OpenRow(ps4Set.focus); return; }
-      if (action === 'ps4-set-option') {
-        stop();
-        const overlay = ps4Set.overlay;
-        if (!overlay || overlay.saving) return;
-        overlay.selected = Number(el.dataset.option);
-        ps4ConfirmOverlay();
-        return;
-      }
-      if (action === 'ps4-set-commit') { stop(); ps4ConfirmOverlay(); return; }
-      if (action === 'ps4-set-cancel') { stop(); ps4CancelOverlay(); return; }
-      // A controller press confirms the slider; a pointer press moves the knob to where it landed.
-      if (action === 'ps4-set-slider') { stop(); if (state.controllerClick || event.detail === 0) ps4ConfirmOverlay(); else ps4Seek(event); return; }
-    }
     // A first click on an XMB item, PS4 tile or 3DS icon that isn't selected selects it, as the pointer did.
-    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); if (ps3Open) { ps3Open = null; ps3Popup = null; ps3Sub = 0; } play('navigate'); renderXmb(false); return; }
+    if (theme() === 'ps3' && el.classList.contains('xmb-item') && !el.classList.contains('on')) { stop(); xmbItem[xmbCategories()[xmbCat].id] = Number(el.dataset.xmbIndex); play('navigate'); renderXmb(false); return; }
     if (theme() === '3ds' && el.classList.contains('ds-icon') && !el.classList.contains('sel')) { stop(); dsFocus = Number(el.dataset.dsIndex); dsTool = -1; play('navigate'); dsUpdate(); return; }
     if (theme() === 'ps4' && el.classList.contains('ps4-tile') && !el.classList.contains('sel')) { stop(); ps4Focus = Number(el.dataset.ps4Index); ps4Area = 'row'; play('navigate'); renderPs4(false); return; }
-    if (theme() === 'ps3' && el.classList.contains('xmb-sub-item') && !el.classList.contains('on')) { stop(); ps3Sub = Number(el.dataset.row); play('navigate'); renderXmb(false); return; }
-    if (theme() === 'ps3' && action === 'xmb-settings-page') { stop(); ps3OpenPage(el.dataset.page); return; }
-    if (theme() === 'ps3' && action === 'xmb-settings-row') { stop(); ps3OpenRow(Number(el.dataset.row)); return; }
-    if (theme() === 'ps3' && action === 'xmb-pop-option') {
-      stop();
-      const popup = ps3Popup;
-      if (!popup || popup.saving) return;
-      popup.selected = Number(el.dataset.option);
-      ps3ConfirmPopup();
-      return;
-    }
-    // A controller press confirms the bar; a pointer press moves the knob to where it landed.
-    if (theme() === 'ps3' && action === 'xmb-bar') { stop(); if (state.controllerClick || event.detail === 0) ps3ConfirmPopup(); else ps3Seek(event); return; }
-    if (theme() === 'ps3' && action === 'xmb-pop-commit') { stop(); ps3ConfirmPopup(); return; }
-    if (theme() === 'ps3' && (action === 'xmb-pop-close' || action === 'xmb-pop-cancel')) { stop(); ps3CancelPopup(); return; }
-    if (theme() === 'ps3' && action === 'xmb-settings-back') { stop(); ps3ClosePage(); return; }
-    if (action === 'g-retro-settings') { stop(); play('confirm'); Promise.resolve(typeof openSettings === 'function' ? openSettings() : settingsDialog.showModal()).then(() => { try { showSettingsPage(el.dataset.page); } catch { /* Missing. */ } }); return; }
     if (action === 'g-ps4-overview') { stop(); play('confirm'); if (typeof openGameDetails === 'function') openGameDetails(el.dataset.gameId); return; }
     if (action === 'g-retro-preview') { stop(); play('confirm'); wiiPreview = el.dataset.gameId; render(); return; }
     if (action === 'g-wii-back') { stop(); play('back'); wiiPreview = null; render(); return; }
@@ -2585,18 +1503,12 @@
       if (game && game.installed !== false) { stop(); play('launch'); wiiPreview = null; selectGame(game.id, false, el); launchSelectedGame(); }
     }
   }, true);
-  // Back: the Wii channel preview returns to the Wii Menu; the PS4 function area and sub-menu close.
+  // Back: the shared shell handles its own levels first; the Home-level previews and toolbars keep their old grammar.
   if (typeof navigateBack === 'function') {
     const back = navigateBack;
     navigateBack = function (...args) {
+      if (window.gShell?.isOpen()) return back.apply(this, args);
       if (on() && state.view === 'home') {
-        if (theme() === 'ps3') {
-          if (ps3Popup) { ps3CancelPopup(); return; }
-          if (ps3Open) { ps3ClosePage(); return; }
-        }
-        if (theme() === 'ps4' && ps4Set) { ps4SetBack(); return; }
-        if (theme() === 'wii' && wiiSet) { wiiBack(); return; }
-        if (theme() === '3ds' && dsSet) { dsBack(); return; }
         if (theme() === 'wii' && wiiPreview) { play('back'); wiiPreview = null; render(); return; }
         if (theme() === 'ps4' && ps4Area !== 'row') { play('back'); ps4Area = 'row'; render(); return; }
         if (theme() === '3ds' && dsTool >= 0) { play('back'); dsTool = -1; dsUpdate(); return; }
@@ -2604,130 +1516,6 @@
       return back.apply(this, args);
     };
   }
-
-  // The console's keyboard/controller Enter path calls performAction() with the focused item's data-action.
-  // Handle the XMB settings actions here so Enter behaves exactly like the controller's ✕ press.
-  if (typeof performAction === 'function') {
-    const actionBase = performAction;
-    performAction = async function (action, source) {
-      if (on() && state.view === 'home' && action === 'settings' && source?.closest?.('#g-retro, #g-retro-chrome')) {
-        if (theme() === 'ps4' && !ps4Set) { ps4OpenSettings(); return true; }
-        if (theme() === 'wii' && !wiiSet) { wiiOpenSettings(); return true; }
-        if (theme() === '3ds' && !dsSet) { dsOpenSettings(); return true; }
-      }
-      if (on() && state.view === 'home' && theme() === '3ds' && dsSet) {
-        if (action === 'ds-set-back') { dsBack(); return true; }
-        if (action === 'ds-set-tile' || action === 'ds-set-row') {
-          dsSet.focus = Number(source?.dataset?.index ?? source?.dataset?.row) || 0;
-          dsActivate();
-          return true;
-        }
-        if (action === 'ds-set-option') {
-          const sub = dsSet.sub;
-          if (sub && !sub.saving) { sub.selected = Number(source?.dataset?.option) || 0; play('confirm'); renderDs(); }
-          return true;
-        }
-        if (action === 'ds-set-commit') { await dsSubConfirm(); return true; }
-        if (action === 'ds-set-cancel') { dsSubCancel(); return true; }
-        if (action === 'ds-set-slider') { await dsSubConfirm(); return true; }
-      }
-      if (on() && state.view === 'home' && theme() === 'wii' && wiiSet) {
-        if (action === 'wii-set-back') { wiiCloseSettings(); return true; }
-        if (action === 'wii-set-page') { wiiTurnPage(Number(source?.dataset?.dir) || 1); return true; }
-        if (action === 'wii-set-pill') { wiiSet.focus = Number(source?.dataset?.row) || 0; wiiOpenSub(wiiSet.focus); return true; }
-        if (action === 'wii-set-option') {
-          const sub = wiiSet.sub;
-          if (sub && !sub.saving) { sub.selected = Number(source?.dataset?.option) || 0; play('confirm'); renderWii(); }
-          return true;
-        }
-        if (action === 'wii-set-commit') { await wiiSubConfirm(); return true; }
-        if (action === 'wii-set-cancel') { wiiSubCancel(); return true; }
-        if (action === 'wii-set-slider') { await wiiSubConfirm(); return true; }
-      }
-      if (on() && state.view === 'home' && theme() === 'ps4' && ps4Set) {
-        if (action === 'ps4-set-back') { ps4SetBack(); return true; }
-        if (action === 'ps4-set-page') { ps4Set.focus = Number(source?.dataset?.index) || 0; ps4OpenPage(source?.dataset?.page); return true; }
-        if (action === 'ps4-set-row') {
-          const index = Number(source?.dataset?.row);
-          ps4Set.focus = index;
-          ps4OpenRow(index);
-          return true;
-        }
-        if (action === 'ps4-set-option') {
-          if (ps4Set.overlay) { ps4Set.overlay.selected = Number(source?.dataset?.option); await ps4ConfirmOverlay(); }
-          return true;
-        }
-        if (action === 'ps4-set-commit') { await ps4ConfirmOverlay(); return true; }
-        if (action === 'ps4-set-cancel') { ps4CancelOverlay(); return true; }
-        if (action === 'ps4-set-slider') { await ps4ConfirmOverlay(); return true; }
-      }
-      if (on() && state.view === 'home' && theme() === 'ps3') {
-        if (action === 'xmb-settings-page') { ps3OpenPage(source?.dataset?.page); return true; }
-        if (action === 'xmb-settings-row') {
-          const index = Number(source?.dataset?.row);
-          if (index !== ps3Sub) { ps3Sub = index; play('navigate'); renderXmb(false); return true; }
-          ps3OpenRow(index);
-          return true;
-        }
-        if (action === 'xmb-pop-option') {
-          if (ps3Popup) { ps3Popup.selected = Number(source?.dataset?.option); await ps3ConfirmPopup(); }
-          return true;
-        }
-        if (action === 'xmb-bar') { await ps3ConfirmPopup(); return true; }
-        if (action === 'xmb-pop-commit') { await ps3ConfirmPopup(); return true; }
-        if (action === 'xmb-pop-close' || action === 'xmb-pop-cancel') { ps3CancelPopup(); return true; }
-        if (action === 'xmb-settings-back') { ps3ClosePage(); return true; }
-      }
-      return actionBase.call(this, action, source);
-    };
-  }
-  // The console screens stay in step with every other way a setting can change (the launcher's own Settings
-  // dialog, a quick-settings shortcut, another theme's shell). Availability is re-checked on the next scan.
-  document.addEventListener('g-setting-change', event => {
-    if (theme() !== 'ps3' || !event.detail?.id) return;
-    ps3LayoutAt = 0;
-    const row = ps3Open?.rows?.find(item => item.id === event.detail.id);
-    if (row) row.value = event.detail.value;
-    // A launcher dialog owns the screen while it is open; the close handler repaints the XMB for it.
-    if (document.querySelector('dialog[open]')) return;
-    if (ps3Open || ps3Popup || event.detail.id === 'enterButton') renderXmb(false);
-  });
-  document.addEventListener('g-settings-ready', () => {
-    if (theme() !== 'ps3') return;
-    ps3Layout = null; ps3LayoutAt = 0;
-    if (state.view === 'home') renderXmb(false);
-  });
-  // The PS4 shell follows every other way a setting can change, and re-checks what this PC can do when a
-  // preference that decides availability (an account key, say) changes.
-  document.addEventListener('g-setting-change', event => {
-    if (theme() !== 'ps4' || !event.detail?.id) return;
-    ps4QueueReload();
-  });
-  document.addEventListener('g-settings-ready', () => {
-    if (theme() !== 'ps4' || !ps4Set) return;
-    forgetShellScan('ps4');
-    ps4QueueReload();
-  });
-  // Wii Settings does the same: every change re-reads the current page, and availability is re-checked.
-  document.addEventListener('g-setting-change', event => {
-    if (theme() !== 'wii' || !event.detail?.id) return;
-    wiiQueueReload();
-  });
-  document.addEventListener('g-settings-ready', () => {
-    if (theme() !== 'wii' || !wiiSet) return;
-    forgetShellScan('wii');
-    wiiQueueReload();
-  });
-  // 3DS System Settings re-reads itself the same way.
-  document.addEventListener('g-setting-change', event => {
-    if (theme() !== '3ds' || !event.detail?.id) return;
-    dsQueueReload();
-  });
-  document.addEventListener('g-settings-ready', () => {
-    if (theme() !== '3ds' || !dsSet) return;
-    forgetShellScan('3ds');
-    dsQueueReload();
-  });
 
   // =========================== Shared audio engine (task A1, plan §2.3) ===========================
   // One engine for every theme. `window.gAudio.play(kind)` replaces the per-file synth wrappers; it picks the

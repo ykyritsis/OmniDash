@@ -34,6 +34,12 @@ body.garrison.g-retro .console-library-content { padding: calc(56 * var(--cpx)) 
 body.garrison.g-retro .library-grid { grid-template-columns: repeat(auto-fill, minmax(calc(190 * var(--cpx)), 1fr)) !important; gap: calc(12 * var(--cpx)) !important; }
 body.garrison.g-retro .g-library-toolbar { display: none !important; }
 body.garrison.g-retro:not(.home-active) #g-retro-chrome { display: none !important; }
+/* A full-screen settings skin (PS4, Wii, 3DS) covers Home; its status bar/clock belongs to Home, not Settings.
+   The Home screen underneath is kept in the DOM (so the opener element and the focus restore stay real) but made
+   invisible, otherwise channel frames, the 3DS status strip or the PS4 tiles peek around the shell's inset. */
+body.g-shell-screen #g-retro-chrome { display: none !important; }
+body.g-shell-screen #g-retro > * { visibility: hidden; }
+body.g-shell-screen #g-retro > :is(.ps4-set, .ps4-set-bg, .wii-set, .wii-set-wall, .ds-set, .ds-set-device) { visibility: visible; }
 /* Each console had its own action colour; keep the Xbox green out of its Play and install buttons. */
 body.garrison[data-g-theme="ps3"] { --g-xbox-green: #3a6fc4; --g-xbox-green-hover: #4b80d6; }
 body.garrison[data-g-theme="ps4"] { --g-xbox-green: #1f7ae0; --g-xbox-green-hover: #2f8bf0; }
@@ -514,7 +520,7 @@ html.reduce-motion body[data-g-theme="wii"] .wii-clock .wii-seg { opacity: 1 !im
    a light striped wall, large rounded pill buttons, blue page arrows and the pack's zip/navigate/select sounds.
    A value opens a sub-screen of pill choices with Back and Confirm along the bottom. Sizes are 1080p console
    pixels like the rest of the Wii theme. */
-body[data-g-theme="wii"] #g-retro .wii-set-wall { position: absolute; inset: 0; background:
+body[data-g-theme="wii"] #g-retro .wii-set-wall { position: absolute; inset: 0; z-index: 5; background:
   radial-gradient(ellipse 74% 58% at 50% 0%, #fff, transparent 72%),
   radial-gradient(ellipse 60% 50% at 12% 100%, rgba(52, 189, 239, .1), transparent 70%),
   repeating-linear-gradient(0deg, rgba(0, 0, 0, .018) 0 calc(1 * var(--cpx)), transparent calc(1 * var(--cpx)) calc(4 * var(--cpx))),
