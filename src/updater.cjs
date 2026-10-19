@@ -53,7 +53,11 @@ function pickRelease(releases, { portable, currentVersion }) {
     if (!parseVersion(version)) continue;
     if (currentVersion && !legacyBeta(currentVersion) && legacyBeta(version)) continue;
     const assets = release.assets || [];
-    const build = assets.find(asset => asset.name === (portable ? `Xbox-Preview-UI-Portable-${version}.exe` : `Xbox-Preview-UI-Setup-${version}.exe`));
+    // Builds are named OmniDash-* since 0.6.1; releases also carry the old Xbox-Preview-UI-* names for older
+    // updaters, and either is accepted.
+    const kind = portable ? 'Portable' : 'Setup';
+    const names = [`OmniDash-${kind}-${version}.exe`, `Xbox-Preview-UI-${kind}-${version}.exe`];
+    const build = names.map(name => assets.find(asset => asset.name === name)).find(Boolean);
     const sums = assets.find(asset => asset.name === 'SHA256SUMS.txt');
     if (build && sums) return { version, name: build.name, url: build.browser_download_url, size: build.size, sumsUrl: sums.browser_download_url };
   }
