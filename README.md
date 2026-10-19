@@ -4,7 +4,7 @@
 
 **One game launcher, nine console dashboards.** OmniDash is a full-screen, controller-first launcher for Windows. It gathers every game you have installed from Steam, Epic, GOG, Amazon, Xbox PC and other launchers into one library. Then it lets you browse that library the way you remember, as an Xbox Series X|S, Xbox One, Xbox 360, PlayStation 3, PlayStation 4, PlayStation 5, Wii or Nintendo 3DS dashboard, or as a clean modern PC launcher.
 
-**[Download the latest release](https://github.com/ykyritsis/OmniDash/releases/latest)** · [Themes](#nine-dashboards) · [Console packs](#console-packs-one-click) · [Getting started](#getting-started) · [Controls](#controls)
+**[Download OmniDash 0.6.1](https://github.com/ykyritsis/OmniDash/releases/latest)** ([notes](docs/release-0.6.1.md)) · [Themes](#nine-dashboards) · [Console packs](#console-packs-one-click) · [Getting started](#getting-started) · [Controls](#controls)
 
 > Unofficial, fan-made project. Not affiliated with Microsoft, Sony, Nintendo or Valve. See [Legal](#legal-and-attribution).
 
@@ -52,7 +52,6 @@ OmniDash draws every theme itself, so each one is complete straight after instal
 
 OmniDash never hosts or redistributes these files. They're downloaded on your request, for your own use, from their authors' projects, and their rights stay with those authors and the console makers. Each pack folder gets an `INSTALLED-BY-OMNIDASH.txt` listing where its files came from. You can also drop your own files into a pack folder; the pack manager shows exactly which file names each theme reads.
 
-> One-click install, the 2025 Series home and the latest fixes are on the [`console-themes`](https://github.com/ykyritsis/OmniDash/tree/console-themes) branch and arrive in the next release. In 0.6.0, use **Open folder** and the file names listed in the pack manager.
 
 ---
 
@@ -136,7 +135,7 @@ npm run prepare:streaming
 npm start
 ```
 
-Run `npm test` for the full suites and `npm run test:unit` for the ones that need no Electron runtime. Build with `npm run dist` (installer) or `npm run dist:portable`. Developer notes for the themes are in [docs/HANDOVER-themes.md](https://github.com/ykyritsis/OmniDash/blob/console-themes/docs/HANDOVER-themes.md), with the pack map in [docs/theme-packs.md](https://github.com/ykyritsis/OmniDash/blob/console-themes/docs/theme-packs.md).
+Run `npm test` for the full suites and `npm run test:unit` for the ones that need no Electron runtime. Build with `npm run dist` (installer) or `npm run dist:portable`. Developer notes for the themes are in [docs/HANDOVER-themes.md](docs/HANDOVER-themes.md), with the pack map in [docs/theme-packs.md](docs/theme-packs.md).
 
 ## Limits
 
