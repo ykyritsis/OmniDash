@@ -308,3 +308,121 @@ body.garrison[data-g-theme="series"] #controller-prompts kbd { display: inline-f
 body.garrison[data-g-theme="series"] #controller-prompts .g-glyph { --gw: 1.45em; --gh: 1.45em; }
 body.garrison[data-g-theme="series"].g-xset-open #controller-prompts,
 body.garrison[data-g-theme="series"].g-console-account-open #controller-prompts { display: none !important; }
+
+/* =====================================================================================================
+   SERIES HOME, 2025 DASHBOARD. Matches the owner's reference capture (900x506, scaled x2.133 to 1080p):
+   - Profile: 58 px gamerpic centred at (133, 107); name 22 px at x 178; Gamerscore line under it.
+   - Five 49 px round buttons centred on the screen at y 107, 88 px apart: My games, Store, Game Pass,
+     Search, Settings. No Home button: Home is this screen.
+   - Status corner: battery (when there is one) and the time, right edge at x 1813.
+   - One row of square tiles whose bottoms sit at y 1030, from x 104: the selected tile is 246x245 with the
+     title over its lower art, the rest are 152x151, 30 px apart. Nothing else is on the screen; the selected
+     game's art fills it edge to edge.
+   This block is last in the file so it wins over the earlier, wider-tile layout.
+   ===================================================================================================== */
+/* Full-bleed art: no swirl falling in at the edges, no drift, just the game with a soft top and bottom shade. */
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer {
+  -webkit-mask-image: none; mask-image: none; background-position: center 35% !important;
+}
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { opacity: 1 !important; animation: none; }
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer::after {
+  background: linear-gradient(180deg, rgba(0, 0, 0, .42) 0, rgba(0, 0, 0, .08) 16%, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, .18) 66%, rgba(0, 0, 0, .62) 100%);
+}
+
+/* ---------- Top bar ---------- */
+body.garrison[data-g-theme="series"] .topbar { position: fixed; inset: 0 0 auto; height: calc(190 * var(--cpx)); padding: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .34), transparent); }
+body.garrison[data-g-theme="series"] .topbar .g-top-left { position: absolute; left: calc(104 * var(--cpx)); top: calc(78 * var(--cpx)); margin: 0; }
+body.garrison[data-g-theme="series"] #g-series-me { gap: calc(16 * var(--cpx)); margin: 0; padding: 0; border-radius: calc(29 * var(--cpx)); background: none; }
+body.garrison[data-g-theme="series"] #g-series-me:hover { background: none; }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-avatar { width: calc(58 * var(--cpx)); height: calc(58 * var(--cpx)); box-shadow: none; }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-copy { gap: calc(4 * var(--cpx)); padding-right: calc(12 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-series-me strong { font: 600 calc(22 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+body.garrison[data-g-theme="series"] #g-series-me small { display: flex; align-items: center; gap: calc(6 * var(--cpx)); color: #fff; font: 400 calc(18 * var(--cpx))/1.1 var(--g-font); text-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+body.garrison[data-g-theme="series"] #g-series-me .g-me-g { width: calc(16 * var(--cpx)); height: calc(16 * var(--cpx)); margin: 0; font-size: calc(10 * var(--cpx)); }
+body.garrison[data-g-theme="series"] #g-series-me:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; background: rgba(255, 255, 255, .1); }
+
+body.garrison[data-g-theme="series"] .top-center-nav { position: absolute; left: 50%; top: calc(82.5 * var(--cpx)); display: flex; gap: calc(39 * var(--cpx)); margin: 0; transform: translateX(-50%); }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button[data-action="home"] { display: none !important; }
+body.garrison[data-g-theme="series"] .top-center-nav .g-360-only[data-action="settings"] { display: grid !important; }
+body.garrison[data-g-theme="series"] .top-center-nav [data-action="library"] { order: 1; }
+body.garrison[data-g-theme="series"] .top-center-nav [data-action="dashboard-store"] { order: 2; }
+body.garrison[data-g-theme="series"] .top-center-nav [data-action="dashboard-gamepass"] { order: 3; }
+body.garrison[data-g-theme="series"] .top-center-nav [data-action="toggle-search"] { order: 4; }
+body.garrison[data-g-theme="series"] .top-center-nav [data-action="settings"] { order: 5; }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button {
+  display: grid; place-items: center; width: calc(49 * var(--cpx)); height: calc(49 * var(--cpx)); padding: 0; border: 0;
+  background: rgba(24, 24, 24, .5) !important; box-shadow: none; color: #fff;
+}
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button > svg { width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button .g-gamepass { transform: scale(.62); }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button.active { background: rgba(24, 24, 24, .5) !important; box-shadow: none; }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button:is(.focused, :focus-visible) { transform: none; background: rgba(255, 255, 255, .16) !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; }
+/* The name only appears under the button you are on, as the dashboard does. */
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button.active:not(.focused)::after { display: none !important; }
+body.garrison[data-g-theme="series"] .top-center-nav .top-nav-button.focused::after { top: calc(100% + 10 * var(--cpx)); font: 600 calc(17 * var(--cpx))/1 var(--g-font); }
+
+body.garrison[data-g-theme="series"] .topbar .top-actions { position: absolute; right: calc(107 * var(--cpx)); top: calc(83 * var(--cpx)); display: flex; align-items: center; gap: calc(22 * var(--cpx)); height: calc(48 * var(--cpx)); margin: 0; }
+body.garrison[data-g-theme="series"] .topbar .top-actions > .g-icon-button[data-action="settings"],
+body.garrison[data-g-theme="series"] .topbar .top-actions > #dashboard-clock { display: none !important; }
+body.garrison[data-g-theme="series"] .topbar #g-quick-button { width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); background: none !important; box-shadow: none; }
+body.garrison[data-g-theme="series"] .topbar #g-quick-button > svg { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .topbar #g-quick-button:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .16) !important; box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; transform: none; }
+body.garrison[data-g-theme="series"] .topbar #g-quick-button.focused::after { display: none !important; }
+#g-series-status { display: none; }
+body.garrison[data-g-theme="series"] .topbar .top-actions > #g-series-status { display: flex !important; align-items: center; gap: calc(22 * var(--cpx)); color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+body.garrison[data-g-theme="series"] .g-series-clock { font: 400 calc(26 * var(--cpx))/1 var(--g-font); letter-spacing: .01em; white-space: nowrap; }
+body.garrison[data-g-theme="series"] .g-series-battery { position: relative; display: block; width: calc(26 * var(--cpx)); height: calc(14 * var(--cpx)); border: calc(2 * var(--cpx)) solid #fff; border-radius: calc(3 * var(--cpx)); }
+body.garrison[data-g-theme="series"] .g-series-battery[hidden] { display: none; }
+body.garrison[data-g-theme="series"] .g-series-battery::after { content: ""; position: absolute; right: calc(-5 * var(--cpx)); top: 25%; width: calc(2.5 * var(--cpx)); height: 50%; border-radius: 0 calc(1 * var(--cpx)) calc(1 * var(--cpx)) 0; background: #fff; }
+body.garrison[data-g-theme="series"] .g-series-battery b { position: absolute; inset: calc(1.5 * var(--cpx)); right: auto; width: calc((100% - 3 * var(--cpx)) * var(--level, 1)); border-radius: calc(1 * var(--cpx)); background: #fff; }
+
+/* ---------- The row ---------- */
+/* Home is one screen tall and the row is pinned inside it. (Not position: fixed: the page transitions leave a
+   transform on #home-view, which would make it the containing block and drop the row off the top.) */
+body.garrison[data-g-theme="series"].home-active #home-view { position: relative; height: 100vh; min-height: 0; padding: 0; overflow: hidden; }
+body.garrison[data-g-theme="series"].home-active #home-view .dashboard-recent { position: absolute; left: 0; right: 0; bottom: calc(50 * var(--cpx)); }
+body.garrison[data-g-theme="series"].home-active :is(#g-series-cards, #controller-prompts, #controller-prompts:not([hidden])) { display: none !important; }
+body.garrison[data-g-theme="series"].home-active #recent-row,
+body.garrison[data-g-theme="series"].home-active #recent-row.row-focused {
+  position: relative; z-index: 2;
+  display: flex; align-items: flex-end; gap: calc(30 * var(--cpx)); height: calc(245 * var(--cpx));
+  margin: 0 !important; padding: 0 calc(104 * var(--cpx)); overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+}
+body.garrison[data-g-theme="series"].home-active #recent-row > :is(.game-card, .g-library-tile),
+body.garrison[data-g-theme="series"].home-active #recent-row:not(.row-focused) > :is(.game-card, .g-library-tile) {
+  position: relative; flex: 0 0 calc(152 * var(--cpx)); width: calc(152 * var(--cpx)); height: calc(151 * var(--cpx)); aspect-ratio: auto;
+  overflow: hidden; border-radius: calc(6 * var(--cpx)); background: rgba(255, 255, 255, .08); box-shadow: 0 calc(4 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 0, 0, .35);
+  transform: none !important; filter: none;
+  transition: flex-basis var(--m-dur, .2s) var(--m-ease, ease), width var(--m-dur, .2s) var(--m-ease, ease), height var(--m-dur, .2s) var(--m-ease, ease) !important;
+}
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card > :is(img, .art-fallback) { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+/* The selected game: the big tile, art kept, its name over the bottom of it. No ring: the size is the focus. */
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card.selected {
+  flex-basis: calc(246 * var(--cpx)); width: calc(246 * var(--cpx)); height: calc(245 * var(--cpx)); margin-right: calc(2 * var(--cpx));
+}
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card:is(.focused, :focus, :focus-visible) { box-shadow: 0 calc(6 * var(--cpx)) calc(18 * var(--cpx)) rgba(0, 0, 0, .45) !important; outline: none; }
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card .g-card-text { display: none !important; }
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card.selected .g-card-text {
+  display: block !important; position: absolute; inset: auto 0 0; max-width: none; margin: 0; padding: calc(46 * var(--cpx)) calc(14 * var(--cpx)) calc(12 * var(--cpx));
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .55) 38%, rgba(0, 0, 0, .78)); transform: none; pointer-events: none;
+}
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card.selected .g-card-text strong {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal;
+  color: #fff; font: 400 calc(22 * var(--cpx))/1.32 var(--g-font); text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+}
+/* Small tiles carry their platform mark bottom left, as the dashboard prints X|S. */
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card:not(.selected) .provider-mark {
+  display: block !important; position: absolute; left: calc(10 * var(--cpx)); bottom: calc(9 * var(--cpx)); z-index: 1; width: calc(20 * var(--cpx)); height: calc(20 * var(--cpx));
+  margin: 0; padding: 0; border: 0; background: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .8));
+}
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card .provider-mark img { width: 100%; height: 100%; filter: brightness(0) invert(1); }
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card.selected .provider-mark { display: none !important; }
+html.reduce-motion body.garrison[data-g-theme="series"].home-active #recent-row > .game-card { transition: none !important; }
+/* Text marks (Epic, PC) read like the dashboard's X|S label: small bold white type. */
+body.garrison[data-g-theme="series"].home-active #recent-row > .game-card:not(.selected) .provider-mark:not(:has(img)) { width: auto; height: auto; color: #fff; font: 700 calc(13 * var(--cpx))/1 var(--g-font); letter-spacing: .04em; }
+/* The row ends on the way into your library: a quiet tile with the library glyph in the middle. */
+body.garrison[data-g-theme="series"].home-active #recent-row > .g-library-tile { display: grid; place-items: center; background: rgba(24, 24, 24, .55); color: #fff; }
+body.garrison[data-g-theme="series"].home-active #recent-row > .g-library-tile .g-collage { display: none; }
+body.garrison[data-g-theme="series"].home-active #recent-row > .g-library-tile .g-library-label { display: grid !important; place-items: center; gap: calc(10 * var(--cpx)); position: static; margin: 0; padding: 0; background: none; font: 600 calc(15 * var(--cpx))/1.2 var(--g-font); text-align: center; }
+body.garrison[data-g-theme="series"].home-active #recent-row > .g-library-tile .g-library-label .g-glyph { width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); }
+body.garrison[data-g-theme="series"].home-active #recent-row > .g-library-tile:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff !important; }

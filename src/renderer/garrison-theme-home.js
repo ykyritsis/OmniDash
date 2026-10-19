@@ -136,6 +136,53 @@
   new MutationObserver(applyTheme).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
   applyTheme();
 
+  // ---------- Series: the status corner (battery when there is one, then the time) ----------
+  // The dashboard prints the time with a two-digit hour and a lower-case am/pm ("04:55 pm"); 24-hour follows
+  // the Clock format setting. The battery shows only on a machine that really runs on one.
+  const seriesStatus = document.createElement('span');
+  seriesStatus.id = 'g-series-status';
+  seriesStatus.setAttribute('aria-hidden', 'true');
+  seriesStatus.innerHTML = '<i class="g-series-battery" hidden><b></b></i><time class="g-series-clock"></time>';
+  document.querySelector('.topbar .top-actions')?.append(seriesStatus);
+  const seriesClock = seriesStatus.querySelector('.g-series-clock');
+  const seriesBattery = seriesStatus.querySelector('.g-series-battery');
+  function tickSeriesClock() {
+    if (theme() !== 'series' || document.hidden) return;
+    const now = new Date();
+    const twentyFour = window.gSettings?.cached?.('clockFormat') === '24h';
+    try {
+      seriesClock.textContent = now.toLocaleTimeString([], twentyFour ? { hour: '2-digit', minute: '2-digit', hour12: false } : { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+    } catch { seriesClock.textContent = now.toTimeString().slice(0, 5); }
+  }
+  tickSeriesClock();
+  setInterval(tickSeriesClock, 10000);
+  // The Series bar ends with Settings; the round nav button the 360 added for it has no icon of its own, so it
+  // takes the same gear as the launcher's Settings button.
+  function seriesSettingsIcon() {
+    const nav = document.querySelector('.top-center-nav .g-360-only[data-action="settings"]');
+    const gear = document.querySelector('.top-actions > .g-icon-button[data-action="settings"] > svg');
+    if (!nav || !gear || nav.querySelector(':scope > svg')) return;
+    nav.prepend(gear.cloneNode(true));
+    nav.dataset.gLabel ||= 'Settings';
+    nav.setAttribute('aria-label', nav.getAttribute('aria-label') || 'Settings');
+  }
+  setTimeout(seriesSettingsIcon, 0); // after garrison-theme-360.js (later in index.html) has added the button
+  new MutationObserver(seriesSettingsIcon).observe(document.body, { attributes: true, attributeFilter: ["data-g-theme"] });
+  document.addEventListener('visibilitychange', tickSeriesClock);
+  document.addEventListener('g-setting-change', event => { if (event.detail?.id === 'clockFormat') tickSeriesClock(); });
+  new MutationObserver(tickSeriesClock).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+  // A desktop reports a full, charging "battery"; only a real one (discharging, or below full) is shown.
+  navigator.getBattery?.().then(battery => {
+    const paint = () => {
+      const real = !battery.charging || battery.level < 1;
+      seriesBattery.hidden = !real;
+      seriesBattery.style.setProperty('--level', String(Math.max(.05, battery.level)));
+      seriesBattery.classList.toggle('charging', battery.charging);
+    };
+    paint();
+    for (const type of ['levelchange', 'chargingchange']) battery.addEventListener(type, paint);
+  }).catch(() => {});
+
   // ---------- One: the panorama scrolls sideways ----------
   // Home opens with the big tile in view and Pins off to the left, like the console; the panorama follows
   // focus, keeping the focused group fully on screen.

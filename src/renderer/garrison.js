@@ -1851,7 +1851,14 @@ navigateConsoleHome = function (direction, current) {
     if (next) setFocusedElement(next);
     return true;
   }
-  if (row && direction === 'up') { setFocusedElement(document.querySelector('.top-center-nav [data-action="home"]')); return true; }
+  if (row && direction === 'up') {
+    // Home, unless the theme leaves it out of the bar (the Series dashboard does): then the bar's first button.
+    const home = document.querySelector('.top-center-nav [data-action="home"]');
+    const shown = [...document.querySelectorAll('.top-center-nav .top-nav-button')].filter(item => item.offsetParent !== null)
+      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+    setFocusedElement(home?.offsetParent ? home : shown[0] || home);
+    return true;
+  }
   if (row && direction === 'down') {
     const band = [...document.querySelectorAll('#home-view .collection-band')].find(item => item.offsetParent !== null);
     const target = band?.querySelector('.game-row .focusable, .g-publisher-cards .focusable') || band?.querySelector('.focusable');
