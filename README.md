@@ -137,6 +137,22 @@ npm start
 
 Run `npm test` for the full suites and `npm run test:unit` for the ones that need no Electron runtime. Build with `npm run dist` (installer) or `npm run dist:portable`. Developer notes for the themes are in [docs/HANDOVER-themes.md](docs/HANDOVER-themes.md), with the pack map in [docs/theme-packs.md](docs/theme-packs.md).
 
+## How it's built
+
+The theming is the visible part. The launcher layer underneath is the hard part.
+
+**One library, many sources.** Games are discovered by reading what each launcher already stores locally — Steam's library manifests, Epic's install records, and the registry or manifest locations used by Ubisoft Connect, EA, Battle.net, GOG, Xbox PC and Amazon — rather than by scraping their interfaces. No account sync, no server, and it works offline. Anything a launcher won't report can be added by hand.
+
+**Every theme is a navigation model, not a recolour.** A full-screen console dashboard has to specify how focus moves, what confirm and back do, which sounds fire on move / select / back, what the boot sequence looks like, how the on-screen keyboard is laid out and what its settings screen contains. Nine of those sit on one library and one settings registry: switching themes re-renders, it never re-scans. Each theme implements the same contract, documented in [`docs/HANDOVER-themes.md`](docs/HANDOVER-themes.md), with the file map in [`docs/theme-packs.md`](docs/theme-packs.md).
+
+**Artwork is validated, not just cached.** Xbox Store, Steam and SteamGridDB are queried in that order and cached on disk. Wide art only fills wide slots and square art only fills square ones — a mismatched aspect ratio is the fastest way to make a launcher look cheap. Sources rate-limit; misses fall back to user-supplied art.
+
+**Costs nothing while you play.** When a game takes focus, every animation, video and loop pauses. A launcher that eats GPU time in the background is worse than no launcher.
+
+**Updates are deliberate.** The built-in updater verifies its download and refuses to run mid-game.
+
+Tests: `npm test` runs the full suites; `npm run test:unit` covers what needs no Electron runtime.
+
 ## Limits
 
 - Discovery reads local launchers and manifests. It isn't a full account sync with every store.
@@ -149,3 +165,7 @@ Run `npm test` for the full suites and `npm run test:unit` for the ones that nee
 OmniDash is a fan-made, unofficial launcher. Xbox, Xbox Game Pass and Microsoft; PlayStation, PS3, PS4, PS5 and XMB; Wii, Nintendo 3DS and Nintendo; Steam; and all game names, logos and artwork belong to their respective owners. Nothing here implies sponsorship, approval or affiliation. OmniDash doesn't bundle games, grant licences, bypass DRM or ship console assets. Optional packs are fetched only on the user's request from their authors' public projects.
 
 Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), based on Moonlight, under [GPL v3](src/remote-play/LICENSE.StreamLight). Launcher brand symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons) (CC0). System icons use Windows' Segoe MDL2 Assets.
+
+## Licence
+
+OmniDash's own code is MIT — see [LICENSE](LICENSE). `src/remote-play/` bundles the unmodified StreamLight runtime, which remains under GPL v3 and keeps its own licence file.
