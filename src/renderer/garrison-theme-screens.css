@@ -391,6 +391,9 @@ html.reduce-motion #g-xset * { animation: none !important; transition: none !imp
 .g-pack-row.empty .g-pack-state { background: #ffcf6a1a; color: #e8c57c; }
 .g-pack-row.missing .g-pack-state { background: #ff8a8a15; color: #efa3a3; }
 .g-pack-credit { margin: 0; color: inherit; opacity: .82; line-height: 1.45; }
+.g-pack-source { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35em .6em; margin: 0; opacity: .82; line-height: 1.45; }
+.g-pack-source small { opacity: .7; }
+.g-pack-progress { flex-basis: 100%; font-style: normal; color: var(--g-accent, #3fbf3f); opacity: 1; }
 .g-pack-credit small { opacity: .75; }
 .g-pack-counts { display: flex; flex-wrap: wrap; gap: .45em; }
 .g-pack-count { display: inline-flex; align-items: baseline; gap: .35em; padding: .22em .62em; border: 1px solid #ffffff14; border-radius: 999px; color: inherit; opacity: .62; font-size: .88em; }

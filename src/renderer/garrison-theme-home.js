@@ -34,7 +34,9 @@
       const tried = new Set();
       const tryAll = async urls => { for (const url of urls) { if (tried.has(url)) continue; tried.add(url); if (await isWallpaper(url)) return url; } return ''; };
       // Steam's library hero is the console-style key art: 3840 px wide, no logo, made to sit behind a dashboard.
-      const steamHero = game.provider === 'Steam' && /^\d+$/.test(String(game.appId || '')) ? [`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_hero.jpg`] : [];
+      // library_hero.jpg is only 1920x620, which a 1440p screen stretches 2.3x to fill its height; the _2x file is
+      // the same art at 3840x1240, so it is tried first and the 1x one stays as the fallback.
+      const steamHero = game.provider === 'Steam' && /^\d+$/.test(String(game.appId || '')) ? ['library_hero_2x.jpg', 'library_hero.jpg'].map(file => `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/${file}`) : [];
       let found = await tryAll([...steamHero, ...list(game.artwork?.hero), ...list(game.artwork?.wide), ...list(game.artwork?.screenshots).slice(0, 4)]);
       if (!found && typeof loadGamePageDetails === 'function') {
         const details = await loadGamePageDetails(game).catch(() => null);

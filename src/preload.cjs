@@ -93,6 +93,8 @@ contextBridge.exposeInMainWorld('launcher', {
   getRetroPack: () => ipcRenderer.invoke('theme:retro-pack'),
   getRetroSound: (id, kind) => ipcRenderer.invoke('theme:retro-sound', id, kind),
   getThemePacks: () => ipcRenderer.invoke('theme:packs'),
+  installThemePack: (id) => ipcRenderer.invoke('theme:pack-install', id),
+  onThemePackProgress: (callback) => { const listener = (_event, progress) => callback(progress); ipcRenderer.on('theme:pack-progress', listener); return () => ipcRenderer.removeListener('theme:pack-progress', listener); },
   openThemePack: (id) => ipcRenderer.invoke('theme:pack-open', id),
   writeThemePackReadme: (id) => ipcRenderer.invoke('theme:pack-readme', id),
   setPref: (key, value) => ipcRenderer.invoke('prefs:set', key, value),

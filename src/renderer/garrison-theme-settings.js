@@ -79,7 +79,8 @@
   // reveals the pack (or its parent when the pack is missing), and Add README writes a short drop-in guide when the
   // pack has no README of its own. The registry and the folder scan live in src/support.cjs and reach the page over
   // theme:packs; the IPC opens Explorer and writes the README, and both are gated in the hidden review harness.
-  const GPACK_OPEN = 'g-pack-open', GPACK_README = 'g-pack-readme';
+  const GPACK_OPEN = 'g-pack-open', GPACK_README = 'g-pack-readme', GPACK_INSTALL = 'g-pack-install';
+  let gPackInstalling = '', gPackProgress = '';
   // Pack text goes into HTML: one escaper for every value, as the shell had before the Xbox block moved out.
   const packEscape = value => String(value ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const GPACK_COUNTS = [
@@ -139,7 +140,8 @@
       <div class="g-pack-counts" aria-label="Files found">${chips}</div>
       ${install}
       <p class="g-pack-wants"><span class="g-pack-label">Looks for</span>${wants}</p>
-      <div class="g-pack-foot"><div class="g-pack-readme">${readme}</div><div class="g-pack-actions">${readmeButton}<button class="secondary focusable g-pack-button" type="button" data-action="${GPACK_OPEN}" data-pack="${packEscape(pack.id)}" aria-label="Open folder ${packEscape(pack.folder)}">Open folder</button></div></div>
+      ${(pack.sources || []).length ? `<p class="g-pack-source"><span class="g-pack-label">Get it</span>${pack.sources.map(source => `<span>${packEscape(source.repo)} <small>(${packEscape(source.licence)})</small></span>`).join(' · ')}${gPackInstalling === pack.id && gPackProgress ? `<em class="g-pack-progress">${packEscape(gPackProgress)}</em>` : ''}</p>` : ''}
+      <div class="g-pack-foot"><div class="g-pack-readme">${readme}</div><div class="g-pack-actions">${(pack.sources || []).length ? `<button class="${pack.found ? 'secondary ' : ''}focusable g-pack-button" type="button" data-action="${GPACK_INSTALL}" data-pack="${packEscape(pack.id)}"${gPackInstalling ? ' disabled' : ''}>${gPackInstalling === pack.id ? 'Installing…' : pack.found ? 'Reinstall' : 'Install'}</button>` : ''}${readmeButton}<button class="secondary focusable g-pack-button" type="button" data-action="${GPACK_OPEN}" data-pack="${packEscape(pack.id)}" aria-label="Open folder ${packEscape(pack.folder)}">Open folder</button></div></div>
     </article>`;
   }
 
@@ -214,6 +216,36 @@
       }
       return true;
     }
+    if (action === GPACK_INSTALL) {
+      if (gPackInstalling || !window.launcher?.installThemePack) return true;
+      gPackInstalling = id;
+      gPackProgress = 'Starting…';
+      gPackRender();
+      const stop = window.launcher.onThemePackProgress?.(progress => {
+        if (progress.id !== id) return;
+        const part = progress.parts > 1 ? ` (${progress.part} of ${progress.parts})` : '';
+        gPackProgress = progress.phase === 'download' ? `Downloading ${progress.repo}${part}${progress.received ? ` · ${(progress.received / 1048576).toFixed(1)} MB` : ''}`
+          : progress.phase === 'unpack' ? `Unpacking ${progress.repo}${part}` : progress.phase === 'place' ? `Putting ${progress.repo} in place${part}` : 'Done';
+        const line = gPackSection?.querySelector(`[data-pack-id="${CSS.escape(id)}"] .g-pack-progress`);
+        if (line) line.textContent = gPackProgress; else gPackRender();
+      });
+      try {
+        const result = await window.launcher.installThemePack(id);
+        if (result?.demo) { gPackNote('Review mode: nothing was downloaded.'); return true; }
+        gPackPlay('confirm');
+        gPackNote(`${pack.name} pack installed. Reloading so the theme picks it up…`);
+        setTimeout(() => location.reload(), 1200);
+      } catch (error) {
+        gPackNote(error?.message || 'The pack could not be installed.');
+        gPackPlay('back');
+      } finally {
+        stop?.();
+        gPackInstalling = '';
+        gPackProgress = '';
+        await gPackLoad(true);
+      }
+      return true;
+    }
     if (action === GPACK_README) {
       if (gPackReadmeBusy) return true;
       gPackReadmeBusy = id;
@@ -242,12 +274,12 @@
   if (typeof performAction === 'function') {
     const packPerformBase = performAction;
     performAction = async function (action, source) {
-      if (action === GPACK_OPEN || action === GPACK_README) { await gPackAction(action, source); return true; }
+      if (action === GPACK_OPEN || action === GPACK_README || action === GPACK_INSTALL) { await gPackAction(action, source); return true; }
       return packPerformBase.call(this, action, source);
     };
   }
   document.addEventListener('click', event => {
-    const button = event.target.closest?.(`[data-action="${GPACK_OPEN}"], [data-action="${GPACK_README}"]`);
+    const button = event.target.closest?.(`[data-action="${GPACK_OPEN}"], [data-action="${GPACK_README}"], [data-action="${GPACK_INSTALL}"]`);
     if (!button) return;
     event.preventDefault();
     event.stopImmediatePropagation();

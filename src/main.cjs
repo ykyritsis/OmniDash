@@ -1,5 +1,6 @@
 const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, safeStorage } = require('electron');
 const support = require('./support.cjs');
+const packInstaller = require('./pack-installer.cjs');
 support.installLogCapture();
 const fs = require('fs/promises');
 const path = require('path');
@@ -3074,7 +3075,21 @@ function registerIpc() {
   // two real actions — reveal a folder, and write a short README when the pack has none. The report is read-only.
   // Both actions are gated in demo mode so the hidden review harness never opens Explorer or writes into a pack
   // folder; scripts/pack-manager-test.cjs exercises the real write against a temporary folder.
-  ipcMain.handle('theme:packs', async () => ({ root: retroRoot, packs: await support.listThemePacks(retroRoot) }));
+  ipcMain.handle('theme:packs', async () => ({ root: retroRoot, packs: (await support.listThemePacks(retroRoot)).map(pack => ({ ...pack, sources: packInstaller.sourcesFor(pack.id) })) }));
+  // One-click install from the pack's original public projects (src/pack-installer.cjs). The review harness never
+  // downloads.
+  ipcMain.handle('theme:pack-install', async (event, id) => {
+    if (!packInstaller.SOURCES[id]) throw new Error('This console has no pack to install.');
+    if (process.env.NEBULA_DEMO === '1' || process.env.NEBULA_REVIEW === '1') return { ok: false, demo: true };
+    const sender = event.sender;
+    let last = 0;
+    return packInstaller.install(retroRoot, id, progress => {
+      const now = Date.now();
+      if (progress.phase === 'download' && now - last < 250) return;
+      last = now;
+      if (!sender.isDestroyed()) sender.send('theme:pack-progress', progress);
+    });
+  });
   ipcMain.handle('theme:pack-open', async (_event, id) => {
     const pack = support.PACK_REGISTRY.find(item => item.id === id);
     if (!pack) throw new Error('Unknown console pack.');
