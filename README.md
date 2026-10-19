@@ -1,160 +1,134 @@
 # OmniDash
 
-<img src="docs/promo/beta25-v2/github-hero.jpg" alt="OmniDash, with the app's new mark and a sample library" width="100%">
+<img src="docs/screenshots/all-themes.jpg" alt="The nine OmniDash dashboards: Xbox Series, Xbox One, Xbox 360, PS3, PS4, PS5, Wii, 3DS and the PC look" width="100%">
 
-**OmniDash** — a full-screen Windows launcher with console-inspired themes, controller navigation, a shared game library and Steam launch options.
+**One game launcher, nine console dashboards.** OmniDash is a full-screen, controller-first launcher for Windows. It gathers every game you have installed from Steam, Epic, GOG, Amazon, Xbox PC and other launchers into one library. Then it lets you browse that library the way you remember, as an Xbox Series X|S, Xbox One, Xbox 360, PlayStation 3, PlayStation 4, PlayStation 5, Wii or Nintendo 3DS dashboard, or as a clean modern PC launcher.
 
-**[Download 0.6.0](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.6.0/OmniDash-Setup-0.6.0.exe)** · [Setup](#getting-started) · [0.6.0 notes](docs/release-0.6.0.md)
+**[Download the latest release](https://github.com/ykyritsis/OmniDash/releases/latest)** · [Themes](#nine-dashboards) · [Console packs](#console-packs-one-click) · [Getting started](#getting-started) · [Controls](#controls)
 
-- Browse installed games from Steam, Epic, Xbox PC and other launchers.
-- Use a controller, mouse or keyboard.
-- Select supported Steam launch modes and follow first-run setup.
-- Manage downloads, favourites, collections and artwork.
+> Unofficial, fan-made project. Not affiliated with Microsoft, Sony, Nintendo or Valve. See [Legal](#legal-and-attribution).
 
-Unofficial community project. Images show beta 25 with a sample library; available builds are listed on the Releases page.
+---
 
-## Screenshots
+## Nine dashboards
 
-<img src="docs/promo/beta25-v2/screenshot-library.png" alt="Beta 25 library with sample games" width="100%">
+Pick a dashboard during setup or any time in **Settings → Appearance**. Every theme sits on the same library, so switching never re-scans anything. Each one has its own layout, navigation, focus style, sounds, boot screen, launch sequence, notifications, on-screen keyboard and Settings screen.
 
-<img src="docs/promo/beta25-v2/promo-game-page.jpg" alt="Forza Horizon 5 game page on a desktop monitor mockup" width="100%">
-
-[Onboarding](docs/promo/beta25-v2/promo-onboarding.jpg) · [Library connections](docs/promo/beta25-v2/promo-libraries.jpg) · [Library on ROG Ally](docs/promo/beta25-v2/promo-library.jpg)
-
-## Device mockups
-
-| ROG Ally | Laptop |
+| | |
 | --- | --- |
-| <img src="docs/promo/beta25-v2/promo-rog-ally.jpg" alt="ROG Ally mockup" width="100%"> | <img src="docs/promo/beta25-v2/promo-laptop.jpg" alt="Laptop mockup" width="100%"> |
+| <img src="docs/screenshots/series-home.jpg" alt="Xbox Series X\|S theme"> **Xbox Series X\|S.** The current dashboard: profile corner, round top bar, a low row of square tiles with the selected game grown, on the game's full-screen key art. | <img src="docs/screenshots/one-home.jpg" alt="Xbox One theme"> **Xbox One (2013).** The Metro Home with Pins, Friends, Game Pass and Store pivots, live tiles and Spotlight. LB and RB switch hubs in place. |
+| <img src="docs/screenshots/x360-home.jpg" alt="Xbox 360 theme"> **Xbox 360 (Metro).** The 2011 dashboard band with its lime tiles, the rotating featured tile, gamercard and hub pivots (bing, home, social, games, apps, settings). | <img src="docs/screenshots/ps3-home.jpg" alt="PS3 theme"> **PlayStation 3.** The XrossMediaBar, with categories across and items down. The ribbon wave follows the month's colour and the time of day. Settings live in the XMB itself. |
+| <img src="docs/screenshots/ps4-home.jpg" alt="PS4 theme"> **PlayStation 4.** The 2013 home row with the big Start tile, the function area, content cards with your achievements, and the Quick Menu. | <img src="docs/screenshots/ps5-home.jpg" alt="PS5 theme"> **PlayStation 5.** The games row over the selected game's art, activity cards and the Control Center. |
+| <img src="docs/screenshots/wii-home.jpg" alt="Wii theme"> **Wii.** The Wii Menu's channel grid, the seven-segment clock and bottom bar, channel previews with Wii Menu / Start, the HOME Menu and Wii Settings pages. | <img src="docs/screenshots/3ds-home.jpg" alt="3DS theme"> **Nintendo 3DS.** The HOME Menu's two screens (stacked, side by side or large top screen), the toolbar, the icon grid and the software banner. |
+| <img src="docs/screenshots/helix-home.jpg" alt="PC theme"> **Helix (PC).** OmniDash's own modern look, for desktop and handheld PCs. | <img src="docs/screenshots/series-library.jpg" alt="Library"> **My games & apps.** A full-screen console library in every theme, with sections, counts, sorting and storage. |
 
-[Desktop mockup](docs/promo/beta25-v2/promo-desktop.jpg) · [Full screenshot](docs/promo/beta25-v2/screenshot-home.png)
+### Settings that really change things
 
-Device images are illustrative mockups based on app captures, not photographs of a hardware test.
+Every console's Settings screen is built from one registry of real launcher options. There are no decorative rows: if OmniDash can't change something, it doesn't pretend to.
 
-## 0.6.0
+<img src="docs/screenshots/ps3-shell.jpg" alt="PS3 settings in the XMB" width="32%"> <img src="docs/screenshots/wii-shell.jpg" alt="Wii Settings" width="32%"> <img src="docs/screenshots/3ds-shell.jpg" alt="3DS System Settings" width="32%">
 
-- **Now called OmniDash.** New name, window title, splash, onboarding and a drawn mark. Your settings, theme packs and library stay in the same place.
-- **Console settings do something.** PS3, PS4, Wii and 3DS each get their own settings screen backed by one registry of real launcher options; Advanced (launcher) stays at the bottom of every list.
-- **Console account menus.** PS3 gets an XMB account panel, PS4 a left Quick Menu, and Wii a HOME Menu with real volume, mute, rumble, notifications and battery.
-- Choose what to install: DLC and language packs are listed with sizes before a Steam install starts.
-- Cancelling a launch really cancels, and says honestly what happened. The launch screen now grows out of the tile like a console.
-- Handheld quick settings (volume, brightness, Wi-Fi, power plan), pause downloads while playing, and controller vibration.
-- Smart collections, friends playing now and your captures on game pages.
-- Every dialog now shares one Xbox look; Apps are icon tiles; the Xbox button falls back to Windows' own Game Bar link.
-- Includes the 0.5.1 audit fixes. [0.6.0 notes](docs/release-0.6.0.md)
+- Volume, mute, screen brightness (laptops and handhelds) and the Windows power plan.
+- Screen size, text size, tile corners, reduced motion and high-contrast focus.
+- Interface sounds, menu music and its volume, and a 12- or 24-hour clock with your date order.
+- Screen-saver delay and notification toggles (friends, downloads, achievements).
+- The enter button (✕ or ○ on PlayStation), Nintendo button layout and controller vibration.
+- Theme, accent colour, background and console packs.
+- Accounts (Steam, Epic, SteamGridDB), updates, backup and restore.
+- **Advanced (launcher)** at the bottom of every console list opens the full launcher settings.
 
-## 0.5.0
+---
 
-- Faster friends shelves preserve artwork, scrolling and focus. Hidden-page responses and stale artwork prefetch stop doing unnecessary UI work.
-- Idle controller polling and overlapping Steam status checks do less background work; screenshot/news caches stay bounded.
-- Help, feedback and feature requests point to this GitHub project; the Xbox mode setup guide is current.
-- The Xbox button uses a native Game Bar helper with useful errors and a Windows Settings shortcut. Live overlay confirmation is still outstanding; see the release notes.
+## Console packs (one click)
 
-- Rounded Library selection glows no longer clip against the tab bar or source filters.
-- Ghosts, Infinite Warfare and other Steam galleries keep valid trailer thumbnails, repair cached preview links and merge duplicate trailers. Short titles make each trailer identifiable.
-- Feature releases advance through **0.5.0**, **0.6.0**, and onward; patch versions cover smaller fixes.
+OmniDash draws every theme itself, so each one is complete straight after install. For the consoles' real icons, fonts, sounds and menu music, open **Settings → Appearance → Console packs** and press **Install**. OmniDash downloads the pack from the original public project that publishes it, straight into your own pack folder, and reloads the theme.
 
-**Updating from 0.27.0-beta:** download and install 0.5.0 once. The older updater treats the new number as lower; your settings remain in Windows app data. Subsequent updates use the new version series.
+| Pack | Downloaded from | Adds |
+| --- | --- | --- |
+| PlayStation 3 | [CorruptionVR/PS3-Simulator](https://github.com/CorruptionVR/PS3-Simulator), [JMRDev0/XMB-PS3-Icons-Sounds-Pack-](https://github.com/JMRDev0/XMB-PS3-Icons-Sounds-Pack-) | XMB icons, PS3 system font, XMB sounds and music |
+| PlayStation 4 | [d4v1-sudo/Ps4-UI](https://github.com/d4v1-sudo/Ps4-UI) | Wave background, icons, SST font, sounds |
+| Wii | [andrewplus/Wii.JS](https://github.com/andrewplus/Wii.JS), [aica7/Liink](https://github.com/aica7/Liink) | Channel frames, buttons, Wii pointer, sounds, Rodin fonts |
+| Xbox 360 | [ZivvoZ/dashx360](https://github.com/ZivvoZ/dashx360) | Boot video, dashboard sounds, tiles and themes |
 
-- Faster Store and search refreshes reuse cards, decoded artwork and controller focus. Ownership lookups and currency formatting avoid repeated work.
-- Fixes offline Store retry loops, uppercase searches, controller entry into search results, stale responses, false ownership matches and missing-price labels.
-- Bounded game-page caches recover quickly from offline fallbacks, retain useful saved metadata, and prevent old requests from undoing edits or resets.
+OmniDash never hosts or redistributes these files. They're downloaded on your request, for your own use, from their authors' projects, and their rights stay with those authors and the console makers. Each pack folder gets an `INSTALLED-BY-OMNIDASH.txt` listing where its files came from. You can also drop your own files into a pack folder; the pack manager shows exactly which file names each theme reads.
 
-- The Xbox logo at the top left opens Windows Game Bar. Friends has a separate button beside it; both support touch, keyboard and controller navigation with the shared white focus glow.
-- Faster large-library refreshes: Home and Library build their own visible page, with hidden pages refreshed on entry.
-- Preferred-copy grouping and play history are reused while their inputs stay unchanged. Installs, library edits and new launches update them immediately.
-- Local cover updates patch artwork in place, preserving controller focus, scroll positions and decoded unchanged images. Cached artwork skips redundant notifications and settings writes.
-- Extra library card pages are released on Home/Store; returning from a game page retains the selected card and position.
-- Bright white borders and a soft white glow provide a consistent focus effect across games, navigation, Settings and menus.
-- MA15+ uses the official Australian classification badge, bundled for offline use.
-- Controller navigation scrolls all the way to **My games** in Jump back in, including handheld screens and enlarged text.
-- Remote cover updates keep the existing Home tiles and controller focus.
-- Local and remote game pages share prefetched details, with bounded caches and region-aware refreshes. Artwork downloads are shared and limited across callers; cached reads avoid repeated format probes and settings writes.
-- Automatic stream completion checks the host's final state before returning to the game page, fixing a race that could leave a stale **Resume game** button. Detached host shortcuts still need process tracking configured on the host.
-- Retains **End session**, improved discovery, the simplified profile menu and automatic background PC Gamerscore updates.
-- Includes shared streaming presets, customizable controller shortcuts, regional classifications, square cached artwork and remote games in **Jump back in**.
-- Includes download-size estimates, Settings → Storage, automatic launch update checks and all publisher/series artwork cards.
+> One-click install, the 2025 Series home and the latest fixes are on the [`console-themes`](https://github.com/ykyritsis/OmniDash/tree/console-themes) branch and arrive in the next release. In 0.6.0, use **Open folder** and the file names listed in the pack manager.
 
-[Full release notes](docs/release-0.5.0.md) · [Remote play guide](docs/remote-play.md) · [StreamLight parity audit](docs/streamlight-parity.md)
+---
 
-## Download
+## Everything else it does
 
-Get **[0.6.0 from GitHub Releases](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/tag/v0.6.0)**. Download the Setup executable for your handheld or desktop.
+<details open>
+<summary><strong>One library from every launcher</strong></summary>
 
-| File | Choose this for |
-| --- | --- |
-| `OmniDash-Setup-x.y.z.exe` | An installed copy with a Start menu entry and uninstaller. |
-| `OmniDash-Portable-x.y.z.exe` | Running without installation. Replace the executable to update; settings remain in Windows app data. |
-| `SHA256SUMS.txt` | Verifying the downloaded files. |
+- Discovers installed games from Steam, Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon, plus anything you add yourself.
+- Steam hidden games stay hidden, and hiding a game in OmniDash syncs to Steam. Steam Family libraries are supported.
+- Favourites, custom and smart collections, publisher and series rows, and recently added and recently played.
+- Artwork from the Xbox Store, Steam and (with your key) SteamGridDB, cached on disk. Wide art only goes in wide slots and square art in square ones.
 
-Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Choose **More info → Run anyway** if you trust the source.
+</details>
+
+<details>
+<summary><strong>Game pages, launching and downloads</strong></summary>
+
+- Game pages with descriptions, screenshots, trailers, input support, achievements, your captures and friends who are playing.
+- Steam launch options in a controller-friendly dialog. The launch screen follows the game's start-up and lets you cancel for real.
+- Choose DLC and language packs, with sizes, before a Steam install. Pause, resume, reorder and cancel Steam downloads from the Queue.
+- Pause downloads while you play, and return to a running game.
+
+</details>
+
+<details>
+<summary><strong>Store, Game Pass, friends and achievements</strong></summary>
+
+- Xbox Store browsing, the PC Game Pass catalogue and Steam search for games you don't own yet.
+- Steam friends who are online and what they're playing, with toasts when friends come online.
+- Steam achievements, a PC Gamerscore and achievement toasts when you come back from a game.
+
+</details>
+
+<details>
+<summary><strong>Built for the couch, handhelds and quiet background running</strong></summary>
+
+- Controller, keyboard, mouse and touch everywhere, with each console's own on-screen keyboard and button glyphs.
+- Quick settings for handhelds: volume, brightness, Wi-Fi, battery and power plan.
+- While a game is in front, every animation, video and loop pauses, so OmniDash costs next to nothing.
+- A built-in updater with verified downloads; it never updates mid-game.
+- Remote play preview (StreamLight / Moonlight), optional Xbox Mode Home integration, and a power menu with sleep, restart and shut down.
+
+</details>
+
+---
 
 ## Getting started
 
-1. Install or unpack your downloaded build, then choose a profile.
-2. Connect your libraries. Installed games are discovered from local launchers and manifests.
-3. Optionally add a **SteamGridDB key** in **Settings → Library → Artwork services** to fill artwork gaps. Get a key from your SteamGridDB account's Preferences → API.
-4. Enable **Steam download controls** from the Queue to pause and resume Steam downloads. The connection stays on this PC (`127.0.0.1`).
+1. Download **OmniDash-Setup** (installed) or **OmniDash-Portable** (no install) from [Releases](https://github.com/ykyritsis/OmniDash/releases/latest).
+2. Pick a dashboard and your profile on the first screen. Installed games are found automatically.
+3. Optional:
+   - Add a **SteamGridDB key** (Settings → Library → Artwork services) to fill artwork gaps.
+   - Add a **Steam Web API key** for uninstalled games, achievement progress and friends.
+4. Optional: install **console packs** in Settings → Appearance.
 
-Installed Steam games, recorded local playtime and Steam's hidden-game list need no API key. A Steam Web API key enables additional account data, including uninstalled games, personal achievement progress and verified friend presence, subject to your Steam privacy settings.
+Builds aren't code-signed yet, so Windows SmartScreen may warn on first run: choose **More info → Run anyway** if you trust the source. Your settings, caches and packs live in `%APPDATA%\xbox-preview-ui` and survive updates.
 
-## More under the hood
+## Controls
 
-<details>
-<summary><strong>Home, library and game pages</strong></summary>
-
-- Jump back in, Recently added, favourites, custom collections, controller-friendly games and multiplayer shelves.
-- Steam friend activity shows verified friends who are currently in a game.
-- Library tabs for Installed, Recently played, Queue and My games, with filters, sorting and layouts.
-- Launcher discovery for Steam, Epic, Xbox PC, Ubisoft Connect, EA, Battle.net, GOG and Amazon where installed locally.
-- Artwork-led game pages with descriptions, screenshots, trailers where available, input support and achievements.
-- Manage artwork, files, shortcuts, collections, favourites, hiding and uninstalling from game options.
-- Steam hidden games stay hidden until you choose to show them; hiding a Steam game syncs with Steam.
-- Return to game is available while a tracked game is running.
-
-</details>
-
-<details>
-<summary><strong>Steam, downloads and account connections</strong></summary>
-
-- Supported Steam launch choices appear in a controller-friendly dialog before launch.
-- Launch progress follows game startup and first-run setup; supported Steam requests appear in the app.
-- Steam Queue controls include pause, resume, move to top, pause/resume all and cancellation through Steam.
-- Steam Family libraries, Steam achievements and PC Gamerscore from verified achievements.
-- Steam sign-in and cart pages use a separate sandboxed in-app browser session.
-- Xbox Store browsing, PC Game Pass catalog and Steam search results for additional games.
-- Account integrations have different setup requirements. See [library connections](docs/library-connections.md).
-
-</details>
-
-<details>
-<summary><strong>Personalisation, performance and updates</strong></summary>
-
-- Interface scaling, reduced motion and high-contrast focus.
-- Optional interface sounds and local sound packs.
-- Artwork and metadata caches for quicker return visits; manual artwork replacement.
-- Background work and animations pause while a game is in front.
-- Built-in update checks, verified downloads and installation on restart or app exit.
-- Power menu with confirmed sleep, restart and shutdown.
-- Optional Xbox Mode Home app integration: [setup guide](docs/xbox-mode.md).
-
-</details>
-
-## Controller controls
+The confirm button is A on Xbox-style pads. It follows each theme's layout, and the PlayStation themes can use ✕ or ○ as Enter.
 
 | Input | Action |
 | --- | --- |
-| D-pad / left stick | Move focus |
-| A | Select, open a game, or activate the focused action |
-| B | Back; return Home from the Library |
-| Y | Search |
-| Menu | Options for the focused game |
-| View | My games & apps, or Home |
-| Xbox button | Windows Game Bar |
+| D-pad / left stick | Move |
+| A / ✕ | Select, open, or play |
+| B / ○ | Back |
+| Y / △ | Search (PS3: Options) |
+| Menu / OPTIONS | Options for the focused game |
+| View | My games & apps |
+| LB / RB | Switch hubs (Xbox One, 360) or pages (Wii) |
+| Xbox / PS / HOME button | Windows Game Bar, or the theme's own menu |
 
-## Run or build from source
+## Build from source
 
-Install Node.js 22.5 or newer (the test suite uses `node:sqlite`), then:
+You need Node.js 22.5 or newer.
 
 ```powershell
 npm install
@@ -162,55 +136,17 @@ npm run prepare:streaming
 npm start
 ```
 
-Run the test suites with `npm test`, or `npm run test:unit` for the suites that need no Electron runtime.
+Run `npm test` for the full suites and `npm run test:unit` for the ones that need no Electron runtime. Build with `npm run dist` (installer) or `npm run dist:portable`. Developer notes for the themes are in [docs/HANDOVER-themes.md](https://github.com/ykyritsis/OmniDash/blob/console-themes/docs/HANDOVER-themes.md), with the pack map in [docs/theme-packs.md](https://github.com/ykyritsis/OmniDash/blob/console-themes/docs/theme-packs.md).
 
-Create Windows builds:
+## Limits
 
-```powershell
-npm run dist
-npm run dist:portable
-```
-
-Builds are written to `dist/`. The installer does not change Windows' Full Screen Experience Home app or install a certificate. See [Xbox Mode setup](docs/xbox-mode.md) for the optional integration.
-
-## Preview limits
-
-- Discovery reads local manifests and installed-game folders; it is not a complete account sync with every store.
-- Steam account data depends on API access and profile visibility. Achievement catalogs for matching non-Steam editions are reference-only unless linked progress is available.
-- Artwork and metadata sources can rate-limit, change or have no match. You can supply your own artwork.
-- Some Steam dialogs, third-party launchers, sign-in windows and Windows prompts can still appear externally.
-- Native keyboard placement is managed by Windows. Beta 25 was checked at handheld resolution and against Windows InputPane, but not on the physical handheld.
-- Epic uninstalled-game support needs a signed-in Legendary helper. See [library connections](docs/library-connections.md).
-- SteamDB is not scraped; Game Options lets you enter a Steam App ID manually.
-- Remote play is a first preview. Standard hosts expose their published apps and session state; they do not guarantee that a game window is visible. Desktop or detached-launcher entries need host-side game tracking for automatic stream termination. See [remote-play setup and limits](docs/remote-play.md).
-
-## Recent changes
-
-| Preview | Highlights |
-| --- | --- |
-| [Beta 30](docs/release-0.27.0-beta.30.md) | Embedded StreamLight remote-play preview, Steam download/install-size estimates and Settings storage overview. |
-| [Beta 27](docs/release-0.27.0-beta.27.md) | Immediate launch update checks and a centred update prompt for keyboard, mouse and controller. |
-| [Beta 26](docs/release-0.27.0-beta.26.md) | Updated management dialogs, unique gallery media, quicker Steam lookup, regional ratings and finished publisher/series artwork. |
-| [Beta 25](docs/release-0.27.0-beta.25.md) | Home card polish, rounded selection corners and native Windows keyboard throughout. |
-| [Beta 24](docs/release-0.27.0-beta.24.md) | Steam launch choices, setup status and supported launch prompts. |
-| [Beta 23](docs/release-0.27.0-beta.23.md) | Larger home shelves, verified friend activity and update installer fixes. |
-
-Older notes are in [docs/](docs).
-
-## Share the project
-
-The [downloadable beta 25 promo kit](https://github.com/ykyritsis/xbox-cloud-preview-on-pc/releases/download/v0.27.0-beta.25/Xbox-Preview-UI-Beta25-Promo-Kit-v2.zip) ([browse files](docs/promo/beta25-v2)) includes GitHub banners, Discord graphics, transparent logos, screenshots, editable layouts and [ready-to-paste Discord copy](docs/promo/beta25-v2/DISCORD-POST.txt). Use the [asset guide](docs/promo/beta25-v2/ASSET-GUIDE.txt) for dimensions and posting notes. The kit uses the app's existing blue icon. Device mockups were generated with the built-in image tool using the included screenshots as references.
+- Discovery reads local launchers and manifests. It isn't a full account sync with every store.
+- Steam account data depends on your API key and profile visibility. Artwork sources can rate-limit or miss a match; you can always set your own.
+- Some third-party launcher windows, sign-ins and Windows prompts still appear outside OmniDash.
+- Console themes are recreations made from public reference material. Packs are optional and come from third-party projects.
 
 ## Legal and attribution
 
-Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), based on Moonlight, under [GPL v3](src/remote-play/LICENSE.StreamLight). The native bridge source and reproducible preparation script are included in this repository. See [streaming component details](docs/remote-play.md#streaming-component-and-source).
+OmniDash is a fan-made, unofficial launcher. Xbox, Xbox Game Pass and Microsoft; PlayStation, PS3, PS4, PS5 and XMB; Wii, Nintendo 3DS and Nintendo; Steam; and all game names, logos and artwork belong to their respective owners. Nothing here implies sponsorship, approval or affiliation. OmniDash doesn't bundle games, grant licences, bypass DRM or ship console assets. Optional packs are fetched only on the user's request from their authors' public projects.
 
-This is a purely fan-made, unofficial launcher. Xbox, Xbox Game Pass, Microsoft, PlayStation, Steam, SteamGridDB, ASUS, game names, logos, and artwork belong to their respective owners. Nothing here implies their sponsorship, approval, or affiliation. The app does not bundle games, grant licenses, bypass DRM, or provide content you do not own. Artwork, news, screenshots, achievements, and metadata remain subject to their source services' rights and terms.
-
-System icons use the Segoe MDL2 Assets font supplied by Windows. In Settings → Audio & Video, you can load a personal sound folder containing `navigation.wav` and `activation.wav`, with optional `back.wav` and `launch.wav`. Imported sounds stay in your local profile and are not included in builds or uploads.
-
-The optional startup animation uses the Xbox mark with an original synthesized chime, not Microsoft's console sound recording. Interface sounds can be muted and the animation disabled in Settings → General → Volume & audio. Reduced motion is respected. Personal sound packs can include `startup.wav` alongside `navigation.wav` and `activation.wav`; those user-provided files are not distributed with the app.
-
-Ubisoft, EA, Battle.net and Epic Games SVG symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. The brands themselves remain trademarks of their respective owners. The Steam Family service shape was checked against [Valve's client protocol definitions](https://github.com/SteamTracking/Protobufs/blob/master/steam/steammessages_familygroups.steamclient.proto) and [steam-family-library](https://github.com/salah153/steam-family-library).
-
-**Branding caution:** [Microsoft's published app-branding guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks) restrict unlicensed use of its names and logos in app names, icons, and promotional material. This fan disclaimer does not grant permission. The project may need rebranding or asset changes if requested by a rights holder.
+Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), based on Moonlight, under [GPL v3](src/remote-play/LICENSE.StreamLight). Launcher brand symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons) (CC0). System icons use Windows' Segoe MDL2 Assets.

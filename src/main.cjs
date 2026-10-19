@@ -2988,7 +2988,9 @@ function registerIpc() {
   }
   // Optional theme pack: DashX360's Xbox 360 assets (sounds, boot video, dashboard themes), installed by the
   // player into their own app data folder. It is never part of the launcher's files or releases.
-  const themePackRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs', 'dashx360');
+  // NEBULA_PACK_ROOT points the review harness at another pack folder (an empty one shows the drawn fallbacks).
+  const packsBase = process.env.NEBULA_PACK_ROOT || path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs');
+  const themePackRoot = path.join(packsBase, 'dashx360');
   // The first file that exists in a pack, out of the names a theme looks for. Music is a list rather than a
   // fixed name so a player can drop their own loop in without renaming anything.
   async function firstExisting(root, names = []) {
@@ -3031,7 +3033,7 @@ function registerIpc() {
   });
   // Optional PlayStation and Nintendo packs (icons, fonts, sounds) the player keeps in the same folder. The
   // renderer gets file URLs for the folder; sounds and music come only from these fixed lists.
-  const retroRoot = path.join(app.getPath('appData'), 'xbox-preview-ui', 'theme-packs');
+  const retroRoot = packsBase;
   const RETRO_PACKS = {
     ps3: { check: 'ps3/PS3-Simulator-main/icons/settings.png', sounds: { navigate: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/down.ogg', category: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/up.ogg',
       confirm: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/ok.ogg', back: 'ps3/XMB-PS3-Icons-Sounds-Pack--main/pack/PS3 Icons + Sounds/oggs/cancel.ogg',

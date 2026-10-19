@@ -12,7 +12,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 
-const REPO = 'ykyritsis/xbox-cloud-preview-on-pc';
+const REPO = 'ykyritsis/OmniDash'; // renamed from xbox-cloud-preview-on-pc; GitHub redirects the old name
 const CHECK_EVERY = 6 * 60 * 60 * 1000;
 
 // "0.27.0-beta.17" → core numbers and pre-release identifiers. A release without a pre-release tag is newer

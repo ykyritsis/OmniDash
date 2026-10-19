@@ -21,6 +21,6 @@ const {createWindowsShell,SUPPORT_LINKS}=require('../src/windows-shell.cjs');
  Date.now=realNow;
  await assert.rejects(createWindowsShell({...options,platform:'linux'}).openGameBar(),/requires Windows/);
  await assert.rejects(createWindowsShell({...options,getWindow:()=>null}).openGameBar(),/unavailable/);
- for(const url of Object.values(SUPPORT_LINKS))assert(url.startsWith('https://github.com/ykyritsis/xbox-cloud-preview-on-pc'));
+ for(const url of Object.values(SUPPORT_LINKS))assert(url.startsWith('https://github.com/ykyritsis/OmniDash'));
  console.log('PASS native shell arguments, duplicate-press cooldown, no protocol toggle after helper failure, missing-helper fallback, unavailable windows and support links');
 })().catch(error=>{console.error(error);process.exitCode=1;});

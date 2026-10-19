@@ -1,6 +1,6 @@
 const path = require('node:path');
 const { execFile } = require('node:child_process');
-const PROJECT_URL = 'https://github.com/ykyritsis/xbox-cloud-preview-on-pc';
+const PROJECT_URL = 'https://github.com/ykyritsis/OmniDash';
 const SUPPORT_LINKS = Object.freeze({ feedback: `${PROJECT_URL}/issues`, feature: `${PROJECT_URL}/issues/new`, help: `${PROJECT_URL}#getting-started` });
 function createWindowsShell({ runtimeDirectory, getWindow, run = execFile, platform = process.platform }) {
   let opening, openedAt = 0;
