@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="95" height="28" viewBox="0 0 95 28" role="img" aria-label="license: MIT">
+  <title>license: MIT</title>
+  <defs>
+    <clipPath id="badge-license"><rect width="95" height="28" rx="5"/></clipPath>
+  </defs>
+  <g clip-path="url(#badge-license)">
+    <rect width="55" height="28" fill="#24292f"/>
+    <rect x="55" width="40" height="28" fill="#2ea043"/>
+  </g>
+  <g font-family="'Segoe UI', Verdana, Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle">
+    <text x="27.5" y="18.5" fill="#c9d1d9">license</text>
+    <text x="75" y="18.5" fill="#ffffff" font-weight="600">MIT</text>
+  </g>
+</svg>

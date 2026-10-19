@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="152" height="28" viewBox="0 0 152 28" role="img" aria-label="built with Electron 39">
+  <title>built with Electron 39</title>
+  <defs>
+    <clipPath id="badge-electron"><rect width="152" height="28" rx="5"/></clipPath>
+  </defs>
+  <g clip-path="url(#badge-electron)">
+    <rect width="68" height="28" fill="#24292f"/>
+    <rect x="68" width="84" height="28" fill="#8957e5"/>
+  </g>
+  <g font-family="'Segoe UI', Verdana, Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle">
+    <text x="34" y="18.5" fill="#c9d1d9">built with</text>
+    <text x="110" y="18.5" fill="#ffffff" font-weight="600">Electron 39</text>
+  </g>
+</svg>
