@@ -585,3 +585,12 @@ body[data-g-theme="ps5"] :is(#settings-dialog, #avatar-dialog, #achievement-dial
 body[data-g-theme="ps5"] #settings-dialog .settings-sidebar { background: #080d16 !important; }
 body[data-g-theme="ps5"] .settings-tab, body[data-g-theme="ps5"] #settings-dialog :is(h1, h2, h3) { font-family: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif; font-weight: 300; }
 body[data-g-theme="ps5"] #settings-dialog .settings-tab.active { background: #0070d1 !important; }
+
+/* ---------- Settings: use the whole panel on a big screen ----------
+   The settings page caps at 1100px, which on a 1440p or 4K display leaves the right half of the
+   panel empty and squeezes the theme cards into four narrow columns. Past 1500px wide the page
+   takes the panel's width and the theme grid keeps its four columns at a comfortable size. */
+@media (min-width: 1500px) {
+  #settings-dialog .settings-page[data-settings-page="personalization"] { max-width: none; }
+  #settings-dialog .g-theme-picker { grid-template-columns: repeat(4, minmax(240px, 1fr)); }
+}
