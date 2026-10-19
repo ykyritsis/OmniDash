@@ -48,6 +48,10 @@ const SHOW = {
   shell: `openSettings()`, shD: `gShell.move('down')`, shU: `gShell.move('up')`, shR: `gShell.move('right')`, shA: `gShell.activate()`, shB: `gShell.back()`
 };
 app.on('browser-window-created', (_, win) => {
+  // Size the review window before the page lays out. Setting it only after load leaves viewport-derived
+  // scale variables (the Helix settings dialog uses --p) at the default 1600x960, so a later resize can
+  // clip content that would fit if the app had opened at the review size.
+  win.setContentSize(viewWidth, viewHeight);
   const errors = []; win.webContents.on('console-message', e => { if (e.level === 'error') errors.push(e.message.slice(0, 200)); });
   win.webContents.once('did-finish-load', async () => {
     // The demo library import lands a few seconds in and replaces the game list, so paint the stand-in
@@ -63,10 +67,14 @@ app.on('browser-window-created', (_, win) => {
     await new Promise(r => setTimeout(r, 700));
     await fs.mkdir(output, { recursive: true });
     const demoArt = process.env.DEMO_ART === '0' ? '' : await fs.readFile(path.join(__dirname, 'theme-demo-art.js'), 'utf8');
+    // Optional review-only script that swaps the demo library's titles and gamerpic before each theme paints,
+    // so README captures show mainstream games without changing the app's own demo data.
+    const libraryScript = process.env.DEMO_LIBRARY_SCRIPT ? await fs.readFile(path.resolve(process.env.DEMO_LIBRARY_SCRIPT), 'utf8') : '';
     for (const theme of themes) {
+      // Change the demo library before the theme paints: the Series backdrop remembers the selected game's
+      // Steam hero per id, so renaming the game after a theme switch would leave the previous game's art up.
+      if (libraryScript) await win.webContents.executeJavaScript(libraryScript).catch(e => errors.push('library: ' + e));
       await win.webContents.executeJavaScript(`(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); if (window.gSetTheme) gSetTheme(${JSON.stringify(theme)}); else document.body.dataset.gTheme = ${JSON.stringify(theme)}; })()`).catch(e => errors.push(String(e)));
-      // Paint the stand-in artwork for this theme: the demo library can replace the game list (and with it
-      // the artwork) at any point, so do it per theme rather than once at start-up.
       if (demoArt) await win.webContents.executeJavaScript(demoArt).catch(e => errors.push('art: ' + e));
       for (const [si, screen] of screens.entries()) {
         // hub-<id> opens a pivot hub; page-<settings page id> opens Settings on that page.
@@ -75,7 +83,37 @@ app.on('browser-window-created', (_, win) => {
           : SHOW[screen];
         const keepDialogs = /^sh[DURAB]$/.test(screen);
         await win.webContents.executeJavaScript(`(() => { ${keepDialogs ? '' : "for (const d of document.querySelectorAll('dialog[open]')) d.close();"} ${show || `showView('home')`}; })()`).catch(e => errors.push(screen + ': ' + e));
-        await new Promise(r => setTimeout(r, screen === 'boot' ? 1100 : screen === 'saver' ? 2600 : screen === 'store' ? 6000 : 1800));
+        const fixedWait = Number(process.env.SCREEN_WAIT_MS) || 0;
+        await new Promise(r => setTimeout(r, fixedWait || (screen === 'boot' ? 1100 : screen === 'saver' ? 2600 : screen === 'store' ? 6000 : 1800)));
+        // A slow demo scan can push its library:initial after the theme switch and restore the stand-in
+        // titles. Re-apply the review library on Home and let the theme repaint its extras from it.
+        if (libraryScript && screen === 'home') {
+          await win.webContents.executeJavaScript(libraryScript).catch(e => errors.push('library: ' + e));
+          if (theme === 'series') {
+            await win.webContents.executeJavaScript(`(() => {
+              const game = state.games.find(item => item.id === state.selectedGameId);
+              return game && window.gThemeBackdrop ? gThemeBackdrop(game).then(url => { applyAmbientImage(game, url, 'artwork'); return url; }) : '';
+            })()`).catch(e => errors.push('backdrop: ' + e));
+          }
+          await new Promise(r => setTimeout(r, 1200));
+        }
+        // A hidden (offscreen) window throttles page timers, so the library toast (2.6 s) and the scan
+        // progress card (1.8 s) can stay on screen for minutes. They are transient chrome, not UI, and have
+        // no place in a README capture. A review-only style hides them for the rest of the run: removing
+        // classes is not enough, because each console toast has an entrance animation with fill-mode: both
+        // that holds it visible even without `.show`.
+        await win.webContents.executeJavaScript(`(() => {
+          if (!document.querySelector('#review-hide-chrome')) {
+            const style = document.createElement('style');
+            style.id = 'review-hide-chrome';
+            style.textContent = '#toast, #scan-progress, #importing-screen { display: none !important; }';
+            document.head.append(style);
+          }
+          const card = document.querySelector('#scan-progress'); if (card) card.hidden = true;
+          const toast = document.querySelector('#toast'); if (toast) toast.classList.remove('show', 'g-toast-in');
+          const importing = document.querySelector('#importing-screen'); if (importing) { importing.classList.remove('visible'); importing.hidden = true; }
+        })()`).catch(e => errors.push('clean: ' + e));
+        await new Promise(r => setTimeout(r, 250));
         await fs.writeFile(path.join(output, `${theme}-${/^(nav[RLUD]|press|back|sh[DURAB])$/.test(screen) ? si + "-" : ""}${screen}.png`), (await win.webContents.capturePage()).toPNG());
       }
     }
