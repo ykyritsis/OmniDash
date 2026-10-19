@@ -33,10 +33,6 @@ THEMES = [
 ]
 RETRO = ["x360", "ps3", "wii", "3ds"]
 
-# Helix's Appearance page clips its fourth theme card at 1920x1080 (a real dialog-width bug, reported
-# separately). Its Account page is laid out cleanly and still shows real, registry-backed settings.
-SETTINGS_SCREEN = {"helix": "page-experience"}
-
 BG = (5, 7, 10)
 GAP = 6
 WIDTH = 1280
@@ -93,7 +89,7 @@ def main() -> None:
     # --- Per-theme dashboard and settings images ------------------------------------------------
     for theme, _label in THEMES:
         home = resize(load(theme, "home"))
-        settings = resize(load(theme, SETTINGS_SCREEN.get(theme, "page-personalization")))
+        settings = resize(load(theme, "page-personalization"))
 
         # Dashboards are photographic: a 256-colour palette is the difference between ~1.5 MB
         # truecolour PNGs and ~0.3 MB ones, and it is what the README-size budget allows.
