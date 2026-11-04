@@ -24,7 +24,7 @@ html:has(body[data-g-theme="series"]) { background: #050c05; }
 
 /* ---------- Wallpaper: the green swirl, and the selected game's art over it on Home ---------- */
 body.garrison[data-g-theme="series"] #g-theme-wall, body.garrison[data-g-theme="series"] #g-theme-wall .g-wall-series { display: block; }
-body.garrison[data-g-theme="series"] .g-swirl-ribbons { transform-origin: 50% 80%; animation: g-swirl 38s ease-in-out infinite alternate; }
+body.garrison[data-g-theme="series"] .g-swirl-ribbons { transform-origin: 50% 80%; } /* Still: animating this full-screen SVG cost about 18% CPU at idle. */
 @keyframes g-swirl { from { transform: translate(-2%, 0) scale(1.02); } to { transform: translate(2%, -2%) scale(1.06) rotate(-1deg); } }
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer {
   visibility: visible !important; z-index: 0; background-size: cover !important; background-position: center 30% !important; transition: opacity var(--m-fade) var(--m-ease) !important;

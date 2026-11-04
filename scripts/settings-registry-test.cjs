@@ -76,7 +76,8 @@ function createHarness({ brightness = 70, volume = { level: 45, muted: false }, 
     checkForUpdates: async () => { calls.push(['checkForUpdates']); return { state: 'current' }; },
     copyDiagnostics: async () => { calls.push(['copyDiagnostics']); },
     exportSettings: async () => { calls.push(['exportSettings']); },
-    importSettings: async () => { calls.push(['importSettings']); }
+    importSettings: async () => { calls.push(['importSettings']); },
+    saveSettings: async settings => { calls.push(['saveSettings', settings]); return settings; }
   };
   const window = {
     launcher, navigator: { getGamepads: () => [] },
@@ -89,6 +90,7 @@ function createHarness({ brightness = 70, volume = { level: 45, muted: false }, 
     setFocusedElement: element => { calls.push(['setFocusedElement', element.id]); },
     formatBytes: bytes => `${Math.round(bytes / 1e9)} GB`,
     showToast: () => {},
+    gPromptText: async options => { calls.push(['gPromptText', options.title]); return 'NEWKEY123'; },
     Event: FakeEvent, CustomEvent: FakeEvent
   };
   const state = {
@@ -103,7 +105,7 @@ function createHarness({ brightness = 70, volume = { level: 45, muted: false }, 
   };
   const context = vm.createContext({ window, document, navigator: window.navigator, state, console, setTimeout, clearTimeout });
   vm.runInContext(source, context, { filename: 'garrison-settings-registry.js' });
-  return { api: window.gSettings, calls, events, prefs, elements, window, getTheme: () => theme };
+  return { api: window.gSettings, calls, events, prefs, elements, window, state, getTheme: () => theme };
 }
 
 function eventFor(events, name, id) {
@@ -111,7 +113,7 @@ function eventFor(events, name, id) {
 }
 
 (async () => {
-  const { api, calls, events, elements } = createHarness();
+  const { api, calls, events, elements, state } = createHarness();
 
   // ---------- Shape: every entry is complete ----------
   assert.ok(api, 'window.gSettings exists');
@@ -228,14 +230,17 @@ function eventFor(events, name, id) {
 
   // Actions use the launcher's existing buttons/IPC and report real status.
   assert.equal(await api.get('steamAccount'), 'Not set up');
-  await api.set('steamAccount', null);
-  assert.ok(calls.some(call => call[0] === 'performAction' && call[1] === 'settings'), 'account setup opens the launcher Settings');
-  assert.ok(calls.some(call => call[0] === 'showSettingsPage' && call[1] === 'services'));
-  assert.ok(calls.some(call => call[0] === 'setFocusedElement' && call[1] === 'steam-api-key'));
+  assert.equal(await api.set('steamAccount', null), 'Set up', 'the key is typed in place and saved');
+  assert.ok(calls.some(call => call[0] === 'gPromptText'), 'account keys use the shared prompt');
+  assert.ok(calls.some(call => call[0] === 'saveSettings' && call[1].steamApiKey === 'NEWKEY123'), 'the key is saved directly');
+  assert.ok(!calls.some(call => call[0] === 'performAction' && call[1] === 'settings'), 'no detour into the launcher dialog');
+  elements['steam-api-key'].value = '';
+  state.steamApiKeyConfigured = false;
   await api.set('checkForUpdates', null);
   assert.ok(calls.some(call => call[0] === 'checkForUpdates'), 'Check for updates falls back to the existing IPC');
-  await api.set('launcherSettings', null);
-  assert.ok(calls.some(call => call[0] === 'performAction' && call[1] === 'settings'), 'Advanced (launcher) opens the real dialog');
+  assert.equal(api.entry('launcherSettings'), null, 'there is no separate launcher-settings row');
+  await api.set('rescanLibrary', null);
+  assert.ok(calls.some(call => call[0] === 'performAction' && call[1] === 'rescan'), 'Scan for games runs the scan directly');
 
   // Read-only facts are real values.
   assert.equal(await api.get('appVersion'), '0.6.0');
@@ -288,9 +293,9 @@ function eventFor(events, name, id) {
         assert.ok(api.label(row.id, console).length > 0, `${console}/${page.id} row "${row.id}" has real wording`);
       }
     }
-    // Advanced (launcher) is always one real action at the bottom, never a fake console block.
-    const last = api.layout(console).at(-1);
-    assert.deepEqual(Array.from(last.rows, row => row.id), ['launcherSettings'], `${console} keeps Advanced (launcher) last`);
+    // Settings is one list: every console has the same sections and no detour into a separate launcher dialog.
+    assert.deepEqual(api.layout(console).map(page => page.id), api.sections.map(section => section.id), `${console} uses the shared sections`);
+    assert.ok(!api.layout(console).some(page => page.rows.some(row => row.id === 'launcherSettings')), `${console} has no launcher-settings bridge`);
   }
   const rendererDir = path.resolve(__dirname, '../src/renderer');
   const readRenderer = name => fs.readFileSync(path.join(rendererDir, name), 'utf8');

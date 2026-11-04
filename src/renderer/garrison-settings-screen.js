@@ -24,18 +24,18 @@
   // The sections and their rows come from the registry (the same list every console uses); this file only adds
   // an icon and a one-line summary for each. "All launcher settings" sits at the end of System.
   const LOOK = {
-    appearance: { icon: 'color', blurb: 'Theme, background and clock' },
+    appearance: { icon: 'color', blurb: 'Theme, background, pack and clock' },
     'display-sound': { icon: 'tv', blurb: 'Screen size, brightness and sound' },
     controller: { icon: 'controller', blurb: 'Connection and vibration' },
     notifications: { icon: 'bell', blurb: 'Which pop-ups you see' },
-    library: { icon: 'library', blurb: 'What shows in your library' },
+    library: { icon: 'library', blurb: 'Scanning, what shows and artwork' },
     account: { icon: 'contact', blurb: 'Your profile and connected stores' },
     accessibility: { icon: 'ease', blurb: 'Text size, motion and focus' },
-    system: { icon: 'settings', blurb: 'Start-up, updates and backup' }
+    system: { icon: 'settings', blurb: 'Start-up, updates, backup and reset' }
   };
   const CATEGORIES = (window.gSettings?.sections || []).filter(section => LOOK[section.id]).map(section => ({
     id: section.id, name: section.title, icon: LOOK[section.id].icon, blurb: LOOK[section.id].blurb,
-    rows: section.id === 'system' ? [...section.rows, 'launcherSettings'] : section.rows.slice()
+    rows: section.rows.slice()
   }));
   const LABEL = {
     uiScale: 'Screen size', textSize: 'Text size', fullscreen: 'Open in full screen', startupAnimation: 'Startup animation',
@@ -43,11 +43,11 @@
     accent: 'Accent colour', background: 'Background', screensaverDelay: 'Dim the screen after', clockFormat: 'Clock', dateOrder: 'Date format',
     controllerStatus: 'Controller', controllerVibration: 'Vibration', libraryCounts: 'Library', freeDisk: 'Free space',
     showUninstalledSteam: 'Show uninstalled Steam games', showUninstalledEpic: 'Show uninstalled Epic games', pauseDownloadsWhilePlaying: 'Pause downloads while playing',
-    profile: 'Name and gamerpic', steamAccount: 'Steam', epicAccount: 'Epic Games', artworkKey: 'Artwork (SteamGridDB)', friendsOnline: 'Friends online',
+    profile: 'Name and gamerpic', steamAccount: 'Steam Web API key', epicAccount: 'Epic Games', artworkKey: 'SteamGridDB key', friendsOnline: 'Friends online',
     notifyFriends: 'Friends coming online', notifyDownloads: 'Downloads finishing', notifyAchievements: 'Achievements unlocked',
     highContrastFocus: 'High-contrast focus', reducedMotion: 'Reduce motion', wifi: 'Network', appVersion: 'Version',
     checkForUpdates: 'Check for updates', exportSettings: 'Back up settings', importSettings: 'Restore settings', copyDiagnostics: 'Copy diagnostics',
-    launcherSettings: 'All launcher settings'
+    rescanLibrary: 'Scan for games', consolePack: 'Console pack', clearArtwork: 'Reset chosen artwork', resetLauncherData: 'Reset OmniDash'
   };
   const DESC = {
     theme: 'The whole dashboard style. Your games and settings stay the same.',
@@ -74,9 +74,9 @@
     showUninstalledEpic: 'Also list Epic games you own but have not installed.',
     pauseDownloadsWhilePlaying: 'Keeps Steam downloads from slowing your game down.',
     profile: 'Change the name and picture shown in the corner.',
-    steamAccount: 'Connect Steam for friends, achievements and owned games.',
-    epicAccount: 'Connect Epic Games to bring in that library.',
-    artworkKey: 'A free key that fills in missing game artwork.',
+    steamAccount: 'Optional. Adds uninstalled games you own, verified Gamerscore and friends.',
+    epicAccount: 'Found automatically through Legendary or Heroic.',
+    artworkKey: 'Optional. A free key that fills in missing artwork.',
     friendsOnline: 'Steam friends who are online now.',
     notifyFriends: 'Show a pop-up when a friend comes online.',
     notifyDownloads: 'Show a pop-up when a download or update finishes.',
@@ -90,7 +90,10 @@
     exportSettings: 'Save your settings to a file.',
     importSettings: 'Load settings from a backup file.',
     copyDiagnostics: 'Copies a report (without keys) to send with a bug.',
-    launcherSettings: 'Game libraries, remote play, privacy and other rarely used options.'
+    rescanLibrary: 'Look again for games installed on this PC.',
+    consolePack: 'Original icons, fonts and sounds for this dashboard, from its author’s project.',
+    clearArtwork: 'Go back to the artwork OmniDash picks for every game.',
+    resetLauncherData: 'Clears your settings, artwork and caches. Your games are not touched.'
   };
   const UNIT = { volume: '%', menuMusicVolume: '%', brightness: '%', uiScale: '%', textSize: '%', screensaverDelay: ' min', tileRadius: ' px' };
 
@@ -398,9 +401,7 @@
   if (typeof openSettings === 'function') {
     const openBase = openSettings;
     openSettings = async function (...args) {
-      if (on() && !launcherPass) { await open(); return undefined; }
-      // Rows such as Steam and "All launcher settings" need the launcher's full dialog itself.
-      if (on() && typeof window.gOpenLauncherSettings === 'function') return window.gOpenLauncherSettings(...args);
+      if (on()) { await open(); return undefined; }
       return openBase.apply(this, args);
     };
   }

@@ -94,3 +94,16 @@ body.garrison #g-aero-settings :is(.as-cat, .as-row, .as-option, .as-close):is(.
 body.garrison #g-aero-settings .as-hints { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: calc(28 * var(--us-u)); font-size: calc(16 * var(--us-u)); color: var(--us-muted); }
 body.garrison #g-aero-settings .as-hints span { display: flex; align-items: center; }
 html.reduce-motion #g-aero-settings, html.reduce-motion #g-aero-settings * { animation: none !important; transition: none !important; }
+
+/* The text prompt (garrison-text-prompt.js): one field, Save and Cancel. Every theme uses it. */
+#g-text-prompt { width: min(640px, 86vw); padding: 28px 30px 24px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 18px; background: #1f2023; color: #fff; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); }
+#g-text-prompt::backdrop { background: rgba(0, 0, 0, .55); }
+#g-text-prompt h2 { margin: 0; font: 600 24px/1.2 "Segoe UI Variable Display", "Segoe UI", sans-serif; }
+#g-text-prompt .g-tp-body { margin: 6px 0 18px; color: rgba(255, 255, 255, .68); font-size: 15px; line-height: 1.4; }
+#g-text-prompt input { box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; background: rgba(0, 0, 0, .35); color: #fff; font: 400 17px/1 inherit; }
+#g-text-prompt input:is(:focus, .focused) { outline: none; border-color: #60cdff; box-shadow: 0 0 0 3px rgba(96, 205, 255, .35); }
+#g-text-prompt .g-tp-help { min-height: 1em; margin: 10px 0 0; color: rgba(255, 255, 255, .55); font-size: 13px; }
+#g-text-prompt .g-tp-actions { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+#g-text-prompt .g-tp-actions span { flex: 1; }
+#g-text-prompt .g-tp-actions button { min-width: 104px; height: 42px; border-radius: 10px; font: 600 15px/1 inherit; }
+body[data-g-skin="aero"] #g-text-prompt { background: linear-gradient(180deg, rgba(30, 130, 180, .98), rgba(8, 60, 100, .98)); border-color: rgba(255, 255, 255, .3); }

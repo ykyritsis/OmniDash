@@ -215,6 +215,21 @@
     if (field && field.value.trim()) return 'Set up';
     return appFlag && appState()?.[appFlag] ? 'Set up' : 'Not set up';
   }
+  // Keys are typed in the shared prompt (garrison-text-prompt.js) and saved directly, so no screen needs the
+  // launcher's dialog. The hidden form field is kept in step, or its next save would write the old key back.
+  async function promptKey({ fieldId, setting, appFlag, title, body, help }) {
+    if (typeof root.gPromptText !== 'function') throw new Error('Typing is not available yet.');
+    const field = qs('#' + fieldId);
+    const current = field?.value?.trim() || '';
+    const value = await root.gPromptText({ title, body, help, value: current, secret: true, placeholder: 'Paste the key here' });
+    if (value === null) return accountStatus(fieldId, appFlag);
+    await root.launcher.saveSettings({ [setting]: value });
+    if (field) field.value = value;
+    const app = appState();
+    if (app && appFlag) app[appFlag] = Boolean(value);
+    if (typeof root.showToast === 'function') root.showToast(value ? `${title} saved` : `${title} removed`);
+    return accountStatus(fieldId, appFlag);
+  }
   async function openAccountField(fieldId, appFlag) {
     if (typeof root.performAction === 'function') await root.performAction('settings', null);
     if (typeof root.showSettingsPage === 'function') root.showSettingsPage('services');
@@ -227,6 +242,13 @@
     return accountStatus(fieldId, appFlag);
   }
   const fieldStatus = (fieldId, appFlag) => () => accountStatus(fieldId, appFlag);
+
+  async function currentPack() {
+    if (typeof root.launcher?.getThemePacks !== 'function') return null;
+    const theme = root.gTheme?.() || 'helix';
+    const list = (await root.launcher.getThemePacks().catch(() => null))?.packs || [];
+    return list.find(pack => pack.console === theme) || null;
+  }
 
   // ---------- Entries ----------
   const entries = [
@@ -376,19 +398,40 @@
       await root.performAction('avatar-picker', null);
       return null;
     } }),
-    actionEntry({ id: 'steamAccount', label: { default: 'Steam account' }, run: () => openAccountField('steam-api-key', 'steamApiKeyConfigured'), status: fieldStatus('steam-api-key', 'steamApiKeyConfigured') }),
-    actionEntry({ id: 'epicAccount', label: { default: 'Epic account' }, run: () => openAccountField('legendary-path', 'epicHelperPath'), status: fieldStatus('legendary-path', 'epicHelperPath') }),
-    actionEntry({ id: 'artworkKey', label: { default: 'Artwork services' }, run: () => openAccountField('sgdb-key'), status: fieldStatus('sgdb-key') }),
+    actionEntry({ id: 'steamAccount', label: { default: 'Steam Web API key' }, status: fieldStatus('steam-api-key', 'steamApiKeyConfigured'), run: () => promptKey({
+      fieldId: 'steam-api-key', setting: 'steamApiKey', appFlag: 'steamApiKeyConfigured', title: 'Steam Web API key',
+      body: 'Optional. Adds games you own but have not installed, verified Gamerscore and friends.', help: 'Get one at steamcommunity.com/dev/apikey' }) }),
+    {
+      id: 'epicAccount', kind: 'info', label: { default: 'Epic Games' },
+      get: async () => (appState()?.epicHelperPath || qs('#legendary-path')?.value?.trim() ? 'Connected' : 'Installed games only'),
+      set: async () => { throw new Error('Epic Games is found automatically.'); },
+      available: async () => true
+    },
+    actionEntry({ id: 'artworkKey', label: { default: 'SteamGridDB key' }, status: fieldStatus('sgdb-key'), run: () => promptKey({
+      fieldId: 'sgdb-key', setting: 'steamGridDbKey', title: 'SteamGridDB key',
+      body: 'Optional. Fills in artwork for games that have none.', help: 'Get one free at steamgriddb.com/profile/preferences/api' }) }),
+    actionEntry({ id: 'rescanLibrary', label: { default: 'Scan for games' }, run: async () => {
+      if (typeof root.performAction !== 'function') throw new Error('The library is not ready.');
+      await root.performAction('rescan', null);
+      return null;
+    } }),
+    actionEntry({ id: 'consolePack', label: { default: 'Console pack' }, status: async () => {
+      const pack = await currentPack();
+      return !pack ? 'Not needed' : pack.found ? 'Installed' : 'Not installed';
+    }, run: async () => {
+      const pack = await currentPack();
+      if (!pack || !(pack.sources || []).length) { root.showToast?.('This dashboard draws everything itself'); return 'Not needed'; }
+      root.showToast?.(`Installing the ${pack.name} pack…`);
+      await root.launcher.installThemePack(pack.id);
+      root.showToast?.(`${pack.name} pack installed`);
+      return 'Installed';
+    } }),
+    actionEntry({ id: 'clearArtwork', label: { default: 'Reset chosen artwork' }, run: clickAction('[data-action="clear-custom-artwork"]') }),
     actionEntry({ id: 'checkForUpdates', label: { default: 'Check for updates', ps3: 'System Update', ps4: 'System Update', wii: 'Wii System Update', '3ds': 'System Update', x360: 'System Update' }, run: clickAction('#g-update-check', () => root.launcher.checkForUpdates()) }),
     actionEntry({ id: 'copyDiagnostics', label: { default: 'Copy diagnostics' }, run: clickAction('[data-action="g-support-copy"]', () => root.launcher.copyDiagnostics()) }),
     actionEntry({ id: 'exportSettings', label: { default: 'Export settings' }, run: clickAction('[data-action="g-support-export"]', () => root.launcher.exportSettings()) }),
     actionEntry({ id: 'importSettings', label: { default: 'Restore settings' }, run: clickAction('[data-action="g-support-import"]', () => root.launcher.importSettings()) }),
     actionEntry({ id: 'resetLauncherData', label: { default: 'Reset launcher data', ps3: 'Restore Default Settings' }, run: clickAction('[data-action="reset-launcher-data"]') }),
-    actionEntry({ id: 'launcherSettings', label: { default: 'Advanced (launcher)' }, run: async () => {
-      if (typeof root.performAction !== 'function') throw new Error('The launcher settings dialog is not ready.');
-      await root.performAction('settings', null);
-      return null;
-    } }),
 
     // Real read-only information
     {
@@ -480,7 +523,7 @@
   // each console's wording; rows carry registry ids only, so every label still comes from the entry.
   const CONSOLE_IDS = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
   const SECTIONS = [
-    { id: 'appearance', rows: ['theme', 'background', 'clockFormat'], extra: { ps3: ['ps3ThemeColour', 'enterButton'], ps4: ['enterButton'], ps5: ['enterButton'], wii: ['nintendoLayout'], '3ds': ['nintendoLayout', 'screenLayout3ds'] },
+    { id: 'appearance', rows: ['theme', 'background', 'consolePack', 'clockFormat'], extra: { ps3: ['ps3ThemeColour', 'enterButton'], ps4: ['enterButton'], ps5: ['enterButton'], wii: ['nintendoLayout'], '3ds': ['nintendoLayout', 'screenLayout3ds'] },
       title: { default: 'Appearance', ps3: 'Theme Settings', ps4: 'Themes', wii: 'Wii Settings', '3ds': 'Theme' } },
     { id: 'display-sound', rows: ['uiScale', 'brightness', 'volume', 'soundEffects', 'menuMusic'],
       title: { default: 'Display & sound', ps3: 'Display & Sound Settings', ps4: 'Sound & Screen', ps5: 'Screen & Sound', wii: 'Screen & Sound', '3ds': 'Sound & Display' } },
@@ -488,22 +531,21 @@
       title: { default: 'Controller', x360: 'Controllers', ps3: 'Accessory Settings', ps4: 'Devices', ps5: 'Accessories', wii: 'Controllers', '3ds': 'Controls' } },
     { id: 'notifications', rows: ['notifyAchievements', 'notifyFriends', 'notifyDownloads'],
       title: { default: 'Notifications', ps3: 'Notification Settings', wii: 'Wii Message Board' } },
-    { id: 'library', rows: ['showUninstalledSteam', 'showUninstalledEpic', 'pauseDownloadsWhilePlaying'],
+    { id: 'library', rows: ['rescanLibrary', 'showUninstalledSteam', 'showUninstalledEpic', 'pauseDownloadsWhilePlaying', 'clearArtwork'],
       title: { default: 'Library', ps3: 'Game Settings', '3ds': 'Data Management' } },
     { id: 'account', rows: ['profile', 'steamAccount', 'epicAccount', 'artworkKey'],
       title: { default: 'Accounts', x360: 'Profile', ps3: 'Account Management', ps4: 'Account Management', '3ds': 'Profile' } },
     { id: 'accessibility', rows: ['textSize', 'reducedMotion', 'highContrastFocus'],
       title: { default: 'Accessibility', one: 'Ease of Access', x360: 'Ease of Access' } },
-    { id: 'system', rows: ['fullscreen', 'startupAnimation', 'checkForUpdates', 'appVersion', 'exportSettings', 'importSettings'],
+    { id: 'system', rows: ['fullscreen', 'startupAnimation', 'checkForUpdates', 'appVersion', 'exportSettings', 'importSettings', 'resetLauncherData'],
       title: { default: 'System', ps3: 'System Settings', wii: 'Wii System' } },
-    { id: 'advanced', rows: ['launcherSettings'], title: { default: 'Advanced (launcher)' } }
   ];
   const LAYOUTS = Object.fromEntries(CONSOLE_IDS.map(console => [console, SECTIONS.map(section => ({
     id: section.id,
     title: section.title[console] || section.title.default,
     rows: [...section.rows, ...(section.extra?.[console] || [])].map(id => ({ id }))
   }))]));
-  // Helix and Aero draw these same sections in the shared Settings screen (garrison-theme-aero-settings.js).
+  // Every theme draws these same sections in the shared Settings screen (garrison-theme-aero-settings.js).
   const SECTION_LIST = SECTIONS.map(section => ({ id: section.id, rows: section.rows.slice(), extra: { ...(section.extra || {}) }, title: section.title.default }));
 
   // ---------- API ----------
