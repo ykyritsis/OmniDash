@@ -521,7 +521,7 @@ runStartupSequence = function (settings) {
   setTimeout(dismiss, reduced ? 200 : 2350);
 };
 
-// ---------- Onboarding: welcome, you, your libraries, done. Detected accounts need one press. ----------
+// ---------- Onboarding: two screens. Pick a dashboard (you're recognised from Steam), then bring your games. ----------
 // Launchers that can also bring in games you own but haven't installed are switchable here.
 const gOnboardIcons = { steam: 'assets/steam.svg', 'steam-family': 'assets/steam.svg', epic: 'assets/epic.svg', ea: 'assets/ea.svg', battlenet: 'assets/battlenet.svg', ubisoft: 'assets/ubisoft.svg', xbox: 'assets/xbox.svg' };
 const gOnboard = { step: 0, identity: null, linked: {}, local: null, accounts: {}, sources: null, busy: {} };
@@ -530,7 +530,7 @@ const gOnboard = { step: 0, identity: null, linked: {}, local: null, accounts: {
   onboardingDialog.innerHTML = `<div class="g-onboard-stage"></div>
     <div hidden aria-hidden="true"><input id="onboard-name" /><input id="onboard-steam-key" /><input id="onboard-sgdb-key" /><input id="onboard-steam-id" /><input id="onboard-uninstalled" type="checkbox" /><span id="onboard-uninstalled-note"></span><span id="onboard-steam-status"></span><span id="onboard-steam-check"></span><div id="onboard-avatar-choices"></div><button id="onboard-back"></button><button id="onboard-next"></button><button id="onboard-finish"></button></div>`;
 })();
-function gOnboardDots(step) { return `<div class="g-onboard-dots">${[0, 1, 2, 3].map(index => `<i class="${index === step ? 'active' : index < step ? 'done' : ''}"></i>`).join('')}</div>`; }
+function gOnboardDots(step) { return `<div class="g-onboard-dots">${[0, 1].map(index => `<i class="${index === step ? 'active' : index < step ? 'done' : ''}"></i>`).join('')}</div>`; }
 function gOnboardStatus(source) {
   const busy = gOnboard.busy[source.id];
   if (busy) return busy;
@@ -565,18 +565,17 @@ function renderOnboarding(focus = true) {
   const name = gOnboard.identity?.name || state.displayName || 'Player';
   const avatar = gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
   stage.dataset.step = String(step);
+  // garrison-themes.js adds the dashboard picker above the primary button of step 0.
   stage.innerHTML = step === 0
-    ? `<div class="g-onboard-hero"><img class="g-onboard-logo" src="assets/omnidash.svg" alt="" /><h1>Welcome</h1><p>All your PC games, from every launcher, in one home.</p><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Get started</button></div>${gOnboardDots(0)}`
-    : step === 1
-      ? `<div class="g-onboard-panel"><h1>Is this you?</h1><p>${gOnboard.identity?.name ? 'We found your Steam account on this PC.' : 'Choose how you appear on this PC. You can change it any time.'}</p><div class="g-onboard-player"><span class="g-onboard-avatar">${avatar}</span><strong>${escapeHtml(name)}</strong></div><div class="g-onboard-actions"><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Continue as ${escapeHtml(name)}</button><button class="g-onboard-secondary focusable" type="button" data-action="g-onboard-rename">Use another name</button></div></div>${gOnboardDots(1)}`
-      : step === 2
-        ? `<div class="g-onboard-panel g-onboard-wide"><h1>Bring your games</h1><p>Installed games from every launcher appear automatically. Switch a launcher on to also include games you own but haven't installed.</p><div class="g-onboard-services">${gOnboardServicesMarkup()}</div><div class="g-onboard-actions"><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Continue</button></div><p class="g-onboard-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p></div>${gOnboardDots(2)}`
-        : `<div class="g-onboard-hero"><span class="g-onboard-done">${gIcon('check')}</span><h1>You're all set</h1><p>We'll bring in your games now. This only takes a moment.</p><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-finish">Let's go</button></div>${gOnboardDots(3)}`;
+    ? `<div class="g-onboard-hero"><img class="g-onboard-logo" src="assets/omnidash.svg" alt="" /><h1>Welcome to OmniDash</h1><p>Every game on this PC, from every launcher, in one home.</p>
+        <div class="g-onboard-player"><span class="g-onboard-avatar">${avatar}</span><span><small>Playing as</small><strong>${escapeHtml(name)}</strong></span><button class="g-onboard-secondary focusable" type="button" data-action="g-onboard-rename">Change</button></div>
+        <button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Continue</button></div>${gOnboardDots(0)}`
+    : `<div class="g-onboard-panel g-onboard-wide"><h1>Bring your games</h1><p>Installed games from every launcher are added automatically. Switch a launcher on to also include games you own but haven't installed.</p><div class="g-onboard-services">${gOnboardServicesMarkup()}</div><div class="g-onboard-actions"><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-finish">Let's go</button></div><p class="g-onboard-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p></div>${gOnboardDots(1)}`;
   refreshFocusables();
   if (focus) setFocusedElement(stage.querySelector('.g-onboard-primary') || stage.querySelector('.focusable'), { scroll: false });
 }
 showOnboardingStep = function (step) {
-  gOnboard.step = Math.max(0, Math.min(3, step));
+  gOnboard.step = Math.max(0, Math.min(1, step));
   state.onboardingStep = gOnboard.step;
   refreshOnboardingAccounts();
   renderOnboarding();

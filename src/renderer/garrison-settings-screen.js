@@ -25,18 +25,21 @@
   // an icon and a one-line summary for each. "All launcher settings" sits at the end of System.
   const LOOK = {
     appearance: { icon: 'color', blurb: 'Theme, background, pack and clock' },
-    'display-sound': { icon: 'tv', blurb: 'Screen size, brightness and sound' },
+    'display-sound': { icon: 'tv', blurb: 'Screen size, brightness, sound and vibration' },
     controller: { icon: 'controller', blurb: 'Connection and vibration' },
     notifications: { icon: 'bell', blurb: 'Which pop-ups you see' },
     library: { icon: 'library', blurb: 'Scanning, what shows and artwork' },
-    account: { icon: 'contact', blurb: 'Your profile and connected stores' },
+    account: { icon: 'contact', blurb: 'Your profile, keys and library' },
     accessibility: { icon: 'ease', blurb: 'Text size, motion and focus' },
-    system: { icon: 'settings', blurb: 'Start-up, updates, backup and reset' }
+    system: { icon: 'settings', blurb: 'Updates and reset' }
   };
   const CATEGORIES = (window.gSettings?.sections || []).filter(section => LOOK[section.id]).map(section => ({
     id: section.id, name: section.title, icon: LOOK[section.id].icon, blurb: LOOK[section.id].blurb,
     rows: section.rows.slice()
   }));
+  // Settings is one short page: every section's rows in order, under a thin heading each ('#' marks a heading).
+  const ALL = { id: 'all', name: 'Settings', icon: 'settings', blurb: '', rows: CATEGORIES.flatMap(cat => [`#${cat.id}`, ...cat.rows]) };
+  const headingOf = id => CATEGORIES.find(cat => `#${cat.id}` === id);
   const LABEL = {
     uiScale: 'Screen size', textSize: 'Text size', fullscreen: 'Open in full screen', startupAnimation: 'Startup animation',
     soundEffects: 'Interface sounds', menuMusic: 'Menu music', menuMusicVolume: 'Menu music volume', powerPlan: 'Power mode',
@@ -105,16 +108,14 @@
   screen.innerHTML = `
     <header class="as-head"><div><h1>Settings</h1><p>Change how OmniDash looks, sounds and plays.</p></div>
       <button class="as-close focusable" type="button" data-action="aero-set-close" aria-label="Close settings"><kbd data-g-role="back"></kbd>Close</button></header>
-    <nav class="as-cats" aria-label="Categories">${CATEGORIES.map(cat => `
-      <button class="as-cat focusable" type="button" data-action="aero-set-cat" data-cat="${cat.id}">${icon(cat.icon)}<span><strong>${esc(cat.name)}</strong><small>${esc(cat.blurb)}</small></span></button>`).join('')}</nav>
-    <div class="as-page"><div class="as-page-head"><span class="as-orb" aria-hidden="true"></span><h2></h2><p></p></div><div class="as-rows" role="list"></div></div>
+    <div class="as-page as-one"><div class="as-rows" role="list"></div></div>
     <footer class="as-hints"><span><kbd data-g-role="confirm"></kbd>Select</span><span><kbd data-g-role="dpad"></kbd>Change</span><span><kbd data-g-role="back"></kbd>Back</span></footer>`;
   document.body.append(screen);
   const rowsHost = screen.querySelector('.as-rows');
-  const cats = [...screen.querySelectorAll('.as-cat')];
+  const cats = [];
 
-  let current = CATEGORIES[0];
-  let area = 'cats';
+  let current = ALL;
+  let area = 'rows';
   let list = null; // { id, options, value } while a choice's list is open
   let token = 0;
   let returnFocus = null;
@@ -155,19 +156,21 @@
   }
   async function showCategory(cat, { keepFocusId = '' } = {}) {
     current = cat;
-    for (const button of cats) button.classList.toggle('on', button.dataset.cat === cat.id);
-    const orb = screen.querySelector('.as-page-head .as-orb');
-    orb.innerHTML = icon(cat.icon);
-    orb.dataset.orb = cat.id;
-    screen.querySelector('.as-page-head h2').textContent = cat.name;
-    screen.querySelector('.as-page-head p').textContent = cat.blurb;
     const mine = ++token;
-    if (!keepFocusId) rowsHost.innerHTML = cat.rows.map(() => '<div class="as-row as-ghost"></div>').join('');
-    const loaded = await Promise.all(cat.rows.map(load));
+    if (!keepFocusId) rowsHost.innerHTML = cat.rows.filter(id => !id.startsWith('#')).map(() => '<div class="as-row as-ghost"></div>').join('');
+    const loaded = await Promise.all(cat.rows.map(id => (id.startsWith('#') ? null : load(id))));
     if (mine !== token) return;
     rowData.clear();
     cat.rows.forEach((id, index) => { if (loaded[index]) rowData.set(id, loaded[index]); });
-    rowsHost.innerHTML = cat.rows.filter(id => rowData.has(id)).map(rowMarkup).join('') || '<p class="as-empty">Nothing to change here on this PC.</p>';
+    // A heading shows only when its group has at least one row this PC can use.
+    let markup = '', pending = '';
+    for (const id of cat.rows) {
+      if (id.startsWith('#')) { const group = headingOf(id); pending = group ? `<h3 class="as-group" data-group="${esc(group.id)}">${esc(group.name)}</h3>` : ''; continue; }
+      if (!rowData.has(id)) continue;
+      markup += pending + rowMarkup(id);
+      pending = '';
+    }
+    rowsHost.innerHTML = markup || '<p class="as-empty">Nothing to change here on this PC.</p>';
     rowsHost.classList.remove('as-in'); void rowsHost.offsetWidth; rowsHost.classList.add('as-in');
     try { refreshFocusables(); } catch { /* Not ready yet. */ }
     if (keepFocusId && area === 'rows') focus(rowsHost.querySelector(`.as-row[data-id="${CSS.escape(keepFocusId)}"]`) || rowsHost.querySelector('.focusable'));
@@ -251,16 +254,16 @@
     screen.hidden = false;
     document.body.classList.add('g-aero-settings-open');
     sound('confirm');
-    area = 'cats';
-    const cat = CATEGORIES.find(item => item.id === catId) || CATEGORIES[0];
-    focus(cats.find(button => button.dataset.cat === cat.id));
-    await showCategory(cat);
+    area = 'rows';
+    focus(screen.querySelector('.as-close'));
+    await showCategory(ALL);
+    enterCategory(catId);
   }
+  // Jump to a group (a launcher page like "Appearance" opens Settings there), or to the first row.
   function enterCategory(catId) {
-    const cat = CATEGORIES.find(item => item.id === catId);
-    if (!cat) return;
-    focus(cats.find(button => button.dataset.cat === cat.id));
-    showCategory(cat);
+    const heading = catId && rowsHost.querySelector(`.as-group[data-group="${CSS.escape(catId)}"]`);
+    const first = heading ? heading.nextElementSibling : rowsHost.querySelector('.as-row.focusable');
+    if (first) { area = 'rows'; focus(first); }
   }
   function close() {
     if (screen.hidden) return;
@@ -283,14 +286,9 @@
       if (direction === 'up' || direction === 'down') focus(options[Math.max(0, Math.min(options.length - 1, at + (direction === 'up' ? -1 : 1)))]);
       return;
     }
-    if (area === 'cats' || !rowsHost.contains(focused)) {
-      area = 'cats';
-      const at = Math.max(0, cats.indexOf(focused));
-      if (direction === 'up' || direction === 'down') {
-        const next = cats[Math.max(0, Math.min(cats.length - 1, at + (direction === 'up' ? -1 : 1)))];
-        if (next && next !== focused) { focus(next); sound('navigate'); showCategory(CATEGORIES.find(cat => cat.id === next.dataset.cat)); }
-        else if (direction === 'up' && at === 0) focus(screen.querySelector('.as-close'));
-      } else if (direction === 'right') enterRows();
+    if (!rowsHost.contains(focused)) {
+      // On Close (or nowhere): down goes into the list.
+      if (direction === 'down') enterRows();
       return;
     }
     const rows = [...rowsHost.querySelectorAll('.as-row.focusable')];
@@ -298,11 +296,11 @@
     if (direction === 'up' || direction === 'down') {
       const next = rows[at + (direction === 'up' ? -1 : 1)];
       if (next) { focus(next); sound('navigate'); }
+      else if (direction === 'up') focus(screen.querySelector('.as-close'));
       return;
     }
     const id = focused?.dataset.id;
-    if (step(id, direction === 'left' ? -1 : 1)) return;
-    if (direction === 'left') backToCats();
+    step(id, direction === 'left' ? -1 : 1);
   }
   function enterRows() {
     const first = rowsHost.querySelector('.as-row.focusable');
@@ -311,13 +309,8 @@
     focus(first);
     sound('navigate');
   }
-  function backToCats() {
-    area = 'cats';
-    focus(cats.find(button => button.dataset.cat === current.id));
-  }
   function back() {
     if (list) { closeList(true); sound('back'); return; }
-    if (area === 'rows') { backToCats(); sound('back'); return; }
     close();
   }
 
@@ -384,12 +377,6 @@
     row.querySelector('.as-ctl').innerHTML = control(row.dataset.id, 'slider', data.value, [], data.entry);
     apply(row.dataset.id, data.value);
   }, true);
-  // Hovering a category with the mouse shows it, like moving onto it with the controller.
-  screen.addEventListener('pointerover', event => {
-    const cat = event.target.closest?.('.as-cat');
-    if (!cat || cat.dataset.cat === current.id || list) return;
-    showCategory(CATEGORIES.find(item => item.id === cat.dataset.cat));
-  });
   // A change made elsewhere (the quick menu, a hotkey) shows up in the open list straight away.
   document.addEventListener('g-setting-change', event => {
     const id = event.detail?.id;

@@ -427,7 +427,7 @@
       return 'Installed';
     } }),
     actionEntry({ id: 'clearArtwork', label: { default: 'Reset chosen artwork' }, run: clickAction('[data-action="clear-custom-artwork"]') }),
-    actionEntry({ id: 'checkForUpdates', label: { default: 'Check for updates', ps3: 'System Update', ps4: 'System Update', wii: 'Wii System Update', '3ds': 'System Update', x360: 'System Update' }, run: clickAction('#g-update-check', () => root.launcher.checkForUpdates()) }),
+    actionEntry({ id: 'checkForUpdates', status: async () => { try { const version = (await root.launcher.getUpdateStatus())?.currentVersion; return version ? `Version ${version}` : null; } catch { return null; } }, label: { default: 'Check for updates', ps3: 'System Update', ps4: 'System Update', wii: 'Wii System Update', '3ds': 'System Update', x360: 'System Update' }, run: clickAction('#g-update-check', () => root.launcher.checkForUpdates()) }),
     actionEntry({ id: 'copyDiagnostics', label: { default: 'Copy diagnostics' }, run: clickAction('[data-action="g-support-copy"]', () => root.launcher.copyDiagnostics()) }),
     actionEntry({ id: 'exportSettings', label: { default: 'Export settings' }, run: clickAction('[data-action="g-support-export"]', () => root.launcher.exportSettings()) }),
     actionEntry({ id: 'importSettings', label: { default: 'Restore settings' }, run: clickAction('[data-action="g-support-import"]', () => root.launcher.importSettings()) }),
@@ -525,20 +525,14 @@
   const SECTIONS = [
     { id: 'appearance', rows: ['theme', 'background', 'consolePack', 'clockFormat'], extra: { ps3: ['ps3ThemeColour', 'enterButton'], ps4: ['enterButton'], ps5: ['enterButton'], wii: ['nintendoLayout'], '3ds': ['nintendoLayout', 'screenLayout3ds'] },
       title: { default: 'Appearance', ps3: 'Theme Settings', ps4: 'Themes', wii: 'Wii Settings', '3ds': 'Theme' } },
-    { id: 'display-sound', rows: ['uiScale', 'brightness', 'volume', 'soundEffects', 'menuMusic'],
-      title: { default: 'Display & sound', ps3: 'Display & Sound Settings', ps4: 'Sound & Screen', ps5: 'Screen & Sound', wii: 'Screen & Sound', '3ds': 'Sound & Display' } },
-    { id: 'controller', rows: ['controllerStatus', 'controllerVibration'],
-      title: { default: 'Controller', x360: 'Controllers', ps3: 'Accessory Settings', ps4: 'Devices', ps5: 'Accessories', wii: 'Controllers', '3ds': 'Controls' } },
-    { id: 'notifications', rows: ['notifyAchievements', 'notifyFriends', 'notifyDownloads'],
-      title: { default: 'Notifications', ps3: 'Notification Settings', wii: 'Wii Message Board' } },
-    { id: 'library', rows: ['rescanLibrary', 'showUninstalledSteam', 'showUninstalledEpic', 'pauseDownloadsWhilePlaying', 'clearArtwork'],
-      title: { default: 'Library', ps3: 'Game Settings', '3ds': 'Data Management' } },
-    { id: 'account', rows: ['profile', 'steamAccount', 'epicAccount', 'artworkKey'],
-      title: { default: 'Accounts', x360: 'Profile', ps3: 'Account Management', ps4: 'Account Management', '3ds': 'Profile' } },
-    { id: 'accessibility', rows: ['textSize', 'reducedMotion', 'highContrastFocus'],
+    { id: 'display-sound', rows: ['uiScale', 'brightness', 'volume', 'soundEffects', 'menuMusic', 'controllerVibration'],
+      title: { default: 'Sound & display', ps3: 'Display & Sound Settings', ps4: 'Sound & Screen', ps5: 'Screen & Sound', wii: 'Screen & Sound', '3ds': 'Sound & Display' } },
+    { id: 'account', rows: ['profile', 'steamAccount', 'artworkKey', 'showUninstalledSteam', 'rescanLibrary'],
+      title: { default: 'Games & accounts', x360: 'Profile', ps3: 'Account Management', ps4: 'Account Management', '3ds': 'Profile' } },
+    { id: 'accessibility', rows: ['textSize', 'reducedMotion'],
       title: { default: 'Accessibility', one: 'Ease of Access', x360: 'Ease of Access' } },
-    { id: 'system', rows: ['fullscreen', 'startupAnimation', 'checkForUpdates', 'appVersion', 'exportSettings', 'importSettings', 'resetLauncherData'],
-      title: { default: 'System', ps3: 'System Settings', wii: 'Wii System' } },
+    { id: 'system', rows: ['checkForUpdates', 'resetLauncherData'],
+      title: { default: 'System', ps3: 'System Settings', wii: 'Wii System' } }
   ];
   const LAYOUTS = Object.fromEntries(CONSOLE_IDS.map(console => [console, SECTIONS.map(section => ({
     id: section.id,

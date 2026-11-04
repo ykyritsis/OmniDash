@@ -111,3 +111,16 @@ body.garrison #power-dialog .power-footer > span:last-child { display: inline-fl
 /* Labels never show the text I-beam: nothing on the dashboard is selectable, so only fields get a text cursor. */
 body.garrison { cursor: default; }
 body.garrison :is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, [contenteditable="true"]) { cursor: text; }
+
+/* Onboarding step 1: who you are is a small chip under the welcome line, with Change beside it. */
+.g-onboard-hero .g-onboard-player { display: inline-flex; align-items: center; gap: calc(1.2 * var(--p)); margin: calc(1.2 * var(--p)) auto calc(.4 * var(--p)); padding: calc(.6 * var(--p)) calc(.8 * var(--p)) calc(.6 * var(--p)) calc(.6 * var(--p)); border-radius: calc(4 * var(--p)); background: rgba(255, 255, 255, .07); text-align: left; }
+.g-onboard-hero .g-onboard-avatar { width: calc(4.6 * var(--p)); height: calc(4.6 * var(--p)); box-shadow: 0 0 0 2px rgba(255, 255, 255, .16); }
+.g-onboard-hero .g-onboard-player small { display: block; font-size: calc(1.1 * var(--p)); color: rgba(255, 255, 255, .62); }
+.g-onboard-hero .g-onboard-player strong { font-size: calc(1.6 * var(--p)); }
+.g-onboard-hero .g-onboard-player .g-onboard-secondary { min-width: 0; min-height: 0; height: calc(3.6 * var(--p)); padding: 0 calc(1.8 * var(--p)); border-radius: calc(1.8 * var(--p)); font-size: calc(1.2 * var(--p)); }
+/* Ten dashboards in two rows of five, small, so Continue stays on screen. */
+.g-onboard-hero .g-onboard-logo { width: calc(6 * var(--p)); height: calc(6 * var(--p)); }
+.g-onboard-hero h1 { margin-top: calc(.8 * var(--p)); }
+.g-theme-onboard .g-theme-picker { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+.g-theme-onboard .g-theme-card small { display: none; }
+.g-theme-onboard .g-theme-card .g-tp { aspect-ratio: 16 / 8; }

@@ -55,6 +55,10 @@
     chevron: svg('<path d="m9 5 7 7-7 7"/>'),
     more: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></svg>`,
     search: svg('<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>'),
+    plus: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" fill="#f5c400"/></svg>`,
+    store: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8h14l-1.2 12H6.2Z" fill="#1f6fd8"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M9.5 12.5h5M12 10v5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    pad: svg('<path d="M7.5 7h9a4 4 0 0 1 4 4.2l-.6 5.3a2.2 2.2 0 0 1-3.9 1.1L14.4 15H9.6L8 17.6a2.2 2.2 0 0 1-3.9-1.1l-.6-5.3A4 4 0 0 1 7.5 7Z"/><path d="M8 10v3M6.5 11.5h3"/><circle cx="15.5" cy="11" r=".6" fill="currentColor"/><circle cx="17" cy="12.5" r=".6" fill="currentColor"/>'),
+    media: svg('<rect x="3.5" y="5" width="12" height="9" rx="1.6"/><path d="M8 18h3"/><path d="M18 9v8.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="m18 9 2.5-1"/>'),
     library: svg('<rect x="4" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.4"/>'),
     capture: svg('<rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="m8 6 1.5-2h5L16 6"/> <circle cx="12" cy="12" r="3"/>')
   };
@@ -200,7 +204,9 @@
   }
   function updateChrome() {
     if (!chrome.querySelector('.p5-status')) {
-      chrome.innerHTML = `<nav class="p5-tabs" aria-label="Home"><button class="p5-tab on focusable" type="button" data-action="g-ps5-games">Games</button><button class="p5-tab focusable" type="button" data-action="g-ps5-media">Media</button></nav>
+      const shoulder = name => `<span class="p5-shoulder" aria-hidden="true">${window.gGlyphs?.icon?.(THEME, name) || name.toUpperCase()}</span>`;
+      const cat = (action, icon, label, onClass = '') => `<button class="p5-cat focusable${onClass}" type="button" data-action="${action}" aria-label="${label}" data-label="${label}">${p5icon(icon)}</button>`;
+      chrome.innerHTML = `<nav class="p5-tabs" aria-label="Home">${shoulder('l1')}${cat('dashboard-gamepass', 'plus', 'Game Pass')}${cat('dashboard-store', 'store', 'Store')}${cat('g-ps5-games', 'pad', 'Games', ' on')}${cat('library', 'library', 'Library')}${cat('g-ps5-media', 'media', 'Media')}${shoulder('r1')}</nav>
         <div class="p5-status"><button class="p5-top-icon focusable" type="button" data-action="g-ps5-search" aria-label="Search">${p5icon('search')}</button><button class="p5-top-icon focusable" type="button" data-action="g-ps5-settings" aria-label="Settings">${p5icon('settings')}</button><button class="p5-me focusable" type="button" data-action="g-ps5-me" aria-label="Control Center"><span class="p5-avatar">${avatar()}</span><i class="p5-me-ring" aria-hidden="true"></i></button><time class="p5-clock"></time></div>
         <div class="p5-chrome-hints">${gRow(homePrompts())}</div>`;
       clockTimer ||= setInterval(() => { if (on() && !document.hidden) updateChrome(); }, 15000);
@@ -248,6 +254,14 @@
       sub.textContent = parts.join(' · ') || (game.installed === false ? 'Not installed' : 'Ready to play');
     }
     renderCards(game);
+    if (sub && typeof loadGamePageDetails === 'function') {
+      clearTimeout(applySelection.textTimer);
+      applySelection.textTimer = setTimeout(() => loadGamePageDetails(game).then(details => {
+        if (!on() || list[sel]?.id !== game.id || !details?.description) return;
+        const text = String(details.description).replace(/\s+/g, ' ').trim();
+        sub.textContent = text.length > 120 ? `${text.slice(0, 117).replace(/\s+\S*$/, '')}…` : text;
+      }).catch(() => {}), 200);
+    }
     // The key art follows the selection, after a short pause so scrolling past games does not load each one.
     clearTimeout(applySelection.artTimer);
     if (force) scheduleAmbient(game);
@@ -273,7 +287,7 @@
         <span class="p5-card-meter" aria-hidden="true"><i data-p5-trophy-bar style="width:${percent}%"></i></span>
       </button>
       <button class="p5-card p5-card-friends focusable" type="button" data-action="g-ps5-friends" data-card="1" aria-label="Friends who play">
-        <span class="p5-card-icon" aria-hidden="true">${p5icon('person')}</span>
+        <span class="p5-card-faces" aria-hidden="true">${(state.gFriends?.friends || []).filter(friend => friend.avatar).slice(0, 4).map(friend => `<img src="${esc(friend.avatar)}" alt="" loading="lazy" />`).join('') || p5icon('person')}</span>
         <span class="p5-card-copy"><strong>Friends Who Play</strong><small>${friends ? `${friends} playing now` : 'See who’s online'}</small></span>
         <span class="p5-card-chevron" aria-hidden="true">${p5icon('chevron')}</span>
       </button>
@@ -366,7 +380,7 @@
         focusEl(tile());
         return true;
       }
-      if (direction === 'up') { area = 'top'; focusEl(chrome.querySelector('.p5-tab.on')); return true; }
+      if (direction === 'up') { area = 'top'; focusEl(chrome.querySelector('.p5-cat.on')); return true; }
       if (direction === 'down') { area = 'actions'; focusEl(host.querySelector('.p5-play')); return true; }
       return false;
     }
@@ -725,6 +739,19 @@
       default: return false;
     }
   }
+
+  // L1 / R1 step through the category bar, as on the 2026 Home.
+  const pageScrollBase = window.gPageScroll;
+  window.gPageScroll = direction => {
+    if (!on() || mode || state.view !== 'home' || document.querySelector('dialog[open]')) return pageScrollBase?.(direction);
+    const cats = [...chrome.querySelectorAll('.p5-cat')];
+    const at = Math.max(0, cats.findIndex(button => button.classList.contains('on')));
+    const next = cats[at + (direction > 0 ? 1 : -1)];
+    if (!next) return;
+    play('navigate');
+    area = 'top';
+    focusEl(next);
+  };
 
   // ---------- Wiring ----------
   document.addEventListener('click', event => {

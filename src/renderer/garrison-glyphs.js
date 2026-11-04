@@ -401,8 +401,15 @@
   function upgrade(root) {
     if (!doc || !doc.body) return;
     const consoleId = currentConsole();
-    if (!consoleId) return;
     const scope = root && root.querySelectorAll ? root : doc;
+    // Helix (the Xbox PC look) has no console set of its own: prompts that ask for a role by name use the Xbox
+    // Series buttons there, so a prompt painted under another theme never keeps that theme's buttons.
+    if (!consoleId) {
+      let own = [];
+      try { own = [...scope.querySelectorAll('[data-g-role]')]; } catch { /* Fine. */ }
+      own.forEach((element, index) => decorate(element, 'series', item => item.dataset.gRole, index));
+      return;
+    }
     for (const [selector, role] of AUTO_RULES) {
       let elements = [];
       try { elements = [...scope.querySelectorAll(selector)]; } catch { continue; }

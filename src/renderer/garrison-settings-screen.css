@@ -107,3 +107,12 @@ html.reduce-motion #g-aero-settings, html.reduce-motion #g-aero-settings * { ani
 #g-text-prompt .g-tp-actions span { flex: 1; }
 #g-text-prompt .g-tp-actions button { min-width: 104px; height: 42px; border-radius: 10px; font: 600 15px/1 inherit; }
 body[data-g-skin="aero"] #g-text-prompt { background: linear-gradient(180deg, rgba(30, 130, 180, .98), rgba(8, 60, 100, .98)); border-color: rgba(255, 255, 255, .3); }
+
+/* One page: the list fills the width under the title, grouped by thin headings. */
+body.garrison #g-aero-settings:not([hidden]) { grid-template-columns: minmax(0, 1fr); padding-left: max(calc(120 * var(--us-u)), calc(50vw - 560 * var(--us-u))); padding-right: max(calc(120 * var(--us-u)), calc(50vw - 560 * var(--us-u))); }
+body.garrison #g-aero-settings .as-page.as-one { padding: calc(10 * var(--us-u)) calc(18 * var(--us-u)) calc(24 * var(--us-u)); }
+body.garrison #g-aero-settings .as-one .as-rows { margin-top: 0; background: transparent; padding: 0; gap: 0; }
+body.garrison #g-aero-settings .as-group { margin: calc(22 * var(--us-u)) calc(20 * var(--us-u)) calc(6 * var(--us-u)); font: 600 calc(15 * var(--us-u))/1.2 var(--us-font); letter-spacing: .06em; text-transform: uppercase; color: var(--us-muted); }
+body.garrison #g-aero-settings .as-group:first-child { margin-top: calc(8 * var(--us-u)); }
+body.garrison #g-aero-settings .as-group + .as-row::before { display: none; }
+body[data-g-skin="aero"] #g-aero-settings .as-group { color: rgba(255, 255, 255, .85); text-shadow: 0 1px 3px rgba(0, 40, 70, .55); }

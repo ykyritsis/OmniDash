@@ -295,9 +295,13 @@ async function writeSettingsFile(text) {
     }
   }
 }
+// Settings that no longer have a switch: full screen, the start-up animation and the three notification kinds
+// are always on, whatever an older settings file says.
+const ALWAYS_ON = { fullscreen: true, startupAnimation: true, notifyFriends: true, notifyDownloads: true, notifyAchievements: true };
 async function readSettings() {
   try {
     const saved = await readSettingsFile();
+    if (process.env.NEBULA_DEMO !== '1') Object.assign(saved, ALWAYS_ON);
     return { ...SETTINGS_DEFAULTS, ...saved, showUninstalledSteam: Boolean(saved.showUninstalledSteam && saved.steamApiKey), uiScale: saved.uiScale === 0.7 && !saved.uiScaleCustomized ? 1 : saved.uiScale ?? SETTINGS_DEFAULTS.uiScale, steamGridDbKey: saved.steamGridDbKey || process.env.NEBULA_SGDB_KEY || '' };
   } catch {
     if (process.env.NEBULA_DEMO === '1') return { ...SETTINGS_DEFAULTS, onboardingComplete: true, fullscreen: false };

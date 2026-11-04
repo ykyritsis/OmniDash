@@ -392,3 +392,45 @@ html.reduce-motion #startup-screen .g-m-p5-mark { opacity: 1; }
 #g-ps5-chrome .p5-me { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); }
 #g-ps5-chrome .p5-clock { font-size: calc(30 * var(--cpx)); font-weight: 400; }
 #g-ps5-chrome .p5-chrome-hints { display: none; }
+
+/* ---------- Home, 2026 layout ----------
+   As the 2026 system software draws it: a bar of category icons at the top (L1 · Plus · Store · Games · Library ·
+   Media · R1), then many small square tiles with the selected one tall in the first slot and its name beside it,
+   a large logo with the game's short description, Play Game, and wide Activity Cards peeking at the bottom. */
+#g-ps5-chrome .p5-tabs { top: calc(46 * var(--cpx)); left: calc(70 * var(--cpx)); align-items: center; gap: calc(52 * var(--cpx)); }
+#g-ps5-chrome .p5-shoulder { display: grid; place-items: center; color: #fff; opacity: .9; }
+#g-ps5-chrome .p5-shoulder .g-glyph { font-size: calc(30 * var(--cpx)); }
+#g-ps5-chrome .p5-cat { position: relative; display: grid; place-items: center; width: calc(62 * var(--cpx)); height: calc(62 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: none; color: #fff; cursor: pointer; }
+#g-ps5-chrome .p5-cat svg { width: calc(38 * var(--cpx)); height: calc(38 * var(--cpx)); filter: drop-shadow(0 1px calc(4 * var(--cpx)) rgba(0, 0, 0, .55)); }
+#g-ps5-chrome .p5-cat.on::after { content: ""; position: absolute; left: 50%; bottom: calc(-6 * var(--cpx)); width: calc(6 * var(--cpx)); height: calc(6 * var(--cpx)); margin-left: calc(-3 * var(--cpx)); border-radius: 50%; background: #fff; }
+#g-ps5-chrome .p5-cat:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .92); color: #0b0d12; box-shadow: 0 0 calc(22 * var(--cpx)) rgba(255, 255, 255, .45); }
+#g-ps5-chrome .p5-cat:is(.focused, :focus-visible)::before { content: attr(data-label); position: absolute; top: calc(100% + 12 * var(--cpx)); left: 50%; transform: translateX(-50%); white-space: nowrap; color: #fff; font-size: calc(20 * var(--cpx)); text-shadow: 0 1px calc(6 * var(--cpx)) rgba(0, 0, 0, .7); }
+#g-ps5-chrome .p5-status { top: calc(46 * var(--cpx)); }
+
+/* Row: small tiles, the selected one tall in the first slot. */
+#g-ps5 .p5-row-wrap { top: calc(128 * var(--cpx)); }
+#g-ps5 .p5-row { left: calc(205 * var(--cpx)); gap: calc(10 * var(--cpx)); transform: translateX(calc(var(--p5-sel, 0) * -128 * var(--cpx))); }
+#g-ps5 .p5-tile { width: calc(118 * var(--cpx)); height: calc(118 * var(--cpx)); border-radius: calc(10 * var(--cpx)); }
+#g-ps5 .p5-tile.sel { width: calc(186 * var(--cpx)); height: calc(186 * var(--cpx)); margin-right: calc(6 * var(--cpx)); }
+#g-ps5 .p5-row-title { left: calc(408 * var(--cpx)); top: calc(134 * var(--cpx)); font-size: calc(30 * var(--cpx)); }
+
+/* Feature: large logo, the game's description, Play Game. No cover card on the right. */
+#g-ps5 .p5-side { display: none; }
+#g-ps5 .p5-feature { left: calc(200 * var(--cpx)); top: calc(470 * var(--cpx)); width: calc(860 * var(--cpx)); }
+#g-ps5 .p5-logo-box { height: calc(220 * var(--cpx)); }
+#g-ps5 .p5-logo { max-width: calc(700 * var(--cpx)); max-height: calc(200 * var(--cpx)); }
+#g-ps5 .p5-subtitle { max-width: calc(820 * var(--cpx)); margin-top: calc(26 * var(--cpx)); font-size: calc(30 * var(--cpx)); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#g-ps5 .p5-actions { margin-top: calc(40 * var(--cpx)); }
+#g-ps5 .p5-play { min-width: calc(370 * var(--cpx)); height: calc(80 * var(--cpx)); border-radius: calc(40 * var(--cpx)); font-size: calc(30 * var(--cpx)); }
+#g-ps5 .p5-more { width: calc(78 * var(--cpx)); height: calc(78 * var(--cpx)); }
+
+/* Cards: wide, blue-grey, peeking up from the bottom edge. */
+#g-ps5 .p5-cards { left: calc(200 * var(--cpx)); bottom: calc(-60 * var(--cpx)); gap: calc(34 * var(--cpx)); }
+#g-ps5 .p5-card { width: calc(560 * var(--cpx)); height: calc(150 * var(--cpx)); align-items: flex-start; padding-top: calc(20 * var(--cpx)); border: 0; border-radius: calc(16 * var(--cpx)); background: rgba(36, 58, 92, .92); flex-direction: column; gap: calc(14 * var(--cpx)); }
+#g-ps5 .p5-card-chevron, #g-ps5 .p5-card-meter { display: none; }
+#g-ps5 .p5-card-faces { display: flex; height: calc(42 * var(--cpx)); }
+#g-ps5 .p5-card-faces img { width: calc(42 * var(--cpx)); height: calc(42 * var(--cpx)); margin-right: calc(-8 * var(--cpx)); border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(36, 58, 92, 1); }
+#g-ps5 .p5-card-faces svg { width: calc(38 * var(--cpx)); height: calc(38 * var(--cpx)); }
+#g-ps5 .p5-card-icon { width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); }
+#g-ps5 .p5-card-copy strong { font-size: calc(26 * var(--cpx)); font-weight: 600; }
+#g-ps5 .p5-cards:focus-within { bottom: calc(46 * var(--cpx)); }
