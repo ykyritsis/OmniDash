@@ -251,8 +251,9 @@
   // left and opens that page's rows in the XMB's right-hand panel; choosing a row opens the console's option
   // pop-up. The shared shell owns the page/row/value state, availability, Back grammar and focus restore; this
   // block only paints the XMB's own chrome and moves its column.
-  const PS3_PAGE_ICONS = { display: 'display-settings', sound: 'sound-settings', theme: 'theme-settings', time: 'time-settings', system: 'system-settings', accessory: 'acc-settings', network: 'network-settings', notifications: 'chat-settings', game: 'game-settings', account: 'psn', advanced: 'settings' };
-  const PS3_PAGE_GLYPHS = { display: 'tv', sound: 'volume', theme: 'color', time: 'language', system: 'settings', accessory: 'controller', network: 'globe', notifications: 'bell', game: 'game', account: 'contact', advanced: 'settings' };
+  // Keyed by the registry section ids, which are the PS3 Settings column's pages.
+  const PS3_PAGE_ICONS = { appearance: 'theme-settings', 'display-sound': 'display-settings', controller: 'acc-settings', notifications: 'chat-settings', library: 'game-settings', account: 'psn', accessibility: 'settings', system: 'system-settings' };
+  const PS3_PAGE_GLYPHS = { appearance: 'color', 'display-sound': 'tv', controller: 'controller', notifications: 'bell', library: 'game', account: 'contact', accessibility: 'ease', system: 'settings' };
   const PS3_ROW_ICONS = {
     uiScale: 'display-settings', brightness: 'display-settings', fullscreen: 'display-settings',
     volume: 'sound-settings', mute: 'sound-settings', soundEffects: 'sound-settings', menuMusic: 'music-settings', menuMusicVolume: 'music-settings',
@@ -652,7 +653,8 @@
   // The console's Settings app: registry pages with icons down the left and a blue focus bar, then the page's rows
   // sliding in from the right. The shared shell owns pages, values, availability, option dialogs and Back; this
   // block paints the PS4 screen.
-  const PS4_PAGE_GLYPHS = { account: 'contact', notifications: 'bell', devices: 'controller', 'sound-screen': 'volume', network: 'globe', themes: 'color', system: 'settings', accessibility: 'ease', advanced: 'settings' };
+  // Keyed by the registry section ids, which are the PS4 category list's pages.
+  const PS4_PAGE_GLYPHS = { appearance: 'color', 'display-sound': 'volume', controller: 'controller', notifications: 'bell', library: 'library', account: 'contact', accessibility: 'ease', system: 'settings' };
   const ps4SetGlyphs = () => (window.gSettings?.cached?.('enterButton') === 'o' ? { confirm: '○', back: '✕' } : { confirm: '✕', back: '○' });
   function ps4BuildShell() {
     let shell = host.querySelector('.ps4-set');
@@ -1364,28 +1366,37 @@
   window.addEventListener('blur', () => dsHeld.clear());
 
   // ---------- 3DS: System Settings, the two-screen skin ----------
-  // The top screen describes the focused option; the bottom screen holds the console's large white buttons. Its
-  // root is the four buttons the console grouped there — Internet Settings, Data Management, Other Settings and
-  // Advanced (launcher); Other Settings lists the rest of the registry layout. The shared shell owns the model,
-  // values, availability and Back grammar; this block paints the two screens.
+  // The top screen describes the focused option; the bottom screen holds the console's large white buttons. With the
+  // shared settings sections, the root holds Other Settings, which lists the eight sections; Internet, Data and
+  // Advanced entries only appear if a layout still supplies those pages. The shared shell owns the model, values,
+  // availability and Back grammar; this block paints the two screens.
   const DS_SET_ICONS = {
-    internet: { svg: 'web' }, data: { svg: 'library' }, profile: { svg: 'mii' },
-    'date-time': { glyph: 'language' }, sound: { glyph: 'volume' }, display: { glyph: 'tv' }, theme: { glyph: 'color' },
-    controls: { glyph: 'controller' }, notifications: { glyph: 'bell' }, system: { glyph: 'settings' }, advanced: { glyph: 'settings' }
+    internet: { svg: 'web' }, data: { svg: 'library' },
+    appearance: { glyph: 'color' }, 'display-sound': { glyph: 'volume' }, controller: { glyph: 'controller' },
+    notifications: { glyph: 'bell' }, library: { glyph: 'library' }, account: { glyph: 'contact' },
+    accessibility: { glyph: 'ease' }, system: { glyph: 'settings' },
+    profile: { svg: 'mii' }, 'date-time': { glyph: 'language' }, sound: { glyph: 'volume' }, display: { glyph: 'tv' },
+    theme: { glyph: 'color' }, controls: { glyph: 'controller' }, advanced: { glyph: 'settings' }
   };
   const DS_SET_COPY = {
     internet: 'Set up and test this PC\'s Internet connection, and see who is online.',
     data: 'See how much space is free and how many games and apps the launcher knows about.',
+    appearance: 'Choose the theme, the background picture and how the clock is written.',
+    'display-sound': 'Adjust screen brightness, interface size, volume and menu music.',
+    controller: 'Set the button layout and vibration, and see the connected controller.',
+    notifications: 'Choose which friend, download and achievement notifications appear.',
+    library: 'Scan for games, choose what the library shows and reset chosen artwork.',
+    account: 'Change the name and picture, and connect Steam and artwork services.',
+    accessibility: 'Choose text size, reduced motion and a high-contrast focus ring.',
+    system: 'See the version, check for updates, back up or reset the launcher\'s data.',
     profile: 'Change the name and picture shown around the launcher.',
     'date-time': 'Choose how the clock and dates are written everywhere.',
     sound: 'Set the volume, mute the PC, and choose interface and menu music.',
     display: 'Adjust screen brightness, interface size and the two-screen layout.',
     theme: 'Choose the background picture behind the HOME Menu.',
     controls: 'Set the button layout and vibration, and see the connected controller.',
-    notifications: 'Choose which friend, download and achievement notifications appear.',
-    system: 'See the version, check for updates and reset the launcher\'s data.',
     advanced: 'Open the launcher\'s own settings for everything else.',
-    other: 'Profile, Date & Time, Sound, Display, Theme, Controls, Notifications and System live here.'
+    other: 'Appearance, Display & sound, Controller, Notifications, Library, Accounts, Accessibility and System live here.'
   };
   const dsSetIcon = pageId => {
     const spec = DS_SET_ICONS[pageId] || {};

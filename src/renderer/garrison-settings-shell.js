@@ -879,7 +879,8 @@
     x360: { name: 'Xbox 360', kicker: 'System Settings' }
   };
   const XSET_PAGE_GLYPHS = {
-    general: 'settings', 'display-sound': 'volume', personalization: 'color', devices: 'controller', network: 'globe',
+    appearance: 'color', 'display-sound': 'volume', controller: 'controller', library: 'library', accessibility: 'ease',
+    general: 'settings', personalization: 'color', devices: 'controller', network: 'globe',
     notifications: 'bell', account: 'contact', system: 'settings', advanced: 'settings', preferences: 'color',
     ease: 'ease', console: 'settings', display: 'tv', controllers: 'controller', profile: 'contact', storage: 'drive'
   };
@@ -1064,7 +1065,11 @@
   // page's rows on the right. It is deliberately simpler than the PS4 skin: one focus language (a white bar with
   // a blue edge), check boxes for toggles, and the same option dialog for choices and sliders. The shared shell
   // owns every value, availability check, commit and Back, exactly as it does for the other seven skins.
-  const PS5_PAGE_GLYPHS = { display: 'tv', sound: 'volume', network: 'globe', system: 'settings', accessibility: 'ease', account: 'contact', advanced: 'settings' };
+  // Keyed by the registry's section ids (one per page), not by an older console-only page list.
+  const PS5_PAGE_GLYPHS = {
+    appearance: 'color', 'display-sound': 'tv', controller: 'controller', notifications: 'bell',
+    library: 'library', account: 'contact', accessibility: 'ease', system: 'settings'
+  };
   const ps5SetGlyphs = () => (root.gSettings?.cached?.('enterButton') === 'o' ? { confirm: '○', back: '✕' } : { confirm: '✕', back: '○' });
   const ps5Row = items => root.gGlyphs?.row?.('ps5', items) || '';
   function ps5BuildShell() {

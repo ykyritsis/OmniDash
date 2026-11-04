@@ -310,6 +310,24 @@ function eventFor(events, name, id) {
   assert.doesNotMatch(settingsShell, /^\s*(?:const|let|var)\s+CONSOLES\s*=|function conBlock|paintConsole/m, 'the hard-coded console option table stays deleted');
   assert.doesNotMatch(readRenderer('garrison-theme-screens.css'), /#settings-dialog \.g-con-option/, 'the decorative console option CSS stays deleted');
 
+  // ---------- Every page carries its own icon, not the generic gear ----------
+  // Section ids are shared by every layout. A skin map keyed by the retired console-only ids silently falls back to
+  // a gear, which is what most PS5 pages used to show. Every current section must be mapped explicitly.
+  const sectionIds = api.sections.map(section => section.id);
+  for (const [file, symbol] of [
+    ['garrison-settings-shell.js', 'PS5_PAGE_GLYPHS'],
+    ['garrison-settings-shell.js', 'XSET_PAGE_GLYPHS'],
+    ['garrison-theme-retro.js', 'PS3_PAGE_ICONS'],
+    ['garrison-theme-retro.js', 'PS3_PAGE_GLYPHS'],
+    ['garrison-theme-retro.js', 'PS4_PAGE_GLYPHS'],
+    ['garrison-theme-retro.js', 'DS_SET_ICONS']
+  ]) {
+    const match = readRenderer(file).match(new RegExp(`const ${symbol} = (\\{[\\s\\S]*?\\});`));
+    assert.ok(match, `${file} still defines ${symbol}`);
+    const map = vm.runInNewContext(`(${match[1]})`);
+    for (const id of sectionIds) assert.ok(map[id], `${symbol} maps page "${id}" to its own icon, not the gear fallback`);
+  }
+
   // ---------- One shared settings shell, seven console skins (this task) ----------
   // guard 1: the shell is loaded, and it reads the registry for pages, rows, values, wording and changes. This
   // fails if someone replaces the registry-driven model with another hand-written list.
