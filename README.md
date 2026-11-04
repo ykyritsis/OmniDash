@@ -83,16 +83,16 @@ Settings is short on purpose. Every dashboard has the same eight sections with t
 
 | Section | What's in it |
 | --- | --- |
-| **Appearance** | Theme, background, clock |
+| **Appearance** | Theme, background, console pack, clock |
 | **Display & sound** | Screen size, brightness, volume, interface sounds, menu music |
 | **Controller** | Connection status, vibration |
 | **Notifications** | Achievements, friends coming online, downloads |
-| **Library** | Show uninstalled Steam / Epic games, pause downloads while playing |
-| **Accounts** | Profile, Steam, Epic, artwork service |
+| **Library** | Scan for games, show uninstalled Steam / Epic games, pause downloads while playing, reset chosen artwork |
+| **Accounts** | Profile, Steam Web API key, Epic Games, SteamGridDB key |
 | **Accessibility** | Text size, reduced motion, high-contrast focus |
-| **System** | Full screen, startup animation, updates, backup and restore |
+| **System** | Full screen, startup animation, updates, backup and restore, reset |
 
-A console only adds what is genuinely its own: the PlayStation Enter button, the Nintendo button layout, the PS3 colour and the 3DS screen layout. Helix and the Xbox dashboards share one calm Settings screen; PlayStation and Nintendo themes draw the same list in their own native menus. Rare launcher options (library sources, remote play, privacy) sit behind **All launcher settings** at the end of System.
+A console only adds what is genuinely its own: the PlayStation Enter button, the Nintendo button layout, the PS3 colour and the 3DS screen layout. Helix and the Xbox dashboards share one calm Settings screen; PlayStation and Nintendo themes draw the same list in their own native menus. There is no separate launcher-settings page: keys are saved in a small prompt, and scanning, packs, artwork resets and the full reset all run from the list.
 
 Every row is backed by one registry of real launcher options, and a test fails if a row names a setting that does not exist.
 
