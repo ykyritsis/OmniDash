@@ -29,9 +29,14 @@
     { id: 'ps5', name: 'PS5', era: 'PlayStation 5', blurb: 'The crisp PS5 home: one row of large tiles under a white glow, the game\'s art drifting behind, Activity Cards below.' },
     { id: 'wii', name: 'Wii', era: 'Wii Menu', blurb: 'The channel grid, the Wii button and clock bar, and the channel preview with Start.' },
     { id: '3ds', name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Both screens side by side on one display: the game\'s banner and status bar, and your icons on the touch screen.' },
+    { id: 'aero', name: 'Aero', era: 'Xbox, Frutiger Aero', blurb: 'The Series dashboard on a sunny island sea: glossy tiles, glass cards and floating bubbles.' },
     { id: 'x360', name: '360', era: 'Xbox 360 Metro, 2011', blurb: 'The lime-green Metro dashboard: lowercase pivots, a featured tile and the grey studio. With DashX360 assets by ZivvoZ when installed.' }
   ];
   const valid = id => THEMES.some(theme => theme.id === id);
+  // A skin is a theme that reuses another's screens and behaviour and only redraws them: Aero is the Series
+  // dashboard (its navigation, library, settings and boot) under its own wallpaper and glass.
+  const SKINS = { aero: 'series' };
+  const baseOf = id => SKINS[id] || id;
   let current = 'helix';
   try { const saved = localStorage.getItem('g-theme'); if (valid(saved)) current = saved; } catch { /* Storage unavailable. */ }
 
@@ -79,7 +84,9 @@
   tick(); setInterval(tick, 15000);
 
   // Picker cards, shared by onboarding and Settings. Each preview is a tiny drawing of that dashboard.
-  const preview = id => ['ps3', 'ps4', 'wii', '3ds'].includes(id) ? `<span class="g-tp g-tp-${id}"></span>` : id === 'ps5'
+  const preview = id => id === 'aero'
+    ? '<span class="g-tp g-tp-series g-tp-aero"><b class="bar"></b><span class="row"><i class="on"></i><i></i><i></i><i></i><i></i></span><span class="wide"><i></i><i></i><i></i><i></i></span></span>'
+    : ['ps3', 'ps4', 'wii', '3ds'].includes(id) ? `<span class="g-tp g-tp-${id}"></span>` : id === 'ps5'
     ? '<span class="g-tp g-tp-ps5"><span class="row"><i></i><i></i><i class="on"></i><i></i><i></i></span><span class="bar"><b></b><b></b><b></b></span><i class="clock"></i></span>'
     : id === 'x360'
     ? '<span class="g-tp g-tp-360"><b class="p"></b><b class="p on"></b><b class="p"></b><b class="p"></b><i class="g"></i><i class="g"></i><i class="big"></i><i class="ad"></i><i class="ad"></i></span>'
@@ -147,9 +154,11 @@
     if (!valid(id)) return;
     const changed = id !== current;
     current = id;
-    document.body.dataset.gTheme = id;
+    const base = baseOf(id);
+    document.body.dataset.gTheme = base;
+    if (base !== id) document.body.dataset.gSkin = id; else delete document.body.dataset.gSkin;
     // Every console theme shares the console behaviour (full-screen library, no hint bar, splash, no scrollbars).
-    if (id === 'helix') delete document.body.dataset.gConsole; else document.body.dataset.gConsole = id;
+    if (base === 'helix') delete document.body.dataset.gConsole; else document.body.dataset.gConsole = base;
     refreshPickers();
     if (!save) return;
     try { localStorage.setItem('g-theme', id); } catch { /* Storage unavailable. */ }

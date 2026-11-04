@@ -60,7 +60,7 @@
     section.hidden = theme() === 'helix';
     if (section.hidden) return;
     const names = { series: 'Game art and the green swirl', one: 'The planet horizon', x360: 'The grey studio' };
-    const items = [['default', names[theme()] || 'Default', ''], ...(theme() === 'series' ? [] : [['game', 'Your last game', '']]),
+    const items = [['default', (document.body.dataset.gSkin === 'aero' ? 'The island sea' : names[theme()]) || 'Default', ''], ...(theme() === 'series' ? [] : [['game', 'Your last game', '']]),
       ...(pack?.themes || []).map(item => [`pack:${item.id}`, item.name, item.home]), ['custom', read(`g-bg-custom:${theme()}`) ? 'Your picture' : 'Choose a picture…', read(`g-bg-custom:${theme()}`)]];
     section.querySelector('.g-setting-note').textContent = pack?.available
       ? `Dress the dashboard. Dashboard themes from ${pack.credit}.`
@@ -103,7 +103,7 @@
   });
 
   document.addEventListener('g-theme-pack', ({ detail }) => { pack = detail; renderPicker(); apply(); });
-  new MutationObserver(() => { renderPicker(); apply(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme'] });
+  new MutationObserver(() => { renderPicker(); apply(); }).observe(document.body, { attributes: true, attributeFilter: ['data-g-theme', 'data-g-skin'] });
   // Pack themes follow the page; game art follows your last game.
   new MutationObserver(() => { if (choice().startsWith('pack:')) apply(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   document.querySelector('#settings-dialog')?.addEventListener('toggle', () => { if (choice().startsWith('pack:')) apply(); });

@@ -1,0 +1,567 @@
+/* AERO: a Frutiger Aero skin of the Series dashboard (body[data-g-theme="series"][data-g-skin="aero"]).
+   Sizes are 1080p console pixels (--cpx). The layout follows the reference: profile top left, four round icons
+   in the middle with Home lit blue, status and time top right; a big square tile with a green glow beside
+   small glossy square tiles that reflect in the sea; four glass cards; the Store row and Customize. */
+html body.garrison[data-g-skin="aero"][data-g-theme] {
+  --a-gut: calc(217 * var(--cpx));
+  /* Glass without a live blur: a blur re-renders whatever is under it on every frame, which made Home lag. */
+  --a-glass: linear-gradient(180deg, rgba(170, 232, 248, .5), rgba(50, 150, 185, .5) 48%, rgba(12, 92, 128, .62));
+  --a-edge: rgba(255, 255, 255, .42);
+  --a-glow: 0 0 0 calc(3 * var(--cpx)) #b6f55a, 0 0 calc(10 * var(--cpx)) calc(2 * var(--cpx)) rgba(140, 235, 70, .95), 0 0 calc(30 * var(--cpx)) calc(6 * var(--cpx)) rgba(110, 220, 60, .55);
+  --a-text: 0 1px 3px rgba(0, 40, 70, .55);
+  --a-font: "Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
+  --g-green: #2fa83a;
+  /* Focus moves on transform only (the glow switches instantly), short and without overshoot. */
+  --a-move: 170ms cubic-bezier(.2, .8, .2, 1);
+}
+html:has(body[data-g-skin="aero"]) { background: #1f86d6; }
+
+/* ---------- Wallpaper ---------- */
+#g-theme-wall .g-wall-aero { display: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-theme-wall { display: block; background: #1f86d6; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-theme-wall .g-wall-series { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-theme-wall .g-wall-aero { display: block; position: absolute; inset: 0; }
+/* Still, unscaled and unfiltered: a moving or zoomed picture is resampled every frame (soft), and it would make
+   the glass above it re-blur on every frame too (stutter). */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-wall-aero { background: url("assets/aero-background.webp") center / cover no-repeat; transform: none; filter: none; animation: none; }
+
+/* The picture is the backdrop; the selected game's art never replaces it. */
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(#ambient, #ambient-next):is(#ambient, #ambient-next, .ambient-layer) { display: none !important; }
+
+/* ---------- Top bar ---------- */
+html body.garrison[data-g-skin="aero"][data-g-theme] .topbar { height: calc(150 * var(--cpx)); padding: 0 var(--a-gut) 0 calc(212 * var(--cpx)); background: linear-gradient(180deg, rgba(0, 50, 110, .28), transparent) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me { padding: 0; margin: 0; gap: calc(14 * var(--cpx)); background: transparent !important; border-radius: calc(40 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me .g-me-avatar {
+  width: calc(64 * var(--cpx)); height: calc(64 * var(--cpx)); background: radial-gradient(circle at 35% 30%, #d9f3ff, #5aa6d6);
+  box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .85), 0 calc(3 * var(--cpx)) calc(10 * var(--cpx)) rgba(0, 40, 80, .45);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me strong { font: 400 calc(23 * var(--cpx))/1.15 var(--a-font); text-shadow: var(--a-text); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me small { font: 400 calc(21 * var(--cpx))/1.2 var(--a-font); color: #fff; text-shadow: var(--a-text); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me .g-me-g { background: #fff; color: #1a1a1a; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-me:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(18 * var(--cpx)) rgba(255, 255, 255, .6) !important; background: rgba(255, 255, 255, .14) !important; }
+/* Home, My games & apps, Search, Settings: Store and Game Pass live in the row and the Store chips. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-center-nav { gap: calc(30 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-center-nav .top-nav-button[data-action="home"] { display: grid !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-center-nav .top-nav-button:is([data-action="dashboard-store"], [data-action="dashboard-gamepass"]) { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(.top-nav-button, .g-icon-button) {
+  width: calc(54 * var(--cpx)); height: calc(54 * var(--cpx)); background: transparent !important; color: #fff; box-shadow: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 40, 80, .5));
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(.top-nav-button, .g-icon-button) > svg { width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button.active {
+  background: radial-gradient(circle at 50% 30%, #bfe9ff, #3aa4ff 45%, #0b5fd8 100%) !important;
+  box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .9), 0 0 calc(16 * var(--cpx)) calc(3 * var(--cpx)) rgba(80, 180, 255, .85) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button.active > svg { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button.focused { background: rgba(255, 255, 255, .22) !important; box-shadow: inset 0 0 0 calc(2 * var(--cpx)) #fff, 0 0 calc(16 * var(--cpx)) rgba(255, 255, 255, .7) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button.active.focused { background: radial-gradient(circle at 50% 30%, #d6f2ff, #4ab0ff 45%, #0b5fd8 100%) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button:is(.active, .focused)::after { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .top-nav-button.focused::after { display: block !important; font: 400 calc(17 * var(--cpx))/1 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-status { gap: calc(18 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-series-status .g-series-clock { font: 400 calc(22 * var(--cpx))/1 var(--a-font); text-transform: uppercase; text-shadow: var(--a-text); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-quick-button { width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-quick-button > svg { width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); }
+
+/* ---------- Home layout ---------- */
+html body.garrison[data-g-skin="aero"][data-g-theme] #home-view { padding-top: calc(226 * var(--cpx)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .dashboard-recent { display: flex !important; flex-direction: column; margin: 0 !important; padding: 0 !important; position: static !important; transform: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row, html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row.row-focused {
+  display: flex !important; align-items: flex-end; gap: calc(12 * var(--cpx)); height: auto !important;
+  margin: 0 !important; padding: calc(26 * var(--cpx)) var(--a-gut) calc(30 * var(--cpx)) !important; overflow: visible !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > :is(.game-card, .g-aero-app),
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row:not(.row-focused) > :is(.game-card, .g-aero-app) {
+  position: relative; flex: 0 0 calc(172 * var(--cpx)) !important; width: auto !important; min-width: 0; height: auto !important; aspect-ratio: 1 / 1 !important;
+  margin: 0 !important; overflow: visible; border: 0; border-radius: calc(5 * var(--cpx)) !important; background: #2a6f8f; color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .45), 0 calc(6 * var(--cpx)) calc(16 * var(--cpx)) rgba(0, 40, 70, .4) !important;
+  transform: none; transition: transform var(--a-move) !important; will-change: transform;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.g-aero-big { flex: 0 0 calc(380 * var(--cpx)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card > :is(img, .art-fallback) { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; border-radius: inherit; overflow: hidden; }
+/* Gloss: a bright top half and a hairline highlight on every tile. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > :is(.game-card, .g-aero-app)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .08) 42%, transparent 50%, transparent 82%, rgba(0, 30, 50, .25));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .g-card-text,
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card:is(.focused, :focus, :focus-visible) .g-card-text { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card :is(.provider, .g-provider, .g-source-badge, .tile-badge, .provider-mark, .control-badge, .console-game-label, .g-col, .g-input-badge) { display: none !important; }
+/* Only the art and Aero's own name label show on a tile: launcher badges and captions stay off it. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card > :not(img, .art-fallback, .g-aero-name) { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row .g-aero-name { position: absolute; left: calc(56 * var(--cpx)); right: calc(56 * var(--cpx)); bottom: calc(16 * var(--cpx)); z-index: 3; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 calc(23 * var(--cpx))/1.2 var(--a-font); text-shadow: 0 1px 6px rgba(0, 0, 0, .85); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.g-aero-big::before { content: ""; position: absolute; inset: 55% 0 0; z-index: 1; border-radius: 0 0 inherit inherit; background: linear-gradient(transparent, rgba(0, 0, 0, .55)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > :is(.game-card, .g-aero-app):is(.focused, :focus, :focus-visible) {
+  z-index: 4; transform: scale(1.03) !important; box-shadow: var(--a-glow) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.g-aero-big:is(.focused, :focus, :focus-visible) { transform: none !important; }
+/* Game Pass and the Store: a mosaic of your own square covers under a tinted gel, the mark and name on top. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app { display: block; overflow: hidden !important; padding: 0; cursor: pointer; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-mosaic { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; border-radius: inherit; overflow: hidden; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-mosaic i { background: #1d5f7c center / cover no-repeat; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app-face { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; align-content: center; gap: calc(8 * var(--cpx)); border-radius: inherit; text-shadow: 0 1px 4px rgba(0, 30, 10, .5); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.gp .g-aero-app-face { background: radial-gradient(circle at 50% 30%, rgba(110, 235, 120, .72), rgba(16, 140, 50, .88) 60%, rgba(6, 90, 30, .94)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.store .g-aero-app-face { background: radial-gradient(circle at 50% 30%, rgba(110, 190, 255, .7), rgba(16, 98, 210, .88) 60%, rgba(8, 60, 150, .94)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.gp .g-aero-app-face svg { width: calc(48 * var(--cpx)); height: calc(48 * var(--cpx)); filter: drop-shadow(0 calc(2 * var(--cpx)) calc(4 * var(--cpx)) rgba(0, 40, 10, .45)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app b { font: 600 calc(19 * var(--cpx))/1 var(--a-font); letter-spacing: .06em; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.store b { letter-spacing: .01em; font-weight: 400; font-size: calc(20 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app .bag { display: grid; place-items: center; width: calc(64 * var(--cpx)); height: calc(64 * var(--cpx)); border-radius: calc(14 * var(--cpx)); background: linear-gradient(180deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, .1)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 calc(4 * var(--cpx)) calc(10 * var(--cpx)) rgba(0, 30, 80, .35); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app .bag svg { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); }
+
+/* ---------- Glass cards ---------- */
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #g-series-cards {
+  display: grid !important; grid-template-columns: 440fr 276fr 366fr 368fr; gap: calc(12 * var(--cpx)); margin: 0 !important; padding: 0 var(--a-gut) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; height: calc(195 * var(--cpx)); padding: calc(16 * var(--cpx)) calc(20 * var(--cpx));
+  overflow: hidden; border: 1px solid var(--a-edge); border-radius: calc(6 * var(--cpx)); color: #fff; text-align: left; cursor: pointer;
+  background: var(--a-glass);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 calc(8 * var(--cpx)) calc(20 * var(--cpx)) rgba(0, 40, 70, .35);
+  font: 400 calc(19 * var(--cpx))/1.3 var(--a-font); text-shadow: var(--a-text);
+  transition: transform var(--a-move) !important; 
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card::before { content: ""; position: absolute; inset: 0 0 52%; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, .04)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card > * { position: relative; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card:is(.focused, :focus, :focus-visible) { box-shadow: var(--a-glow) !important; transform: scale(1.02); z-index: 2; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-head { display: flex; align-items: center; gap: calc(10 * var(--cpx)); font-size: calc(19 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-head svg { width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); flex: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card small { display: block; margin-top: calc(4 * var(--cpx)); font-size: calc(18 * var(--cpx)); color: #fff; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-thumbs { display: flex; gap: calc(6 * var(--cpx)); margin-top: calc(18 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-thumbs i {
+  width: calc(97 * var(--cpx)); height: calc(112 * var(--cpx)); border-radius: calc(4 * var(--cpx)); background: #1d5f7c center / cover no-repeat;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .4), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 30, 50, .4);
+}
+/* Friends: gamerpics with a presence ring (green online, bright green playing, amber away), then who is doing what. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-count { margin-left: calc(4 * var(--cpx)); padding: calc(2 * var(--cpx)) calc(9 * var(--cpx)); border-radius: calc(12 * var(--cpx)); background: rgba(80, 220, 90, .3); font: 400 calc(15 * var(--cpx))/1.2 var(--a-font); font-style: normal; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-avs { display: flex; margin-top: calc(16 * var(--cpx)); padding-left: calc(6 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av {
+  position: relative; display: grid; place-items: center; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); margin-left: calc(-6 * var(--cpx)); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #9fd6ff, #2f78c8); box-shadow: 0 0 0 calc(3 * var(--cpx)) rgba(10, 60, 90, .9);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.online { box-shadow: 0 0 0 calc(3 * var(--cpx)) #3fbf3f; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.playing { box-shadow: 0 0 0 calc(3 * var(--cpx)) #8be03a, 0 0 calc(10 * var(--cpx)) rgba(140, 230, 60, .7); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.away { box-shadow: 0 0 0 calc(3 * var(--cpx)) #e0b13a; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av b { font: 600 calc(22 * var(--cpx))/1 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.more { background: rgba(10, 60, 90, .75); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.more b { font-weight: 400; font-size: calc(18 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.empty { margin-left: 0; background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .5); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-av.empty svg { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-line { margin-top: auto !important; max-width: 100%; overflow: hidden; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: calc(16 * var(--cpx)) !important; line-height: 1.3; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-line strong { font-weight: 600; }
+/* Game Pass card: a strip of your square covers behind green glass. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass { background: #0d5a2a; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass .g-aero-mosaic { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass .g-aero-mosaic i { background: #1d5f3c center / cover no-repeat; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 120, 50, .78), rgba(10, 90, 40, .45) 45%, rgba(4, 50, 22, .88)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass > :not(.g-aero-mosaic) { z-index: 1; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass .g-aero-head { font-size: calc(19 * var(--cpx)); letter-spacing: .04em; font-weight: 600; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-foot { margin-top: auto; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-foot strong { display: block; font: 400 calc(21 * var(--cpx))/1.25 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-foot small { margin: 0; }
+/* Banner cards (My games & apps, Game Pass): square covers side by side fill the card edge to edge, under a
+   tint that keeps the label at the top and the text at the bottom readable, as on the console's Game Pass card. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner { justify-content: space-between; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-strip { position: absolute; inset: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-strip i { min-width: 0; background: #1d5f7c center / cover no-repeat; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.mine::after { background: linear-gradient(180deg, rgba(0, 60, 110, .62), rgba(0, 40, 80, .08) 38%, rgba(0, 30, 60, .12) 55%, rgba(0, 25, 55, .82)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass::after { background: linear-gradient(180deg, rgba(10, 110, 40, .72), rgba(10, 90, 40, .12) 38%, rgba(5, 60, 25, .15) 55%, rgba(4, 50, 22, .86)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner > :not(.g-aero-strip) { z-index: 1; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner::before { z-index: 1; }
+
+/* Achievements: your Gamerscore large, the latest unlock, and your latest game's points out of 1,000. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-score { display: flex; align-items: center; gap: calc(10 * var(--cpx)); margin-top: calc(8 * var(--cpx)); font: 300 calc(34 * var(--cpx))/1.1 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-score .g { display: inline-grid; place-items: center; width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); border-radius: 50%; background: #fff; color: #1a1a1a; font: 700 calc(17 * var(--cpx))/1 var(--a-font); font-style: normal; text-shadow: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-latest { margin-top: calc(6 * var(--cpx)) !important; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: calc(16 * var(--cpx)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-latest b { font-weight: 600; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-game { display: flex; justify-content: space-between; gap: calc(10 * var(--cpx)); width: 100%; margin-top: auto; font-size: calc(15 * var(--cpx)); color: rgba(255, 255, 255, .9); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-game span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-game em { flex: none; font-style: normal; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-bar { width: 100%; height: calc(5 * var(--cpx)); margin-top: calc(6 * var(--cpx)); border-radius: calc(3 * var(--cpx)); background: rgba(255, 255, 255, .25); overflow: hidden; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8be03a, #c8ff6a); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(160, 240, 80, .8); }
+
+/* ---------- Store row and Customize ---------- */
+#g-aero-store { display: none; }
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #g-aero-store { display: block; padding: 0 var(--a-gut); margin-top: calc(26 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-aero-store h3 { margin: 0 0 calc(10 * var(--cpx)); font: 400 calc(26 * var(--cpx))/1.2 var(--a-font); color: #fff; text-shadow: var(--a-text); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chips { display: flex; align-items: flex-end; gap: calc(12 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip {
+  position: relative; display: flex; align-items: center; gap: calc(14 * var(--cpx)); height: calc(66 * var(--cpx)); padding: 0 calc(26 * var(--cpx)) 0 calc(22 * var(--cpx));
+  overflow: hidden; border: 1px solid rgba(200, 255, 220, .5); border-radius: calc(5 * var(--cpx)); color: #fff; cursor: pointer;
+  background: linear-gradient(180deg, rgba(90, 200, 140, .62), rgba(30, 140, 100, .55) 55%, rgba(15, 105, 80, .62));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 calc(6 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 50, 60, .35);
+  font: 400 calc(16 * var(--cpx))/1 var(--a-font); text-shadow: var(--a-text);
+  transition: transform var(--a-move) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip::before { content: ""; position: absolute; inset: 0 0 50%; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .06)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip > * { position: relative; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip:nth-child(1) { width: calc(264 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip:nth-child(2) { width: calc(215 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip:nth-child(3) { width: calc(227 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip:nth-child(4) { width: calc(215 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip svg { width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); flex: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip-bag { display: grid; place-items: center; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); border-radius: calc(3 * var(--cpx)); background: #1f6fd0; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip-bag svg { width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-gp { display: grid; place-items: center; width: calc(34 * var(--cpx)); height: calc(26 * var(--cpx)); border: calc(2 * var(--cpx)) solid #fff; border-radius: calc(4 * var(--cpx)); font: 600 calc(8 * var(--cpx))/.95 var(--a-font); font-style: normal; text-align: center; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-chip:is(.focused, :focus, :focus-visible) { box-shadow: var(--a-glow) !important; transform: scale(1.03); z-index: 2; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize {
+  display: flex; align-items: center; gap: calc(10 * var(--cpx)); height: calc(36 * var(--cpx)); margin: 0 0 calc(4 * var(--cpx)) auto; padding: 0 calc(16 * var(--cpx)) 0 calc(8 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .25); border-radius: calc(5 * var(--cpx)); background: rgba(0, 20, 30, .7); color: #fff; cursor: pointer; font: 400 calc(17 * var(--cpx))/1 var(--a-font);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize i { display: grid; place-items: center; width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx)); border: calc(2 * var(--cpx)) solid #f5c518; border-radius: 50%; color: #f5c518; font: 600 calc(12 * var(--cpx))/1 var(--a-font); font-style: normal; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize:is(.focused, :focus, :focus-visible) { box-shadow: 0 0 0 calc(2 * var(--cpx)) #fff, 0 0 calc(14 * var(--cpx)) rgba(255, 255, 255, .6) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #home-view:not([hidden]) .dashboard-recent { animation: a-enter var(--m-dur) var(--m-ease) both; }
+@keyframes a-enter { from { opacity: 0; transform: translateY(calc(20 * var(--cpx))); } to { opacity: 1; transform: none; } }
+
+/* ---------- My games & apps: the island sea through deep-blue glass, gel buttons and glossy square tiles ---------- */
+html body.garrison[data-g-skin="aero"][data-g-theme] #library-view:not([hidden]) { background: linear-gradient(180deg, rgba(0, 70, 130, .42), rgba(0, 45, 90, .68) 45%, rgba(0, 28, 60, .86)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-lib-side {
+  margin: calc(24 * var(--cpx)) 0 calc(24 * var(--cpx)) calc(24 * var(--cpx)); border: 1px solid var(--a-edge); border-radius: calc(12 * var(--cpx));
+  background: linear-gradient(180deg, rgba(150, 220, 245, .42), rgba(20, 105, 150, .58) 26%, rgba(6, 55, 92, .8)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 calc(14 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 20, 50, .4);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-player { text-shadow: var(--a-text); font-weight: 400; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-avatar { box-shadow: 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .85); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-search {
+  border: 1px solid rgba(255, 255, 255, .45); background: linear-gradient(180deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .12)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7); color: #fff;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-item { border-radius: calc(8 * var(--cpx)); text-shadow: var(--a-text); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-item:hover { background: rgba(255, 255, 255, .12); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-item.active {
+  background: linear-gradient(180deg, #8eea6e, #3cb043 48%, #1f8a32 52%, #2aa43c) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 calc(3 * var(--cpx)) calc(10 * var(--cpx)) rgba(20, 90, 30, .45);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(.g-lib-item, .g-lib-search):is(.focused, :focus-visible) { box-shadow: var(--a-glow) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-ring { background: conic-gradient(#8be03a calc(var(--used) * 1%), rgba(255, 255, 255, .18) 0); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-ring b { background: #0b4a72; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-lib-title h1 { font: 300 calc(46 * var(--cpx))/1.1 var(--a-font); text-shadow: 0 2px 8px rgba(0, 30, 70, .55); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-library-toolbar :is(#library-filter-button, .g-sort-pill) {
+  border: 1px solid rgba(255, 255, 255, .4); background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .1)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65); color: #fff;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-library-toolbar :is(#library-filter-button, .g-sort-pill, #g-sort-button):is(.focused, :focus-visible) { box-shadow: var(--a-glow) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #library-count { color: rgba(255, 255, 255, .85); text-shadow: var(--a-text); }
+/* Square tiles with the same gloss as Home, and the green glow on the one in focus. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card { position: relative; aspect-ratio: 1 / 1; border-radius: calc(6 * var(--cpx)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .4), 0 calc(6 * var(--cpx)) calc(14 * var(--cpx)) rgba(0, 25, 50, .4); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card > :is(img, .art-fallback) { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .06) 42%, transparent 50%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card:is(.focused, :focus-visible) { box-shadow: var(--a-glow) !important; transform: scale(1.05) !important; z-index: 3; }
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(.g-control-button.primary, button.primary, .option-play, #detail-play) { background: linear-gradient(180deg, #8eea6e, #3cb043 48%, #1f8a32 52%, #2aa43c) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7); }
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(dialog, .g-flyout) { background-color: rgba(8, 50, 80, .95) !important; border: 1px solid rgba(255, 255, 255, .22) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #settings-dialog { background-color: rgba(6, 40, 66, .97) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #settings-dialog .settings-sidebar { background: rgba(120, 210, 240, .1); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #settings-dialog .settings-sidebar .settings-tab.active { background: linear-gradient(180deg, #8eea6e, #2aa43c) !important; }
+
+/* ---------- Picker preview ---------- */
+.g-tp-aero { background: linear-gradient(180deg, #1f86d6, #7cc8f2 48%, #3cb8d8 50%, #0a6f9a); }
+.g-tp-aero .bar { background: rgba(255, 255, 255, .7) !important; }
+.g-tp-aero .row i { background: rgba(255, 255, 255, .55) !important; box-shadow: inset 0 1px 0 #fff; }
+.g-tp-aero .row i.on { box-shadow: 0 0 0 2px #b6f55a, 0 0 6px #8be03a !important; background: #e5f5ff !important; }
+.g-tp-aero .wide i { background: rgba(170, 230, 245, .5) !important; border: 1px solid rgba(255, 255, 255, .6); }
+
+/* ---------- Launching page ----------
+   Like the Series: the game's own art fills the screen and slowly pushes in, its logo rises into the middle
+   with a light sweeping across it, and the status sits low. It stays up until the game window has taken focus
+   (main's hand-over), then fades. A game with no logo shows its square cover there instead. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay { background: #04101c !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-launch-scrim { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay > :is(.launch-brand, .launch-copy, .launch-progress, .g-m-flash) { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay #launch-art {
+  display: block !important; position: absolute; inset: 0; opacity: 1 !important; background-size: cover !important; background-position: center !important;
+  filter: saturate(1.08) brightness(.78) !important; transform-origin: 50% 45%;
+  animation: a-art-in 900ms cubic-bezier(.2, .8, .2, 1) both, a-art-push 18s 900ms ease-out both !important;
+}
+@keyframes a-art-in { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: scale(1.04); } }
+@keyframes a-art-push { from { transform: scale(1.04); } to { transform: scale(1.12); } }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .launch-vignette {
+  display: block !important; position: absolute; inset: 0; z-index: 1;
+  background: radial-gradient(ellipse 70% 60% at 50% 46%, rgba(0, 0, 0, 0) 0, rgba(0, 10, 25, .35) 60%, rgba(0, 8, 20, .85) 100%), linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 30%, transparent 62%, rgba(0, 10, 25, .8)) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .launch-vignette::after { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-theme-splash { display: grid !important; place-items: center; z-index: 2; translate: 0 calc(-40 * var(--cpx)); opacity: 1 !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-one-dots { display: none !important; }
+/* The logo: up to 46% of the width and 30% of the height, rising in, with a light sweep every few seconds. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-theme-logo:not([hidden]) {
+  display: block !important; position: static !important; transform: none; max-width: 46vw; max-height: 30vh; object-fit: contain; object-position: center;
+  /* A dark shadow for light logos and a soft light halo so dark logos still read on dark art. */
+  filter: drop-shadow(0 calc(6 * var(--cpx)) calc(24 * var(--cpx)) rgba(0, 0, 0, .6)) drop-shadow(0 0 calc(22 * var(--cpx)) rgba(255, 255, 255, .28));
+  animation: a-logo-in 800ms 250ms cubic-bezier(.2, .8, .2, 1) both !important;
+  -webkit-mask-image: linear-gradient(100deg, #000 0 40%, rgba(0, 0, 0, .55) 48%, #000 56%); -webkit-mask-size: 300% 100%; -webkit-mask-position: 100% 0;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay.g-has-logo .g-theme-logo:not([hidden]) { animation: a-logo-in 800ms 250ms cubic-bezier(.2, .8, .2, 1) both, a-sweep 3.6s 1.4s ease-in-out infinite !important; }
+@keyframes a-logo-in { from { opacity: 0; transform: translateY(calc(24 * var(--cpx))) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes a-sweep { 0%, 55% { -webkit-mask-position: 100% 0; } 100% { -webkit-mask-position: 0 0; } }
+/* No logo: the square cover with the green glow. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-theme-cover {
+  position: relative; width: calc(340 * var(--cpx)); border-radius: calc(10 * var(--cpx));
+  box-shadow: 0 0 0 calc(3 * var(--cpx)) #b6f55a, 0 0 calc(26 * var(--cpx)) calc(4 * var(--cpx)) rgba(140, 235, 70, .7), 0 calc(24 * var(--cpx)) calc(60 * var(--cpx)) rgba(0, 20, 50, .6);
+  animation: a-logo-in 700ms 200ms cubic-bezier(.2, .8, .2, 1) both !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay:not(.g-has-logo):not(.g-no-cover) .g-theme-cover { display: block !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay.g-has-logo .g-theme-cover { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-theme-cover::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .06) 42%, transparent 50%); }
+#launch-overlay .g-aero-launch-title { display: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay:not(.g-has-logo) .g-aero-launch-title {
+  display: block; position: absolute; left: 0; right: 0; top: calc(50% + 150 * var(--cpx)); z-index: 2; text-align: center; color: #fff;
+  font: 300 calc(44 * var(--cpx))/1.15 var(--a-font); text-shadow: 0 2px 10px rgba(0, 20, 50, .6); animation: a-rise 500ms 300ms cubic-bezier(.2, .8, .2, 1) both;
+}
+/* Status: a spinning ring, what is happening, and where, low on the screen; Cancel at the bottom. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-status {
+  position: absolute; left: 50%; right: auto; top: auto; bottom: calc(120 * var(--cpx)); z-index: 3; transform: translateX(-50%);
+  display: flex; align-items: center; gap: calc(14 * var(--cpx)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none;
+  color: #fff; font: 400 calc(22 * var(--cpx))/1.2 var(--a-font); text-shadow: 0 1px 6px rgba(0, 0, 0, .7);
+  opacity: 1 !important; pointer-events: auto !important; animation: a-rise 500ms 500ms cubic-bezier(.2, .8, .2, 1) both;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-status::before {
+  content: ""; flex: none; width: calc(26 * var(--cpx)); height: calc(26 * var(--cpx)); border-radius: 50%;
+  border: calc(3 * var(--cpx)) solid rgba(255, 255, 255, .25); border-top-color: #c8ff6a; animation: a-spin 900ms linear infinite;
+}
+@keyframes a-spin { to { transform: rotate(360deg); } }
+@keyframes a-rise { from { opacity: 0; transform: translate(-50%, calc(14 * var(--cpx))); } to { opacity: 1; transform: translateX(-50%); } }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-aero-launch-title { animation-name: a-rise-plain; }
+@keyframes a-rise-plain { from { opacity: 0; transform: translateY(calc(14 * var(--cpx))); } to { opacity: 1; transform: none; } }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-dots { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-status small { color: rgba(255, 255, 255, .78); font-size: calc(17 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-hint { position: absolute; left: 50%; right: auto; bottom: calc(44 * var(--cpx)); width: auto; z-index: 3; transform: translateX(-50%); color: #fff; font: 400 calc(17 * var(--cpx))/1 var(--a-font); text-shadow: 0 1px 6px rgba(0, 0, 0, .7); opacity: 1 !important; pointer-events: auto !important; }
+html.reduce-motion body.garrison[data-g-skin="aero"] #launch-overlay * { animation: none !important; }
+
+/* ---------- Settings (garrison-settings-screen.js) ----------
+   Categories on the left, the chosen category's settings on the right, each with a description and its control. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-aero-settings:not([hidden]) {
+  position: fixed; inset: 0; z-index: 60; display: grid; grid-template-columns: calc(470 * var(--cpx)) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: calc(22 * var(--cpx)) calc(28 * var(--cpx)); padding: calc(56 * var(--cpx)) calc(120 * var(--cpx)) calc(36 * var(--cpx));
+  background: linear-gradient(180deg, rgba(0, 40, 90, .55), rgba(0, 50, 80, .35) 40%, rgba(0, 40, 70, .6)); color: #fff; font-family: var(--a-font);
+  animation: as-in 200ms cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes as-in { from { opacity: 0; transform: scale(1.015); } to { opacity: 1; transform: none; } }
+html body.garrison.g-aero-settings-open[data-g-skin="aero"][data-g-theme] :is(main, .topbar, #g-aero-store) { visibility: hidden; }
+body[data-g-skin="aero"] #g-aero-settings .as-head { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; }
+body[data-g-skin="aero"] #g-aero-settings .as-head h1 { margin: 0; font: 300 calc(56 * var(--cpx))/1.05 var(--a-font); text-shadow: var(--a-text); }
+body[data-g-skin="aero"] #g-aero-settings .as-head p { margin: calc(6 * var(--cpx)) 0 0; font-size: calc(21 * var(--cpx)); color: rgba(255, 255, 255, .85); text-shadow: var(--a-text); }
+body[data-g-skin="aero"] #g-aero-settings kbd {
+  display: inline-grid; place-items: center; min-width: calc(28 * var(--cpx)); height: calc(28 * var(--cpx)); margin-right: calc(8 * var(--cpx)); padding: 0 calc(6 * var(--cpx));
+  border-radius: calc(14 * var(--cpx)); background: rgba(255, 255, 255, .2); font: 600 calc(14 * var(--cpx))/1 var(--a-font); color: #fff;
+}
+body[data-g-skin="aero"] #g-aero-settings kbd.a { background: #3fae3f; }
+body[data-g-skin="aero"] #g-aero-settings kbd.b { background: #d0383a; }
+body[data-g-skin="aero"] #g-aero-settings .as-close {
+  display: flex; align-items: center; height: calc(50 * var(--cpx)); padding: 0 calc(20 * var(--cpx)) 0 calc(12 * var(--cpx)); border: 1px solid var(--a-edge);
+  border-radius: calc(25 * var(--cpx)); background: rgba(0, 40, 70, .45); color: #fff; font: 400 calc(19 * var(--cpx))/1 var(--a-font); cursor: pointer;
+}
+/* Shared glass for the two panels. */
+body[data-g-skin="aero"] #g-aero-settings :is(.as-cats, .as-page) {
+  min-height: 0; overflow: hidden auto; scrollbar-width: none; border: 1px solid var(--a-edge); border-radius: calc(10 * var(--cpx));
+  background: linear-gradient(180deg, rgba(150, 220, 245, .46), rgba(18, 100, 145, .62) 30%, rgba(5, 52, 88, .82));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 calc(14 * var(--cpx)) calc(40 * var(--cpx)) rgba(0, 30, 60, .35);
+}
+body[data-g-skin="aero"] #g-aero-settings .as-cats { display: flex; flex-direction: column; gap: calc(4 * var(--cpx)); padding: calc(14 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat {
+  display: flex; align-items: center; gap: calc(16 * var(--cpx)); width: 100%; min-height: calc(76 * var(--cpx)); padding: calc(10 * var(--cpx)) calc(16 * var(--cpx));
+  border: 0; border-radius: calc(8 * var(--cpx)); background: transparent; color: #fff; text-align: left; cursor: pointer;
+  transition: background-color 140ms ease;
+}
+body[data-g-skin="aero"] #g-aero-settings .as-cat > svg { flex: none; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat strong { display: block; font: 400 calc(22 * var(--cpx))/1.2 var(--a-font); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat small { display: block; margin-top: calc(2 * var(--cpx)); font-size: calc(15 * var(--cpx)); color: rgba(255, 255, 255, .72); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat:hover { background: rgba(255, 255, 255, .1); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat.on { background: linear-gradient(180deg, rgba(120, 220, 110, .5), rgba(40, 150, 70, .5)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
+body[data-g-skin="aero"] #g-aero-settings .as-page { display: flex; flex-direction: column; padding: calc(26 * var(--cpx)) calc(30 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head h2 { margin: 0; font: 400 calc(34 * var(--cpx))/1.15 var(--a-font); }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head p { margin: calc(4 * var(--cpx)) 0 calc(18 * var(--cpx)); font-size: calc(18 * var(--cpx)); color: rgba(255, 255, 255, .75); }
+body[data-g-skin="aero"] #g-aero-settings .as-rows { display: flex; flex-direction: column; gap: calc(8 * var(--cpx)); padding: calc(6 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-rows.as-in > * { animation: as-row-in 220ms cubic-bezier(.2, .8, .2, 1) both; }
+body[data-g-skin="aero"] #g-aero-settings .as-rows.as-in > :nth-child(2) { animation-delay: 25ms; }
+body[data-g-skin="aero"] #g-aero-settings .as-rows.as-in > :nth-child(3) { animation-delay: 50ms; }
+body[data-g-skin="aero"] #g-aero-settings .as-rows.as-in > :nth-child(4) { animation-delay: 75ms; }
+body[data-g-skin="aero"] #g-aero-settings .as-rows.as-in > :nth-child(n+5) { animation-delay: 100ms; }
+@keyframes as-row-in { from { opacity: 0; transform: translateX(calc(14 * var(--cpx))); } to { opacity: 1; transform: none; } }
+body[data-g-skin="aero"] #g-aero-settings .as-row {
+  display: flex; align-items: center; gap: calc(24 * var(--cpx)); width: 100%; min-height: calc(84 * var(--cpx)); padding: calc(12 * var(--cpx)) calc(22 * var(--cpx));
+  border: 1px solid rgba(255, 255, 255, .16); border-radius: calc(8 * var(--cpx)); background: rgba(255, 255, 255, .08); color: #fff; text-align: left;
+  transition: background-color 140ms ease;
+}
+body[data-g-skin="aero"] #g-aero-settings button.as-row { cursor: pointer; }
+body[data-g-skin="aero"] #g-aero-settings button.as-row:hover { background: rgba(255, 255, 255, .14); }
+body[data-g-skin="aero"] #g-aero-settings .as-ghost { opacity: .4; }
+body[data-g-skin="aero"] #g-aero-settings .as-text { flex: 1; min-width: 0; }
+body[data-g-skin="aero"] #g-aero-settings .as-text strong { display: block; font: 400 calc(22 * var(--cpx))/1.25 var(--a-font); }
+body[data-g-skin="aero"] #g-aero-settings .as-text small { display: block; margin-top: calc(3 * var(--cpx)); font-size: calc(16 * var(--cpx)); line-height: 1.35; color: rgba(255, 255, 255, .74); }
+body[data-g-skin="aero"] #g-aero-settings .as-ctl { flex: none; display: flex; align-items: center; gap: calc(14 * var(--cpx)); max-width: 45%; }
+body[data-g-skin="aero"] #g-aero-settings .as-ctl em { font-style: normal; font-size: calc(19 * var(--cpx)); color: rgba(255, 255, 255, .92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body[data-g-skin="aero"] #g-aero-settings .as-switch { position: relative; width: calc(58 * var(--cpx)); height: calc(30 * var(--cpx)); border-radius: calc(15 * var(--cpx)); background: rgba(0, 20, 40, .45); box-shadow: inset 0 0 0 calc(2 * var(--cpx)) rgba(255, 255, 255, .6); }
+body[data-g-skin="aero"] #g-aero-settings .as-switch b { position: absolute; top: calc(5 * var(--cpx)); left: calc(5 * var(--cpx)); width: calc(20 * var(--cpx)); height: calc(20 * var(--cpx)); border-radius: 50%; background: #fff; }
+body[data-g-skin="aero"] #g-aero-settings .as-switch.on { background: linear-gradient(180deg, #7fe05a, #2f9a3a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); }
+body[data-g-skin="aero"] #g-aero-settings .as-switch.on b { transform: translateX(calc(28 * var(--cpx))); }
+body[data-g-skin="aero"] #g-aero-settings .as-k-toggle .as-ctl em { min-width: calc(34 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-slider { position: relative; width: calc(240 * var(--cpx)); height: calc(10 * var(--cpx)); border-radius: calc(5 * var(--cpx)); background: rgba(0, 20, 40, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); cursor: pointer; }
+body[data-g-skin="aero"] #g-aero-settings .as-slider i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #8be03a, #c8ff6a); box-shadow: 0 0 calc(8 * var(--cpx)) rgba(160, 240, 80, .7); }
+body[data-g-skin="aero"] #g-aero-settings .as-slider + em { min-width: calc(70 * var(--cpx)); text-align: right; }
+body[data-g-skin="aero"] #g-aero-settings .as-choice { display: flex; align-items: center; gap: calc(10 * var(--cpx)); padding: calc(6 * var(--cpx)) calc(8 * var(--cpx)); border-radius: calc(20 * var(--cpx)); background: rgba(0, 20, 40, .35); }
+body[data-g-skin="aero"] #g-aero-settings .as-choice i { display: grid; place-items: center; width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); border-radius: 50%; font: 400 calc(24 * var(--cpx))/1 var(--a-font); font-style: normal; cursor: pointer; }
+body[data-g-skin="aero"] #g-aero-settings .as-choice i:hover { background: rgba(255, 255, 255, .2); }
+body[data-g-skin="aero"] #g-aero-settings .as-choice em { min-width: calc(150 * var(--cpx)); text-align: center; }
+body[data-g-skin="aero"] #g-aero-settings .as-go { font-size: calc(28 * var(--cpx)); line-height: 1; opacity: .8; }
+body[data-g-skin="aero"] #g-aero-settings .as-k-info { background: transparent; border-style: dashed; }
+body[data-g-skin="aero"] #g-aero-settings .as-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(190 * var(--cpx)), 1fr)); gap: calc(8 * var(--cpx)); padding: calc(10 * var(--cpx));
+  border-radius: calc(8 * var(--cpx)); background: rgba(0, 30, 55, .55); animation: as-row-in 180ms cubic-bezier(.2, .8, .2, 1) both;
+}
+body[data-g-skin="aero"] #g-aero-settings .as-option { min-height: calc(52 * var(--cpx)); padding: 0 calc(14 * var(--cpx)); border: 1px solid rgba(255, 255, 255, .2); border-radius: calc(6 * var(--cpx)); background: rgba(255, 255, 255, .08); color: #fff; font: 400 calc(18 * var(--cpx))/1.2 var(--a-font); cursor: pointer; }
+body[data-g-skin="aero"] #g-aero-settings .as-option.on { background: linear-gradient(180deg, rgba(120, 220, 110, .55), rgba(40, 150, 70, .55)); }
+body[data-g-skin="aero"] #g-aero-settings .as-empty { margin: 0; font-size: calc(19 * var(--cpx)); color: rgba(255, 255, 255, .8); }
+/* One focus look everywhere on this screen: the dashboard's green glow; nothing moves or resizes. */
+body[data-g-skin="aero"] #g-aero-settings :is(.as-cat, .as-row, .as-option, .as-close):is(.focused, :focus-visible) { outline: none; box-shadow: var(--a-glow) !important; background: rgba(255, 255, 255, .18); }
+body[data-g-skin="aero"] #g-aero-settings .as-hints { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: calc(28 * var(--cpx)); font-size: calc(17 * var(--cpx)); text-shadow: var(--a-text); }
+body[data-g-skin="aero"] #g-aero-settings .as-hints span { display: flex; align-items: center; }
+html.reduce-motion body[data-g-skin="aero"] #g-aero-settings, html.reduce-motion body[data-g-skin="aero"] #g-aero-settings * { animation: none !important; transition: none !important; }
+
+/* ---------- Button prompts: the Series controller set from garrison-glyphs.js ---------- */
+body[data-g-skin="aero"] #g-aero-settings kbd[data-g-role], html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize i[data-g-role] {
+  display: inline-grid; place-items: center; width: auto; min-width: 0; height: auto; padding: 0; margin-right: calc(8 * var(--cpx)); border: 0 !important; border-radius: 0; background: none !important; box-shadow: none; color: #fff;
+}
+body[data-g-skin="aero"] #g-aero-settings kbd[data-g-role] .g-glyph, html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize i[data-g-role] .g-glyph { font-size: calc(22 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize i[data-g-role] { margin-right: calc(2 * var(--cpx)); }
+
+/* ---------- Round 5 ---------- */
+/* Platform marks stay on every tile, selected or not, small in the bottom-left corner. */
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .provider-mark,
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.selected .provider-mark {
+  display: block !important; position: absolute; left: calc(10 * var(--cpx)); bottom: calc(10 * var(--cpx)); z-index: 3; width: calc(22 * var(--cpx)); height: calc(22 * var(--cpx));
+  margin: 0; padding: 0; border: 0; background: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .85));
+}
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .provider-mark img { width: 100%; height: 100%; filter: brightness(0) invert(1); }
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .provider-mark:not(:has(img)) { width: auto; height: auto; color: #fff; font: 700 calc(13 * var(--cpx))/1 var(--a-font); letter-spacing: .04em; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card > :not(img, .art-fallback, .g-aero-name, .provider-mark) { display: none !important; }
+
+/* The selected tile's name and a line about it, above the small tiles (the big tile shows its own name). */
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row { position: relative; }
+#recent-row > .g-aero-focus { display: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .g-aero-focus {
+  display: grid; gap: calc(4 * var(--cpx)); position: absolute; z-index: 5; pointer-events: none;
+  left: calc(var(--a-gut) + 392 * var(--cpx)); right: var(--a-gut); bottom: calc(30 * var(--cpx) + 172 * var(--cpx) + 16 * var(--cpx));
+  color: #fff; text-shadow: 0 2px 10px rgba(0, 30, 70, .7), 0 0 2px rgba(0, 30, 70, .5);
+  opacity: 0; transform: translateY(calc(8 * var(--cpx))); transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .g-aero-focus.on { opacity: 1; transform: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .g-aero-focus strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 calc(34 * var(--cpx))/1.15 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .g-aero-focus small { font: 400 calc(19 * var(--cpx))/1.2 var(--a-font); color: rgba(255, 255, 255, .92); }
+/* A game that is running wears a small green "Playing" badge. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.g-aero-running::before {
+  content: "▶ Playing"; position: absolute; top: calc(10 * var(--cpx)); left: calc(10 * var(--cpx)); right: auto; bottom: auto; inset: calc(10 * var(--cpx)) auto auto calc(10 * var(--cpx)); z-index: 4;
+  padding: calc(4 * var(--cpx)) calc(10 * var(--cpx)); border-radius: calc(12 * var(--cpx)); background: linear-gradient(180deg, #8eea6e, #2aa43c); color: #fff;
+  font: 600 calc(13 * var(--cpx))/1 var(--a-font); box-shadow: 0 calc(2 * var(--cpx)) calc(6 * var(--cpx)) rgba(0, 40, 10, .45);
+}
+
+/* My games & apps: a bento collage of your square covers, one large and six small, with thin glass seams. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-collage {
+  position: absolute; inset: 0; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: calc(2 * var(--cpx)); background: rgba(255, 255, 255, .35);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-collage i { min-width: 0; background: #1d5f7c center / cover no-repeat; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-collage i:first-child { grid-row: 1 / 3; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.mine::after { background: linear-gradient(180deg, rgba(0, 50, 100, .7), rgba(0, 40, 80, 0) 34%, rgba(0, 30, 60, 0) 52%, rgba(0, 22, 50, .88)) !important; }
+
+/* Launch status: "Starting" with its spinner, what is launching it underneath, then Cancel. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-status { flex-direction: column; gap: calc(8 * var(--cpx)); text-align: center; bottom: calc(70 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-status::before { display: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay #launch-status { display: inline-flex; align-items: center; gap: calc(12 * var(--cpx)); font: 400 calc(24 * var(--cpx))/1.2 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay #launch-status::before {
+  content: ""; flex: none; width: calc(24 * var(--cpx)); height: calc(24 * var(--cpx)); border-radius: 50%;
+  border: calc(3 * var(--cpx)) solid rgba(255, 255, 255, .25); border-top-color: #c8ff6a; animation: a-spin 900ms linear infinite;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay #launch-via { display: block; margin: 0; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay #launch-via:empty { display: none; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-cancel {
+  margin-top: calc(10 * var(--cpx)); padding: calc(8 * var(--cpx)) calc(22 * var(--cpx)); border: 1px solid rgba(255, 255, 255, .35); border-radius: calc(20 * var(--cpx));
+  background: rgba(0, 20, 40, .45); color: #fff; font: 400 calc(17 * var(--cpx))/1 var(--a-font);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] #launch-overlay .g-launch-hint { display: none !important; }
+
+/* ---------- Round 6 ---------- */
+/* Tiles read the same everywhere: art only. A cover drawn by the launcher's fallback (no square art) keeps its
+   picture but loses the title it prints across it, so no tile carries text the others do not. */
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .art-fallback:has(.fallback-art) :is(.fallback-title, .fallback-scrim) { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #recent-row > .game-card .art-fallback .fallback-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* The last tile on the row: your library, a blue gel over a few of your covers. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.lib .g-aero-app-face { background: radial-gradient(circle at 50% 28%, rgba(120, 210, 255, .72), rgba(20, 110, 200, .9) 60%, rgba(8, 62, 140, .95)); gap: calc(6 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app .lib-icon { display: grid; place-items: center; width: calc(58 * var(--cpx)); height: calc(58 * var(--cpx)); border-radius: 50%; background: linear-gradient(180deg, rgba(255, 255, 255, .4), rgba(255, 255, 255, .1)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 calc(4 * var(--cpx)) calc(10 * var(--cpx)) rgba(0, 30, 80, .35); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app .lib-icon svg { width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.lib b { font: 600 calc(16 * var(--cpx))/1.15 var(--a-font); letter-spacing: 0; text-align: center; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-app.lib small { font: 400 calc(14 * var(--cpx))/1 var(--a-font); color: rgba(255, 255, 255, .85); }
+
+/* Frosted banner cards: one cover blurred behind the words on the left, sharp covers on the right fading into it. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-frost {
+  position: absolute; inset: calc(-30 * var(--cpx)); background: #1d5f7c center / cover no-repeat;
+  filter: blur(calc(18 * var(--cpx))) saturate(1.25) brightness(.72);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.mine .g-aero-collage,
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass .g-aero-strip {
+  inset: 0 0 0 auto; width: 58%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%); mask-image: linear-gradient(90deg, transparent, #000 22%);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.mine .g-aero-collage { grid-template-columns: 2fr 1fr 1fr; background: transparent; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass .g-aero-strip { width: 52%; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.mine::after { background: linear-gradient(90deg, rgba(0, 40, 80, .35), rgba(0, 40, 80, 0) 55%) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.pass::after { background: linear-gradient(90deg, rgba(10, 100, 40, .55), rgba(10, 100, 40, .1) 55%, rgba(0, 0, 0, 0)) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner > :is(.g-aero-head, .g-aero-foot) { max-width: 48%; text-shadow: 0 1px 6px rgba(0, 20, 40, .8); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-card.banner .g-aero-frost { z-index: 0; }
+
+/* ---------- Library: glass panels, roomy grid, and the selected game's name on its tile (as Helix does) ---------- */
+html body.garrison[data-g-skin="aero"][data-g-theme] .console-library-content {
+  margin: calc(24 * var(--cpx)) calc(24 * var(--cpx)) calc(24 * var(--cpx)) calc(18 * var(--cpx)); padding: calc(34 * var(--cpx)) calc(36 * var(--cpx)) calc(60 * var(--cpx)) !important;
+  border: 1px solid rgba(255, 255, 255, .28); border-radius: calc(12 * var(--cpx));
+  background: linear-gradient(180deg, rgba(120, 200, 235, .22), rgba(10, 70, 115, .42) 30%, rgba(4, 40, 75, .6));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid, html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid.dense-results {
+  grid-template-columns: repeat(auto-fill, minmax(calc(210 * var(--cpx)), 1fr)) !important; gap: calc(20 * var(--cpx)) !important;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card .g-card-text { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card:is(.focused, :focus-visible) .g-card-text {
+  display: flex !important; flex-direction: column; justify-content: flex-end; gap: calc(3 * var(--cpx)); position: absolute; inset: auto 0 0 0; z-index: 3;
+  margin: 0; padding: calc(40 * var(--cpx)) calc(14 * var(--cpx)) calc(12 * var(--cpx)); border-radius: 0 0 calc(6 * var(--cpx)) calc(6 * var(--cpx));
+  background: linear-gradient(transparent, rgba(0, 0, 0, .78)); pointer-events: none; text-align: left;
+}
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card:is(.focused, :focus-visible) .g-card-text strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #fff; font: 600 calc(19 * var(--cpx))/1.2 var(--a-font); }
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card:is(.focused, :focus-visible) .g-card-text :is(small, em) { display: block; color: rgba(255, 255, 255, .78); font: 400 calc(15 * var(--cpx))/1.2 var(--a-font); font-style: normal; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card .art-fallback:has(.fallback-art) :is(.fallback-title, .fallback-scrim) { display: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-lib-item .g-lib-icon { display: grid; place-items: center; width: calc(34 * var(--cpx)); height: calc(34 * var(--cpx)); border-radius: 50%; background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .08)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); }
+
+/* ---------- Settings: glossy icon orbs on the categories and a matching orb on the page title ---------- */
+body[data-g-skin="aero"] #g-aero-settings .as-cat > svg { box-sizing: content-box; padding: calc(9 * var(--cpx)); border-radius: 50%; background: radial-gradient(circle at 50% 25%, rgba(170, 230, 255, .75), rgba(30, 120, 200, .85) 70%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 30, 70, .35); }
+body[data-g-skin="aero"] #g-aero-settings .as-cat.on > svg { background: radial-gradient(circle at 50% 25%, rgba(220, 255, 200, .85), rgba(50, 160, 60, .9) 70%); }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head { display: grid; grid-template-columns: auto 1fr; column-gap: calc(18 * var(--cpx)); align-items: center; }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head .as-orb { grid-row: 1 / 3; display: grid; place-items: center; width: calc(64 * var(--cpx)); height: calc(64 * var(--cpx)); border-radius: 50%; background: radial-gradient(circle at 50% 25%, rgba(220, 255, 200, .85), rgba(50, 160, 60, .9) 70%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 calc(4 * var(--cpx)) calc(12 * var(--cpx)) rgba(0, 40, 20, .35); }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head .as-orb svg { width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-page-head p { margin-bottom: 0; }
+body[data-g-skin="aero"] #g-aero-settings .as-rows { margin-top: calc(20 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-row { background: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .05)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+
+/* ---------- Manage game in Aero: one glass surface instead of a dark sidebar on a blue sheet ---------- */
+html body.garrison[data-g-skin="aero"][data-g-theme] #game-options-dialog { background: linear-gradient(180deg, rgba(20, 110, 160, .96), rgba(6, 50, 88, .97)) !important; border: 1px solid rgba(255, 255, 255, .3) !important; border-radius: calc(14 * var(--cpx)) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 calc(30 * var(--cpx)) calc(80 * var(--cpx)) rgba(0, 20, 50, .6) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #game-options-dialog :is(aside, .options-sidebar, .g-manage-side, [class*="manage-side"]) { background: rgba(255, 255, 255, .08) !important; border: 1px solid rgba(255, 255, 255, .18); border-radius: calc(10 * var(--cpx)); }
+html body.garrison[data-g-skin="aero"][data-g-theme] #game-options-dialog :is(select, input, textarea) { background: rgba(0, 25, 50, .5) !important; border: 1px solid rgba(255, 255, 255, .25) !important; color: #fff; }
+html body.garrison[data-g-skin="aero"][data-g-theme] #game-options-dialog .focused { box-shadow: var(--a-glow) !important; }
+
+/* The game menu in Aero: the same glass. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-game-flyout { background: linear-gradient(180deg, rgba(30, 130, 180, .97), rgba(8, 60, 100, .98)) !important; border: 1px solid rgba(255, 255, 255, .32) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 calc(20 * var(--cpx)) calc(50 * var(--cpx)) rgba(0, 20, 50, .55) !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-game-flyout .g-menu-item.focused { box-shadow: var(--a-glow) !important; background: rgba(255, 255, 255, .16) !important; }
+
+/* Home tiles never print the launcher's caption, whatever their state (Series shows it on the selected tile). */
+html body.garrison.home-active[data-g-skin="aero"][data-g-theme] #recent-row > .game-card.game-card:is(.selected, .focused, :not(.selected)) .g-card-text.g-card-text { display: none !important; }
+/* Library focus label: the name first, then the platform and size. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .library-grid .game-card .g-card-text > strong { order: -1; }
+
+/* Focus on the cards and Store chips is the glow alone: scaling them would re-render the frosted backdrop on
+   every frame of the animation. */
+html body.garrison[data-g-skin="aero"][data-g-theme] :is(.g-aero-card, .g-aero-chip):is(.focused, :focus, :focus-visible) { transform: none !important; }
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-frost { will-change: auto; contain: strict; }
+
+/* Settings in Aero: the rows are separate glass bars, so the shared grouped-list backing and hairlines are off. */
+body[data-g-skin="aero"] #g-aero-settings .as-rows { background: transparent; padding: calc(6 * var(--cpx)); gap: calc(8 * var(--cpx)); }
+body[data-g-skin="aero"] #g-aero-settings .as-row + .as-row::before { display: none; }
+body[data-g-skin="aero"] #g-aero-settings :is(.as-cat > svg, .as-orb) { border-radius: 50%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 30, 70, .35); }

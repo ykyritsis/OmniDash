@@ -131,17 +131,20 @@ gPollDownloads = async function () {
 // Library tiles: a grouped menu anchored to the tile. Game page "…": Share and Manage, as in the video.
 gGameMenuMarkup = function (game) {
   const installed = game.installed !== false;
-  const favorite = state.favoriteGameIds.includes(game.id);
   const steam = game.provider === 'Steam' && game.appId;
-  void favorite;
-  // The Xbox app's Start-button menu: the title, then Play, Manage game and Uninstall. Everything else
-  // (Favorites, Hide, artwork, files) lives in Manage game.
-  return `<header class="g-menu-head g-menu-head-plain"><h2>${escapeHtml(game.title)}</h2></header>
+  const running = state.activeGameSession?.gameId === game.id;
+  const status = running ? 'Playing now' : !installed ? 'Not installed' : [game.provider, typeof lastPlayedAt === 'function' && lastPlayedAt(game) ? `Last played ${relativeTime(lastPlayedAt(game))}` : ''].filter(Boolean).join(' · ');
+  // One menu for every theme, as on the console: the game at the top, the few things you do with it, Uninstall
+  // set apart, and the buttons that work here at the bottom. Everything else (favourites, artwork, files) is in
+  // Manage game.
+  return `<header class="g-menu-head g-menu-head-game"><span class="g-menu-art">${gameArt(game)}</span><span><h2>${escapeHtml(game.title)}</h2><small>${escapeHtml(status)}</small></span></header>
     <div class="g-menu-group">
-      ${gRow('g-game-play', installed ? 'play' : 'download', installed ? 'Play' : 'Install')}
+      ${running ? gRow('g-game-resume', 'play', 'Resume') : gRow('g-game-play', installed ? 'play' : 'download', installed ? 'Play' : 'Install')}
+      ${gRow('g-game-details', 'info', 'Game details')}
       ${gRow('g-game-manage', 'controller', 'Manage game')}
-      ${installed && steam ? gRow('g-game-uninstall', 'delete', 'Uninstall') : ''}
-    </div>`;
+    </div>
+    ${installed && steam ? `<div class="g-menu-group">${gRow('g-game-uninstall', 'delete', 'Uninstall', ' data-tone="danger"')}</div>` : ''}
+    <footer class="g-menu-hints"><span><kbd class="xb-button xb-a" data-g-role="confirm">A</kbd>Select</span><span><kbd class="xb-button xb-b" data-g-role="back">B</kbd>Back</span></footer>`;
 };
 function gShareUrl(game) {
   if (game.provider === 'Steam' && /^\d+$/.test(String(game.appId || ''))) return `https://store.steampowered.com/app/${game.appId}/`;
@@ -156,6 +159,13 @@ async function gShareGame(game) {
 const gMenusPerform = performAction;
 performAction = async function (action, source) {
   if (action === 'g-queue-toggle' && source?.dataset.mode) { await gQueueAction(source.dataset.appId, source.dataset.mode); return; }
+  if (action === 'g-game-details' || action === 'g-game-resume') {
+    const id = state.optionsGameId;
+    if (gGameMenu.open) gGameMenu.close();
+    if (action === 'g-game-resume') await gMenusPerform('return-to-game', source);
+    else if (id) { selectGame(id, false); openGameDetails(id); }
+    return;
+  }
   if (action === 'g-game-share') {
     const game = state.games.find(item => item.id === state.optionsGameId) || state.games.find(item => item.id === state.detailGameId);
     if (gGameMenu.open) gGameMenu.close();

@@ -65,3 +65,15 @@ body.garrison .g-game-flyout .g-menu-head-plain { display: block; margin: 0 0 ca
 body.garrison .g-game-flyout .g-menu-head-plain h2 { margin: 0; font: 600 calc(1.6 * var(--p)) / 1.25 var(--g-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.garrison .g-game-flyout .g-menu-group .g-menu-item { min-height: calc(3.9 * var(--p)); padding: 0 calc(1 * var(--p)); gap: calc(1 * var(--p)); font-size: calc(1.45 * var(--p)); border-radius: calc(.7 * var(--p)); }
 body.garrison .g-game-flyout .g-menu-group .g-menu-item > svg.g-glyph { width: calc(1.9 * var(--p)); height: calc(1.9 * var(--p)); }
+
+/* The game menu, every theme: the game (art, name, status), its actions, Uninstall apart, then the button hints. */
+body.garrison .g-game-flyout .g-menu-head-game { display: flex; align-items: center; gap: calc(1 * var(--p)); margin: 0 0 calc(.6 * var(--p)); padding: calc(.2 * var(--p)) calc(.6 * var(--p)) calc(.9 * var(--p)); border-bottom: 1px solid rgba(255, 255, 255, .1); }
+body.garrison .g-game-flyout .g-menu-head-game .g-menu-art { width: calc(4.4 * var(--p)); border-radius: calc(.5 * var(--p)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .15); }
+body.garrison .g-game-flyout .g-menu-head-game > span:last-child { min-width: 0; }
+body.garrison .g-game-flyout .g-menu-head-game h2 { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 calc(1.45 * var(--p)) / 1.2 var(--g-font); max-width: calc(16 * var(--p)); }
+body.garrison .g-game-flyout .g-menu-head-game small { display: block; margin-top: calc(.25 * var(--p)); color: rgba(255, 255, 255, .7); font-size: calc(1 * var(--p)); }
+body.garrison .g-game-flyout .g-menu-hints { display: flex; justify-content: flex-end; gap: calc(1.2 * var(--p)); margin-top: calc(.6 * var(--p)); padding: calc(.7 * var(--p)) calc(.6 * var(--p)) calc(.2 * var(--p)); border-top: 1px solid rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .78); font-size: calc(1 * var(--p)); }
+body.garrison .g-game-flyout .g-menu-hints span { display: inline-flex; align-items: center; gap: calc(.45 * var(--p)); }
+body.garrison .g-game-flyout .g-menu-hints kbd { width: calc(1.7 * var(--p)); height: calc(1.7 * var(--p)); font-size: calc(.95 * var(--p)); }
+body.garrison .g-game-flyout .g-menu-hints kbd[data-g-glyph-key] { width: auto; height: auto; background: none !important; }
+body.garrison .g-game-flyout .g-menu-hints .g-glyph { font-size: calc(1.6 * var(--p)); }

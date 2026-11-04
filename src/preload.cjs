@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('launcher', {
   openGameBarSettings: () => ipcRenderer.invoke('app:game-bar-settings'),
   getGameStorage: (gameId) => ipcRenderer.invoke('game:storage', gameId),
   getGamerscoreBreakdown: (gameId) => ipcRenderer.invoke('gamerscore:breakdown', gameId),
+  getLocalGamerscore: () => ipcRenderer.invoke('gamerscore:local'),
   openRatingInfo: (system) => ipcRenderer.invoke('app:rating-info', system),
   steamAutoLink: () => ipcRenderer.invoke('steam:auto-link'),
   xboxModeStatus: () => ipcRenderer.invoke('xbox-mode:status'),

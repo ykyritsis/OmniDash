@@ -1,0 +1,96 @@
+/* Settings screen (garrison-settings-screen.js), shared by Helix and the Xbox dashboards.
+   Calm and plain, like a phone's settings: sections down the left, each with a coloured icon tile; the chosen
+   section on the right as one grouped list, every row with a name, a short description and its control. The
+   theme only changes the accent; Aero restyles the same markup as glass (garrison-theme-aero.css). */
+#g-aero-settings { display: none; }
+body.garrison #g-aero-settings:not([hidden]) {
+  --us-accent: #3fbf3f;
+  --us-panel: #1c1d20;
+  --us-group: #26272b;
+  --us-line: rgba(255, 255, 255, .07);
+  --us-muted: rgba(255, 255, 255, .62);
+  --us-u: var(--cpx, calc(100vh / 1080));
+  --us-font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  position: fixed; inset: 0; z-index: 60; display: grid; grid-template-columns: calc(440 * var(--us-u)) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: calc(22 * var(--us-u)) calc(28 * var(--us-u)); padding: calc(56 * var(--us-u)) calc(120 * var(--us-u)) calc(36 * var(--us-u));
+  background: linear-gradient(180deg, #17191c, #0d0f11); color: #fff; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  animation: us-in 180ms cubic-bezier(.2, .8, .2, 1) both;
+}
+body.garrison[data-g-theme="helix"] #g-aero-settings { --us-accent: #60cdff; }
+@keyframes us-in { from { opacity: 0; transform: scale(1.01); } to { opacity: 1; transform: none; } }
+body.garrison.g-aero-settings-open :is(main, .topbar) { visibility: hidden; }
+body.garrison #g-aero-settings .as-head { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; }
+body.garrison #g-aero-settings .as-head h1 { margin: 0; font: 600 calc(48 * var(--us-u))/1.05 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -.01em; }
+body.garrison #g-aero-settings .as-head p { margin: calc(6 * var(--us-u)) 0 0; font-size: calc(19 * var(--us-u)); color: var(--us-muted); }
+body.garrison #g-aero-settings kbd { display: inline-grid; place-items: center; margin-right: calc(8 * var(--us-u)); background: none; border: 0; color: #fff; }
+body.garrison #g-aero-settings kbd .g-glyph { font-size: calc(22 * var(--us-u)); }
+body.garrison #g-aero-settings .as-close { display: flex; align-items: center; height: calc(48 * var(--us-u)); padding: 0 calc(20 * var(--us-u)) 0 calc(12 * var(--us-u)); border: 0; border-radius: calc(24 * var(--us-u)); background: rgba(255, 255, 255, .08); color: #fff; font: 400 calc(18 * var(--us-u))/1 var(--us-font); cursor: pointer; }
+
+/* Sections */
+body.garrison #g-aero-settings :is(.as-cats, .as-page) { min-height: 0; overflow: hidden auto; scrollbar-width: none; border-radius: calc(18 * var(--us-u)); background: var(--us-panel); border: 1px solid var(--us-line); }
+body.garrison #g-aero-settings .as-cats { display: flex; flex-direction: column; gap: calc(2 * var(--us-u)); padding: calc(12 * var(--us-u)); }
+body.garrison #g-aero-settings .as-cat {
+  display: flex; align-items: center; gap: calc(16 * var(--us-u)); width: 100%; min-height: calc(70 * var(--us-u)); padding: calc(8 * var(--us-u)) calc(14 * var(--us-u));
+  border: 0; border-radius: calc(12 * var(--us-u)); background: transparent; color: #fff; text-align: left; cursor: pointer; transition: background-color 120ms ease;
+}
+body.garrison #g-aero-settings .as-cat:hover { background: rgba(255, 255, 255, .05); }
+body.garrison #g-aero-settings .as-cat.on { background: rgba(255, 255, 255, .1); }
+/* Coloured icon tiles, one colour per section, as a phone's settings list draws them. */
+body.garrison #g-aero-settings :is(.as-cat > svg, .as-orb) { flex: none; box-sizing: content-box; width: calc(24 * var(--us-u)); height: calc(24 * var(--us-u)); padding: calc(9 * var(--us-u)); border-radius: calc(10 * var(--us-u)); color: #fff; background: #6b6f76; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="appearance"] > svg, .as-orb[data-orb="appearance"]) { background: #8e5cf7; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="display-sound"] > svg, .as-orb[data-orb="display-sound"]) { background: #2f7cf6; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="controller"] > svg, .as-orb[data-orb="controller"]) { background: #2fae4b; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="notifications"] > svg, .as-orb[data-orb="notifications"]) { background: #ef4b4b; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="library"] > svg, .as-orb[data-orb="library"]) { background: #f2931f; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="account"] > svg, .as-orb[data-orb="account"]) { background: #5a7a9c; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="accessibility"] > svg, .as-orb[data-orb="accessibility"]) { background: #1f9be0; }
+body.garrison #g-aero-settings :is(.as-cat[data-cat="system"] > svg, .as-orb[data-orb="system"]) { background: #7a7f87; }
+body.garrison #g-aero-settings .as-cat strong { display: block; font: 600 calc(20 * var(--us-u))/1.2 var(--us-font); }
+body.garrison #g-aero-settings .as-cat small { display: block; margin-top: calc(2 * var(--us-u)); font-size: calc(15 * var(--us-u)); color: var(--us-muted); }
+
+/* The chosen section */
+body.garrison #g-aero-settings .as-page { display: flex; flex-direction: column; padding: calc(28 * var(--us-u)) calc(32 * var(--us-u)); }
+body.garrison #g-aero-settings .as-page-head { display: grid; grid-template-columns: auto 1fr; column-gap: calc(16 * var(--us-u)); align-items: center; }
+body.garrison #g-aero-settings .as-page-head .as-orb { grid-row: 1 / 3; width: calc(30 * var(--us-u)); height: calc(30 * var(--us-u)); padding: calc(12 * var(--us-u)); border-radius: calc(14 * var(--us-u)); }
+body.garrison #g-aero-settings .as-page-head .as-orb svg { width: 100%; height: 100%; }
+body.garrison #g-aero-settings .as-page-head h2 { margin: 0; font: 600 calc(32 * var(--us-u))/1.15 var(--us-font); }
+body.garrison #g-aero-settings .as-page-head p { margin: calc(2 * var(--us-u)) 0 0; font-size: calc(17 * var(--us-u)); color: var(--us-muted); }
+/* One grouped list with hairlines between rows. */
+body.garrison #g-aero-settings .as-rows { display: flex; flex-direction: column; margin-top: calc(22 * var(--us-u)); padding: calc(4 * var(--us-u)); border-radius: calc(14 * var(--us-u)); background: var(--us-group); }
+body.garrison #g-aero-settings .as-rows.as-in > * { animation: us-row 200ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes us-row { from { opacity: 0; transform: translateY(calc(6 * var(--us-u))); } to { opacity: 1; transform: none; } }
+body.garrison #g-aero-settings .as-row {
+  position: relative; display: flex; align-items: center; gap: calc(24 * var(--us-u)); width: 100%; min-height: calc(78 * var(--us-u)); padding: calc(12 * var(--us-u)) calc(20 * var(--us-u));
+  border: 0; border-radius: calc(10 * var(--us-u)); background: transparent; color: #fff; text-align: left;
+}
+body.garrison #g-aero-settings .as-row + .as-row::before { content: ""; position: absolute; left: calc(20 * var(--us-u)); right: calc(20 * var(--us-u)); top: 0; height: 1px; background: var(--us-line); }
+body.garrison #g-aero-settings button.as-row { cursor: pointer; }
+body.garrison #g-aero-settings button.as-row:hover { background: rgba(255, 255, 255, .04); }
+body.garrison #g-aero-settings .as-ghost { min-height: calc(78 * var(--us-u)); }
+body.garrison #g-aero-settings .as-text { flex: 1; min-width: 0; }
+body.garrison #g-aero-settings .as-text strong { display: block; font: 400 calc(20 * var(--us-u))/1.25 var(--us-font); }
+body.garrison #g-aero-settings .as-text small { display: block; margin-top: calc(3 * var(--us-u)); font-size: calc(15 * var(--us-u)); line-height: 1.35; color: var(--us-muted); }
+body.garrison #g-aero-settings .as-ctl { flex: none; display: flex; align-items: center; gap: calc(14 * var(--us-u)); max-width: 45%; }
+body.garrison #g-aero-settings .as-ctl em { font-style: normal; font-size: calc(18 * var(--us-u)); color: var(--us-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.garrison #g-aero-settings .as-switch { position: relative; width: calc(52 * var(--us-u)); height: calc(30 * var(--us-u)); border-radius: calc(15 * var(--us-u)); background: rgba(255, 255, 255, .18); transition: background-color 160ms ease; }
+body.garrison #g-aero-settings .as-switch b { position: absolute; top: calc(3 * var(--us-u)); left: calc(3 * var(--us-u)); width: calc(24 * var(--us-u)); height: calc(24 * var(--us-u)); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: transform 160ms cubic-bezier(.2, .8, .2, 1); }
+body.garrison #g-aero-settings .as-switch.on { background: var(--us-accent); }
+body.garrison #g-aero-settings .as-switch.on b { transform: translateX(calc(22 * var(--us-u))); }
+body.garrison #g-aero-settings .as-k-toggle .as-ctl em { display: none; }
+body.garrison #g-aero-settings .as-slider { position: relative; width: calc(220 * var(--us-u)); height: calc(6 * var(--us-u)); border-radius: calc(3 * var(--us-u)); background: rgba(255, 255, 255, .18); cursor: pointer; }
+body.garrison #g-aero-settings .as-slider i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--us-accent); }
+body.garrison #g-aero-settings .as-slider + em { min-width: calc(64 * var(--us-u)); text-align: right; }
+body.garrison #g-aero-settings .as-choice { display: flex; align-items: center; gap: calc(6 * var(--us-u)); }
+body.garrison #g-aero-settings .as-choice i { display: grid; place-items: center; width: calc(30 * var(--us-u)); height: calc(30 * var(--us-u)); border-radius: 50%; font: 400 calc(22 * var(--us-u))/1 var(--us-font); font-style: normal; color: var(--us-muted); cursor: pointer; }
+body.garrison #g-aero-settings .as-choice i:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+body.garrison #g-aero-settings .as-choice em { min-width: calc(140 * var(--us-u)); text-align: center; color: #fff; }
+body.garrison #g-aero-settings .as-go { font-size: calc(26 * var(--us-u)); line-height: 1; color: var(--us-muted); }
+body.garrison #g-aero-settings .as-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(180 * var(--us-u)), 1fr)); gap: calc(8 * var(--us-u)); padding: calc(8 * var(--us-u)) calc(16 * var(--us-u)) calc(14 * var(--us-u)); }
+body.garrison #g-aero-settings .as-option { min-height: calc(50 * var(--us-u)); padding: 0 calc(14 * var(--us-u)); border: 0; border-radius: calc(10 * var(--us-u)); background: rgba(255, 255, 255, .07); color: #fff; font: 400 calc(17 * var(--us-u))/1.2 var(--us-font); cursor: pointer; }
+body.garrison #g-aero-settings .as-option.on { background: var(--us-accent); color: #fff; }
+body.garrison #g-aero-settings .as-empty { margin: calc(20 * var(--us-u)) 0 0; font-size: calc(18 * var(--us-u)); color: var(--us-muted); }
+/* Focus: a clear ring in the accent colour, nothing moves. */
+body.garrison #g-aero-settings :is(.as-cat, .as-row, .as-option, .as-close):is(.focused, :focus-visible) { outline: none; box-shadow: 0 0 0 calc(3 * var(--us-u)) var(--us-accent), 0 0 calc(16 * var(--us-u)) color-mix(in srgb, var(--us-accent) 45%, transparent); }
+body.garrison #g-aero-settings .as-hints { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: calc(28 * var(--us-u)); font-size: calc(16 * var(--us-u)); color: var(--us-muted); }
+body.garrison #g-aero-settings .as-hints span { display: flex; align-items: center; }
+html.reduce-motion #g-aero-settings, html.reduce-motion #g-aero-settings * { animation: none !important; transition: none !important; }

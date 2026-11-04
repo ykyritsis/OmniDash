@@ -473,99 +473,38 @@
     }
   ];
 
-  // ---------- Console layouts (plan §2.1 and §2.2) ----------
-  // Each console names only its pages, their order and the registry ids in them. Wording stays on the entry's
-  // label object, so every shell says "Sound Settings" the console's way without owning a second copy of it.
-  const LAYOUTS = {
-    series: [
-      { id: 'general', title: 'General', rows: [{ id: 'fullscreen' }, { id: 'startupAnimation' }, { id: 'uiScale' }, { id: 'textSize' }, { id: 'highContrastFocus' }, { id: 'reducedMotion' }] },
-      { id: 'display-sound', title: 'Display & sound', rows: [{ id: 'brightness' }, { id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'powerPlan' }] },
-      { id: 'personalization', title: 'Personalization', rows: [{ id: 'accent' }, { id: 'background' }, { id: 'screensaverDelay' }, { id: 'clockFormat' }, { id: 'dateOrder' }] },
-      { id: 'devices', title: 'Devices & connections', rows: [{ id: 'controllerStatus' }, { id: 'controllerVibration' }] },
-      { id: 'network', title: 'Network', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'account', title: 'Profile & system', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'appVersion' }, { id: 'freeDisk' }, { id: 'libraryCounts' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'checkForUpdates' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    one: [
-      { id: 'network', title: 'Network', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'display-sound', title: 'Display & sound', rows: [{ id: 'brightness' }, { id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'uiScale' }] },
-      { id: 'preferences', title: 'Preferences', rows: [{ id: 'accent' }, { id: 'background' }, { id: 'screensaverDelay' }, { id: 'clockFormat' }, { id: 'dateOrder' }] },
-      { id: 'ease', title: 'Ease of Access', rows: [{ id: 'textSize' }, { id: 'highContrastFocus' }, { id: 'reducedMotion' }] },
-      { id: 'devices', title: 'Devices', rows: [{ id: 'controllerStatus' }, { id: 'controllerVibration' }] },
-      { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'appVersion' }, { id: 'freeDisk' }, { id: 'libraryCounts' }, { id: 'powerPlan' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'fullscreen' }, { id: 'startupAnimation' }, { id: 'checkForUpdates' }] },
-      { id: 'account', title: 'Account', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    x360: [
-      { id: 'console', title: 'Console Settings', rows: [{ id: 'uiScale' }, { id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }] },
-      { id: 'display', title: 'Display', rows: [{ id: 'accent' }, { id: 'background' }, { id: 'textSize' }, { id: 'reducedMotion' }] },
-      { id: 'controllers', title: 'Controllers', rows: [{ id: 'controllerStatus' }, { id: 'controllerVibration' }] },
-      { id: 'network', title: 'Network Settings', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'profile', title: 'Profile', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'storage', title: 'Storage', rows: [{ id: 'freeDisk' }, { id: 'libraryCounts' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'appVersion' }, { id: 'checkForUpdates' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'fullscreen' }, { id: 'startupAnimation' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    ps3: [
-      { id: 'display', title: 'Display Settings', rows: [{ id: 'uiScale' }, { id: 'brightness' }, { id: 'fullscreen' }] },
-      { id: 'sound', title: 'Sound Settings', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'ps3GameAudio' }] },
-      { id: 'theme', title: 'Theme Settings', rows: [{ id: 'ps3ThemeColour' }, { id: 'background' }] },
-      { id: 'time', title: 'Date and Time Settings', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }] },
-      { id: 'system', title: 'System Settings', rows: [{ id: 'appVersion' }, { id: 'freeDisk' }, { id: 'powerPlan' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },
-      { id: 'accessory', title: 'Accessory Settings', rows: [{ id: 'controllerStatus' }, { id: 'controllerVibration' }, { id: 'enterButton' }] },
-      { id: 'network', title: 'Network Settings', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'notifications', title: 'Notification Settings', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'game', title: 'Game Settings', rows: [{ id: 'pauseDownloadsWhilePlaying' }, { id: 'libraryCounts' }] },
-      { id: 'account', title: 'Account Management', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    ps5: [
-      { id: 'display', title: 'Display', rows: [{ id: 'uiScale' }, { id: 'brightness' }, { id: 'fullscreen' }] },
-      { id: 'sound', title: 'Sound', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }] },
-      { id: 'network', title: 'Network', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }, { id: 'appVersion' }, { id: 'freeDisk' }, { id: 'libraryCounts' }, { id: 'powerPlan' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },
-      { id: 'accessibility', title: 'Accessibility', rows: [{ id: 'textSize' }, { id: 'highContrastFocus' }, { id: 'reducedMotion' }] },
-      { id: 'account', title: 'Account', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    ps4: [
-      { id: 'account', title: 'Account Management', rows: [{ id: 'profile' }, { id: 'steamAccount' }, { id: 'epicAccount' }, { id: 'artworkKey' }] },
-      { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'devices', title: 'Devices', rows: [{ id: 'controllerStatus' }, { id: 'controllerVibration' }, { id: 'enterButton' }] },
-      { id: 'sound-screen', title: 'Sound & Screen', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }, { id: 'brightness' }, { id: 'uiScale' }] },
-      { id: 'network', title: 'Network', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'themes', title: 'Themes', rows: [{ id: 'background' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }, { id: 'appVersion' }, { id: 'freeDisk' }, { id: 'libraryCounts' }, { id: 'powerPlan' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'fullscreen' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },
-      { id: 'accessibility', title: 'Accessibility', rows: [{ id: 'textSize' }, { id: 'highContrastFocus' }, { id: 'reducedMotion' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    wii: [
-      { id: 'page-1', title: 'Wii Settings · Page 1', rows: [{ id: 'uiScale' }, { id: 'brightness' }, { id: 'volume' }, { id: 'mute' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }] },
-      { id: 'page-2', title: 'Wii Settings · Page 2', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }, { id: 'soundEffects' }] },
-      { id: 'page-3', title: 'Wii Settings · Page 3', rows: [{ id: 'nintendoLayout' }, { id: 'controllerVibration' }, { id: 'controllerStatus' }] },
-      { id: 'internet', title: 'Internet', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'message-board', title: 'Wii Message Board', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'system', title: 'Wii System', rows: [{ id: 'appVersion' }, { id: 'freeDisk' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'fullscreen' }, { id: 'checkForUpdates' }, { id: 'resetLauncherData' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ],
-    '3ds': [
-      { id: 'internet', title: 'Internet Settings', rows: [{ id: 'wifi' }, { id: 'friendsOnline' }] },
-      { id: 'data', title: 'Data Management', rows: [{ id: 'freeDisk' }, { id: 'libraryCounts' }] },
-      { id: 'profile', title: 'Profile', rows: [{ id: 'profile' }] },
-      { id: 'date-time', title: 'Date & Time', rows: [{ id: 'clockFormat' }, { id: 'dateOrder' }, { id: 'screensaverDelay' }] },
-      { id: 'sound', title: 'Sound', rows: [{ id: 'volume' }, { id: 'mute' }, { id: 'soundEffects' }, { id: 'menuMusic' }, { id: 'menuMusicVolume' }] },
-      { id: 'display', title: 'Display', rows: [{ id: 'brightness' }, { id: 'uiScale' }, { id: 'screenLayout3ds' }] },
-      { id: 'theme', title: 'Theme', rows: [{ id: 'background' }] },
-      { id: 'controls', title: 'Controls', rows: [{ id: 'nintendoLayout' }, { id: 'controllerVibration' }, { id: 'controllerStatus' }] },
-      { id: 'notifications', title: 'Notifications', rows: [{ id: 'notifyFriends' }, { id: 'notifyDownloads' }, { id: 'notifyAchievements' }] },
-      { id: 'system', title: 'System', rows: [{ id: 'appVersion' }, { id: 'checkForUpdates' }, { id: 'pauseDownloadsWhilePlaying' }, { id: 'resetLauncherData' }] },
-      { id: 'advanced', title: 'Advanced (launcher)', rows: [{ id: 'launcherSettings' }] }
-    ]
-  };
+  // ---------- Console layouts ----------
+  // One short list for every console: the same eight sections and the same genuine settings, in the same order,
+  // so Settings reads alike whichever dashboard you use. Only a console's own controls are added for it (the PS3's
+  // colour, the PlayStation Enter button, the Nintendo button layout, the 3DS screen layout). Section names follow
+  // each console's wording; rows carry registry ids only, so every label still comes from the entry.
+  const CONSOLE_IDS = ['series', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'];
+  const SECTIONS = [
+    { id: 'appearance', rows: ['theme', 'background', 'clockFormat'], extra: { ps3: ['ps3ThemeColour', 'enterButton'], ps4: ['enterButton'], ps5: ['enterButton'], wii: ['nintendoLayout'], '3ds': ['nintendoLayout', 'screenLayout3ds'] },
+      title: { default: 'Appearance', ps3: 'Theme Settings', ps4: 'Themes', wii: 'Wii Settings', '3ds': 'Theme' } },
+    { id: 'display-sound', rows: ['uiScale', 'brightness', 'volume', 'soundEffects', 'menuMusic'],
+      title: { default: 'Display & sound', ps3: 'Display & Sound Settings', ps4: 'Sound & Screen', ps5: 'Screen & Sound', wii: 'Screen & Sound', '3ds': 'Sound & Display' } },
+    { id: 'controller', rows: ['controllerStatus', 'controllerVibration'],
+      title: { default: 'Controller', x360: 'Controllers', ps3: 'Accessory Settings', ps4: 'Devices', ps5: 'Accessories', wii: 'Controllers', '3ds': 'Controls' } },
+    { id: 'notifications', rows: ['notifyAchievements', 'notifyFriends', 'notifyDownloads'],
+      title: { default: 'Notifications', ps3: 'Notification Settings', wii: 'Wii Message Board' } },
+    { id: 'library', rows: ['showUninstalledSteam', 'showUninstalledEpic', 'pauseDownloadsWhilePlaying'],
+      title: { default: 'Library', ps3: 'Game Settings', '3ds': 'Data Management' } },
+    { id: 'account', rows: ['profile', 'steamAccount', 'epicAccount', 'artworkKey'],
+      title: { default: 'Accounts', x360: 'Profile', ps3: 'Account Management', ps4: 'Account Management', '3ds': 'Profile' } },
+    { id: 'accessibility', rows: ['textSize', 'reducedMotion', 'highContrastFocus'],
+      title: { default: 'Accessibility', one: 'Ease of Access', x360: 'Ease of Access' } },
+    { id: 'system', rows: ['fullscreen', 'startupAnimation', 'checkForUpdates', 'appVersion', 'exportSettings', 'importSettings'],
+      title: { default: 'System', ps3: 'System Settings', wii: 'Wii System' } },
+    { id: 'advanced', rows: ['launcherSettings'], title: { default: 'Advanced (launcher)' } }
+  ];
+  const LAYOUTS = Object.fromEntries(CONSOLE_IDS.map(console => [console, SECTIONS.map(section => ({
+    id: section.id,
+    title: section.title[console] || section.title.default,
+    rows: [...section.rows, ...(section.extra?.[console] || [])].map(id => ({ id }))
+  }))]));
+  // Helix and Aero draw these same sections in the shared Settings screen (garrison-theme-aero-settings.js).
+  const SECTION_LIST = SECTIONS.map(section => ({ id: section.id, rows: section.rows.slice(), extra: { ...(section.extra || {}) }, title: section.title.default }));
 
   // ---------- API ----------
   const byId = new Map(entries.map(entry => [entry.id, entry]));
@@ -643,6 +582,7 @@
     options,
     label,
     layouts: LAYOUTS,
+    sections: SECTION_LIST,
     layout,
     cached,
     formatClock,

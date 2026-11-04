@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="OmniDash">
+  <!-- OmniDash: one rounded tile split into four (every dashboard, one library) with a play mark cut through it. -->
+  <defs>
+    <linearGradient id="od-fill" x1=".1" y1="0" x2=".75" y2="1">
+      <stop offset="0" stop-color="#1ef0ff"/>
+      <stop offset=".42" stop-color="#2f8dff"/>
+      <stop offset=".78" stop-color="#6a4dff"/>
+      <stop offset="1" stop-color="#8b3dff"/>
+    </linearGradient>
+    <radialGradient id="od-glow" cx=".12" cy=".95" r=".6">
+      <stop offset="0" stop-color="#d24dff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#c04dff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="od-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <rect width="256" height="256" rx="82" fill="#fff"/>
+      <rect x="124" y="0" width="8" height="256" fill="#000"/>
+      <rect x="0" y="124" width="256" height="8" fill="#000"/>
+      <path d="M93.6 65.6 L181.5 128 L93.6 190.4 Z" fill="#000" stroke="#000" stroke-width="40" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g mask="url(#od-cut)">
+    <rect width="256" height="256" fill="url(#od-fill)"/>
+    <rect width="256" height="256" fill="url(#od-glow)"/>
+  </g>
+</svg>

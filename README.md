@@ -1,24 +1,25 @@
+<p align="center"><img src="docs/logo/omnidash-banner-dark.png" alt="OmniDash" width="620"></p>
+
+<p align="center"><strong>A console-style game launcher for Windows, built for the TV and the couch.</strong><br>
+One library from Steam, Epic, GOG, Amazon, Xbox and your own games, behind ten dashboards you can switch at any time.</p>
+
 <p align="center">
-  <img src="docs/screenshots/hero.png" alt="Eight OmniDash dashboards: Helix, Xbox Series X and S, Xbox One, Xbox 360, PlayStation 3, PlayStation 4, Wii and Nintendo 3DS" width="100%">
+  <a href="https://github.com/ykyritsis/OmniDash/releases/latest"><img src="https://img.shields.io/github/v/release/ykyritsis/OmniDash?style=for-the-badge&label=Download&color=2f8dff" alt="Download the latest release"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?style=for-the-badge&logo=windows" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/github/license/ykyritsis/OmniDash?style=for-the-badge&color=6a4dff" alt="MIT license">
 </p>
 
-<h1 align="center">OmniDash</h1>
-
-<p align="center"><strong>A multi-console game launcher for your TV.</strong><br>
-One library from Steam, Epic, GOG, Amazon, Xbox and your own games, behind eight dashboards you can switch at any time.</p>
-
 <p align="center">
-  <img src="docs/badges/windows.svg" alt="Windows 10 and 11" height="28">
-  <img src="docs/badges/electron.svg" alt="Built with Electron 39" height="28">
-  <img src="docs/badges/mit.svg" alt="MIT license" height="28">
+  <img src="docs/screenshots/aero-home.jpg" alt="The Aero dashboard: square game tiles over a sunny island sea, with My games, Friends, Game Pass and Achievements cards" width="100%">
+  <br><sub><b>Aero</b> — the Xbox dashboard in Frutiger Aero. Square box art, glass cards and a keyless PC Gamerscore.</sub>
 </p>
 
 <p align="center">
   <a href="https://github.com/ykyritsis/OmniDash/releases/latest"><strong>Download for Windows</strong></a> &nbsp;·&nbsp;
   <a href="#themes">Themes</a> &nbsp;·&nbsp;
-  <a href="#console-packs-optional">Console packs</a> &nbsp;·&nbsp;
-  <a href="#settings-that-actually-work">Settings</a> &nbsp;·&nbsp;
-  <a href="#controls">Controls</a> &nbsp;·&nbsp;
+  <a href="#settings">Settings</a> &nbsp;·&nbsp;
+  <a href="#achievements-and-gamerscore">Gamerscore</a> &nbsp;·&nbsp;
+  <a href="#install">Install</a> &nbsp;·&nbsp;
   <a href="#faq">FAQ</a>
 </p>
 
@@ -49,6 +50,7 @@ A theme is a navigation model, not a recolour. Each one has its own layout, focu
 | --- | --- | --- |
 | **Helix**<br><sub>PC · default</sub> | <img src="docs/screenshots/helix-home.png" width="340" alt="Helix dashboard"> | OmniDash's own PC look: black glass, square art, quiet motion. Built for desktop and handheld PCs.<br><sub>[Settings screenshot](docs/screenshots/helix-settings.png)</sub> |
 | **Xbox Series X\|S** | <img src="docs/screenshots/series-home.png" width="340" alt="Xbox Series X and S dashboard"> | The current Xbox dashboard: round top bar, a low row of square tiles with the focused game grown, over the game's full-screen key art.<br><sub>[Settings screenshot](docs/screenshots/series-settings.png)</sub> |
+| **Aero**<br><sub>Xbox · Frutiger Aero</sub> | <img src="docs/screenshots/aero-home.jpg" width="340" alt="Aero dashboard"> | The Xbox dashboard on a sunny island sea: one big square for your last game, glossy square tiles, frosted glass cards for your library, friends, Game Pass and Gamerscore, and a launch screen that rises the game's logo over its key art.<br><sub>[Library](docs/screenshots/aero-library.jpg) · [Settings](docs/screenshots/aero-settings.jpg)</sub> |
 | **Xbox One (2013)** | <img src="docs/screenshots/one-home.png" width="340" alt="Xbox One dashboard"> | The Metro panorama: Pins, Home, Friends, Game Pass and Store pivots, live tiles and Spotlight. LB and RB slide between hubs in place.<br><sub>[Settings screenshot](docs/screenshots/one-settings.png)</sub> |
 | **Xbox 360 (Metro)** | <img src="docs/screenshots/x360-home.png" width="340" alt="Xbox 360 dashboard"> | The 2011 band: lime tiles, a rotating featured tile, the gamercard and the bing / home / social / games / apps / settings pivots.<br><sub>[Settings screenshot](docs/screenshots/x360-settings.png)</sub> |
 | **PlayStation 3 (XMB)** | <img src="docs/screenshots/ps3-home.png" width="340" alt="PlayStation 3 XMB dashboard"> | The XrossMediaBar: categories across, items down, and a ribbon wave that follows the month's colour and the time of day. Settings live in the XMB itself.<br><sub>[Settings screenshot](docs/screenshots/ps3-settings.png)</sub> |
@@ -57,7 +59,7 @@ A theme is a navigation model, not a recolour. Each one has its own layout, focu
 | **Wii** | <img src="docs/screenshots/wii-home.png" width="340" alt="Wii Menu dashboard"> | The Wii Menu channel grid, the seven-segment clock and bottom bar, channel previews and the pointer. Wii Settings opens in the same shell.<br><sub>[Settings screenshot](docs/screenshots/wii-settings.png)</sub> |
 | **Nintendo 3DS** | <img src="docs/screenshots/3ds-home.png" width="340" alt="Nintendo 3DS HOME Menu dashboard"> | Two screens, the icon grid, toolbar and software banner. System Settings is a 3DS settings shell, not a dialog in a costume.<br><sub>[Settings screenshot](docs/screenshots/3ds-settings.png)</sub> |
 
-> PS5 is the one theme still in progress. The eight finished dashboards are the ones captured above. Switching between them keeps your library, focus position and settings.
+> PS5 is the one theme still in progress. The other nine dashboards are finished. Switching between them keeps your library, focus position and settings.
 
 ## Console packs (optional)
 
@@ -75,29 +77,40 @@ OmniDash draws every theme itself, so each dashboard is complete straight after 
 
 Packs live in `%APPDATA%\xbox-preview-ui\theme-packs`. The full file map, licences and per-theme music order are in [docs/theme-packs.md](docs/theme-packs.md).
 
-## Settings that actually work
+## Settings
 
-Every console's Settings screen is built from one registry of real launcher options. There are no decorative rows: if OmniDash cannot change something, it does not pretend to.
+Settings is short on purpose. Every dashboard has the same eight sections with the same handful of genuine options, in the same order, so it reads alike whatever theme you use:
 
-- Volume, mute, screen brightness (laptops and handhelds) and the Windows power plan.
-- Screen size, text size, tile corners, reduced motion and high-contrast focus.
-- Interface sounds, menu music and its volume, and a 12- or 24-hour clock with your date order.
-- Screen-saver delay and notification toggles for friends, downloads and achievements.
-- The enter button (✕ or ○ on PlayStation), Nintendo button layout and controller vibration.
-- Theme, accent colour, background and console packs.
-- Accounts (Steam, Epic, SteamGridDB), updates, backup and restore.
-- **Advanced (launcher)** at the bottom of every console list opens the full launcher settings.
+| Section | What's in it |
+| --- | --- |
+| **Appearance** | Theme, background, clock |
+| **Display & sound** | Screen size, brightness, volume, interface sounds, menu music |
+| **Controller** | Connection status, vibration |
+| **Notifications** | Achievements, friends coming online, downloads |
+| **Library** | Show uninstalled Steam / Epic games, pause downloads while playing |
+| **Accounts** | Profile, Steam, Epic, artwork service |
+| **Accessibility** | Text size, reduced motion, high-contrast focus |
+| **System** | Full screen, startup animation, updates, backup and restore |
 
-The settings are **registry-backed**: one typed list of capabilities feeds every screen, and a test fails if any row lacks a real setting id.
+A console only adds what is genuinely its own: the PlayStation Enter button, the Nintendo button layout, the PS3 colour and the 3DS screen layout. Helix and the Xbox dashboards share one calm Settings screen; PlayStation and Nintendo themes draw the same list in their own native menus. Rare launcher options (library sources, remote play, privacy) sit behind **All launcher settings** at the end of System.
 
-**One engine, seven console-native shells.** The same settings model paints seven console-native skins — Series, One, 360, PS3, PS4, Wii and 3DS — each with the console's own chrome, fonts, glyphs and navigation. Helix uses the launcher dialog. PS5's settings shell belongs to the in-progress PS5 theme and is not counted here. Every console layout can still reach the full launcher settings through **Advanced (launcher)**.
+Every row is backed by one registry of real launcher options, and a test fails if a row names a setting that does not exist.
 
-| | |
-|:---:|:---:|
-| <img src="docs/screenshots/ps3-settings.png" alt="PlayStation 3 XMB Settings" width="100%"> | <img src="docs/screenshots/ps4-settings.png" alt="PlayStation 4 Settings" width="100%"> |
-| <sub>PlayStation 3 · XMB Settings</sub> | <sub>PlayStation 4 · Settings</sub> |
-| <img src="docs/screenshots/wii-settings.png" alt="Wii Settings" width="100%"> | <img src="docs/screenshots/3ds-settings.png" alt="Nintendo 3DS System Settings" width="100%"> |
-| <sub>Wii · Wii Settings</sub> | <sub>Nintendo 3DS · System Settings</sub> |
+<p align="center">
+  <img src="docs/screenshots/helix-settings.jpg" alt="Settings in Helix: eight sections on the left, the Appearance section on the right" width="49%">
+  <img src="docs/screenshots/aero-settings.jpg" alt="The same Settings screen restyled as glass in Aero" width="49%">
+</p>
+
+## Achievements and Gamerscore
+
+OmniDash gives you a PC Gamerscore **without a Steam Web API key**. It reads the achievement files Steam already keeps on your PC (offline, instant, and it works with a private profile) and scores them like a console:
+
+- Every game is worth **1,000G**, shared across its achievements.
+- Rarer achievements are worth more: weight = 10 + 90 × (1 − √(global unlock % ÷ 100)), so a 1% achievement is worth about eight times one nearly everyone has.
+- Points are rounded to multiples of 5, keeping each game at exactly 1,000G.
+- Global unlock rates come from Steam's public stats, once per game, and are cached.
+
+New unlocks pop an "Achievement unlocked · 35G" toast. If you have linked a Steam Web API key, its verified score is used instead.
 
 ## Sound and motion
 
@@ -196,7 +209,7 @@ Builds are not code-signed yet. SmartScreen warns about any unsigned installer w
 <details>
 <summary><strong>Is the PS5 theme finished?</strong></summary>
 
-Not yet. It is in progress and is not part of the polished screenshot set. The other eight dashboards are finished.
+Not yet. It is in progress and is not part of the polished screenshot set. The other nine dashboards are finished.
 </details>
 
 <details>

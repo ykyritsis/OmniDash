@@ -112,6 +112,26 @@
     up: PS.up, down: PS.down, left: PS.left, right: PS.right
   };
 
+  // Xbox Series X|S: the controller's own look. Dark round buttons with a soft top highlight and the letter in its
+  // colour (A green, B red, X blue, Y yellow), dark bumpers and triggers with white labels, and View, Menu and
+  // Guide on dark discs. Drawn here; no controller artwork is shipped.
+  const SX = { body: '#1c1d1f', rim: 'rgba(255,255,255,.22)', shine: 'rgba(255,255,255,.13)', a: '#7dd957', b: '#ff5a5a', x: '#4aa8ff', y: '#ffd23a' };
+  const seriesDisc = inner => svg([32, 32], `<circle cx="16" cy="16" r="13" fill="${SX.body}" stroke="${SX.rim}" stroke-width="1.2"/><ellipse cx="16" cy="10" rx="9" ry="5" fill="${SX.shine}"/>${inner}`);
+  const seriesFace = letter => seriesDisc(text(16, 16.8, 15, letter.toUpperCase(), 700, SX[letter]));
+  const seriesBumper = (word, flip) => svg([44, 32], `<path d="${flip ? 'M40 23H8a4 4 0 0 1-4-4v-3c0-5 4-8 10-8h17c6 0 9 4 9 9v2a4 4 0 0 1 0 4Z' : 'M4 23h32a4 4 0 0 0 4-4v-3c0-5-4-8-10-8H13c-6 0-9 4-9 9v2a4 4 0 0 0 0 4Z'}" fill="${SX.body}" stroke="${SX.rim}" stroke-width="1.2"/>${text(22, 16, 9.5, word, 700, '#fff')}`);
+  const seriesTrigger = word => svg([40, 32], `<path d="M8 27c-2 0-3-1-3-3l1-12c0-4 3-8 8-8h12c5 0 8 4 8 8l1 12c0 2-1 3-3 3Z" fill="${SX.body}" stroke="${SX.rim}" stroke-width="1.2"/>${text(20, 17, 9.5, word, 700, '#fff')}`);
+  const SERIES_SET = {
+    ...XBOX_SET,
+    a: seriesFace('a'), b: seriesFace('b'), x: seriesFace('x'), y: seriesFace('y'),
+    lb: seriesBumper('LB', false), rb: seriesBumper('RB', true),
+    lt: seriesTrigger('LT'), rt: seriesTrigger('RT'),
+    view: seriesDisc('<rect x="9" y="12.5" width="9" height="8" rx="1.6" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="13" y="10" width="10" height="8" rx="1.6" fill="' + SX.body + '" stroke="#fff" stroke-width="1.6"/>'),
+    menu: seriesDisc('<path d="M10 11.5h12M10 16h12M10 20.5h12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
+    start: seriesDisc('<path d="M10 11.5h12M10 16h12M10 20.5h12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
+    guide: seriesDisc('<circle cx="16" cy="16" r="7.5" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M11.6 11.8c1.3.3 2.9 1.6 4.4 3.2 1.5-1.6 3.1-2.9 4.4-3.2 1.7 2.1 2 5.7.5 8.1-.6-2-2.8-4.4-4.9-6-2.1 1.6-4.3 4-4.9 6-1.5-2.4-1.2-6 .5-8.1Z" fill="#fff"/>'),
+    dpad: svg([32, 32], `<path d="M12.2 4.5h7.6v7.7h7.7v7.6h-7.7v7.7h-7.6v-7.7H4.5v-7.6h7.7Z" fill="${SX.body}" stroke="${SX.rim}" stroke-width="1.2"/><path d="M16 8l2 3h-4Z M16 24l-2-3h4Z M8 16l3-2v4Z M24 16l-3 2v-4Z" fill="#fff" opacity=".8"/>`)
+  };
+
   // Every console owns a complete, independent set so a skin can never accidentally borrow another's glyph.
   const SETS = {
     ps3: { ...PS },
@@ -119,7 +139,7 @@
     ps5: { ...PS },
     wii: { ...NINTENDO_COMMON },
     '3ds': { ...NINTENDO_COMMON },
-    series: { ...XBOX_SET },
+    series: { ...SERIES_SET },
     one: { ...XBOX_SET },
     x360: { ...XBOX_SET }
   };

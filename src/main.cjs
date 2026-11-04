@@ -2339,8 +2339,11 @@ function registerIpc() {
     return true;
   });
   const steamLaunch = createSteamLaunch({ evaluate: (...args) => steamClientEval(...args) });
+  // Steam's own launch controls (launch modes, first-time setup prompts) need Steam started with remote debugging.
+  // Without them, or when they don't answer, the game starts with Steam's standard -applaunch instead: launching
+  // must never wait on a Steam restart.
   async function prepareSteamLaunch(game) {
-    if (!await exists(await steamControlFlag())) return { setupRequired: true, choices: [] };
+    if (!await exists(await steamControlFlag())) return { classic: true, choices: [] };
     const steamExe = await steamExecutableFile();
     if (!steamExe) throw new Error('Steam was not found on this PC.');
     if (!await steamClientIsRunning()) {
@@ -2348,16 +2351,19 @@ function registerIpc() {
       spawn(steamExe, ['-silent'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
     }
     const deadline = Date.now() + 90000;
-    let lastError;
+    let lastError, controlsSince = 0;
     while (Date.now() < deadline) {
       if (launchWaitCancel.has(game.id)) throw new Error('Launch cancelled.');
       if (await steamSignedIn()) {
         try { return { choices: await steamLaunch.prepare(game) }; }
         catch (error) { lastError = error; }
+        // Signed in, but the controls still don't answer after a few seconds: use the standard launch.
+        controlsSince ||= Date.now();
+        if (Date.now() - controlsSince > 12000) return { classic: true, choices: [] };
       } else launchStatus(game.id, 'Waiting for Steam to sign in');
       await new Promise(resolve => setTimeout(resolve, 1000));
       // A live but incompatible client should fail clearly instead of silently launching a default mode.
-      if (lastError && /cannot hand|does not support|launch controls are unavailable/.test(lastError.message)) throw lastError;
+      if (lastError && /cannot hand|does not support|launch controls are unavailable/.test(lastError.message)) return { classic: true, choices: [] };
     }
     throw new Error(lastError ? 'Steam controls are not ready. Restart Steam, then try again.' : 'Sign in to Steam, then try again.');
   }
@@ -2389,12 +2395,21 @@ function registerIpc() {
     } else if (game.provider === 'Steam' && /^\d+$/.test(String(game.appId)) && process.env.NEBULA_DEMO !== '1') {
       if (launchWaitCancel.delete(gameId)) throw new Error('Launch cancelled.');
       const prepared = await prepareSteamLaunch(game);
-      if (prepared.setupRequired) throw new Error('Enable Steam controls to launch games inside the app.');
-      const index = launchIndex ?? (prepared.choices.length === 1 ? prepared.choices[0].index : undefined);
       if (launchWaitCancel.delete(gameId)) throw new Error('Launch cancelled.');
       launchStatus(gameId, `Starting ${game.title}`);
-      await steamLaunch.start(game, index, optionText);
-      if (launchWaitCancel.delete(gameId)) { await stopLaunch(gameId); throw new Error('Launch cancelled.'); }
+      if (prepared.classic) {
+        const steamExe = await steamExecutableFile();
+        try {
+          if (!steamExe) throw new Error('Steam was not found on this PC.');
+          await launchExecutable(steamExe, ['-silent', '-applaunch', String(game.appId), ...parsedOptions], path.dirname(steamExe));
+        } catch {
+          await shell.openExternal(parsedOptions.length ? `steam://run/${encodeURIComponent(game.appId)}//${encodeURIComponent(optionText)}` : `steam://rungameid/${encodeURIComponent(game.appId)}`);
+        }
+      } else {
+        const index = launchIndex ?? (prepared.choices.length === 1 ? prepared.choices[0].index : undefined);
+        await steamLaunch.start(game, index, optionText);
+        if (launchWaitCancel.delete(gameId)) { await stopLaunch(gameId); throw new Error('Launch cancelled.'); }
+      }
     } else if (game.launchUri && game.provider === 'Steam' && game.appId && game.steamExecutable && await exists(game.steamExecutable)) {
       try {
         await launchExecutable(game.steamExecutable, ['-silent', '-applaunch', game.appId, ...parsedOptions], path.dirname(game.steamExecutable));
@@ -2964,7 +2979,7 @@ function registerIpc() {
   const PREF_KEYS = {
     pauseDownloadsWhilePlaying: true,
     controllerVibration: true,
-    theme: ['helix', 'series', 'one', 'x360', 'ps3', 'ps4', 'wii', '3ds'],
+    theme: ['helix', 'series', 'aero', 'one', 'x360', 'ps3', 'ps4', 'ps5', 'wii', '3ds'],
     clockFormat: ['12h', '24h'],
     dateOrder: ['locale', 'dmy', 'mdy'],
     enterButton: ['x', 'o'],
@@ -3414,6 +3429,21 @@ function registerIpc() {
     if (!urls[action]) throw new Error('Unknown friend action.');
     if (process.env.NEBULA_DEMO !== '1') await shell.openExternal(urls[action]);
     return true;
+  });
+  // Keyless PC Gamerscore from Steam's own achievement cache on this PC (local-gamerscore.cjs). Unlock rates for
+  // the rarity split are fetched in the background, once per game, and the renderer asks again while any are pending.
+  const localGamerscore = require('./local-gamerscore.cjs').createLocalGamerscore({
+    steamRoots: findSteamRoots,
+    cacheFile: path.join(app.getPath('userData'), 'achievement-rates.json'),
+    fetchJson: async (url) => { const response = await fetch(url, { signal: AbortSignal.timeout(10000) }); if (!response.ok) throw new Error(`Steam returned ${response.status}`); return response.json(); }
+  });
+  ipcMain.handle('gamerscore:local', async () => {
+    if (process.env.NEBULA_DEMO === '1') return { available: false, points: 0, unlocked: 0, total: 0, games: [] };
+    const titles = new Map(currentLibrary.filter((game) => game.provider === 'Steam' && game.appId).map((game) => [String(game.appId), game.title]));
+    const result = await localGamerscore.compute({ titles });
+    const pending = result.missingRates.length > 0;
+    if (pending) localGamerscore.refreshRates(result.missingRates).catch(() => {});
+    return { ...result, missingRates: undefined, pending };
   });
   // Gamerscore calculator: the fixed 1,000-point split for a Steam game, from global unlock rates.
   const gamerscoreBreakdowns = new Map();

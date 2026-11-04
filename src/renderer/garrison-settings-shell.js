@@ -1246,6 +1246,8 @@
       await open(consoleId);
       return undefined;
     };
+    // A theme with its own Settings screen (Aero) still needs the launcher's full dialog for some rows.
+    root.gOpenLauncherSettings = (...args) => openSettingsBase.apply(root, args);
   }
   if (typeof showSettingsPage === 'function') {
     const showSettingsPageBase = showSettingsPage;
