@@ -53,6 +53,9 @@
     person: svg('<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>'),
     power: svg('<path d="M12 4v8"/><path d="M7 6.5a7 7 0 1 0 10 0"/>'),
     chevron: svg('<path d="m9 5 7 7-7 7"/>'),
+    more: `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></svg>`,
+    search: svg('<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>'),
+    library: svg('<rect x="4" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.4"/>'),
     capture: svg('<rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="m8 6 1.5-2h5L16 6"/> <circle cx="12" cy="12" r="3"/>')
   };
   const p5icon = name => P5_ICON[name] || P5_ICON.settings;
@@ -120,18 +123,28 @@
   function rootMarkup() {
     host.innerHTML = `<i class="p5-amb p5-amb-a" aria-hidden="true"></i><i class="p5-amb p5-amb-b" aria-hidden="true"></i>
       <i class="p5-grain" aria-hidden="true"></i><i class="p5-dust" aria-hidden="true"></i>
+      <i class="p5-hero-shade" aria-hidden="true"></i>
       <div class="p5-home">
-        <div class="p5-row" role="list" aria-label="Recent games"></div>
-        <div class="p5-title-wrap"><h1 class="p5-title"></h1><p class="p5-subtitle"></p></div>
+        <div class="p5-row-wrap"><div class="p5-row" role="list" aria-label="Games"></div><span class="p5-row-title" aria-hidden="true"></span></div>
+        <div class="p5-feature">
+          <div class="p5-logo-box"><img class="p5-logo" alt="" draggable="false" hidden /><h1 class="p5-title"></h1></div>
+          <p class="p5-subtitle"></p>
+          <div class="p5-actions" role="group" aria-label="Game"><button class="p5-play focusable" type="button" data-action="g-ps5-continue">Play Game</button><button class="p5-more focusable" type="button" data-action="g-ps5-more" aria-label="Options">${p5icon('more')}</button></div>
+        </div>
+        <div class="p5-side" aria-hidden="true"><span class="p5-side-cover"></span><span class="p5-side-time"></span></div>
         <div class="p5-cards" role="group" aria-label="Activity Cards"></div>
       </div>`;
+    // The logo replaces the title once it loads; a game without one keeps its name in large type.
+    const logo = host.querySelector('.p5-logo');
+    logo.addEventListener('load', () => { logo.hidden = false; host.classList.add('p5-has-logo'); });
+    logo.addEventListener('error', () => { logo.hidden = true; host.classList.remove('p5-has-logo'); });
     builtKey = '';
   }
   function renderHome() {
     if (!on()) { teardown(); return; }
     document.body.classList.add('g-ps5');
     document.body.classList.toggle('home-active', state.view === 'home');
-    list = homeList().slice(0, 8);
+    list = homeList().slice(0, 12);
     if (!host.querySelector('.p5-row')) rootMarkup();
     if (!list.length) {
       host.querySelector('.p5-row').innerHTML = '';
@@ -160,9 +173,9 @@
           <span class="p5-tile-art">${art ? `<img src="${esc(art)}" alt="" draggable="false" loading="lazy" />` : `<span class="p5-tile-letter" aria-hidden="true">${esc(letter)}</span>`}</span>
           <span class="p5-tile-gloss" aria-hidden="true"></span>
         </button>`;
-      }).join('');
+      }).join('') + `<button class="p5-tile p5-tile-lib focusable" type="button" role="listitem" data-action="library" aria-label="Game library"><span class="p5-tile-art">${p5icon('library')}</span></button>`;
     }
-    [...row.children].forEach((el, index) => el.classList.toggle('sel', index === sel));
+    [...row.querySelectorAll('.p5-tile[data-ps5-index]')].forEach((el, index) => el.classList.toggle('sel', index === sel));
     applySelection({ focus: false, force: true });
     updateChrome();
     scheduleAmbient(list[sel]);
@@ -187,7 +200,8 @@
   }
   function updateChrome() {
     if (!chrome.querySelector('.p5-status')) {
-      chrome.innerHTML = `<div class="p5-status"><time class="p5-clock"></time><button class="p5-me focusable" type="button" data-action="g-ps5-me" aria-label="Control Center"><span class="p5-avatar">${avatar()}</span><i class="p5-me-ring" aria-hidden="true"></i></button></div>
+      chrome.innerHTML = `<nav class="p5-tabs" aria-label="Home"><button class="p5-tab on focusable" type="button" data-action="g-ps5-games">Games</button><button class="p5-tab focusable" type="button" data-action="g-ps5-media">Media</button></nav>
+        <div class="p5-status"><button class="p5-top-icon focusable" type="button" data-action="g-ps5-search" aria-label="Search">${p5icon('search')}</button><button class="p5-top-icon focusable" type="button" data-action="g-ps5-settings" aria-label="Settings">${p5icon('settings')}</button><button class="p5-me focusable" type="button" data-action="g-ps5-me" aria-label="Control Center"><span class="p5-avatar">${avatar()}</span><i class="p5-me-ring" aria-hidden="true"></i></button><time class="p5-clock"></time></div>
         <div class="p5-chrome-hints">${gRow(homePrompts())}</div>`;
       clockTimer ||= setInterval(() => { if (on() && !document.hidden) updateChrome(); }, 15000);
     }
@@ -203,13 +217,29 @@
     const raw = (index - (count - 1) / 2) * (196 + 28);
     return Math.max(-330, Math.min(330, raw));
   }
+  const logoFor = game => game?.artwork?.logo || (game?.provider === 'Steam' && /^\d+$/.test(String(game.appId || '')) ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/logo.png` : '');
   function applySelection({ focus = false, force = false } = {}) {
     if (!list.length) return;
     const game = list[sel];
-    host.style.setProperty('--p5-anchor', String(anchorFor(sel, list.length)));
-    [...host.querySelectorAll('.p5-tile')].forEach((el, index) => el.classList.toggle('sel', index === sel));
+    host.style.setProperty('--p5-sel', String(sel));
+    [...host.querySelectorAll('.p5-tile[data-ps5-index]')].forEach((el, index) => el.classList.toggle('sel', index === sel));
+    const rowTitle = host.querySelector('.p5-row-title');
+    if (rowTitle) rowTitle.textContent = game.title;
     const title = host.querySelector('.p5-title'), sub = host.querySelector('.p5-subtitle');
     if (title) title.textContent = game.title;
+    const logo = host.querySelector('.p5-logo'), wanted = logoFor(game);
+    if (logo && logo.dataset.src !== wanted) {
+      logo.dataset.src = wanted;
+      logo.hidden = true;
+      host.classList.remove('p5-has-logo');
+      if (wanted) logo.src = wanted; else logo.removeAttribute('src');
+    }
+    const side = host.querySelector('.p5-side-cover');
+    if (side) side.style.backgroundImage = cssUrl(cover(game));
+    const sideTime = host.querySelector('.p5-side-time');
+    if (sideTime) { sideTime.textContent = playedText(game); sideTime.hidden = !playedText(game); }
+    const playButton = host.querySelector('.p5-play');
+    if (playButton) playButton.textContent = state.activeGameSession?.gameId === game.id ? 'Resume' : game.installed === false ? 'Install' : 'Play Game';
     if (sub) {
       const parts = [];
       if (playedText(game)) parts.push(`Played ${playedText(game)}`);
@@ -218,7 +248,10 @@
       sub.textContent = parts.join(' · ') || (game.installed === false ? 'Not installed' : 'Ready to play');
     }
     renderCards(game);
+    // The key art follows the selection, after a short pause so scrolling past games does not load each one.
+    clearTimeout(applySelection.artTimer);
     if (force) scheduleAmbient(game);
+    else applySelection.artTimer = setTimeout(() => { if (on() && list[sel]?.id === game.id) scheduleAmbient(game); }, 140);
     if (focus && !mode && overlay.hidden) focusEl(host.querySelector('.p5-tile.sel'));
   }
   function renderCards(game) {
@@ -231,16 +264,18 @@
     const percent = info && info.total ? Math.round((info.unlocked / info.total) * 100) : 0;
     const captureCount = captures ? captures.filter(item => item.game?.id === game?.id).length : null;
     const captureSub = captureCount === null ? 'Screenshots and clips' : captureCount ? `${captureCount} from this game` : 'No captures yet';
+    void continueSub;
+    const friends = (state.gFriends?.friends || []).filter(friend => friend.game && friend.game === game.title).length;
     cards.innerHTML = `
-      <button class="p5-card p5-card-continue focusable" type="button" data-action="g-ps5-continue" data-card="0" aria-label="Continue ${esc(game.title)}">
-        <span class="p5-card-icon" aria-hidden="true">${p5icon('play')}</span>
-        <span class="p5-card-copy"><strong>Continue</strong><small>${esc(continueSub)}</small></span>
-        <span class="p5-card-chevron" aria-hidden="true">${p5icon('chevron')}</span>
-      </button>
-      <button class="p5-card p5-card-trophies focusable" type="button" data-action="g-ps5-trophies" data-card="1" aria-label="Trophies, ${esc(trophySub)}">
+      <button class="p5-card p5-card-trophies focusable" type="button" data-action="g-ps5-trophies" data-card="0" aria-label="Trophies, ${esc(trophySub)}">
         <span class="p5-card-icon" aria-hidden="true">${p5icon('trophy')}</span>
         <span class="p5-card-copy"><strong>Trophies</strong><small data-p5-trophy-text>${esc(trophySub)}</small></span>
         <span class="p5-card-meter" aria-hidden="true"><i data-p5-trophy-bar style="width:${percent}%"></i></span>
+      </button>
+      <button class="p5-card p5-card-friends focusable" type="button" data-action="g-ps5-friends" data-card="1" aria-label="Friends who play">
+        <span class="p5-card-icon" aria-hidden="true">${p5icon('person')}</span>
+        <span class="p5-card-copy"><strong>Friends Who Play</strong><small>${friends ? `${friends} playing now` : 'See who’s online'}</small></span>
+        <span class="p5-card-chevron" aria-hidden="true">${p5icon('chevron')}</span>
       </button>
       <button class="p5-card p5-card-captures focusable" type="button" data-action="g-ps5-captures" data-card="2" aria-label="Captures, ${esc(captureSub)}">
         <span class="p5-card-icon" aria-hidden="true">${p5icon('photo')}</span>
@@ -312,34 +347,43 @@
     if (mode) return false; // Hub, trophies and captures use the launcher's spatial focus.
     if (document.querySelector('dialog[open]')) return false;
     if (!list.length) return false;
+    const step = (items, current) => {
+      const at = Math.max(0, items.indexOf(current));
+      const next = items[Math.max(0, Math.min(items.length - 1, at + (direction === 'right' ? 1 : -1)))];
+      if (next && next !== current) { focusEl(next); play('navigate'); }
+      return true;
+    };
+    const current = document.activeElement;
+    const tile = () => host.querySelector('.p5-tile.sel');
     if (area === 'row') {
       if (direction === 'left' || direction === 'right') {
-        const next = Math.max(0, Math.min(list.length - 1, sel + (direction === 'right' ? 1 : -1)));
-        if (next === sel) return false;
+        if (current?.classList.contains('p5-tile-lib')) { if (direction === 'left') { focusEl(tile()); } return true; }
+        const next = sel + (direction === 'right' ? 1 : -1);
+        if (next >= list.length) { focusEl(host.querySelector('.p5-tile-lib')); return true; }
+        if (next < 0) return true;
         sel = next;
         applySelection();
-        focusEl(host.querySelector('.p5-tile.sel'));
+        focusEl(tile());
         return true;
       }
-      if (direction === 'up') { area = 'me'; focusEl(chrome.querySelector('.p5-me')); return true; }
-      if (direction === 'down') { area = 'cards'; focusEl(host.querySelector('.p5-card')); return true; }
+      if (direction === 'up') { area = 'top'; focusEl(chrome.querySelector('.p5-tab.on')); return true; }
+      if (direction === 'down') { area = 'actions'; focusEl(host.querySelector('.p5-play')); return true; }
       return false;
+    }
+    if (area === 'actions') {
+      if (direction === 'up') { area = 'row'; focusEl(tile()); return true; }
+      if (direction === 'down') { area = 'cards'; focusEl(host.querySelector('.p5-card')); return true; }
+      return step([...host.querySelectorAll('.p5-actions .focusable')], current);
     }
     if (area === 'cards') {
-      const cards = [...host.querySelectorAll('.p5-card.focusable')];
-      const index = Math.max(0, cards.indexOf(document.activeElement.closest?.('.p5-card')));
-      if (direction === 'up') { area = 'row'; focusEl(host.querySelector('.p5-tile.sel')); return true; }
-      if (direction === 'left' || direction === 'right') {
-        const next = cards[Math.max(0, Math.min(cards.length - 1, index + (direction === 'right' ? 1 : -1)))];
-        if (!next || next === cards[index]) return false;
-        focusEl(next);
-        return true;
-      }
-      return false;
+      if (direction === 'up') { area = 'actions'; focusEl(host.querySelector('.p5-play')); return true; }
+      if (direction === 'down') return true;
+      return step([...host.querySelectorAll('.p5-card.focusable')], current);
     }
-    if (area === 'me') {
-      if (direction === 'down') { area = 'row'; focusEl(host.querySelector('.p5-tile.sel')); return true; }
-      return false;
+    if (area === 'top' || area === 'me') {
+      if (direction === 'down') { area = 'row'; focusEl(tile()); return true; }
+      if (direction === 'up') return true;
+      return step([...chrome.querySelectorAll('.p5-tabs .focusable, .p5-status .focusable')], current);
     }
     return false;
   }
@@ -643,7 +687,14 @@
   function handleAction(action, el) {
     const index = Number(el.dataset.ps5Index);
     switch (action) {
-      case 'g-ps5-tile': if (Number.isFinite(index)) { sel = Math.max(0, Math.min(list.length - 1, index)); applySelection(); } openHub(el.dataset.gameId); return true;
+      // As on the console, pressing a game's tile starts it; its options are under "…" and the Options button.
+      case 'g-ps5-tile': if (Number.isFinite(index)) { sel = Math.max(0, Math.min(list.length - 1, index)); applySelection(); } continueGame(); return true;
+      case 'g-ps5-more': openOptions(); return true;
+      case 'g-ps5-games': return true;
+      case 'g-ps5-media': openCaptures(); return true;
+      case 'g-ps5-search': if (typeof performAction === 'function') performAction('toggle-search'); return true;
+      case 'g-ps5-settings': if (typeof openSettings === 'function') openSettings(); return true;
+      case 'g-ps5-friends': if (typeof performAction === 'function') performAction('g-friends'); return true;
       case 'g-ps5-me': openControlCenter(); return true;
       case 'g-ps5-continue': continueGame(); return true;
       case 'g-ps5-trophies': openTrophies(list[sel]?.id, ''); return true;
@@ -697,7 +748,8 @@
       return;
     }
     if (event.target.closest?.('.p5-card')) { area = 'cards'; return; }
-    if (event.target.closest?.('.p5-me')) { area = 'me'; return; }
+    if (event.target.closest?.('.p5-actions')) { area = 'actions'; return; }
+    if (event.target.closest?.('#g-ps5-chrome')) { area = 'top'; return; }
   });
 
   if (typeof renderRecentGames === 'function') {

@@ -318,15 +318,77 @@ html.reduce-motion #startup-screen .g-m-p5-mark { opacity: 1; }
 }
 
 
-/* ---------- Performance ----------
-   The ambient art is blurred on a quarter-size layer scaled up 4x: it looks the same and costs a sixteenth of a
-   full-screen 60 px blur. It no longer drifts, so the blur is drawn once per selection instead of every frame,
-   and the dust is still. Cards use a solid tint instead of a live backdrop blur over the moving art. */
-#g-ps5 .p5-amb {
-  inset: auto; left: -2%; top: -2%; width: 26%; height: 26%; transform-origin: 0 0; transform: scale(4.1);
-  filter: blur(calc(15 * var(--cpx))) saturate(.92) brightness(.52);
-}
+/* ---------- Home, 2020 layout ----------
+   The selected game's own key art fills the screen, sharp, under a soft shade on the left and bottom. A low row of
+   square tiles runs across the top with the selected one first and a little larger, its name beside it; the game's
+   logo, play time and Play Game sit on the left, its cover on the right, and the Activity Cards peek in at the
+   bottom. Nothing is blurred live, so the screen only repaints when the selection changes. */
+#g-ps5 .p5-amb { inset: 0; width: auto; height: auto; left: 0; top: 0; transform: none; filter: brightness(.86) saturate(1.04); background-position: center 30%; }
 #g-ps5 .p5-amb.on { animation: none; }
-#g-ps5 .p5-dust, #g-ps5 .p5-dust::after { animation: none; }
-#g-ps5 .p5-card { backdrop-filter: none; background: rgba(18, 24, 36, .8); }
-#g-ps5-overlay .p5-cc { backdrop-filter: none; background: rgba(14, 18, 26, .96); }
+#g-ps5 .p5-dust, #g-ps5 .p5-grain { display: none; }
+#g-ps5 .p5-hero-shade {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(4, 8, 18, .78), rgba(4, 8, 18, .38) 30%, rgba(4, 8, 18, 0) 58%),
+    linear-gradient(180deg, rgba(3, 6, 14, .72), rgba(3, 6, 14, .1) 30%, rgba(3, 6, 14, 0) 62%, rgba(3, 6, 14, .82));
+}
+/* Row */
+#g-ps5 .p5-row-wrap { position: absolute; left: 0; right: 0; top: calc(108 * var(--cpx)); height: calc(200 * var(--cpx)); z-index: 3; }
+#g-ps5 .p5-row {
+  left: calc(150 * var(--cpx)); top: 0; gap: calc(14 * var(--cpx)); align-items: flex-start; transform: translateX(calc(var(--p5-sel, 0) * -164 * var(--cpx)));
+  transition: transform .22s cubic-bezier(.2, .9, .2, 1);
+}
+#g-ps5 .p5-tile { width: calc(150 * var(--cpx)); height: calc(150 * var(--cpx)); border-radius: calc(12 * var(--cpx)); opacity: 1; transform: none; transform-origin: 0 0; box-shadow: 0 calc(6 * var(--cpx)) calc(16 * var(--cpx)) rgba(0, 0, 0, .45); }
+#g-ps5 .p5-tile:hover { transform: none; }
+#g-ps5 .p5-tile.sel { width: calc(176 * var(--cpx)); height: calc(176 * var(--cpx)); margin-right: calc(4 * var(--cpx)); transform: none; box-shadow: 0 calc(8 * var(--cpx)) calc(22 * var(--cpx)) rgba(0, 0, 0, .55); }
+#g-ps5 .p5-tile.sel:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(22 * var(--cpx)) rgba(255, 255, 255, .45), 0 calc(8 * var(--cpx)) calc(22 * var(--cpx)) rgba(0, 0, 0, .55); }
+#g-ps5 .p5-tile-lib { display: grid; place-items: center; background: rgba(20, 26, 38, .82); }
+#g-ps5 .p5-tile-lib .p5-tile-art { position: static; display: grid; place-items: center; width: calc(56 * var(--cpx)); height: calc(56 * var(--cpx)); background: none; }
+#g-ps5 .p5-tile-lib svg { width: 100%; height: 100%; }
+#g-ps5 .p5-tile-lib:is(.focused, :focus-visible) { box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(22 * var(--cpx)) rgba(255, 255, 255, .45); }
+#g-ps5 .p5-row-title {
+  position: absolute; left: calc(346 * var(--cpx)); top: calc(160 * var(--cpx)); max-width: calc(700 * var(--cpx)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: calc(22 * var(--cpx)); font-weight: 400; color: #fff; text-shadow: 0 1px calc(8 * var(--cpx)) rgba(0, 0, 0, .7); pointer-events: none;
+}
+/* Feature: logo, line, Play Game and options */
+#g-ps5 .p5-feature { position: absolute; z-index: 3; left: calc(150 * var(--cpx)); top: calc(470 * var(--cpx)); width: calc(720 * var(--cpx)); }
+#g-ps5 .p5-logo-box { display: flex; align-items: flex-end; height: calc(230 * var(--cpx)); }
+#g-ps5 .p5-logo { display: block; max-width: calc(560 * var(--cpx)); max-height: calc(230 * var(--cpx)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 calc(4 * var(--cpx)) calc(18 * var(--cpx)) rgba(0, 0, 0, .55)); }
+#g-ps5 .p5-logo[hidden] { display: none; }
+#g-ps5 .p5-title {
+  position: static; width: auto; max-width: 100%; transform: none; text-align: left; white-space: normal; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: calc(62 * var(--cpx)); font-weight: 600; line-height: 1.05;
+}
+#g-ps5.p5-has-logo .p5-title { display: none; }
+#g-ps5 .p5-title-wrap { display: none; }
+#g-ps5 .p5-subtitle { position: static; margin: calc(16 * var(--cpx)) 0 0; text-align: left; font-size: calc(22 * var(--cpx)); font-weight: 400; color: rgba(255, 255, 255, .9); text-shadow: 0 1px calc(8 * var(--cpx)) rgba(0, 0, 0, .6); }
+#g-ps5 .p5-actions { display: flex; align-items: center; gap: calc(16 * var(--cpx)); margin-top: calc(34 * var(--cpx)); }
+#g-ps5 .p5-play {
+  min-width: calc(330 * var(--cpx)); height: calc(70 * var(--cpx)); padding: 0 calc(36 * var(--cpx)); border: 0; border-radius: calc(35 * var(--cpx));
+  background: rgba(255, 255, 255, .2); color: #fff; font-size: calc(24 * var(--cpx)); font-weight: 500; cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+#g-ps5 .p5-more { display: grid; place-items: center; width: calc(70 * var(--cpx)); height: calc(70 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .2); color: #fff; cursor: pointer; }
+#g-ps5 .p5-more svg { width: calc(30 * var(--cpx)); height: calc(30 * var(--cpx)); }
+#g-ps5 :is(.p5-play, .p5-more):is(.focused, :focus-visible) { background: #fff; color: #0b0d12; box-shadow: 0 0 calc(30 * var(--cpx)) rgba(255, 255, 255, .45); }
+/* Cover, right */
+#g-ps5 .p5-side { position: absolute; z-index: 3; right: calc(130 * var(--cpx)); top: calc(490 * var(--cpx)); width: calc(300 * var(--cpx)); }
+#g-ps5 .p5-side-cover { display: block; width: 100%; aspect-ratio: 1; border-radius: calc(10 * var(--cpx)); background: #111 center / cover no-repeat; box-shadow: 0 calc(14 * var(--cpx)) calc(36 * var(--cpx)) rgba(0, 0, 0, .55); }
+#g-ps5 .p5-side-time { position: absolute; right: 0; top: calc(100% + 30 * var(--cpx)); padding: calc(8 * var(--cpx)) calc(16 * var(--cpx)); border-radius: calc(20 * var(--cpx)); background: rgba(0, 0, 0, .55); font-size: calc(19 * var(--cpx)); }
+#g-ps5 .p5-side-time[hidden] { display: none; }
+/* Activity Cards peek in at the bottom; they rise when focused. */
+#g-ps5 .p5-cards { left: calc(150 * var(--cpx)); top: auto; bottom: calc(-46 * var(--cpx)); transform: none; z-index: 3; transition: bottom .22s cubic-bezier(.2, .9, .2, 1); }
+#g-ps5 .p5-cards:focus-within { bottom: calc(40 * var(--cpx)); }
+#g-ps5 .p5-card { width: calc(420 * var(--cpx)); height: calc(130 * var(--cpx)); backdrop-filter: none; background: rgba(14, 18, 28, .86); }
+#g-ps5 .p5-card:is(.focused, :focus-visible) { transform: none; }
+/* Top bar */
+#g-ps5-chrome .p5-tabs { position: fixed; z-index: 6; top: calc(40 * var(--cpx)); left: calc(150 * var(--cpx)); display: flex; gap: calc(44 * var(--cpx)); }
+#g-ps5-chrome .p5-tab { padding: calc(6 * var(--cpx)) calc(2 * var(--cpx)); border: 0; border-radius: calc(6 * var(--cpx)); background: none; color: rgba(255, 255, 255, .7); font-size: calc(30 * var(--cpx)); font-weight: 400; cursor: pointer; text-shadow: 0 1px calc(8 * var(--cpx)) rgba(0, 0, 0, .6); }
+#g-ps5-chrome .p5-tab.on { color: #fff; }
+#g-ps5-chrome .p5-tab:is(.focused, :focus-visible) { outline: none; box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff; }
+#g-ps5-chrome .p5-status { top: calc(34 * var(--cpx)); right: calc(80 * var(--cpx)); gap: calc(26 * var(--cpx)); }
+#g-ps5-chrome .p5-top-icon { display: grid; place-items: center; width: calc(52 * var(--cpx)); height: calc(52 * var(--cpx)); padding: 0; border: 0; border-radius: 50%; background: none; color: #fff; cursor: pointer; }
+#g-ps5-chrome .p5-top-icon svg { width: calc(32 * var(--cpx)); height: calc(32 * var(--cpx)); }
+#g-ps5-chrome .p5-top-icon:is(.focused, :focus-visible) { background: #fff; color: #0b0d12; }
+#g-ps5-chrome .p5-me { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); }
+#g-ps5-chrome .p5-clock { font-size: calc(30 * var(--cpx)); font-weight: 400; }
+#g-ps5-chrome .p5-chrome-hints { display: none; }
