@@ -1,0 +1,91 @@
+/* First-run setup (garrison.js renderOnboarding), laid out like a console's own: the chosen dashboard softly fills
+   the screen behind, the step's title and copy sit on the left, a large live preview on the right, every dashboard
+   in a row along the bottom, then button hints, the step count and the next button. Sizes follow --p. */
+body.garrison dialog.g-onboarding { background: #07090c; }
+body.garrison dialog.g-onboarding .g-onboard-stage {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; place-items: stretch; height: 100%;
+  padding: calc(3.4 * var(--p)) calc(6 * var(--p)) calc(2.6 * var(--p)); overflow: hidden; animation: ob-in .45s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes ob-in { from { opacity: 0; transform: translateX(calc(2 * var(--p))); } to { opacity: 1; transform: none; } }
+.g-onboard-stage > * { position: relative; z-index: 1; }
+.g-onboard-dots { display: none; }
+
+/* Backdrop: the dashboard you're looking at, blurred once (it never moves) under a dark veil. */
+.ob-backdrop { position: absolute !important; inset: 0; z-index: 0 !important; overflow: hidden; }
+.ob-backdrop img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; opacity: 0; filter: blur(36px) saturate(1.2) brightness(.55); transition: opacity .6s ease; }
+.ob-backdrop img.on { opacity: 1; }
+.ob-backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4, 6, 10, .88), rgba(4, 6, 10, .55) 46%, rgba(4, 6, 10, .3)), linear-gradient(180deg, rgba(4, 6, 10, 0) 55%, rgba(4, 6, 10, .85)); }
+
+.ob-top { display: flex; align-items: center; gap: calc(1 * var(--p)); font: 600 calc(1.3 * var(--p)) / 1 var(--g-font); letter-spacing: .02em; color: rgba(255, 255, 255, .9); }
+.ob-top img { width: calc(2.6 * var(--p)); height: calc(2.6 * var(--p)); }
+
+.ob-main { display: grid; grid-template-columns: minmax(0, 36fr) minmax(0, 64fr); gap: calc(5 * var(--p)); align-items: center; min-height: 0; padding: calc(2 * var(--p)) 0; }
+.ob-copy { display: grid; align-content: center; gap: calc(1.4 * var(--p)); text-align: left; }
+.ob-eyebrow { font: 600 calc(1.1 * var(--p)) / 1 var(--g-font); letter-spacing: .18em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
+.g-onboard-stage .ob-copy h1 { margin: 0; font: 600 calc(4.6 * var(--p)) / 1.05 var(--g-display, var(--g-font)); letter-spacing: -.02em; }
+.g-onboard-stage .ob-copy p { margin: 0; max-width: calc(40 * var(--p)); font-size: calc(1.55 * var(--p)); line-height: 1.5; color: rgba(255, 255, 255, .8); }
+.g-onboard-stage .ob-copy .ob-note { font-size: calc(1.2 * var(--p)); color: rgba(255, 255, 255, .55); }
+.ob-player { display: inline-flex; align-items: center; gap: calc(1.2 * var(--p)); justify-self: start; margin-top: calc(1.2 * var(--p)); padding: calc(.7 * var(--p)) calc(.8 * var(--p)) calc(.7 * var(--p)) calc(.7 * var(--p)); border-radius: calc(4 * var(--p)); background: rgba(255, 255, 255, .08); }
+.ob-avatar { display: block; width: calc(4.6 * var(--p)); height: calc(4.6 * var(--p)); overflow: hidden; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, .2); }
+.ob-avatar > * { width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 50%; }
+.ob-player small { display: block; font-size: calc(1.05 * var(--p)); color: rgba(255, 255, 255, .6); }
+.ob-player strong { font: 600 calc(1.6 * var(--p)) / 1.2 var(--g-font); }
+.ob-link { height: calc(3.6 * var(--p)); padding: 0 calc(1.8 * var(--p)); border: 0; border-radius: calc(1.8 * var(--p)); background: rgba(255, 255, 255, .14); color: #fff; font: 600 calc(1.2 * var(--p)) / 1 var(--g-font); cursor: pointer; }
+
+/* Right: the live preview and the pack offer under it. */
+.ob-stagearea { display: grid; gap: calc(1.4 * var(--p)); align-content: center; min-height: 0; }
+.ob-preview { position: relative; margin: 0; overflow: hidden; aspect-ratio: 16 / 9; border-radius: calc(1.2 * var(--p)); background: #111; box-shadow: 0 calc(2 * var(--p)) calc(5 * var(--p)) rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .12); }
+.ob-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ob-preview figcaption { position: absolute; inset: auto 0 0 0; display: grid; gap: calc(.3 * var(--p)); padding: calc(5 * var(--p)) calc(2 * var(--p)) calc(1.6 * var(--p)); background: linear-gradient(transparent, rgba(0, 0, 0, .82)); text-align: left; }
+.ob-preview strong { font: 600 calc(2.2 * var(--p)) / 1.1 var(--g-font); }
+.ob-preview em { font-style: normal; font-size: calc(1.15 * var(--p)); letter-spacing: .06em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+.ob-preview small { font-size: calc(1.25 * var(--p)); line-height: 1.4; color: rgba(255, 255, 255, .85); }
+.ob-pack { position: relative; display: flex; align-items: center; gap: calc(1.6 * var(--p)); padding: calc(1.2 * var(--p)) calc(1.4 * var(--p)); overflow: hidden; border-radius: calc(1 * var(--p)); background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.ob-pack-copy { flex: 1; min-width: 0; text-align: left; }
+.ob-pack-copy strong { display: block; font: 600 calc(1.45 * var(--p)) / 1.25 var(--g-font); }
+.ob-pack-copy small { display: block; margin-top: calc(.2 * var(--p)); font-size: calc(1.15 * var(--p)); color: rgba(255, 255, 255, .65); }
+.ob-pack-button { display: inline-flex; align-items: center; gap: calc(.6 * var(--p)); flex: none; height: calc(4 * var(--p)); padding: 0 calc(2.2 * var(--p)); border: 0; border-radius: calc(2 * var(--p)); background: #fff; color: #0b0d12; font: 600 calc(1.3 * var(--p)) / 1 var(--g-font); cursor: pointer; }
+.ob-pack-button svg { width: calc(1.6 * var(--p)); height: calc(1.6 * var(--p)); }
+.ob-pack.done .ob-pack-button, .ob-pack.busy .ob-pack-button { background: rgba(255, 255, 255, .16); color: #fff; cursor: default; }
+.ob-pack-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; background: rgba(255, 255, 255, .12); }
+.ob-pack-bar b { position: absolute; top: 0; bottom: 0; width: 30%; background: #fff; animation: ob-bar 1.2s ease-in-out infinite; }
+@keyframes ob-bar { from { left: -30%; } to { left: 100%; } }
+
+/* Bottom: every dashboard in one row. */
+.ob-strip { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(1 * var(--p)); padding: calc(.6 * var(--p)) 0 calc(1.6 * var(--p)); }
+.ob-card { position: relative; display: grid; gap: calc(.6 * var(--p)); padding: 0; border: 0; background: none; color: rgba(255, 255, 255, .75); text-align: left; cursor: pointer; }
+.ob-card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: calc(.6 * var(--p)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); transition: transform .18s cubic-bezier(.2, .8, .2, 1); }
+.ob-card span { font: 600 calc(1.15 * var(--p)) / 1.2 var(--g-font); }
+.ob-card.on { color: #fff; }
+.ob-card.on img { box-shadow: 0 0 0 calc(.25 * var(--p)) #fff; }
+.ob-card.on span::after { content: " ✓"; }
+.ob-card:is(.focused, :focus-visible) { outline: none; color: #fff; }
+.ob-card:is(.focused, :focus-visible) img { transform: translateY(calc(-.5 * var(--p))) scale(1.06); box-shadow: 0 0 0 calc(.3 * var(--p)) #fff, 0 calc(1 * var(--p)) calc(2.4 * var(--p)) rgba(0, 0, 0, .55); }
+
+/* Step 2: the launcher switches in two columns. */
+.ob-services.g-onboard-services { margin: 0; max-height: 100%; overflow: auto; scrollbar-width: none; }
+
+/* Footer: hints, step count, next. */
+.ob-foot { display: flex; align-items: center; gap: calc(2.4 * var(--p)); padding-top: calc(1.4 * var(--p)); border-top: 1px solid rgba(255, 255, 255, .1); }
+.ob-hints { display: flex; gap: calc(2 * var(--p)); font-size: calc(1.2 * var(--p)); color: rgba(255, 255, 255, .75); }
+.ob-hints span { display: inline-flex; align-items: center; gap: calc(.6 * var(--p)); }
+.ob-hints kbd { background: none; border: 0; padding: 0; color: #fff; }
+.ob-hints .g-glyph { font-size: calc(1.8 * var(--p)); }
+.ob-count { margin-left: auto; font-size: calc(1.2 * var(--p)); color: rgba(255, 255, 255, .6); }
+.ob-next.g-onboard-primary { min-width: calc(20 * var(--p)); height: calc(4.8 * var(--p)); border-radius: calc(2.4 * var(--p)); background: #fff; color: #0b0d12; font: 600 calc(1.5 * var(--p)) / 1 var(--g-font); }
+.ob-next.g-onboard-primary:hover { background: #e9edf2; }
+.g-onboard-stage :is(.ob-next, .ob-link, .ob-pack-button):is(.focused, :focus-visible) { outline: none; box-shadow: 0 0 0 calc(.25 * var(--p)) #0b0d12, 0 0 0 calc(.5 * var(--p)) #fff; }
+html.reduce-motion .g-onboard-stage, html.reduce-motion .g-onboard-stage * { animation: none !important; transition: none !important; }
+.g-onboard-stage .ob-card:is(.focused, :focus-visible) { box-shadow: none !important; background: none !important; }
+.g-onboard-stage .ob-card:is(.focused, :focus-visible)::before, .g-onboard-stage .ob-card:is(.focused, :focus-visible)::after { display: none !important; }
+/* Step 2: compact switches so all eight fit. */
+.ob-services .g-onboard-service { min-height: calc(6 * var(--p)); padding-top: calc(.6 * var(--p)); padding-bottom: calc(.6 * var(--p)); }
+.ob-services .g-onboard-service small { font-size: calc(1.1 * var(--p)); line-height: 1.3; }
+.ob-services .g-onboard-service strong { font-size: calc(1.4 * var(--p)); }
+.ob-services .g-onboard-service img, .ob-services .g-onboard-service .g-onboard-mark { width: calc(3.2 * var(--p)); height: calc(3.2 * var(--p)); }
+.g-onboard-stage .ob-card, .g-onboard-stage .ob-card:is(.focused, :focus-visible) { outline: none !important; border: 0 !important; }
+/* The preview shrinks to make room for the pack offer, so nothing overlaps the row of dashboards. */
+.ob-stagearea { justify-items: end; }
+.ob-preview { width: 100%; max-height: 44vh; max-width: calc(44vh * 16 / 9); }
+.ob-pack { width: 100%; max-width: calc(44vh * 16 / 9); box-sizing: border-box; }
+.g-onboard-stage .ob-card { --g-ring: none; }

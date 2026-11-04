@@ -559,6 +559,48 @@ function gOnboardServicesMarkup() {
   const steamOn = gOnboard.sources.find(item => item.id === 'steam')?.enabled;
   return gOnboard.sources.filter(item => item.id !== 'steam-family' || steamOn).map(gOnboardService).join('');
 }
+// The setup screens, laid out like a console's first-run: the step's title and a line on the left, the content on
+// the right, button hints and the step count along the bottom. Screen 1 previews each dashboard full size as you
+// move along the row of dashboards, and offers that dashboard's console pack when it has one.
+const gOnboardPack = { list: null, busy: '', status: '', error: '' };
+function gOnboardThemeId() { return (typeof window.gTheme === 'function' && window.gTheme()) || 'helix'; }
+function gOnboardTheme(id) { return (window.gThemes || []).find(theme => theme.id === id) || { id, name: id, era: '', blurb: '' }; }
+function gOnboardPackFor(id) { return (gOnboardPack.list || []).find(pack => pack.console === id && (pack.sources || []).length) || null; }
+function gOnboardPackMarkup(id) {
+  const pack = gOnboardPackFor(id);
+  if (!pack) return '';
+  const busy = gOnboardPack.busy === pack.id;
+  const done = pack.found && !busy;
+  const label = done ? 'Installed' : busy ? (gOnboardPack.status || 'Getting ready…') : 'Download';
+  return `<div class="ob-pack${done ? ' done' : ''}${busy ? ' busy' : ''}">
+    <span class="ob-pack-copy"><strong>Original ${escapeHtml(pack.name)} look</strong><small>${escapeHtml(gOnboardPack.error || (done ? 'Icons, fonts and sounds are installed.' : 'Icons, fonts and sounds from the community project, downloaded to this PC.'))}</small></span>
+    <button class="ob-pack-button focusable" type="button" data-action="g-onboard-pack" data-pack="${escapeHtml(pack.id)}"${done || busy ? ' disabled' : ''}>${done ? gIcon('check') : ''}<span>${label}</span></button>
+    ${busy ? '<i class="ob-pack-bar"><b></b></i>' : ''}
+  </div>`;
+}
+function gOnboardPreview(id) {
+  const theme = gOnboardTheme(id);
+  const stage = onboardingDialog.querySelector('.g-onboard-stage');
+  if (!stage || gOnboard.step !== 0) return;
+  stage.querySelector('.ob-preview img')?.setAttribute('src', `assets/theme-previews/${id}.webp`);
+  const back = stage.querySelector('.ob-backdrop');
+  if (back && back.dataset.theme !== id) {
+    back.dataset.theme = id;
+    back.insertAdjacentHTML('beforeend', `<img src="assets/theme-previews/${id}.webp" alt="" />`);
+    const layers = back.querySelectorAll('img');
+    requestAnimationFrame(() => layers[layers.length - 1]?.classList.add('on'));
+    [...layers].slice(0, -2).forEach(layer => layer.remove());
+  }
+  const name = stage.querySelector('.ob-theme-name'), era = stage.querySelector('.ob-theme-era'), blurb = stage.querySelector('.ob-theme-blurb');
+  if (name) name.textContent = theme.name;
+  if (era) era.textContent = theme.era;
+  if (blurb) blurb.textContent = theme.blurb;
+  const packSlot = stage.querySelector('.ob-pack-slot');
+  if (packSlot) {
+    const markup = gOnboardPackMarkup(id);
+    if (packSlot.dataset.for !== id || packSlot.dataset.markup !== markup) { packSlot.dataset.for = id; packSlot.dataset.markup = markup; packSlot.innerHTML = markup; refreshFocusables(); }
+  }
+}
 function renderOnboarding(focus = true) {
   const stage = onboardingDialog.querySelector('.g-onboard-stage');
   const step = gOnboard.step;
@@ -566,16 +608,69 @@ function renderOnboarding(focus = true) {
   // The picture you chose wins; otherwise the Steam picture.
   const chosen = selectedAvatarId && selectedAvatarId !== 'steam-profile';
   const avatar = !chosen && gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
+  const current = gOnboardThemeId();
+  const hints = (next) => `<footer class="ob-foot"><span class="ob-hints"><span><kbd data-g-role="confirm"></kbd>Select</span>${step ? '<span><kbd data-g-role="back"></kbd>Back</span>' : ''}</span>
+    <span class="ob-count">${step + 1} of 2</span>${next}</footer>`;
   stage.dataset.step = String(step);
-  // garrison-themes.js adds the dashboard picker above the primary button of step 0.
-  stage.innerHTML = step === 0
-    ? `<div class="g-onboard-hero"><img class="g-onboard-logo" src="assets/omnidash.svg" alt="" /><h1>Welcome to OmniDash</h1><p>Every game on this PC, from every launcher, in one home.</p>
-        <div class="g-onboard-player"><span class="g-onboard-avatar">${avatar}</span><span><small>Playing as</small><strong>${escapeHtml(name)}</strong></span><button class="g-onboard-secondary focusable" type="button" data-action="g-onboard-rename">Change</button></div>
-        <button class="g-onboard-primary focusable" type="button" data-action="g-onboard-next">Continue</button></div>${gOnboardDots(0)}`
-    : `<div class="g-onboard-panel g-onboard-wide"><h1>Bring your games</h1><p>Installed games from every launcher are added automatically. Switch a launcher on to also include games you own but haven't installed.</p><div class="g-onboard-services">${gOnboardServicesMarkup()}</div><div class="g-onboard-actions"><button class="g-onboard-primary focusable" type="button" data-action="g-onboard-finish">Let's go</button></div><p class="g-onboard-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p></div>${gOnboardDots(1)}`;
+  stage.innerHTML = `<div class="ob-backdrop" aria-hidden="true" data-theme="${current}"><img class="on" src="assets/theme-previews/${current}.webp" alt="" /></div>
+    <header class="ob-top"><img src="assets/omnidash.svg" alt="" /><span>OmniDash</span></header>
+    ${step === 0 ? `
+    <section class="ob-main">
+      <div class="ob-copy">
+        <span class="ob-eyebrow">Set up</span>
+        <h1>Choose your dashboard</h1>
+        <p>Every game on this PC, from every launcher, in one home. Pick the console you want it to feel like; you can change it any time.</p>
+        <div class="ob-player"><span class="ob-avatar">${avatar}</span><span><small>Playing as</small><strong>${escapeHtml(name)}</strong></span><button class="ob-link focusable" type="button" data-action="g-onboard-rename">Change</button></div>
+      </div>
+      <div class="ob-stagearea">
+        <figure class="ob-preview"><img src="assets/theme-previews/${current}.webp" alt="" /><figcaption><strong class="ob-theme-name"></strong><em class="ob-theme-era"></em><small class="ob-theme-blurb"></small></figcaption></figure>
+        <div class="ob-pack-slot"></div>
+      </div>
+    </section>
+    <nav class="ob-strip" role="radiogroup" aria-label="Dashboards">${(window.gThemes || []).map(theme => `<button class="ob-card focusable${theme.id === current ? ' on' : ''}" type="button" role="radio" aria-checked="${theme.id === current}" data-g-theme-pick="${theme.id}" aria-label="${escapeHtml(`${theme.name}, ${theme.era}`)}"><img src="assets/theme-previews/${theme.id}.webp" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(theme.name)}</span></button>`).join('')}</nav>
+    ${hints('<button class="ob-next focusable g-onboard-primary" type="button" data-action="g-onboard-next">Continue</button>')}` : `
+    <section class="ob-main">
+      <div class="ob-copy">
+        <span class="ob-eyebrow">Set up</span>
+        <h1>Bring your games</h1>
+        <p>Installed games from every launcher are added automatically. Switch a launcher on to also include games you own but haven't installed.</p>
+        <p class="ob-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p>
+      </div>
+      <div class="ob-stagearea"><div class="g-onboard-services ob-services">${gOnboardServicesMarkup()}</div></div>
+    </section>
+    ${hints('<button class="ob-next focusable g-onboard-primary" type="button" data-action="g-onboard-finish">Let\'s go</button>')}`}`;
+  if (step === 0) {
+    gOnboardPreview(current);
+    if (!gOnboardPack.list && window.launcher?.getThemePacks) window.launcher.getThemePacks().then(result => { gOnboardPack.list = result?.packs || []; gOnboardPreview(gOnboardThemeId()); }).catch(() => { gOnboardPack.list = []; });
+  }
   refreshFocusables();
-  if (focus) setFocusedElement(stage.querySelector('.g-onboard-primary') || stage.querySelector('.focusable'), { scroll: false });
+  if (focus) setFocusedElement(step === 0 ? (stage.querySelector('.ob-card.on') || stage.querySelector('.ob-next')) : stage.querySelector('.ob-next'), { scroll: false });
 }
+// Moving along the row previews that dashboard; pressing it picks it (garrison-themes.js applies the theme).
+// The controller moves focus by class rather than with focus events, so the row is watched for it.
+new MutationObserver(() => {
+  const card = onboardingDialog.querySelector('.ob-card.focused');
+  if (card && onboardingDialog.dataset.obFocus !== card.dataset.gThemePick) { onboardingDialog.dataset.obFocus = card.dataset.gThemePick; gOnboardPreview(card.dataset.gThemePick); }
+}).observe(onboardingDialog, { subtree: true, attributes: true, attributeFilter: ['class'] });
+onboardingDialog.addEventListener('focusin', event => {
+  const card = event.target.closest?.('.ob-card');
+  if (card) gOnboardPreview(card.dataset.gThemePick);
+});
+document.addEventListener('click', event => {
+  const card = event.target.closest?.('.ob-card');
+  if (!card || !onboardingDialog.open) return;
+  setTimeout(() => {
+    for (const other of onboardingDialog.querySelectorAll('.ob-card')) { const on = other === card; other.classList.toggle('on', on); other.setAttribute('aria-checked', String(on)); }
+    gOnboardPreview(card.dataset.gThemePick);
+  }, 0);
+});
+window.launcher?.onThemePackProgress?.(progress => {
+  if (!gOnboardPack.busy || !onboardingDialog.open) return;
+  const part = progress.parts > 1 ? ` · part ${progress.part} of ${progress.parts}` : '';
+  if (progress.phase === 'download') gOnboardPack.status = `Downloading ${Math.max(1, Math.round((progress.received || 0) / 1048576))} MB${part}`;
+  else if (progress.phase === 'unpack' || progress.phase === 'place') gOnboardPack.status = `Installing${part}`;
+  gOnboardPreview(gOnboardThemeId());
+});
 showOnboardingStep = function (step) {
   gOnboard.step = Math.max(0, Math.min(1, step));
   state.onboardingStep = gOnboard.step;
@@ -611,6 +706,21 @@ window.launcher.onConnectionProgress(data => {
 
 const gOnboardActions = {
   'g-onboard-next': () => showOnboardingStep(gOnboard.step + 1),
+  'g-onboard-pack': async source => {
+    const id = source.dataset.pack;
+    if (!id || gOnboardPack.busy) return;
+    gOnboardPack.busy = id; gOnboardPack.status = ''; gOnboardPack.error = '';
+    gOnboardPreview(gOnboardThemeId());
+    try {
+      const result = await window.launcher.installThemePack(id);
+      if (result?.demo) gOnboardPack.error = 'Packs are not downloaded in demo mode.';
+      gOnboardPack.list = (await window.launcher.getThemePacks().catch(() => null))?.packs || gOnboardPack.list;
+      if (!result?.demo) showToast('Console pack installed');
+    } catch (error) { gOnboardPack.error = String(error?.message || 'The download did not finish. Try again in Settings.').replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); }
+    gOnboardPack.busy = '';
+    gOnboardPreview(gOnboardThemeId());
+    setFocusedElement(onboardingDialog.querySelector('.ob-next'), { scroll: false });
+  },
   'g-onboard-noop': () => {},
   'g-onboard-toggle': async source => {
     const id = source.dataset.service;
