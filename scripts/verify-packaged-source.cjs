@@ -24,16 +24,5 @@ for (const [name, version] of Object.entries(expected.dependencies || {})) {
   assert.ok(asar.extractFile(archive, path.join('node_modules', name, dependency.main)).length, `Dependency entry point missing: ${name}`);
 }
 assert.ok(!entries.some(file => /interface-sounds\.json|local-settings\.json|\.visual-review|DashX|\.(wav|mp3)$/i.test(file)), 'A private settings/reference/sound file was packaged');
-if (expected.build.extraResources?.some(item => item.to === 'streamlight')) {
-  const component = path.join(path.dirname(archive), 'streamlight');
-  const manifest = JSON.parse(fs.readFileSync(path.join(component, 'runtime-manifest.json'), 'utf8'));
-  const staged = JSON.parse(fs.readFileSync(path.join(root, '.packaging-staging', 'streamlight', 'runtime-manifest.json'), 'utf8'));
-  assert.deepEqual(manifest, staged, 'Packaged streaming component is stale');
-  assert.equal(manifest.version, '7.0.0');
-  for (const [name, hash] of Object.entries(manifest.files)) {
-    assert(!/StreamLight\.ini|hosts\.json|portable\.dat|engine-profile/i.test(name), 'A private streaming profile was bundled');
-    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(component, name))).digest('hex'), hash, `Streaming runtime mismatch: ${name}`);
-  }
-  console.log(`PASS: ${Object.keys(manifest.files).length} streaming runtime files match the prepared hashes; no private pairing profile bundled.`);
-}
+// The Windows helper (resources/native/WindowsShell.exe) is a single small file; nothing to verify.
 console.log(`PASS: ${sources.length} packaged source files exactly match the workspace; no private settings or sound recordings bundled.`);

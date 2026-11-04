@@ -140,9 +140,10 @@ Builds are not code-signed yet, so Windows SmartScreen may warn on first run. Ch
 **From source** — Node.js 22.5 or newer:
 
 ```powershell
-npm install
-npm run prepare:streaming
-npm start
+corepack enable pnpm
+pnpm install
+pnpm run prepare:native
+pnpm start
 ```
 
 Run `npm test` for the full suites and `npm run test:unit` for the ones that need no Electron runtime. Build with `npm run dist` (installer) or `npm run dist:portable`. Developer notes are in [docs/HANDOVER-themes.md](docs/HANDOVER-themes.md).
@@ -175,7 +176,6 @@ Everything it knows lives under `%APPDATA%\xbox-preview-ui`: settings, library s
 - Artwork and metadata from the Xbox Store, Steam, SteamGridDB and the store pages you open.
 - Update checks against GitHub Releases.
 - A console pack, only when you press **Install**, downloaded from that project's public repository.
-- Remote play, on your own network.
 - Steam sign-in and store pages, in their own sandboxed web sessions.
 
 Optional Steam and SteamGridDB keys are stored locally and sent only to the service they belong to. Nothing is sent to OmniDash itself, because there is nowhere to send it.
@@ -256,10 +256,10 @@ OmniDash's themes are original recreations; the optional packs come from these p
 - **Wii.JS** by [andrewplus](https://github.com/andrewplus/Wii.JS) — channel frames, pointer and sounds (GPL-3).
 - **Liink** by [aica7](https://github.com/aica7/Liink) — Rodin fonts (GPL-2).
 
-Remote play bundles the unmodified [StreamLight 7.0.0 runtime](https://github.com/FoggyBytes/StreamLight/tree/v7.0.0), based on Moonlight, under [GPL v3](src/remote-play/LICENSE.StreamLight). Launcher brand symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons) (CC0). System icons use Windows' Segoe MDL2 Assets.
+The PS5 theme uses [Source Sans 3](https://github.com/adobe-fonts/source-sans) (SIL Open Font License). Launcher brand symbols are from [Simple Icons](https://github.com/simple-icons/simple-icons) (CC0). System icons use Windows' Segoe MDL2 Assets.
 
 Xbox, Xbox Game Pass and Microsoft; PlayStation, PS3, PS4, PS5 and XMB; Wii, Nintendo 3DS and Nintendo; Steam; and all game names, logos and artwork belong to their respective owners. Nothing here implies sponsorship, approval or affiliation.
 
 ## License
 
-OmniDash's own code is **MIT** — see [LICENSE](LICENSE). The bundled StreamLight runtime in `src/remote-play/` remains under **GPL v3** and keeps its own licence file. Console and game assets are not covered by either: they belong to their owners, and the optional packs keep their own licences.
+OmniDash's own code is **MIT** — see [LICENSE](LICENSE). Console and game assets are not covered by either: they belong to their owners, and the optional packs keep their own licences.

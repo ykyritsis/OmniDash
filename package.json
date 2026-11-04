@@ -1,6 +1,6 @@
 {
   "name": "xbox-preview-ui",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "description": "OmniDash — a controller-first Windows game launcher with console-inspired themes.",
   "main": "src/main.cjs",
@@ -14,9 +14,9 @@
     "profile:startup": "electron scripts/startup-profile.cjs",
     "profile:startup:stalls": "electron scripts/startup-stalls-profile.cjs",
     "profile:startup:cold": "electron scripts/startup-cold-profile.cjs",
-    "prepare:streaming": "node scripts/prepare-streaming.cjs",
-    "predist": "node scripts/prepare-streaming.cjs",
-    "predist:portable": "node scripts/prepare-streaming.cjs",
+    "prepare:native": "node scripts/prepare-native.cjs",
+    "predist": "node scripts/prepare-native.cjs",
+    "predist:portable": "node scripts/prepare-native.cjs",
     "dist": "electron-builder --win nsis",
     "dist:portable": "electron-builder --win portable"
   },
@@ -38,9 +38,12 @@
     "appId": "com.nebula.pclauncher",
     "productName": "OmniDash",
     "asarUnpack": ["src/xbox-mode-bridge/**"],
-    "extraResources": [{ "from": ".packaging-staging/streamlight", "to": "streamlight", "filter": ["**/*"] }],
+    "extraResources": [{ "from": ".packaging-staging/native", "to": "native", "filter": ["**/*"] }],
+    "compression": "maximum",
     "files": [
       "src/**/*",
+      "!src/**/*.cs",
+      "!src/**/README.md",
       "build/icon.svg",
       "build/icon.png",
       "package.json"
