@@ -563,7 +563,9 @@ function renderOnboarding(focus = true) {
   const stage = onboardingDialog.querySelector('.g-onboard-stage');
   const step = gOnboard.step;
   const name = gOnboard.identity?.name || state.displayName || 'Player';
-  const avatar = gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
+  // The picture you chose wins; otherwise the Steam picture.
+  const chosen = selectedAvatarId && selectedAvatarId !== 'steam-profile';
+  const avatar = !chosen && gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
   stage.dataset.step = String(step);
   // garrison-themes.js adds the dashboard picker above the primary button of step 0.
   stage.innerHTML = step === 0
@@ -631,9 +633,14 @@ const gOnboardActions = {
     delete gOnboard.busy[id];
     await refreshOnboardingAccounts();
   },
+  // Change opens the profile editor: your name, the Steam picture, an OmniDash gamerpic or your own picture.
   'g-onboard-rename': async () => {
-    const value = await gAskName(gOnboard.identity?.name || state.displayName || '');
-    if (value) { state.displayName = value; gOnboard.identity = { ...(gOnboard.identity || {}), name: value, custom: true }; renderOnboarding(); }
+    await performAction('avatar-picker', null);
+    if (typeof showProfilePage === 'function') { showProfilePage('customize'); setTimeout(() => setFocusedElement(avatarDialog.querySelector('[data-profile-page="customize"] .focusable'), { scroll: false }), 0); }
+    avatarDialog.addEventListener('close', () => {
+      if (state.displayName && state.displayName !== gOnboard.identity?.name) gOnboard.identity = { ...(gOnboard.identity || {}), name: state.displayName, custom: state.profileNameMode === 'custom' };
+      if (onboardingDialog.open) { renderOnboarding(false); setFocusedElement(onboardingDialog.querySelector('[data-action="g-onboard-rename"]'), { scroll: false }); }
+    }, { once: true });
   },
   'g-onboard-link': async source => {
     const service = source.dataset.service;
@@ -652,7 +659,7 @@ const gOnboardActions = {
     try {
       const custom = Boolean(gOnboard.identity?.custom);
       const displayName = (custom ? gOnboard.identity.name : gOnboard.identity?.name) || state.displayName || 'Player';
-      await window.launcher.saveSettings({ onboardingComplete: true, displayName, profileNameMode: custom ? 'custom' : 'steam', avatarId: selectedAvatarId || 'steam-profile', profileAvatarCustomized: false });
+      await window.launcher.saveSettings({ onboardingComplete: true, displayName, profileNameMode: custom ? 'custom' : 'steam', avatarId: selectedAvatarId || 'steam-profile', profileAvatarCustomized: Boolean(selectedAvatarId && selectedAvatarId !== 'steam-profile') });
       state.displayName = displayName;
       onboardingDialog.close();
       refreshPlayerIdentity();

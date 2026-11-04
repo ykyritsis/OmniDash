@@ -84,17 +84,8 @@
   tick(); setInterval(tick, 15000);
 
   // Picker cards, shared by onboarding and Settings. Each preview is a tiny drawing of that dashboard.
-  const preview = id => id === 'aero'
-    ? '<span class="g-tp g-tp-series g-tp-aero"><b class="bar"></b><span class="row"><i class="on"></i><i></i><i></i><i></i><i></i></span><span class="wide"><i></i><i></i><i></i><i></i></span></span>'
-    : ['ps3', 'ps4', 'wii', '3ds'].includes(id) ? `<span class="g-tp g-tp-${id}"></span>` : id === 'ps5'
-    ? '<span class="g-tp g-tp-ps5"><span class="row"><i></i><i></i><i class="on"></i><i></i><i></i></span><span class="bar"><b></b><b></b><b></b></span><i class="clock"></i></span>'
-    : id === 'x360'
-    ? '<span class="g-tp g-tp-360"><b class="p"></b><b class="p on"></b><b class="p"></b><b class="p"></b><i class="g"></i><i class="g"></i><i class="big"></i><i class="ad"></i><i class="ad"></i></span>'
-    : id === 'one'
-    ? '<span class="g-tp g-tp-one"><b class="h"></b><b class="h dim"></b><b class="h dim"></b><i class="big"></i><i></i><i class="blue"></i><i></i><i></i><i class="blue"></i></span>'
-    : id === 'series'
-      ? '<span class="g-tp g-tp-series"><b class="bar"></b><span class="row"><i class="on"></i><i></i><i></i><i></i><i></i></span><span class="wide"><i></i><i></i><i></i></span></span>'
-      : '<span class="g-tp g-tp-helix"><b class="bar"></b><span class="row"><i class="on"></i><i></i><i></i><i></i></span><span class="row low"><i></i><i></i><i></i></span></span>';
+  // Picker cards show a real, small screenshot of each Home (assets/theme-previews, 480 x 270).
+  const preview = id => `<span class="g-tp g-tp-shot"><img src="assets/theme-previews/${id}.webp" alt="" loading="lazy" decoding="async" draggable="false" /></span>`;
   const pickerMarkup = () => `<div class="g-theme-picker" role="radiogroup" aria-label="Theme">${THEMES.map(theme => `
     <button class="g-theme-card focusable${theme.id === current ? ' on' : ''}" type="button" role="radio" aria-checked="${theme.id === current}" data-g-theme-pick="${theme.id}">
       ${preview(theme.id)}

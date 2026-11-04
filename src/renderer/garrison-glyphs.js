@@ -136,7 +136,20 @@
   const SETS = {
     ps3: { ...PS },
     ps4: { ...PS },
-    ps5: { ...PS },
+    // PS5: shoulder and Options keys are pale filled caps with dark lettering, and the face symbols are drawn a
+    // little bolder, as the PS5 system software prints them.
+    ps5: {
+      ...PS,
+      cross: psSymbol(`<path d="M8 8 24 24M24 8 8 24" ${stroke} stroke-width="3.6"/>`),
+      circle: psSymbol(`<circle cx="16" cy="16" r="9" ${stroke} stroke-width="3.2"/>`),
+      triangle: psSymbol(`<path d="M16 7 26 24H6Z" ${stroke} stroke-width="3.1"/>`),
+      square: psSymbol(`<rect x="7.5" y="7.5" width="17" height="17" rx="1" ${stroke} stroke-width="3.1"/>`),
+      l1: svg([38, 32], `<rect x="2" y="6" width="34" height="20" rx="5" fill="#d9dde3"/>${text(19, 16.6, 11, 'L1', 700, '#3a3f47')}`),
+      r1: svg([38, 32], `<rect x="2" y="6" width="34" height="20" rx="5" fill="#d9dde3"/>${text(19, 16.6, 11, 'R1', 700, '#3a3f47')}`),
+      l2: svg([38, 32], `<path d="M4 25V13c0-4 3-7 7-7h16c4 0 7 3 7 7v12Z" fill="#d9dde3"/>${text(19, 17, 11, 'L2', 700, '#3a3f47')}`),
+      r2: svg([38, 32], `<path d="M4 25V13c0-4 3-7 7-7h16c4 0 7 3 7 7v12Z" fill="#d9dde3"/>${text(19, 17, 11, 'R2', 700, '#3a3f47')}`),
+      options: svg([34, 32], `<rect x="3" y="7" width="28" height="18" rx="9" fill="#d9dde3"/><path d="M11 12.5h12M11 16h12M11 19.5h12" stroke="#3a3f47" stroke-width="1.8" stroke-linecap="round"/>`)
+    },
     wii: { ...NINTENDO_COMMON },
     '3ds': { ...NINTENDO_COMMON },
     series: { ...SERIES_SET },

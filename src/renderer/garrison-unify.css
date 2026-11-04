@@ -123,4 +123,4 @@ body.garrison :is(input:not([type="checkbox"], [type="radio"], [type="range"]), 
 .g-onboard-hero h1 { margin-top: calc(.8 * var(--p)); }
 .g-theme-onboard .g-theme-picker { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 .g-theme-onboard .g-theme-card small { display: none; }
-.g-theme-onboard .g-theme-card .g-tp { aspect-ratio: 16 / 8; }
+.g-theme-onboard .g-theme-card .g-tp { aspect-ratio: 16 / 9; }

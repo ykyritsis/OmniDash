@@ -62,6 +62,10 @@ if (process.env.NEBULA_DEMO === '1') {
   if (process.env.NEBULA_DEMO_GPU !== '1') app.disableHardwareAcceleration();
 }
 
+// Lighter footprint: audio runs inside the browser process instead of a separate ~80 MB service process (one
+// window and a few interface sounds don't need the isolation), and no spare renderer is kept warm.
+app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess,SpareRendererForSitePerProcess');
+
 // One launcher at a time. Opening it again (for example from Xbox mode) brings the window forward.
 const XBOX_MODE = process.argv.includes('--xbox-mode');
 if (!process.env.NEBULA_REVIEW && !app.requestSingleInstanceLock()) app.quit();

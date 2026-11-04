@@ -434,3 +434,37 @@ html.reduce-motion #startup-screen .g-m-p5-mark { opacity: 1; }
 #g-ps5 .p5-card-icon { width: calc(40 * var(--cpx)); height: calc(40 * var(--cpx)); }
 #g-ps5 .p5-card-copy strong { font-size: calc(26 * var(--cpx)); font-weight: 600; }
 #g-ps5 .p5-cards:focus-within { bottom: calc(46 * var(--cpx)); }
+
+/* ---------- Type: Source Sans 3 (OFL, bundled), the closest open face to the PS5 system font ---------- */
+@font-face { font-family: "OD PS5 Sans"; src: url("assets/fonts/source-sans-3-300.woff2") format("woff2"); font-weight: 300; font-display: block; }
+@font-face { font-family: "OD PS5 Sans"; src: url("assets/fonts/source-sans-3-400.woff2") format("woff2"); font-weight: 400; font-display: block; }
+@font-face { font-family: "OD PS5 Sans"; src: url("assets/fonts/source-sans-3-600.woff2") format("woff2"); font-weight: 600 700; font-display: block; }
+#g-ps5, #g-ps5-chrome, #g-ps5-overlay, body.garrison.g-ps5 #startup-screen .g-m-p5-mark { font-family: "OD PS5 Sans", "Segoe UI", sans-serif !important; }
+#g-ps5 .p5-row-title, #g-ps5 .p5-subtitle { font-weight: 400; letter-spacing: .005em; }
+#g-ps5 .p5-play { font-weight: 600; letter-spacing: .01em; }
+#g-ps5-chrome .p5-clock { font-weight: 300; font-size: calc(32 * var(--cpx)); }
+
+/* ---------- Category bar, as drawn in 2026: bare icons, wide apart, the shoulder keys as pale caps ---------- */
+#g-ps5-chrome .p5-tabs { left: calc(80 * var(--cpx)); gap: calc(78 * var(--cpx)); }
+#g-ps5-chrome .p5-cat { width: calc(58 * var(--cpx)); height: calc(58 * var(--cpx)); border-radius: calc(12 * var(--cpx)); }
+#g-ps5-chrome .p5-cat svg { width: calc(44 * var(--cpx)); height: calc(44 * var(--cpx)); }
+#g-ps5-chrome .p5-cat.on::after { display: none; }
+#g-ps5-chrome .p5-cat:is(.focused, :focus-visible) { background: rgba(255, 255, 255, .16); color: #fff; box-shadow: 0 0 0 calc(2 * var(--cpx)) #fff; }
+#g-ps5-chrome .p5-cat:is(.focused, :focus-visible) svg [fill="#0b0f16"], #g-ps5-chrome .p5-cat:is(.focused, :focus-visible) svg [stroke="#0b0f16"] { fill: #262d3a; stroke: #262d3a; }
+#g-ps5-chrome .p5-shoulder .g-glyph { font-size: calc(40 * var(--cpx)); }
+
+/* ---------- Activity Cards, as drawn in 2026: solid slate blue, icon or faces top left, a bold title ---------- */
+#g-ps5 .p5-cards { bottom: calc(-44 * var(--cpx)); gap: calc(30 * var(--cpx)); }
+#g-ps5 .p5-card {
+  width: calc(560 * var(--cpx)); height: calc(170 * var(--cpx)); padding: calc(22 * var(--cpx)) calc(26 * var(--cpx)); gap: calc(18 * var(--cpx));
+  border-radius: calc(18 * var(--cpx)) calc(18 * var(--cpx)) 0 0; background: #2b4468; box-shadow: none;
+}
+#g-ps5 .p5-card:hover { background: #33507a; }
+#g-ps5 .p5-card:is(.focused, :focus-visible) { background: #3a5a88; box-shadow: 0 0 0 calc(3 * var(--cpx)) #fff, 0 0 calc(26 * var(--cpx)) rgba(255, 255, 255, .3); }
+#g-ps5 .p5-card-icon, #g-ps5 .p5-card-faces { height: calc(46 * var(--cpx)); }
+#g-ps5 .p5-card-icon { width: calc(46 * var(--cpx)); }
+#g-ps5 .p5-card-faces img { width: calc(46 * var(--cpx)); height: calc(46 * var(--cpx)); box-shadow: 0 0 0 calc(2 * var(--cpx)) #2b4468; }
+#g-ps5 .p5-card-copy strong { font-size: calc(30 * var(--cpx)); font-weight: 600; letter-spacing: .005em; }
+#g-ps5 .p5-card-copy small { opacity: 0; transition: opacity .2s ease; font-size: calc(19 * var(--cpx)); }
+#g-ps5 .p5-cards:focus-within .p5-card-copy small { opacity: 1; }
+#g-ps5 .p5-cards:focus-within { bottom: calc(30 * var(--cpx)); }
