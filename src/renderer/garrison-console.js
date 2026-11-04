@@ -9,6 +9,22 @@
     if ((event.ctrlKey || event.metaKey) && ['+', '=', '-', '_', '0'].includes(event.key)) event.preventDefault();
   });
   document.addEventListener('contextmenu', event => { if (!typing(event.target)) event.preventDefault(); });
+  // Middle-click does not start the browser's auto-scroll.
+  document.addEventListener('mousedown', event => { if (event.button === 1) event.preventDefault(); });
+  // Tab does not jump focus around the page; the controller and arrow keys move focus. Forms keep Tab.
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Tab' && !event.defaultPrevented && !event.target?.closest?.('dialog form, input, textarea, select')) event.preventDefault();
+  });
+  // No browser tooltips: a title attribute becomes the element's accessible name instead, the moment the
+  // pointer reaches it (so screen readers keep the text and nothing pops up).
+  document.addEventListener('mouseover', event => {
+    for (let node = event.target; node && node !== document.body; node = node.parentElement) {
+      const title = node.getAttribute?.('title');
+      if (!title) continue;
+      if (!node.hasAttribute('aria-label')) node.setAttribute('aria-label', title);
+      node.removeAttribute('title');
+    }
+  }, { passive: true, capture: true });
   let timer = 0;
   const wake = () => { document.body.classList.remove('g-pointer-idle'); clearTimeout(timer); timer = setTimeout(() => document.body.classList.add('g-pointer-idle'), 3000); };
   document.addEventListener('mousemove', wake, { passive: true });

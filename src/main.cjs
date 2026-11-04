@@ -3944,10 +3944,14 @@ async function createWindow() {
       sandbox: true,
       backgroundThrottling: true,
       autoplayPolicy: 'no-user-gesture-required',
+      // A console never underlines what you type.
+      spellcheck: false,
       offscreen: Boolean(process.env.NEBULA_CAPTURE_SET || process.env.NEBULA_REVIEW)
     }
   });
   mainWindow.setMenu(null);
+  // No pinch or touchpad zoom: the dashboard is laid out for the screen, like a console's.
+  mainWindow.webContents.setVisualZoomLevelLimits(1, 1).catch(() => {});
   // This window owns the privileged preload (window.launcher: launch games, change settings, power
   // actions), so it must never leave the bundled page. Without these guards a drag-and-dropped link
   // or any accidental navigation would load a remote origin with the whole bridge still attached.

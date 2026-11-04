@@ -317,3 +317,16 @@ html.reduce-motion #startup-screen .g-m-p5-mark { opacity: 1; }
   #startup-screen .g-m-p5-mark { opacity: 1; }
 }
 
+
+/* ---------- Performance ----------
+   The ambient art is blurred on a quarter-size layer scaled up 4x: it looks the same and costs a sixteenth of a
+   full-screen 60 px blur. It no longer drifts, so the blur is drawn once per selection instead of every frame,
+   and the dust is still. Cards use a solid tint instead of a live backdrop blur over the moving art. */
+#g-ps5 .p5-amb {
+  inset: auto; left: -2%; top: -2%; width: 26%; height: 26%; transform-origin: 0 0; transform: scale(4.1);
+  filter: blur(calc(15 * var(--cpx))) saturate(.92) brightness(.52);
+}
+#g-ps5 .p5-amb.on { animation: none; }
+#g-ps5 .p5-dust, #g-ps5 .p5-dust::after { animation: none; }
+#g-ps5 .p5-card { backdrop-filter: none; background: rgba(18, 24, 36, .8); }
+#g-ps5-overlay .p5-cc { backdrop-filter: none; background: rgba(14, 18, 26, .96); }

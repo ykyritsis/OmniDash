@@ -107,3 +107,7 @@ body.garrison #power-dialog .power-confirm-actions .secondary { background: rgba
 body.garrison #power-dialog .power-confirm-actions .primary { background: #107c10; }
 body.garrison #power-dialog .power-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 4px; font-size: 12px; color: #a6aeb0; }
 body.garrison #power-dialog .power-footer > span:last-child { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* Labels never show the text I-beam: nothing on the dashboard is selectable, so only fields get a text cursor. */
+body.garrison { cursor: default; }
+body.garrison :is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, [contenteditable="true"]) { cursor: text; }
