@@ -532,36 +532,41 @@ const gOnboard = { step: 0, identity: null, linked: {}, local: null, accounts: {
     <div hidden aria-hidden="true"><input id="onboard-name" /><input id="onboard-steam-key" /><input id="onboard-sgdb-key" /><input id="onboard-steam-id" /><input id="onboard-uninstalled" type="checkbox" /><span id="onboard-uninstalled-note"></span><span id="onboard-steam-status"></span><span id="onboard-steam-check"></span><div id="onboard-avatar-choices"></div><button id="onboard-back"></button><button id="onboard-next"></button><button id="onboard-finish"></button></div>`;
 })();
 function gOnboardDots(step) { return `<div class="g-onboard-dots">${[0, 1].map(index => `<i class="${index === step ? 'active' : index < step ? 'done' : ''}"></i>`).join('')}</div>`; }
-function gOnboardStatus(source) {
+// Setup's launcher checklist: one row per launcher and two ticks. Installed games are always added (a green
+// tick, nothing to do); the second tick adds the games you own but haven't installed, where the launcher can, and
+// says what turning it on takes (signing in, or just switching it on).
+function gOnboardExtra(source) {
   const busy = gOnboard.busy[source.id];
-  if (busy) return busy;
-  if (!source.owned) return 'Found automatically';
-  const games = count => `${count} game${count === 1 ? '' : 's'}`;
-  if (source.id === 'steam-family' && source.enabled && !source.ready) return 'On · Sign in to Steam to load shared games';
-  if (source.id === 'steam-family') return source.enabled && source.ready ? (source.noFamily ? 'This account isn\'t in a Steam Family' : `${games(source.count)} shared with you`) : 'Also include games your Steam Family shares';
-  if (source.enabled) return source.count ? `Including ${games(source.count)} you haven't installed` : 'Including games you haven\'t installed';
-  if (source.id === 'steam') return gOnboard.identity?.name ? `Off · signed in as ${gOnboard.identity.name}` : 'Off · switch on to sign in';
-  if (source.id === 'epic' && !source.ready) return 'Off · needs the free Legendary helper';
-  if (['ea', 'battlenet'].includes(source.id)) return source.ready ? 'Off · linked' : 'Off · switch on to sign in';
-  return 'Off · switch on to add the rest';
+  if (busy) return { state: 'busy', label: busy };
+  if (!source.owned) return { state: 'na', label: 'Not available' };
+  if (source.enabled) {
+    if (source.id === 'steam-family' && source.ready && source.noFamily) return { state: 'on', label: 'No family yet' };
+    return { state: 'on', label: source.count ? `${source.count} game${source.count === 1 ? '' : 's'} added` : 'On' };
+  }
+  if (source.id === 'epic' && !source.ready) return { state: 'off', label: 'Needs helper' };
+  if (['steam', 'steam-family', 'ea', 'battlenet'].includes(source.id) && !source.ready) return { state: 'off', label: 'Sign in' };
+  return { state: 'off', label: 'Turn on' };
 }
 function gOnboardService(source) {
   const icon = gOnboardIcons[source.id];
   const mark = icon ? `<img src="${icon}" alt="" />` : `<span class="g-onboard-mark" aria-hidden="true">${escapeHtml(source.name.slice(0, 1))}</span>`;
-  const blocked = source.id === 'epic' && !source.ready;
-  const control = source.owned
-    ? `<span class="g-switch${source.enabled ? ' on' : ''}${blocked ? ' blocked' : ''}" aria-hidden="true"><i></i></span>`
-    : `<i class="g-onboard-check">${gIcon('check')}</i>`;
-  return `<button class="g-onboard-service focusable${source.enabled || !source.owned ? ' linked' : ''}${gOnboard.busy[source.id] ? ' busy' : ''}" type="button" ${source.owned ? `role="switch" aria-checked="${source.enabled}" data-action="g-onboard-toggle"` : 'data-action="g-onboard-noop"'} data-service="${source.id}" aria-label="${escapeHtml(source.name)}${source.owned ? ', include games you haven\'t installed' : ''}">${source.id === 'steam-family' ? `<span class="g-onboard-family">${mark}${gIcon('people')}</span>` : mark}<span><strong>${escapeHtml(source.name)}</strong><small>${escapeHtml(gOnboardStatus(source))}</small></span>${control}</button>`;
+  const extra = gOnboardExtra(source);
+  const sub = source.id === 'steam' && gOnboard.identity?.name ? `Signed in as ${gOnboard.identity.name}` : source.id === 'steam-family' ? 'Games your Steam Family shares' : '';
+  const label = `${source.name}. Installed games: added automatically. Games you haven't installed: ${extra.state === 'na' ? 'not available' : extra.state === 'on' ? 'on' : extra.label.toLowerCase()}.`;
+  return `<button class="ob-row focusable ${extra.state}" type="button" ${source.owned ? `role="switch" aria-checked="${source.enabled}" data-action="g-onboard-toggle"` : 'data-action="g-onboard-noop"'} data-service="${source.id}" aria-label="${escapeHtml(label)}">
+    <span class="ob-row-name">${source.id === 'steam-family' ? `<span class="g-onboard-family">${mark}${gIcon('people')}</span>` : mark}<span><strong>${escapeHtml(source.name)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span></span>
+    <span class="ob-tick on"><i>${gIcon('check')}</i><span>Automatic</span></span>
+    <span class="ob-tick ${extra.state}">${extra.state === 'na' ? '<i>–</i>' : `<i>${gIcon('check')}</i>`}<span>${escapeHtml(extra.label)}</span></span>
+  </button>`;
 }
 function gOnboardServicesMarkup() {
   if (!gOnboard.sources) return '<p class="g-onboard-loading">Finding launchers on this PC…</p>';
   // Family games sit under Steam: they're only offered once Steam includes games you haven't installed.
   const steamOn = gOnboard.sources.find(item => item.id === 'steam')?.enabled;
   const shown = gOnboard.sources.filter(item => item.id !== 'steam-family' || steamOn);
-  const full = shown.filter(item => item.owned), installed = shown.filter(item => !item.owned);
-  return (full.length ? `<section class="ob-group"><h3>Can add games you haven't installed</h3><div class="ob-grid">${full.map(gOnboardService).join('')}</div></section>` : '')
-    + (installed.length ? `<section class="ob-group"><h3>Installed games only</h3><div class="ob-grid ob-grid-small">${installed.map(gOnboardService).join('')}</div></section>` : '');
+  // Launchers that can add more come first.
+  const rows = [...shown.filter(item => item.owned), ...shown.filter(item => !item.owned)];
+  return `<div class="ob-table" role="group" aria-label="Launchers"><div class="ob-thead" aria-hidden="true"><span>Launcher</span><span>Installed games</span><span>Games you haven't installed</span></div>${rows.map(gOnboardService).join('')}</div>`;
 }
 // The setup screens, laid out like a console's first-run: the step's title and a line on the left, the content on
 // the right, button hints and the step count along the bottom. Screen 1 previews each dashboard full size as you
@@ -655,7 +660,7 @@ function renderOnboarding(focus = true) {
       <div class="ob-copy">
         <span class="ob-eyebrow">Set up</span>
         <h1>Bring your games</h1>
-        <p>Installed games from every launcher are added automatically. Some launchers can also show the games you own but haven't installed: switch those on.</p>
+        <p>Games you've installed are added automatically. To also see the games you own but haven't installed, select a launcher and sign in.</p>
         <p class="ob-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p>
       </div>
       <div class="ob-stagearea"><div class="g-onboard-services ob-services">${gOnboardServicesMarkup()}</div></div>

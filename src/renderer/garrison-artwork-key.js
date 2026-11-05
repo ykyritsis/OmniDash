@@ -59,7 +59,7 @@ gOnboardServicesMarkup = function () {
   const base = gArtworkServices();
   if (!gOnboard.sources) return base;
   const has = Boolean(document.querySelector('#sgdb-key')?.value.trim());
-  return base + `<section class="ob-group"><h3>Artwork</h3><div class="ob-grid"><button class="g-onboard-service focusable${has ? ' linked' : ''}" type="button" data-action="g-onboard-sgdb"><span class="g-onboard-mark" aria-hidden="true">${gIcon('photo')}</span><span><strong>SteamGridDB</strong><small>${has ? 'Key added · extra artwork on' : 'Optional · artwork for games other stores miss'}</small></span>${has ? `<i class="g-onboard-check">${gIcon('check')}</i>` : '<b class="g-onboard-link">Add key</b>'}</button></div></section>`;
+  return base + `<button class="ob-extra focusable${has ? ' on' : ''}" type="button" data-action="g-onboard-sgdb"><span class="g-onboard-mark" aria-hidden="true">${gIcon('photo')}</span><span><strong>SteamGridDB artwork</strong><small>${has ? 'Key added · extra artwork on' : 'Optional · fills in artwork other stores miss'}</small></span><b>${has ? gIcon('check') + 'Added' : 'Add key'}</b></button>`;
 };
 const gArtworkPerform = performAction;
 performAction = async function (action, source) {
