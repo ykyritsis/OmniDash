@@ -2548,7 +2548,36 @@ function registerIpc() {
     } finally { clearTimeout(slowNote); mainWindow?.removeListener('blur', onBlur); }
   });
   ipcMain.handle('game:wait-cancel', async (_event, gameId) => { launchWaitCancel.add(String(gameId)); stopLaunch(String(gameId)).catch(() => {}); return true; });
-  ipcMain.handle('game:active-session', async () => {
+  ipcMain.handle('game:active-session', () => readActiveSession());
+  // Closing a game from the launcher (the game's options, or Home's "Close game"): the same stopper a cancelled
+  // launch uses, which asks Steam to end a Steam game and ends a direct launch's process tree.
+  ipcMain.handle('game:close', async (_event, gameId) => {
+    gameId = String(gameId || '');
+    if (!activeGameSession || activeGameSession.gameId !== gameId) throw new Error('This game is not running.');
+    if (process.env.NEBULA_DEMO === '1') { activeGameSession = null; notifySessionEnded(gameId, false); return { stopped: true }; }
+    const result = await stopLaunch(gameId);
+    if (result.stopped) { activeGameSession = null; notifySessionEnded(gameId, false); }
+    return { stopped: result.stopped, stillRunning: result.stillRunning };
+  });
+  // A game that ends on its own brings the dashboard back, focused on that game, as a console does.
+  let watchedSession = null;
+  function notifySessionEnded(gameId, bringBack) {
+    watchedSession = null;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('game:ended', { gameId });
+    if (bringBack && (mainWindow.isMinimized() || !mainWindow.isFocused())) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }
+  setInterval(async () => {
+    if (!activeGameSession) { if (watchedSession) notifySessionEnded(watchedSession, true); return; }
+    const session = await readActiveSession().catch(() => null);
+    if (session) { if (session.verified) watchedSession = session.gameId; return; }
+    if (watchedSession) notifySessionEnded(watchedSession, true);
+  }, 4000).unref?.();
+  async function readActiveSession() {
     if (!activeGameSession) return null;
     const session = activeGameSession;
     const age = Date.now() - session.launchedAt;
@@ -2556,20 +2585,20 @@ function registerIpc() {
     if (session.pid) {
       try { process.kill(session.pid, 0); }
       catch { activeGameSession = null; return null; }
-      return { gameId: session.gameId, verified: true };
+      return { gameId: session.gameId, verified: true, launchedAt: session.launchedAt };
     }
     // Steam games start through Steam, so there's no process to watch; Steam's own "running game" value
     // says whether it's still open. Closing the game ends the session at once.
     const game = currentLibrary.find(item => item.id === session.gameId);
     if (game?.provider === 'Steam' && game.appId && process.env.NEBULA_DEMO !== '1') {
-      if (steamLaunch.has(session.gameId)) return { gameId: session.gameId, verified: false };
+      if (steamLaunch.has(session.gameId)) return { gameId: session.gameId, verified: false, launchedAt: session.launchedAt };
       const running = await steamRunningAppId() === String(game.appId);
-      if (running) { session.seenRunning = true; return { gameId: session.gameId, verified: true }; }
+      if (running) { session.seenRunning = true; return { gameId: session.gameId, verified: true, launchedAt: session.launchedAt }; }
       // Not running: closed after it ran, or it never started within two minutes.
       if (session.seenRunning || age > 2 * 60 * 1000) { if (activeGameSession === session) activeGameSession = null; return null; }
     }
-    return { gameId: session.gameId, verified: false };
-  });
+    return { gameId: session.gameId, verified: false, launchedAt: session.launchedAt };
+  }
   ipcMain.handle('game:return', (_event, gameId) => {
     if (!activeGameSession || activeGameSession.gameId !== gameId) throw new Error('This is not the last launched game.');
     if (activeGameSession.pid) {
@@ -3029,17 +3058,37 @@ function registerIpc() {
     wii: ['wii/music/menu.mp3', 'wii/music/menu.ogg', 'wii/Wii.JS-gh-pages/assets/audio/bg-music.mp3'],
     '3ds': ['3ds/music/menu.mp3', '3ds/music/menu.ogg'],
     series: ['series/music/menu.mp3', 'series/music/menu.ogg'],
-    one: ['one/music/menu.mp3', 'one/music/menu.ogg']
+    one: ['one/music/menu.mp3', 'one/music/menu.ogg'],
+    ps5: ['ps5/music/menu.mp3', 'ps5/music/menu.ogg']
   };
+  // Your own sounds: drop navigate/confirm/back/launch/notify/achievement (.wav, .mp3 or .ogg) into a theme's
+  // `sounds` folder and that theme plays them, ahead of any pack recording. This is how Series, One and PS5, which
+  // have no downloadable sound pack, get their console's own sounds. Nothing here is shipped with the app.
+  const DROP_IN_KINDS = ['navigate', 'category', 'confirm', 'back', 'error', 'launch', 'notify', 'achievement', 'boot', 'powerOff'];
+  const DROP_IN_FOLDERS = { series: 'series', one: 'one', ps5: 'ps5', ps3: 'ps3', ps4: 'ps4', wii: 'wii', '3ds': '3ds', x360: 'dashx360' };
+  async function dropInSounds(id) {
+    const folder = DROP_IN_FOLDERS[id];
+    if (!folder) return {};
+    const names = await fs.readdir(path.join(retroRoot, folder, 'sounds')).catch(() => []);
+    const found = {};
+    for (const kind of DROP_IN_KINDS) {
+      const stem = kind.replace(/([A-Z])/g, '[-_ ]?$1');
+      const pattern = new RegExp('^' + stem + '[.](wav|mp3|ogg)$', 'i');
+      const name = names.find(item => pattern.test(item));
+      if (name) found[kind] = `${folder}/sounds/${name}`;
+    }
+    return found;
+  }
   ipcMain.handle('theme:retro-pack', async () => {
-    const available = {}, music = {};
+    const available = {}, music = {}, dropIn = {};
+    for (const id of Object.keys(DROP_IN_FOLDERS)) { const kinds = Object.keys(await dropInSounds(id)); if (kinds.length) dropIn[id] = kinds; }
     for (const [id, pack] of Object.entries(RETRO_PACKS)) available[id] = await exists(path.join(retroRoot, pack.check));
     for (const [id, names] of Object.entries(RETRO_MUSIC)) music[id] = await firstExisting(retroRoot, names);
-    return { available, base: pathToFileURL(retroRoot + path.sep).href, music,
+    return { available, dropIn, base: pathToFileURL(retroRoot + path.sep).href, music,
       sounds: Object.fromEntries(Object.entries(RETRO_PACKS).map(([id, pack]) => [id, Object.keys(pack.sounds)])) };
   });
   ipcMain.handle('theme:retro-sound', async (_event, id, kind) => {
-    const file = kind === 'music' ? await firstExisting(retroRoot, RETRO_MUSIC[id] || []) : RETRO_PACKS[id]?.sounds?.[kind];
+    const file = kind === 'music' ? await firstExisting(retroRoot, RETRO_MUSIC[id] || []) : (await dropInSounds(id))[kind] || RETRO_PACKS[id]?.sounds?.[kind];
     if (!file) throw new Error('Unknown sound.');
     const data = await fs.readFile(path.join(retroRoot, file)).catch(() => null);
     const type = file.endsWith('.ogg') ? 'audio/ogg' : file.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
@@ -3395,6 +3444,42 @@ function registerIpc() {
     cacheFile: path.join(app.getPath('userData'), 'achievement-rates.json'),
     fetchJson: async (url) => { const response = await fetch(url, { signal: AbortSignal.timeout(10000) }); if (!response.ok) throw new Error(`Steam returned ${response.status}`); return response.json(); }
   });
+  // Live pop-ups (live-popup.cjs): shown in the dashboard as a toast, and over the game while you're playing.
+  const livePopup = require('./live-popup.cjs').createLivePopup();
+  let liveTheme = 'series';
+  readSettings().then(settings => { liveTheme = settings.theme || liveTheme; }).catch(() => {});
+  function emitLive(item) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('live:event', item);
+    if (!mainWindow.isFocused() && process.env.NEBULA_REVIEW !== '1') livePopup.show({ ...item, theme: item.theme || liveTheme });
+  }
+  ipcMain.handle('live:popup', (_event, item = {}) => {
+    if (item.theme) liveTheme = String(item.theme);
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused() && item.title && process.env.NEBULA_REVIEW !== '1') livePopup.show({ ...item, theme: liveTheme });
+    return true;
+  });
+  ipcMain.handle('live:theme', (_event, theme) => { liveTheme = String(theme || liveTheme); return true; });
+  // Achievements while you play: Steam rewrites the game's stats cache when an achievement unlocks, so reading it
+  // every few seconds during a Steam session shows each unlock as it happens. The first read is the baseline.
+  const liveAchievements = { appId: '', seen: null, busy: false };
+  setInterval(async () => {
+    const session = activeGameSession;
+    const game = session && currentLibrary.find(item => item.id === session.gameId);
+    if (!game || game.provider !== 'Steam' || !/^\d+$/.test(String(game.appId || '')) || process.env.NEBULA_DEMO === '1') { liveAchievements.appId = ''; return; }
+    if (liveAchievements.busy) return;
+    liveAchievements.busy = true;
+    try {
+      const list = await localGamerscore.unlockedFor(game.appId);
+      if (!list) return;
+      if (liveAchievements.appId !== String(game.appId)) { liveAchievements.appId = String(game.appId); liveAchievements.seen = new Set(list.map(item => item.id)); return; }
+      for (const item of list) {
+        if (liveAchievements.seen.has(item.id)) continue;
+        liveAchievements.seen.add(item.id);
+        emitLive({ kind: 'achievement', title: 'Achievement unlocked', detail: `${item.points ? `${item.points}G · ` : ''}${item.name}`, gameId: game.id });
+      }
+    } catch { /* The cache is being written; the next read catches up. */ }
+    finally { liveAchievements.busy = false; }
+  }, 6000).unref?.();
   ipcMain.handle('gamerscore:local', async () => {
     if (process.env.NEBULA_DEMO === '1') return { available: false, points: 0, unlocked: 0, total: 0, games: [] };
     const titles = new Map(currentLibrary.filter((game) => game.provider === 'Steam' && game.appId).map((game) => [String(game.appId), game.title]));

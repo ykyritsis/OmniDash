@@ -351,7 +351,8 @@
       play('category');
       if (cats[next].id !== 'settings') {
         window.gShell.close({ silent: true, sound: false, restore: false });
-        renderXmb(false);
+        xmbWave.kick(direction === 'left' || direction === 'right' ? 1 : .55);
+    renderXmb(false);
         return true;
       }
       renderXmb(false);
@@ -457,7 +458,9 @@
   // costs a fraction of the time on integrated graphics. It stops whenever the window is hidden or unfocused,
   // or the XMB isn't showing.
   const xmbWave = (() => {
-    let raf = 0, last = 0, t = 0;
+    // Moving through the XMB stirs the wave: each step adds energy that speeds the drift and lifts the swell, then
+    // settles over about a second, as the PS3's wave answers the controller.
+    let raf = 0, last = 0, t = 0, energy = 0;
     const sparks = Array.from({ length: 54 }, () => ({ x: Math.random(), y: .28 + Math.random() * .55, s: .4 + Math.random() * 1.5, p: Math.random() * 6.28, v: .003 + Math.random() * .009 }));
     // base height, amplitude, wavelength, drift, opacity, band thickness, slope (all fractions of the canvas)
     const ribbons = [[.515, .02, 1.1, .0003, .23, .2, -.05], [.6, .013, 1.65, .00042, .105, .14, -.08], [.66, .01, .92, .00025, .062, .11, -.115]];
@@ -468,12 +471,15 @@
       const paused = document.hidden || !document.hasFocus();
       raf = paused ? 0 : requestAnimationFrame(frame);
       if (!paused && stamp - last < 33) return;
-      t += Math.min(80, stamp - last || 33); last = stamp;
+      const step = Math.min(80, stamp - last || 33);
+      energy *= Math.pow(.06, step / 1000);
+      t += step * (1 + energy * 3.2); last = stamp;
       const w = canvas.width = Math.round(innerWidth / 2), h = canvas.height = Math.round(innerHeight / 2);
       const g = canvas.getContext('2d');
       g.clearRect(0, 0, w, h);
       for (const [base, amp, freq, speed, alpha, thick, slope] of ribbons) {
-        const y = (x, k) => h * (base + slope * (x / w) + amp * Math.sin((x / w) * freq * Math.PI + t * speed + k) + .011 * Math.sin((x / w) * 4.3 - t * speed * 1.9 + k));
+        const swell = amp * (1 + energy * .9);
+        const y = (x, k) => h * (base + slope * (x / w) + swell * Math.sin((x / w) * freq * Math.PI + t * speed + k) + .011 * Math.sin((x / w) * 4.3 - t * speed * 1.9 + k));
         const body = new Path2D(), crest = new Path2D();
         for (let x = 0; x <= w; x += 8) crest.lineTo(x, y(x, 0));
         body.addPath(crest);
@@ -498,7 +504,10 @@
         g.beginPath(); g.arc(spark.x * w, (spark.y + .02 * Math.sin(t * .001 + spark.p)) * h, spark.s, 0, 6.28); g.fill();
       }
     }
-    return { start() { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } } };
+    return {
+      start() { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } },
+      kick(amount = 1) { if (document.documentElement.classList.contains('reduce-motion')) return; energy = Math.min(2.2, energy + amount); this.start(); }
+    };
   })();
   addEventListener('focus', () => { if (theme() === 'ps3') xmbWave.start(); });
   document.addEventListener('visibilitychange', () => { if (theme() === 'ps3') xmbWave.start(); });
@@ -1701,7 +1710,14 @@
     // Items that are games boot straight into them, as on these consoles.
     if (el.dataset.retroBoot && el.dataset.gameId) {
       const game = findGame(el.dataset.gameId);
-      if (game && game.installed !== false) { stop(); play('launch'); wiiPreview = null; selectGame(game.id, false, el); launchSelectedGame(); }
+      if (game && game.installed !== false) {
+        stop(); play('launch');
+        // Wii: Start pushes into the channel and washes out to white before the game takes over.
+        const preview = theme() === 'wii' ? el.closest('.wii-preview') : null;
+        const go = () => { wiiPreview = null; selectGame(game.id, false, el); launchSelectedGame(); };
+        if (preview && !document.documentElement.classList.contains('reduce-motion')) { preview.classList.add('wii-starting'); setTimeout(go, 520); }
+        else go();
+      }
     }
   }, true);
   // Back: the shared shell handles its own levels first; the Home-level previews and toolbars keep their old grammar.
@@ -2019,6 +2035,7 @@
       return themePackPromise;
     }
     function packHas(id, kind) {
+      if (pack.dropIn?.[id]?.includes(kind) && window.launcher?.getRetroSound) return true;
       if (id === 'x360') return Boolean(themePackData?.sounds?.includes(kind));
       return Boolean(pack.available?.[id] && pack.sounds?.[id]?.includes(kind) && window.launcher?.getRetroSound);
     }
@@ -2026,7 +2043,7 @@
       const key = `${id}:${kind}`;
       if (!buffers.has(key)) {
         buffers.set(key, null);
-        const request = id === 'x360'
+        const request = id === 'x360' && !pack.dropIn?.[id]?.includes(kind)
           ? window.launcher?.getThemePackSound?.(kind)
           : window.launcher?.getRetroSound?.(id, kind);
         Promise.resolve(request).then(async sound => {

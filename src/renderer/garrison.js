@@ -189,7 +189,7 @@ async function gPollDownloads() {
         installTracking.delete(game.id);
         gDownloads.rates.delete(appId);
         gDownloads.overrides.delete(appId);
-        if (result.installed) game.installed = true;
+        if (result.installed) { game.installed = true; window.gLive?.({ kind: 'download', title: 'Ready to play', detail: game.title }); }
         if (state.detailGameId === game.id) {
           const button = document.querySelector('#detail-play');
           button.classList.remove('g-installing');

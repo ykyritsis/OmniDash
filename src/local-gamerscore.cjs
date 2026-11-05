@@ -114,7 +114,22 @@ function createLocalGamerscore({ steamRoots, cacheFile, fetchJson }) {
       games: games.filter(game => game.unlocked > 0), byApp, missingRates
     };
   }
-  return { compute, refreshRates };
+  // One game's unlocked achievements right now, with their points: compared between two reads, it shows what was
+  // just unlocked while the game is running.
+  async function unlockedFor(appId) {
+    appId = String(appId);
+    await loadRates();
+    for (const root of await steamRoots()) {
+      const accounts = await local.localAccounts(root);
+      if (!accounts.length) continue;
+      const game = await readCached(root, appId, accounts[0]);
+      if (!game || !game.total) return [];
+      const table = roundToFives(pcGamerscore.pointTable(game.achievements.map(item => ({ apiname: item.id })), new Map(Object.entries(rates[appId]?.percent || {}))));
+      return game.achievements.filter(item => item.unlocked).map(item => ({ id: item.id, name: item.name || item.id, points: table[item.id] || 0 }));
+    }
+    return null;
+  }
+  return { compute, refreshRates, unlockedFor };
 }
 
 module.exports = { createLocalGamerscore, roundToFives };

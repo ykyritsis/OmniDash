@@ -28,8 +28,9 @@
   // Windows' own plan names are long; the control has room for one short word each.
   const planName = name => ({ 'high performance': 'Performance', 'ultimate performance': 'Ultimate', 'power saver': 'Saver' })[String(name).toLowerCase()] || name;
 
+  const hintBar = '<footer class="g-menu-hints g-menu-hints-auto"><span><kbd class="xb-button xb-a" data-g-role="confirm">A</kbd>Select</span><span><kbd class="xb-button xb-b" data-g-role="back">B</kbd>Back</span></footer>';
   function markup() {
-    if (!quick) return '<header><h2>Quick settings</h2></header><p class="g-quick-note" role="status">Reading this PC…</p>';
+    if (!quick) return `<header><h2>Quick settings</h2></header><p class="g-quick-note" role="status">Reading this PC…</p>${hintBar}`;
     const tiles = [];
     if (quick.wifi) tiles.push(tile('wifi', 'Wi-Fi', quick.wifi.connected ? `${quick.wifi.ssid || 'Connected'}${quick.wifi.signal !== null ? ` · ${quick.wifi.signal}%` : ''}` : 'Not connected'));
     if (quick.battery) tiles.push(tile('battery', `${quick.battery.percent}%`, quick.battery.charging ? 'Charging' : 'On battery'));
@@ -40,7 +41,7 @@
     const plans = quick.plans.length ? `<h3>Power mode</h3><div class="g-quick-plans" role="radiogroup" aria-label="Power mode">${quick.plans.map(plan =>
       `<button class="g-quick-plan focusable${plan.active ? ' on' : ''}" type="button" role="radio" aria-checked="${plan.active}" aria-label="${escapeHtml(plan.name)}" data-action="g-quick-plan" data-guid="${escapeHtml(plan.guid)}">${escapeHtml(planName(plan.name))}</button>`).join('')}</div>` : '';
     const body = (tiles.length ? `<div class="g-quick-tiles">${tiles.join('')}</div>` : '') + (sliders.length ? `<div class="g-quick-sliders">${sliders.join('')}</div>` : '');
-    return `<header><h2>Quick settings</h2></header>${body || '<p class="g-quick-note">This PC has nothing to adjust here.</p>'}${plans}`;
+    return `<header><h2>Quick settings</h2></header>${body || '<p class="g-quick-note">This PC has nothing to adjust here.</p>'}${plans}${hintBar}`;
   }
   function draw(keep) {
     menu.innerHTML = markup();

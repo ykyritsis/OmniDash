@@ -956,3 +956,8 @@ body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]).store-active #store
 body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay :is(.launch-copy, .launch-copy strong, .launch-copy small, .g-launch-cancel) { color: #5a5a5a !important; text-shadow: none !important; }
 body.garrison:is([data-g-theme="wii"], [data-g-theme="3ds"]) #launch-overlay .g-launch-cancel { border-color: rgba(0, 0, 0, .18) !important; background: rgba(255, 255, 255, .7) !important; }
 #g-retro .wii-ch .wii-title { z-index: 2; } /* channel titles stay above their art (the Forecast globe covered its own name) */
+/* Wii: pressing Start zooms into the channel and fades to white, then the game starts. */
+#g-retro .wii-preview.wii-starting { animation: wii-start .52s cubic-bezier(.5, 0, .75, .4) forwards; pointer-events: none; }
+#g-retro .wii-preview.wii-starting::after { content: ""; position: absolute; inset: 0; background: #fff; animation: wii-start-white .52s ease-in forwards; }
+@keyframes wii-start { from { transform: none; } to { transform: scale(1.35); } }
+@keyframes wii-start-white { from { opacity: 0; } 55% { opacity: .35; } to { opacity: 1; } }

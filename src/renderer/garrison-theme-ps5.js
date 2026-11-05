@@ -335,8 +335,13 @@
       layers[ambFront].classList.remove('on');
       ambFront = next;
     };
-    if (window.gWideArt) window.gWideArt(game).then(src => commit(src || '')).catch(() => commit(''));
-    else commit('');
+    // Wait until the selection rests (a held direction passes many games), then fade to that game's art.
+    clearTimeout(scheduleAmbient.settle);
+    scheduleAmbient.settle = setTimeout(() => {
+      if (ambWanted !== id) return;
+      if (window.gWideArt) window.gWideArt(game).then(src => commit(src || '')).catch(() => commit(''));
+      else commit('');
+    }, 220);
   }
   function probeOptionalBackground() {
     if (optionalBackground) return;

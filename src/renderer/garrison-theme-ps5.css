@@ -31,7 +31,7 @@ body.garrison[data-g-theme="ps5"] #toast::before { background: #0a1a30 radial-gr
 #g-ps5 .p5-amb {
   position: absolute; inset: -8%; z-index: 0; opacity: 0; pointer-events: none;
   background: center 42% / cover no-repeat; filter: blur(calc(60 * var(--cpx))) saturate(.92) brightness(.52);
-  transform: scale(1.14); transition: opacity .7s var(--m-ease, ease);
+  transform: scale(1.14); transition: opacity 1.1s var(--m-ease, ease);
   will-change: opacity, transform;
 }
 #g-ps5 .p5-amb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(158deg, rgba(4, 11, 28, .42), rgba(2, 5, 14, .16) 54%, rgba(1, 3, 9, .48)); }

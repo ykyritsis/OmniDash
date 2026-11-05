@@ -445,3 +445,5 @@ body.garrison[data-g-theme="series"].home-active #recent-row > :first-child { ma
 body.garrison[data-g-theme="series"].home-active #recent-row > :last-child { margin-right: auto; }
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer,
 body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer.ambient-active { transform: none !important; filter: none !important; }
+/* The backdrop fades slowly to the game you rest on, as the Series dashboard does. */
+body.garrison[data-g-theme="series"].home-active :is(#ambient, #ambient-next).ambient-layer { transition: opacity 1.1s ease !important; }

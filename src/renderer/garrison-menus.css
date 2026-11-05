@@ -127,3 +127,27 @@ html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize {
   background: linear-gradient(180deg, rgba(170, 225, 255, .5), rgba(40, 130, 200, .45) 50%, rgba(10, 80, 150, .6) 50%, rgba(20, 110, 190, .6)) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 calc(4 * var(--cpx)) calc(12 * var(--cpx)) rgba(0, 40, 80, .35);
 }
+
+/* The running game's tile: a small "Playing · 1h 12m" badge with a pulsing dot, in every theme's rows. */
+.g-running { position: relative; }
+.g-run-badge { position: absolute; z-index: 3; top: .5em; left: .5em; display: inline-flex; align-items: center; gap: .45em; max-width: calc(100% - 1em); padding: .3em .7em .3em .55em; border-radius: 1em; background: rgba(0, 0, 0, .72); color: #fff; font: 600 clamp(11px, .7vw, 14px) / 1.1 var(--g-font, "Segoe UI", system-ui, sans-serif); white-space: nowrap; pointer-events: none; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.g-run-badge b { overflow: hidden; font-weight: 600; text-overflow: ellipsis; }
+.g-run-badge i { flex: none; width: .55em; height: .55em; border-radius: 50%; background: #3fd35a; box-shadow: 0 0 0 0 rgba(63, 211, 90, .6); animation: g-run-pulse 2s ease-out infinite; }
+@keyframes g-run-pulse { 0% { box-shadow: 0 0 0 0 rgba(63, 211, 90, .6); } 70%, 100% { box-shadow: 0 0 0 .5em rgba(63, 211, 90, 0); } }
+html body.garrison[data-g-theme="ps3"] .g-run-badge, html body.garrison[data-g-theme="ps4"] .g-run-badge, html body.garrison[data-g-theme="ps5"] .g-run-badge { background: rgba(0, 30, 80, .72); }
+html body.garrison[data-g-theme="ps3"] .g-run-badge i, html body.garrison[data-g-theme="ps4"] .g-run-badge i, html body.garrison[data-g-theme="ps5"] .g-run-badge i { background: #4aa3ff; animation-name: g-run-pulse-blue; }
+@keyframes g-run-pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(74, 163, 255, .6); } 70%, 100% { box-shadow: 0 0 0 .5em rgba(74, 163, 255, 0); } }
+html.reduce-motion .g-run-badge i { animation: none; }
+
+/* "Loading…" lines as placeholder bars. The text stays (for screen readers) but isn't painted. */
+.g-skel { position: relative; display: block; min-width: 8em; min-height: 1.15em; -webkit-text-fill-color: transparent; }
+.g-skel::before { content: ""; position: absolute; inset: .2em 35% .2em 0; border-radius: .5em; background: linear-gradient(90deg, color-mix(in srgb, currentColor 8%, transparent) 0%, color-mix(in srgb, currentColor 22%, transparent) 50%, color-mix(in srgb, currentColor 8%, transparent) 100%); background-size: 200% 100%; animation: g-shimmer 1.3s linear infinite; }
+.g-skel::after { content: ""; position: absolute; left: 0; right: 55%; top: calc(100% + .35em); height: .7em; border-radius: .5em; background: color-mix(in srgb, currentColor 8%, transparent); }
+@keyframes g-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+html.reduce-motion .g-skel::before { animation: none; }
+/* Artwork that is still downloading fades in. */
+img { transition: opacity .28s ease; }
+img.g-fade { opacity: 0 !important; }
+/* The hints added to menus that had none. */
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto { display: flex; gap: 1.1em; margin: .55em .4em .1em; padding-top: .55em; border-top: 1px solid var(--mn-line); font-size: .8em; color: var(--mn-sub); }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto span { display: inline-flex; align-items: center; gap: .45em; }

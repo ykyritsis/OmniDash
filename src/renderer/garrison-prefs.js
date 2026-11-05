@@ -24,7 +24,7 @@
   // Vibration: weak motor for a tick, strong for a launch. Only while the launcher is in front.
   function rumble(kind) {
     if (!prefs.controllerVibration || !document.hasFocus() || document.body.classList.contains('g-asleep')) return;
-    const effect = kind === 'launch' ? { duration: 160, strongMagnitude: .5, weakMagnitude: .7 } : kind === 'confirm' ? { duration: 40, strongMagnitude: 0, weakMagnitude: .35 } : null;
+    const effect = kind === 'launch' ? { duration: 160, strongMagnitude: .5, weakMagnitude: .7 } : kind === 'confirm' ? { duration: 40, strongMagnitude: 0, weakMagnitude: .35 } : kind === 'back' ? { duration: 30, strongMagnitude: 0, weakMagnitude: .22 } : kind === 'achievement' ? { duration: 220, strongMagnitude: .25, weakMagnitude: .5 } : null;
     if (!effect) return;
     const pad = [...(navigator.getGamepads?.() || [])].find(item => item?.connected && item.vibrationActuator);
     try { pad?.vibrationActuator.playEffect('dual-rumble', { startDelay: 0, ...effect }); } catch { /* This controller can't vibrate. */ }

@@ -211,17 +211,28 @@ const PACK_REGISTRY = [
   {
     id: 'series', console: 'series', name: 'Xbox Series X|S', folder: 'series',
     credit: 'OmniDash drawn music loop (drop-in music folder)',
-    install: 'an optional music loop for the Series dashboard',
+    install: 'your own console sounds (sounds/navigate, confirm, back, launch, notify, achievement) and an optional music loop for the Series dashboard',
     expected: [
+      { label: 'Music', folder: 'music', names: ['menu.mp3', 'menu.ogg'] },
+      { label: 'Sounds', folder: 'sounds', names: ['navigate.wav', 'confirm.wav', 'back.wav'] }
+    ]
+  },
+  {
+    id: 'ps5', console: 'ps5', name: 'PlayStation 5', folder: 'ps5',
+    credit: 'Your own files (drop-in sounds and music folders)',
+    install: 'your own console sounds (sounds/navigate, confirm, back, launch, notify, achievement) and an optional music loop',
+    expected: [
+      { label: 'Sounds', folder: 'sounds', names: ['navigate.wav', 'confirm.wav', 'back.wav'] },
       { label: 'Music', folder: 'music', names: ['menu.mp3', 'menu.ogg'] }
     ]
   },
   {
     id: 'one', console: 'one', name: 'Xbox One', folder: 'one',
     credit: 'OmniDash drawn music loop (drop-in music folder)',
-    install: 'an optional music loop for the Xbox One dashboard',
+    install: 'your own console sounds (sounds/navigate, confirm, back, launch, notify, achievement) and an optional music loop for the Xbox One dashboard',
     expected: [
-      { label: 'Music', folder: 'music', names: ['menu.mp3', 'menu.ogg'] }
+      { label: 'Music', folder: 'music', names: ['menu.mp3', 'menu.ogg'] },
+      { label: 'Sounds', folder: 'sounds', names: ['navigate.wav', 'confirm.wav', 'back.wav'] }
     ]
   }
 ];

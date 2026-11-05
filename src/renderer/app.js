@@ -113,8 +113,10 @@ function navigateBack() {
     state.detailReturn = null;
     if (returnTo?.searchGameId) openConsoleSearch(returnTo.searchGameId);
   }
-  else if (state.view === 'library') showView('home');
-  else if (state.view === 'store') showView('home');
+  else if (state.view === 'library' || state.view === 'store') {
+    const memory = state.viewFocus?.home;
+    showView('home', memory?.element?.isConnected ? { restore: memory } : {});
+  }
 }
 
 const ambient = document.querySelector('#ambient');
@@ -599,7 +601,9 @@ function applyAmbientImage(game, image, kind) {
     visibleAmbient = target;
   };
   // Keep the previous image visible until its replacement is decoded. Slow or
-  // failed requests must never blank the background or win a later selection.
+  // failed requests must never blank the background or win a later selection. While a direction is held the
+  // background waits for the selection to rest, so it doesn't flicker through every game passed.
+  if (state.navRepeat) { clearTimeout(applyAmbientImage.settle); applyAmbientImage.settle = setTimeout(() => { if (sequence === ambientSequence) { ambientSequence--; applyAmbientImage(game, image, kind); } }, 260); return; }
   if (image) preloadAmbientImage(image).then(success => {
     if (sequence !== ambientSequence) return;
     const size = ambientDimensions.get(image);
@@ -1686,6 +1690,8 @@ async function launchSelectedGame(optionsOverride) {
   if (!state.selectedGameId || !launchOverlay.hidden) return;
   const game = state.games.find((item) => item.id === state.selectedGameId);
   if (!game) return;
+  // The game is already running: selecting it goes back to it, as Quick Resume does, instead of a second launch.
+  if (state.activeGameSession?.gameId === game.id && !optionsOverride) { playUiSound('confirm'); await performAction('return-to-game'); return; }
   if (game.installed === false) {
     if (installTracking.has(game.id)) { showSteamInstallation(game); return; }
     try {
@@ -2103,6 +2109,12 @@ async function openSettings() {
 function showView(view, { restore = null } = {}) {
   if (state.view === 'detail' && view !== 'detail') { state.detailRequestToken++; state.newsRequestToken++; }
   document.body.dataset.pageDirection = restore ? 'back' : 'forward';
+  // Remember where you were on the page you're leaving, so Back lands on that exact tile (a console never sends
+  // you to the start of a row you were halfway along).
+  const leaving = state.view, focusedNow = document.activeElement;
+  if (leaving && leaving !== view && focusedNow && focusedNow !== document.body && !focusedNow.closest('dialog')) {
+    (state.viewFocus ||= {})[leaving] = { element: focusedNow, scrollTop: document.querySelector('main')?.scrollTop || 0 };
+  }
   state.view = view;
   const isLibrary = view === 'library';
   const isDetail = view === 'detail';

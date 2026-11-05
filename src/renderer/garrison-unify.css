@@ -124,3 +124,9 @@ body.garrison :is(input:not([type="checkbox"], [type="radio"], [type="range"]), 
 .g-theme-onboard .g-theme-picker { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 .g-theme-onboard .g-theme-card small { display: none; }
 .g-theme-onboard .g-theme-card .g-tp { aspect-ratio: 16 / 9; }
+/* Console shell: the white focus ring is the only focus indicator, and pages scroll without scrollbars, for mouse
+   and controller alike. */
+body.garrison :focus, body.garrison :focus-visible { outline: none; }
+body.garrison, body.garrison * { scrollbar-width: none; }
+body.garrison ::-webkit-scrollbar { display: none; }
+img { -webkit-user-drag: none; }
