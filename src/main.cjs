@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, powerMonitor, shell, safeStorage } = require('electron');
 const support = require('./support.cjs');
 const packInstaller = require('./pack-installer.cjs');
 support.installLogCapture();
@@ -2449,6 +2449,7 @@ function registerIpc() {
   // a game Steam started take the screen from the launcher. So the launch screen stays until the game's own
   // window is in front: the helper brings it forward, or the game takes focus itself. A game without a window
   // in its folder (store launchers, anti-cheat bootstrappers) hands over after a minute anyway.
+  const LAUNCHER_PROCESSES = /^(steam|steamwebhelper|steamservice|eadesktop|eabackgroundservice|origin|epicgameslauncher|battle\.net|upc|ubisoftconnect|rockstarservice|socialclubhelper|galaxyclient|riotclientux|riotclientservices|amazongames|xboxpcapp|gamingservices)$/;
   async function handOver(game, gameId) {
     const started = await waitForGameWindow(game, gameId);
     // Hold the launch screen a little longer behind the game, so nothing of the launcher flashes while the game
@@ -2458,7 +2459,7 @@ function registerIpc() {
   }
   async function waitForGameWindow(game, gameId) {
     const deadline = Date.now() + 60000;
-    let awaySince = 0, steamGone = 0;
+    let awaySince = 0, steamGone = 0, covered = 0;
     launchStatus(gameId, `Starting ${game.title}`);
     while (Date.now() < deadline) {
       if (launchWaitCancel.delete(gameId)) {
@@ -2466,7 +2467,15 @@ function registerIpc() {
         return { started: false, cancelled: true, stopped: stop.stopped, wasRunning: stop.wasRunning, stillRunning: stop.stillRunning, method: stop.method };
       }
       const focused = mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused();
-      if (!focused) { awaySince ||= Date.now(); if (Date.now() - awaySince > 1500) return { started: true, via: 'window' }; }
+      // A launcher's own window (Steam's "preparing to launch", a sign-in or update prompt) is not the game: keep
+      // the launch screen in front of it, as a console never shows its launcher's plumbing.
+      // Only for the first few seconds: a launcher that still wants you after that (a sign-in, an update to accept)
+      // is let through rather than hidden behind the launch screen.
+      if (!focused && covered < 6000 && LAUNCHER_PROCESSES.test(await windowsShell.foregroundProcess())) {
+        covered += 700;
+        awaySince = 0;
+        if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setAlwaysOnTop(true, 'pop-up-menu'); mainWindow.focus(); setTimeout(() => { if (!mainWindow.isDestroyed()) mainWindow.setAlwaysOnTop(false); }, 400); }
+      } else if (!focused) { awaySince ||= Date.now(); if (Date.now() - awaySince > 1500) return { started: true, via: 'window' }; }
       else {
         awaySince = 0;
         if (game.installPath && await windowsShell.focusGame(game.installPath) === 'focused') return { started: true, via: 'window' };
@@ -2554,17 +2563,23 @@ function registerIpc() {
   ipcMain.handle('game:close', async (_event, gameId) => {
     gameId = String(gameId || '');
     if (!activeGameSession || activeGameSession.gameId !== gameId) throw new Error('This game is not running.');
-    if (process.env.NEBULA_DEMO === '1') { activeGameSession = null; notifySessionEnded(gameId, false); return { stopped: true }; }
+    const launchedAt = activeGameSession.launchedAt;
+    if (process.env.NEBULA_DEMO === '1') { activeGameSession = null; notifySessionEnded(gameId, false, launchedAt); return { stopped: true }; }
     const result = await stopLaunch(gameId);
-    if (result.stopped) { activeGameSession = null; notifySessionEnded(gameId, false); }
+    if (result.stopped) { activeGameSession = null; notifySessionEnded(gameId, false, launchedAt); }
     return { stopped: result.stopped, stillRunning: result.stillRunning };
+  });
+  // Waking from sleep: the dashboard refreshes in place (no reload), and a game that was running stays in front.
+  app.whenReady().then(() => {
+    powerMonitor.on('resume', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('system:resume'); });
+    powerMonitor.on('suspend', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('system:suspend'); });
   });
   // A game that ends on its own brings the dashboard back, focused on that game, as a console does.
   let watchedSession = null;
-  function notifySessionEnded(gameId, bringBack) {
+  function notifySessionEnded(gameId, bringBack, launchedAt = 0) {
     watchedSession = null;
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    mainWindow.webContents.send('game:ended', { gameId });
+    mainWindow.webContents.send('game:ended', { gameId, launchedAt, endedAt: Date.now() });
     if (bringBack && (mainWindow.isMinimized() || !mainWindow.isFocused())) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -2572,10 +2587,10 @@ function registerIpc() {
     }
   }
   setInterval(async () => {
-    if (!activeGameSession) { if (watchedSession) notifySessionEnded(watchedSession, true); return; }
+    if (!activeGameSession) { if (watchedSession) notifySessionEnded(watchedSession.gameId, true, watchedSession.launchedAt); return; }
     const session = await readActiveSession().catch(() => null);
-    if (session) { if (session.verified) watchedSession = session.gameId; return; }
-    if (watchedSession) notifySessionEnded(watchedSession, true);
+    if (session) { if (session.verified) watchedSession = { gameId: session.gameId, launchedAt: session.launchedAt }; return; }
+    if (watchedSession) notifySessionEnded(watchedSession.gameId, true, watchedSession.launchedAt);
   }, 4000).unref?.();
   async function readActiveSession() {
     if (!activeGameSession) return null;
@@ -2934,6 +2949,30 @@ function registerIpc() {
     const out = [];
     for (let start = 0; start < items.length; start += 4) out.push(...await Promise.all(items.slice(start, start + 4).map(async (item, offset) => ({ index: start + offset, name: item.name, kind: item.kind, source: item.source, at: item.at, thumb: await captureThumbnail(item) }))));
     return out;
+  });
+  // Every recent capture, for the Captures page in each theme: Game Bar's Captures folder, newest first.
+  let recentCaptures = [];
+  ipcMain.handle('captures:recent', async () => {
+    if (process.env.NEBULA_DEMO === '1') return [];
+    const folder = path.join(app.getPath('videos'), 'Captures');
+    const names = await fs.readdir(folder).catch(() => []);
+    const files = (await Promise.all(names.filter(name => /\.(png|jpe?g|jxr|mp4)$/i.test(name)).map(async name => {
+      const file = path.join(folder, name);
+      const stat = await fs.stat(file).catch(() => null);
+      return stat ? { path: file, name, kind: /\.mp4$/i.test(name) ? 'video' : 'image', at: stat.mtimeMs } : null;
+    }))).filter(Boolean).sort((a, b) => b.at - a.at).slice(0, 36);
+    recentCaptures = files;
+    const out = [];
+    for (let start = 0; start < files.length; start += 4) out.push(...await Promise.all(files.slice(start, start + 4).map(async (item, offset) => ({ index: start + offset, name: item.name.replace(/\.[^.]+$/, ''), kind: item.kind, at: item.at, thumb: await captureThumbnail(item) }))));
+    return out;
+  });
+  ipcMain.handle('captures:open-recent', async (event, index) => {
+    assertLauncherSender(event);
+    const item = recentCaptures[Number(index)];
+    if (!item) throw new Error('That capture is no longer in the list.');
+    const error = await shell.openPath(item.path);
+    if (error) throw new Error(error);
+    return true;
   });
   ipcMain.handle('captures:open', async (event, gameId, index) => {
     assertLauncherSender(event);
@@ -3942,26 +3981,58 @@ function registerIpc() {
     clipboard.writeText(text);
     return { characters: text.length };
   });
-  ipcMain.handle('backup:export', async () => {
+  // Backups go to Documents\OmniDash: no Windows save dialog, which a controller can't drive. Whether keys are
+  // included is asked in the dashboard first.
+  const backupFolder = () => path.join(app.getPath('documents'), 'OmniDash');
+  ipcMain.handle('backup:export', async (_event, includeKeys = false) => {
     const settings = await readSettings();
-    const choice = await dialog.showMessageBox(mainWindow, {
-      type: 'question', buttons: ['Leave keys out', 'Include keys', 'Cancel'], defaultId: 0, cancelId: 2,
-      title: 'Export settings', message: 'Include your API keys in the backup?',
-      detail: 'Keys let whoever opens the file use them. Leave them out to share a backup safely.'
-    });
-    if (choice.response === 2) return { status: 'cancelled' };
-    const picked = await dialog.showSaveDialog(mainWindow, { title: 'Save settings backup', defaultPath: `xbox-preview-ui-settings-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'Settings backup', extensions: ['json'] }] });
-    if (picked.canceled || !picked.filePath) return { status: 'cancelled' };
-    const backup = support.buildBackup(settings, { includeKeys: choice.response === 1, version: app.getVersion() });
-    await fs.writeFile(picked.filePath, JSON.stringify(backup, null, 2), 'utf8');
-    return { status: 'saved', file: path.basename(picked.filePath), includesKeys: backup.includesKeys, count: Object.keys(backup.data).length };
+    const folder = backupFolder();
+    await fs.mkdir(folder, { recursive: true });
+    const file = path.join(folder, `omnidash-settings-${new Date().toISOString().slice(0, 10)}.json`);
+    const backup = support.buildBackup(settings, { includeKeys: Boolean(includeKeys), version: app.getVersion() });
+    await fs.writeFile(file, JSON.stringify(backup, null, 2), 'utf8');
+    return { status: 'saved', file: path.basename(file), folder: 'Documents › OmniDash', includesKeys: backup.includesKeys, count: Object.keys(backup.data).length };
   });
-  ipcMain.handle('backup:import', async () => {
-    const picked = await dialog.showOpenDialog(mainWindow, { title: 'Open settings backup', properties: ['openFile'], filters: [{ name: 'Settings backup', extensions: ['json'] }] });
-    if (picked.canceled || !picked.filePaths[0]) return { status: 'cancelled' };
-    const parsed = support.parseBackup(await fs.readFile(picked.filePaths[0], 'utf8'));
+  ipcMain.handle('backup:import', async (_event, filePath) => {
+    filePath = String(filePath || '');
+    if (!filePath || path.extname(filePath).toLowerCase() !== '.json') return { status: 'cancelled' };
+    const parsed = support.parseBackup(await fs.readFile(filePath, 'utf8'));
     await writeSettings(parsed.data, { replaceArtwork: true });
-    return { status: 'restored', file: path.basename(picked.filePaths[0]), count: Object.keys(parsed.data).length, includesKeys: parsed.includesKeys };
+    return { status: 'restored', file: path.basename(filePath), count: Object.keys(parsed.data).length, includesKeys: parsed.includesKeys };
+  });
+  ipcMain.handle('backup:folder', () => backupFolder());
+  // The controller file browser (garrison-files.js) in place of Windows' open dialogs: folders and the files of
+  // the kinds asked for, the drives and the usual folders as places, and small picture thumbnails.
+  ipcMain.handle('files:list', async (_event, dir, extensions = []) => {
+    const exts = new Set((Array.isArray(extensions) ? extensions : []).map(item => `.${String(item).toLowerCase().replace(/^\./, '')}`));
+    const places = [];
+    for (const [label, key] of [['Pictures', 'pictures'], ['Downloads', 'downloads'], ['Desktop', 'desktop'], ['Documents', 'documents']]) {
+      try { places.push({ label, path: app.getPath(key) }); } catch { /* Not on this PC. */ }
+    }
+    for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') { const root = letter + ':' + path.sep; if (await exists(root)) places.push({ label: `${letter}:`, path: root, drive: true }); }
+    dir = String(dir || '') || places[0]?.path || 'C:' + path.sep;
+    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
+    if (!entries) throw new Error('That folder could not be opened.');
+    const items = entries.filter(entry => !entry.name.startsWith('.') && !/^(\$|desktop\.ini$|thumbs\.db$|ntuser)/i.test(entry.name))
+      .filter(entry => entry.isDirectory() || exts.has(path.extname(entry.name).toLowerCase()))
+      .map(entry => ({ name: entry.name, path: path.join(dir, entry.name), folder: entry.isDirectory() }))
+      .sort((a, b) => (b.folder - a.folder) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+      .slice(0, 600);
+    const parent = path.dirname(dir) === dir ? '' : path.dirname(dir);
+    return { dir, parent, places, items };
+  });
+  ipcMain.handle('files:thumb', async (_event, filePath) => {
+    if (!/\.(png|jpe?g|webp|gif|bmp)$/i.test(String(filePath || ''))) return '';
+    const image = await nativeImage.createThumbnailFromPath(String(filePath), { width: 192, height: 192 }).catch(() => null);
+    return image && !image.isEmpty() ? image.toDataURL() : '';
+  });
+  ipcMain.handle('files:read-image', async (_event, filePath) => {
+    filePath = String(filePath || '');
+    if (!/\.(png|jpe?g|webp)$/i.test(filePath)) throw new Error('Choose a PNG, JPEG or WebP picture.');
+    const data = await fs.readFile(filePath);
+    if (data.length > 15e6) throw new Error('That picture is over 15 MB.');
+    const ext = path.extname(filePath).toLowerCase();
+    return { name: path.basename(filePath), type: ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg', base64: data.toString('base64') };
   });
   ipcMain.handle('updater:check', () => updater.check({ force: true }));
   ipcMain.handle('updater:install', () => updater.installNow());

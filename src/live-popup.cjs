@@ -9,7 +9,8 @@ const FAMILY = { series: 'xbox', one: 'xbox', helix: 'xbox', aero: 'xbox', x360:
 const ICONS = {
   achievement: '<path d="M7 4h10v3a5 5 0 0 1-10 0V4Zm-3 1h3v2a3 3 0 0 1-3-3Zm16 0h-3v2a3 3 0 0 0 3-3ZM10 14h4v3h3v3H7v-3h3v-3Z"/>',
   friend: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4.5 4.2-6.5 8-6.5s7 2 8 6.5H4Z"/>',
-  download: '<path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4 6.3 10.7l1.4-1.4L11 12.6V3ZM5 18h14v2H5v-2Z"/>'
+  download: '<path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4 6.3 10.7l1.4-1.4L11 12.6V3ZM5 18h14v2H5v-2Z"/>',
+  battery: '<rect x="3" y="7" width="16" height="10" rx="2" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="20" y="10" width="1.6" height="4" rx=".6"/><rect x="5" y="9" width="3" height="6" rx=".8" fill="#ff5a4f"/>'
 };
 const esc = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 

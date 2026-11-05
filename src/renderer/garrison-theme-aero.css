@@ -565,3 +565,5 @@ html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-frost { will-change
 body[data-g-skin="aero"] #g-aero-settings .as-rows { background: transparent; padding: calc(6 * var(--cpx)); gap: calc(8 * var(--cpx)); }
 body[data-g-skin="aero"] #g-aero-settings .as-row + .as-row::before { display: none; }
 body[data-g-skin="aero"] #g-aero-settings :is(.as-cat > svg, .as-orb) { border-radius: 50%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 calc(3 * var(--cpx)) calc(8 * var(--cpx)) rgba(0, 30, 70, .35); }
+/* The Store page starts under Aero's floating top bar instead of beneath it. */
+html body.garrison.store-active[data-g-skin="aero"][data-g-theme] #store-view { padding-top: calc(120 * var(--cpx)) !important; }

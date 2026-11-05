@@ -98,6 +98,13 @@ static class WindowsShell {
                 Thread.Sleep(150);
                 return GetAncestor(GetForegroundWindow(),2)==game?0:4;
             }
+            // --foreground: the program that owns the window in front (so a launch can tell a launcher's pop-up from
+            // the game).
+            if(args.Length==1&&args[0]=="--foreground") {
+                uint owner; GetWindowThreadProcessId(GetForegroundWindow(), out owner);
+                try { Console.WriteLine(Process.GetProcessById((int)owner).ProcessName); } catch { Console.WriteLine(""); }
+                return 0;
+            }
             if(args.Length!=2||args[0]!="--game-bar") throw new Exception("Unknown shell action.");
             if(GameBarVisible()) return 0;
             var window=new IntPtr(long.Parse(args[1]));

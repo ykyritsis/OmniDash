@@ -468,3 +468,12 @@ html.reduce-motion #startup-screen .g-m-p5-mark { opacity: 1; }
 #g-ps5 .p5-card-copy small { opacity: 0; transition: opacity .2s ease; font-size: calc(19 * var(--cpx)); }
 #g-ps5 .p5-cards:focus-within .p5-card-copy small { opacity: 1; }
 #g-ps5 .p5-cards:focus-within { bottom: calc(30 * var(--cpx)); }
+
+/* PS5's own colours on the shared game page and Store: PlayStation blue for actions, white for the chosen tab,
+   and a neutral "owned" chip instead of the Xbox green ones. */
+html body.garrison[data-g-theme="ps5"] .g-own-pill { border-color: rgba(255, 255, 255, .28) !important; background: rgba(255, 255, 255, .1) !important; }
+html body.garrison[data-g-theme="ps5"] .g-own-pill :is(svg, .g-glyph) { color: #8ec5ff !important; }
+html body.garrison[data-g-theme="ps5"] #g-store-hero .g-hero-copy b { background: #0070d1 !important; color: #fff !important; border-radius: calc(22 * var(--cpx)) !important; border: 0 !important; }
+html body.garrison[data-g-theme="ps5"] .console-store-tabs button { border-radius: calc(22 * var(--cpx)) !important; color: rgba(255, 255, 255, .75) !important; background: transparent !important; border: 0 !important; }
+html body.garrison[data-g-theme="ps5"] .console-store-tabs button.active { background: #fff !important; color: #0b0d12 !important; }
+html body.garrison[data-g-theme="ps5"] :is(#detail-play, .detail-primary-action):not(.g-installing) { background: #0070d1 !important; color: #fff !important; }

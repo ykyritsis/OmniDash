@@ -49,14 +49,18 @@
     }
     if (action === 'g-support-export') {
       try {
-        const result = await window.launcher.exportSettings();
-        if (result.status === 'saved') showToast(`Saved ${result.file}${result.includesKeys ? ' · includes your API keys' : ''}`);
+        const keys = await gChoice('Back up settings', 'Include your API keys? Anyone who opens the backup could use them.', [['no', 'Leave keys out', true], ['yes', 'Include keys']]);
+        if (!keys) return;
+        const result = await window.launcher.exportSettings(keys === 'yes');
+        if (result.status === 'saved') showToast(`Backed up to ${result.folder}${result.includesKeys ? ' · includes your API keys' : ''}`);
       } catch (error) { showToast(error.message || 'Could not export settings'); }
       return;
     }
     if (action === 'g-support-import') {
       try {
-        const result = await window.launcher.importSettings();
+        const picked = await window.gPickFile({ title: 'Restore settings', extensions: ['json'], start: await window.launcher.backupFolder().catch(() => '') });
+        if (!picked) return;
+        const result = await window.launcher.importSettings(picked.path);
         if (result.status === 'restored') { showToast(`Settings restored from ${result.file}. Restart to apply everything.`); scanLibrary(false); }
       } catch (error) { showToast(error.message || 'That backup could not be restored'); }
       return;

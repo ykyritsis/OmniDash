@@ -151,3 +151,67 @@ img.g-fade { opacity: 0 !important; }
 /* The hints added to menus that had none. */
 html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto { display: flex; gap: 1.1em; margin: .55em .4em .1em; padding-top: .55em; border-top: 1px solid var(--mn-line); font-size: .8em; color: var(--mn-sub); }
 html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto span { display: inline-flex; align-items: center; gap: .45em; }
+
+/* ---------- The controller file browser ---------- */
+html body.garrison[data-g-theme] dialog.g-files { position: fixed; inset: 0; margin: auto; width: min(1100px, 86vw) !important; height: min(760px, 82vh); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: 1em !important; }
+html body.garrison[data-g-theme] dialog.g-files:not([open]) { display: none; }
+.g-files-head { display: grid; gap: .2em; padding: .2em .5em .7em; }
+.g-files-head h2 { margin: 0 !important; }
+.g-files-head small { overflow: hidden; font-size: .82em; color: var(--mn-sub); white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; }
+.g-files-body { display: grid; grid-template-columns: 13em minmax(0, 1fr); gap: .8em; min-height: 0; }
+.g-files-places { display: grid; align-content: start; gap: .15em; overflow-y: auto; padding-right: .6em; border-right: 1px solid var(--mn-line); }
+.g-files-list { display: grid; align-content: start; gap: .15em; overflow-y: auto; padding: .2em; }
+.g-files-list.pictures { grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr)); gap: .6em; }
+html body.garrison[data-g-theme] dialog.g-files :is(.g-files-place, .g-files-item) { display: flex; align-items: center; gap: .7em; min-height: 2.6em; padding: 0 .75em; border: 0; border-radius: var(--mn-item-radius); background: transparent; color: #fff; font: 400 1em/1.25 var(--g-font, "Segoe UI", system-ui, sans-serif); text-align: left; cursor: pointer; }
+html body.garrison[data-g-theme] dialog.g-files :is(.g-files-place, .g-files-item) > svg { width: 1.3em; height: 1.3em; flex: none; }
+html body.garrison[data-g-theme] dialog.g-files .g-files-item > span:last-child, html body.garrison[data-g-theme] dialog.g-files .g-files-place > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+html body.garrison[data-g-theme] dialog.g-files .g-files-place.on { background: var(--mn-tile); }
+html body.garrison[data-g-theme] dialog.g-files .g-files-item.up > svg, html body.garrison[data-g-theme] dialog.g-files .g-files-item.up .g-files-pic svg { transform: rotate(180deg); }
+.g-files-list.pictures .g-files-item { flex-direction: column; align-items: stretch; gap: .4em; min-height: 0; padding: .45em; font-size: .85em; }
+.g-files-pic { display: grid; place-items: center; aspect-ratio: 1; border-radius: calc(var(--mn-item-radius) - 2px); background: var(--mn-tile) center / cover no-repeat; }
+.g-files-pic svg { width: 2.2em; height: 2.2em; opacity: .8; }
+html body.garrison[data-g-theme] dialog.g-files :is(.g-files-place, .g-files-item):hover { background: var(--mn-hover); }
+html body.garrison[data-g-theme] dialog.g-files :is(.g-files-place, .g-files-item):is(.focused, :focus-visible) { outline: none; background: var(--mn-focus) !important; box-shadow: var(--mn-ring) !important; transform: none !important; }
+.g-files-empty { margin: 1em; color: var(--mn-sub); }
+
+/* ---------- Session recap ---------- */
+html body.garrison[data-g-theme] dialog.g-recap-flyout { width: 26em !important; }
+.g-recap-head { display: flex; align-items: center; gap: .9em; padding: .4em .5em .7em; }
+.g-recap-head .g-menu-art { flex: none; width: 4.2em; height: 4.2em; overflow: hidden; border-radius: var(--mn-item-radius); }
+.g-recap-head .g-menu-art :is(img, .art-fallback) { width: 100%; height: 100%; object-fit: cover; }
+.g-recap-head small { color: var(--mn-sub); font-size: .8em; letter-spacing: .06em; text-transform: uppercase; }
+.g-recap-head h2 { margin: .15em 0 0 !important; font-size: 1.25em !important; }
+.g-recap-chips { display: flex; flex-wrap: wrap; gap: .4em; padding: 0 .5em .7em; }
+.g-recap-chips span { display: inline-flex; align-items: center; gap: .4em; padding: .35em .75em; border-radius: 1em; background: var(--mn-tile); font-size: .88em; font-weight: 600; }
+.g-recap-chips svg { width: 1.1em; height: 1.1em; }
+.g-recap-shots { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4em; padding: 0 .5em .7em; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-recap-shot { display: grid; place-items: center; aspect-ratio: 16 / 9; border: 0; border-radius: calc(var(--mn-item-radius) - 2px); background: var(--mn-tile) center / cover no-repeat; color: #fff; cursor: pointer; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-recap-shot:is(.focused, :focus-visible) { outline: none; box-shadow: var(--mn-ring) !important; }
+/* ---------- Captures page ---------- */
+html body.garrison[data-g-theme] dialog.g-captures-flyout { position: fixed; inset: 0; margin: auto; width: min(1100px, 86vw) !important; max-height: 82vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: 1em !important; }
+html body.garrison[data-g-theme] dialog.g-captures-flyout:not([open]) { display: none; }
+html body.garrison[data-g-theme] dialog.g-captures-flyout header { display: flex; align-items: baseline; gap: .8em; }
+html body.garrison[data-g-theme] dialog.g-captures-flyout header small { color: var(--mn-sub); font-size: .85em; }
+.g-captures-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12em, 1fr)); gap: .7em; overflow-y: auto; padding: .3em; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-captures-item { display: grid; gap: .3em; padding: .4em; border: 0; border-radius: var(--mn-item-radius); background: transparent; color: #fff; text-align: left; cursor: pointer; }
+.g-captures-item > span:nth-child(2) { overflow: hidden; font-size: .85em; white-space: nowrap; text-overflow: ellipsis; }
+.g-captures-item small { color: var(--mn-sub); font-size: .75em; }
+.g-captures-pic { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: calc(var(--mn-item-radius) - 2px); background: var(--mn-tile) center / cover no-repeat; }
+.g-captures-pic svg { width: 2em; height: 2em; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
+html body.garrison[data-g-theme] dialog.g-flyout .g-captures-item:is(.focused, :focus-visible) { outline: none; background: var(--mn-focus) !important; box-shadow: var(--mn-ring) !important; }
+.g-captures-note { margin: 1em .6em; color: var(--mn-sub); }
+
+/* Battery in the top bar (handhelds and laptops only). */
+.g-battery { display: inline-flex; align-items: center; gap: .3em; margin-right: .6em; color: inherit; font: 600 clamp(12px, .78vw, 15px) / 1 var(--g-font, "Segoe UI", system-ui, sans-serif); font-variant-numeric: tabular-nums; opacity: .92; pointer-events: none; }
+.g-battery svg { width: 1.7em; height: 1.7em; }
+.g-battery.low span { color: #ff8a80; }
+#g-ps5 .p5-status .g-battery { align-self: center; margin-right: 1em; }
+
+/* "Classic" on the older dashboards in the theme pickers. */
+.g-classic { display: inline-block; margin-left: .45em; padding: .15em .5em; border-radius: .6em; background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .8); font: 600 .62em/1.2 var(--g-font, "Segoe UI", system-ui, sans-serif); font-style: normal; letter-spacing: .06em; text-transform: uppercase; vertical-align: .15em; }
+
+/* Aero keeps the one-list layout too (its own grid had two columns, which squeezed the list into the first). */
+html body.garrison[data-g-skin="aero"][data-g-theme] #g-aero-settings:not([hidden]) { grid-template-columns: minmax(0, 1fr); padding-left: max(calc(120 * var(--cpx)), calc(50vw - 560 * var(--cpx))); padding-right: max(calc(120 * var(--cpx)), calc(50vw - 560 * var(--cpx))); }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto kbd { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; font-size: .9em; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto kbd[data-g-glyph-key] { width: auto; height: auto; padding: 0; border: 0; background: none !important; box-shadow: none !important; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-hints-auto kbd .g-glyph { font-size: 1.5em; }

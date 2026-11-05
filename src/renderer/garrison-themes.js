@@ -23,14 +23,14 @@
   const THEMES = [
     { id: 'helix', name: 'Helix', era: 'Next generation', blurb: 'The full-screen Xbox PC look. Clean, glassy and quiet.' },
     { id: 'series', name: 'Series', era: 'Xbox Series X|S', blurb: 'Your game’s art behind the dashboard, square tiles and the green swirl.' },
-    { id: 'one', name: 'One', era: 'Xbox One, 2013', blurb: 'Flat Metro tiles, panorama headings and a wall of pins.' },
-    { id: 'ps3', name: 'PS3', era: 'PlayStation 3 XMB', blurb: 'The XrossMediaBar: a glowing wave over the month\'s colour, categories across and items down.' },
-    { id: 'ps4', name: 'PS4', era: 'PlayStation 4', blurb: 'The deep-blue home: a function row, then a row of square tiles with the game\'s art behind.' },
+    { id: 'one', classic: true, name: 'One', era: 'Xbox One, 2013', blurb: 'Flat Metro tiles, panorama headings and a wall of pins.' },
+    { id: 'ps3', classic: true, name: 'PS3', era: 'PlayStation 3 XMB', blurb: 'The XrossMediaBar: a glowing wave over the month\'s colour, categories across and items down.' },
+    { id: 'ps4', classic: true, name: 'PS4', era: 'PlayStation 4', blurb: 'The deep-blue home: a function row, then a row of square tiles with the game\'s art behind.' },
     { id: 'ps5', name: 'PS5', era: 'PlayStation 5', blurb: 'The crisp PS5 home: one row of large tiles under a white glow, the game\'s art drifting behind, Activity Cards below.' },
-    { id: 'wii', name: 'Wii', era: 'Wii Menu', blurb: 'The channel grid, the Wii button and clock bar, and the channel preview with Start.' },
-    { id: '3ds', name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Both screens side by side on one display: the game\'s banner and status bar, and your icons on the touch screen.' },
+    { id: 'wii', classic: true, name: 'Wii', era: 'Wii Menu', blurb: 'The channel grid, the Wii button and clock bar, and the channel preview with Start.' },
+    { id: '3ds', classic: true, name: '3DS', era: 'Nintendo 3DS HOME Menu', blurb: 'Both screens side by side on one display: the game\'s banner and status bar, and your icons on the touch screen.' },
     { id: 'aero', name: 'Aero', era: 'Xbox, Frutiger Aero', blurb: 'The Series dashboard on a sunny island sea: glossy tiles, glass cards and floating bubbles.' },
-    { id: 'x360', name: '360', era: 'Xbox 360 Metro, 2011', blurb: 'The lime-green Metro dashboard: lowercase pivots, a featured tile and the grey studio. With DashX360 assets by ZivvoZ when installed.' }
+    { id: 'x360', classic: true, name: '360', era: 'Xbox 360 Metro, 2011', blurb: 'The lime-green Metro dashboard: lowercase pivots, a featured tile and the grey studio. With DashX360 assets by ZivvoZ when installed.' }
   ];
   const valid = id => THEMES.some(theme => theme.id === id);
   // A skin is a theme that reuses another's screens and behaviour and only redraws them: Aero is the Series
@@ -89,7 +89,7 @@
   const pickerMarkup = () => `<div class="g-theme-picker" role="radiogroup" aria-label="Theme">${THEMES.map(theme => `
     <button class="g-theme-card focusable${theme.id === current ? ' on' : ''}" type="button" role="radio" aria-checked="${theme.id === current}" data-g-theme-pick="${theme.id}">
       ${preview(theme.id)}
-      <span class="g-theme-copy"><strong>${theme.name}</strong><em>${theme.era}</em><small>${theme.blurb}</small></span>
+      <span class="g-theme-copy"><strong>${theme.name}${theme.classic ? ' <i class="g-classic">Classic</i>' : ''}</strong><em>${theme.era}</em><small>${theme.blurb}</small></span>
     </button>`).join('')}</div>`;
   function refreshPickers() {
     for (const card of document.querySelectorAll('[data-g-theme-pick]')) {

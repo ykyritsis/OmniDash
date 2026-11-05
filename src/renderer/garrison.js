@@ -618,7 +618,7 @@ function gOnboardPreview(id) {
   }
   const name = stage.querySelector('.ob-theme-name'), era = stage.querySelector('.ob-theme-era'), blurb = stage.querySelector('.ob-theme-blurb');
   if (name) name.textContent = theme.name;
-  if (era) era.textContent = theme.era;
+  if (era) era.textContent = theme.classic ? `${theme.era} · Classic` : theme.era;
   if (blurb) blurb.textContent = theme.blurb;
   const avatarBox = stage.querySelector('.ob-avatar');
   const avatarId = gOnboardAvatarId(id);
@@ -654,7 +654,7 @@ function renderOnboarding(focus = true) {
         <div class="ob-pack-slot"></div>
       </div>
     </section>
-    <nav class="ob-strip" role="radiogroup" aria-label="Dashboards">${(window.gThemes || []).map(theme => `<button class="ob-card focusable${theme.id === current ? ' on' : ''}" type="button" role="radio" aria-checked="${theme.id === current}" data-g-theme-pick="${theme.id}" aria-label="${escapeHtml(`${theme.name}, ${theme.era}`)}"><img src="assets/theme-previews/${theme.id}.webp" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(theme.name)}</span></button>`).join('')}</nav>
+    <nav class="ob-strip" role="radiogroup" aria-label="Dashboards">${(window.gThemes || []).map(theme => `<button class="ob-card focusable${theme.id === current ? ' on' : ''}" type="button" role="radio" aria-checked="${theme.id === current}" data-g-theme-pick="${theme.id}" aria-label="${escapeHtml(`${theme.name}, ${theme.era}`)}"><img src="assets/theme-previews/${theme.id}.webp" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(theme.name)}${theme.classic ? '<i class="g-classic">Classic</i>' : ''}</span></button>`).join('')}</nav>
     ${hints('<button class="ob-next focusable g-onboard-primary" type="button" data-action="g-onboard-next">Continue</button>')}` : `
     <section class="ob-main">
       <div class="ob-copy">

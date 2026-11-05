@@ -11,7 +11,10 @@
     if (!document.hasFocus()) window.launcher.livePopup?.({ ...item, theme: themeId() }).catch(() => {});
   }
   window.gLive = announce;
+  // Achievements per game for the session recap (garrison-session.js reads and clears it).
+  window.gSessionAchievements = new Map();
   window.launcher.onLiveEvent?.(item => {
+    if (item.kind === 'achievement' && item.gameId) window.gSessionAchievements.set(item.gameId, (window.gSessionAchievements.get(item.gameId) || 0) + 1);
     // The main process shows its own pop-up over a game; here it only needs the toast and the sound.
     showToast(item.detail ? `${item.title} · ${item.detail}` : item.title);
     if (item.kind === 'achievement') { playUiSound('achievement'); window.dispatchEvent(new Event('player-score-updated')); }

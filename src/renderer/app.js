@@ -1167,6 +1167,7 @@ let focusListBuilds = 0;
 const focusObserver = new MutationObserver(records => {
   if (records.some(affectsFocusableLayout)) focusListDirty = true;
 });
+const COSMETIC_FOCUS_CLASSES = new Set(['focused', 'selected', 'store-product-selected', 'on', 'sel', 'pic-on']);
 function affectsFocusableLayout(record) {
   const containsControl = node => node.nodeType === 1 && (node.matches('.focusable') || node.querySelector('.focusable'));
   if (record.type === 'childList') {
@@ -1174,7 +1175,9 @@ function affectsFocusableLayout(record) {
   }
   if (!containsControl(record.target)) return false;
   if (record.attributeName !== 'class') return true;
-  const structuralClasses = value => String(value || '').split(/\s+/).filter(name => !['focused', 'selected', 'store-product-selected'].includes(name)).sort().join(' ');
+  // Selection, swap and animation classes the themes toggle on every step change how a control looks, not whether
+  // it can be focused; rebuilding the list for them cost several milliseconds a step in the heavier themes.
+  const structuralClasses = value => String(value || '').split(/\s+/).filter(name => !COSMETIC_FOCUS_CLASSES.has(name) && !/^g-hub-in-|-swap$|^g-(running|skel|fade|quick-resume)$/.test(name)).sort().join(' ');
   return structuralClasses(record.oldValue) !== structuralClasses(record.target.className);
 }
 focusObserver.observe(document.body, { subtree:true, childList:true, attributes:true, attributeOldValue:true, attributeFilter:['hidden','disabled','inert','open','class'] });
@@ -3096,19 +3099,37 @@ function pollGamepad() {
       navigateBack();
     }
     if (modalBackHandled) { state.previousButtons = pressed; return; }
-    if (justPressed(9)) {
+    // Menu and View act when released, so they can also be held or pressed together, as on a console:
+    // hold Menu for Power options, press View + Menu together to close the running game.
+    const tick = performance.now();
+    const released = index => !pressed[index] && state.previousButtons[index];
+    if (justPressed(9)) state.menuHeldAt = tick;
+    if (justPressed(8)) state.viewHeldAt = tick;
+    if (pressed[8] && pressed[9] && !state.comboFired && (state.menuHeldAt || state.viewHeldAt)) {
+      state.comboFired = true; state.menuHeldAt = 0; state.viewHeldAt = 0;
+      window.gCloseGamePrompt?.();
+    }
+    if (pressed[9] && state.menuHeldAt && tick - state.menuHeldAt > 650) {
+      state.menuHeldAt = 0;
+      for (const open of document.querySelectorAll('dialog[open]')) if (open !== onboardingDialog) open.close();
+      playUiSound('confirm');
+      performAction('power-menu');
+    }
+    if (released(9) && state.menuHeldAt) {
+      state.menuHeldAt = 0;
       if (gameOptionsDialog.open) gameOptionsDialog.close();
       else if (!document.querySelector('dialog[open]') && state.view !== 'store') {
         const gameId = document.activeElement?.dataset.gameId || (state.view === 'detail' ? state.detailGameId : state.selectedGameId);
         if (state.games.some(game => game.id === gameId)) openGameOptions(gameId);
       }
     }
+    if (!pressed[8] && !pressed[9]) state.comboFired = false;
     // X has no global action in the Xbox app; a full library scan was too easy to trigger by accident.
     if (justPressed(3) && !document.querySelector('dialog[open]') && ['home','library'].includes(state.view)) {
       state.controllerClick = true;
       try { performAction('toggle-search'); } finally { state.controllerClick = false; }
     }
-    if (justPressed(8) && !document.querySelector('dialog[open]')) toggleNav();
+    if (released(8) && state.viewHeldAt) { state.viewHeldAt = 0; if (!document.querySelector('dialog[open]')) toggleNav(); }
     if (justPressed(4) && !document.querySelector('dialog[open]')) (window.gPageScroll ? window.gPageScroll(-1) : document.querySelector('main').scrollBy({ top: -window.innerHeight * .75, behavior: 'smooth' }));
     if (justPressed(5) && !document.querySelector('dialog[open]')) (window.gPageScroll ? window.gPageScroll(1) : document.querySelector('main').scrollBy({ top: window.innerHeight * .75, behavior: 'smooth' }));
     // Directions behave like a console: one move on press, then repeats after a short hold that speed up.

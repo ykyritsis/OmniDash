@@ -33,6 +33,12 @@ function createWindowsShell({ runtimeDirectory, getWindow, run = execFile, platf
     return new Promise(resolve => run(path.join(runtimeDirectory, 'WindowsShell.exe'), ['--focus-game', String(folder)],
       { windowsHide: true, timeout: 4000, maxBuffer: 4096 }, error => resolve(!error ? 'focused' : error.code === 4 ? 'blocked' : 'none')));
   }
-  return { openGameBar, focusGame };
+  // The process name of the window in front, lower case without .exe ('' when unknown).
+  function foregroundProcess() {
+    if (platform !== 'win32') return Promise.resolve('');
+    return new Promise(resolve => run(path.join(runtimeDirectory, 'WindowsShell.exe'), ['--foreground'],
+      { windowsHide: true, timeout: 3000, maxBuffer: 4096 }, (error, stdout) => resolve(error ? '' : String(stdout || '').trim().toLowerCase())));
+  }
+  return { openGameBar, focusGame, foregroundProcess };
 }
 module.exports = { createWindowsShell, SUPPORT_LINKS };
