@@ -205,7 +205,14 @@ const onboardingDialog = document.querySelector('#onboarding-dialog');
 const scanProgress = document.querySelector('#scan-progress');
 const importingScreen = document.querySelector('#importing-screen');
 const startupLibrarySnapshot = window.launcher.getCachedLibrary().catch(() => null);
+// Original gamerpics drawn in each console's style (bundled, so they work offline). They are not the consoles'
+// own default pictures, which belong to Microsoft and Sony.
+const consoleAvatarSets = [
+  ['Console styles', [['360-orb', '360 Orb'], ['360-blades', '360 Blades'], ['one-figure', 'One Player'], ['one-neon', 'One Neon'], ['ps3-wave', 'PS3 Wave'],
+    ['ps3-gold', 'PS3 Gold'], ['ps4-particles', 'PS4 Particles'], ['ps4-bokeh', 'PS4 Bokeh'], ['ps5-light', 'PS5 Light'], ['ps5-dark', 'PS5 Dark']]]
+];
 const avatarPresets = [
+  ...consoleAvatarSets.flatMap(([group, items]) => items.map(([file, label]) => ({ id: `cc-${file}`, group, label, url: `assets/avatars/${file}.svg` }))),
   ...['21058', '21038', '21046', '21026', '21047', '20000', '21040', '21045', '21019', '21050', '21044', '21006'].map((number, index) => ({ id: `360-original-${index + 1}`, group: 'Xbox 360 originals', label: `Original ${index + 1}`, url: `https://assets.xboxgamer.pics/titles/fffe07d1/${number}.png` })),
   ...[
     'https://live.staticflickr.com/3748/12110838883_8577c69393_z.jpg',

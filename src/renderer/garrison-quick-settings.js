@@ -20,19 +20,27 @@
   let quick = null, pollTimer = 0;
   const pending = new Map();
 
-  const row = (title, detail, controls = '') => `<div class="g-quick-row"><span class="g-quick-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span><span class="g-quick-controls">${controls}</span></div>`;
+  // Status tiles (Wi-Fi, battery) along the top, a meter row for each level you can change, then the power plan
+  // as one segmented control.
+  const tile = (icon, title, detail) => `<div class="g-quick-tile">${gIcon(icon)}<strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></div>`;
   const stepper = (action, label) => `<button class="g-quick-step focusable" type="button" data-action="${action}" data-delta="-1" aria-label="Lower ${label}">−</button><button class="g-quick-step focusable" type="button" data-action="${action}" data-delta="1" aria-label="Raise ${label}">+</button>`;
+  const slider = (icon, title, level, value, controls, muted = false) => `<div class="g-quick-slider${muted ? ' muted' : ''}">${gIcon(icon)}<span class="g-quick-meter"><span><b>${escapeHtml(title)}</b><em>${escapeHtml(value)}</em></span><i class="g-quick-track"><i style="width:${Math.max(0, Math.min(100, level))}%"></i></i></span><span class="g-quick-controls">${controls}</span></div>`;
+  // Windows' own plan names are long; the control has room for one short word each.
+  const planName = name => ({ 'high performance': 'Performance', 'ultimate performance': 'Ultimate', 'power saver': 'Saver' })[String(name).toLowerCase()] || name;
 
   function markup() {
     if (!quick) return '<header><h2>Quick settings</h2></header><p class="g-quick-note" role="status">Reading this PC…</p>';
-    const parts = [];
-    if (quick.battery) parts.push(row('Battery', `${quick.battery.percent}%${quick.battery.charging ? ' · Charging' : ' · On battery'}`));
-    if (quick.wifi) parts.push(row('Wi-Fi', quick.wifi.connected ? `${quick.wifi.ssid || 'Connected'}${quick.wifi.signal !== null ? ` · ${quick.wifi.signal}%` : ''}` : 'Not connected'));
-    if (quick.volume) parts.push(row('Volume', quick.volume.muted ? 'Muted' : `${quick.volume.level}%`, `${stepper('g-quick-volume', 'volume')}<button class="g-quick-step wide focusable" type="button" data-action="g-quick-mute">${quick.volume.muted ? 'Unmute' : 'Mute'}</button>`));
-    if (quick.brightness !== null) parts.push(row('Brightness', `${quick.brightness}%`, stepper('g-quick-brightness', 'brightness')));
-    const plans = quick.plans.length ? `<h3>Power plan</h3><div class="g-quick-plans" role="radiogroup" aria-label="Power plan">${quick.plans.map(plan =>
-      `<button class="g-quick-plan focusable${plan.active ? ' on' : ''}" type="button" role="radio" aria-checked="${plan.active}" data-action="g-quick-plan" data-guid="${escapeHtml(plan.guid)}">${escapeHtml(plan.name)}</button>`).join('')}</div>` : '';
-    return `<header><h2>Quick settings</h2></header><div class="g-quick-rows">${parts.join('') || '<p class="g-quick-note">This PC has nothing to adjust here.</p>'}</div>${plans}`;
+    const tiles = [];
+    if (quick.wifi) tiles.push(tile('wifi', 'Wi-Fi', quick.wifi.connected ? `${quick.wifi.ssid || 'Connected'}${quick.wifi.signal !== null ? ` · ${quick.wifi.signal}%` : ''}` : 'Not connected'));
+    if (quick.battery) tiles.push(tile('battery', `${quick.battery.percent}%`, quick.battery.charging ? 'Charging' : 'On battery'));
+    const sliders = [];
+    if (quick.volume) sliders.push(slider(quick.volume.muted ? 'mute' : 'volume', 'Volume', quick.volume.muted ? 0 : quick.volume.level, quick.volume.muted ? 'Muted' : `${quick.volume.level}%`,
+      `${stepper('g-quick-volume', 'volume')}<button class="g-quick-step focusable${quick.volume.muted ? ' on' : ''}" type="button" data-action="g-quick-mute" aria-label="${quick.volume.muted ? 'Unmute' : 'Mute'}" aria-pressed="${quick.volume.muted}">${gIcon('mute')}</button>`, quick.volume.muted));
+    if (quick.brightness !== null) sliders.push(slider('brightness', 'Brightness', quick.brightness, `${quick.brightness}%`, stepper('g-quick-brightness', 'brightness')));
+    const plans = quick.plans.length ? `<h3>Power mode</h3><div class="g-quick-plans" role="radiogroup" aria-label="Power mode">${quick.plans.map(plan =>
+      `<button class="g-quick-plan focusable${plan.active ? ' on' : ''}" type="button" role="radio" aria-checked="${plan.active}" aria-label="${escapeHtml(plan.name)}" data-action="g-quick-plan" data-guid="${escapeHtml(plan.guid)}">${escapeHtml(planName(plan.name))}</button>`).join('')}</div>` : '';
+    const body = (tiles.length ? `<div class="g-quick-tiles">${tiles.join('')}</div>` : '') + (sliders.length ? `<div class="g-quick-sliders">${sliders.join('')}</div>` : '');
+    return `<header><h2>Quick settings</h2></header>${body || '<p class="g-quick-note">This PC has nothing to adjust here.</p>'}${plans}`;
   }
   function draw(keep) {
     menu.innerHTML = markup();

@@ -89,3 +89,52 @@ html.reduce-motion .g-onboard-stage, html.reduce-motion .g-onboard-stage * { ani
 .ob-preview { width: 100%; max-height: 44vh; max-width: calc(44vh * 16 / 9); }
 .ob-pack { width: 100%; max-width: calc(44vh * 16 / 9); box-sizing: border-box; }
 .g-onboard-stage .ob-card { --g-ring: none; }
+
+/* One focus ring for every control on these screens: a clean white outline, no glow. */
+.g-onboard-stage { --g-ring: 0 0 0 calc(.3 * var(--p)) #fff; }
+.g-onboard-stage .focusable:is(.focused, :focus-visible)::after { display: none !important; }
+
+/* Player chip: one button (picture, name and "Change"), not a pill with a second button inside it. */
+.g-onboard-stage .ob-player { gap: calc(1.2 * var(--p)); padding: calc(.7 * var(--p)) calc(1.8 * var(--p)) calc(.7 * var(--p)) calc(.7 * var(--p)); border: 0; color: #fff; text-align: left; cursor: pointer; transition: background-color .15s ease; }
+.g-onboard-stage .ob-player:hover { background: rgba(255, 255, 255, .13); }
+.g-onboard-stage .ob-player:is(.focused, :focus-visible) { outline: none; background: rgba(255, 255, 255, .16); box-shadow: var(--g-ring) !important; transform: none !important; }
+.ob-player-copy { display: grid; gap: calc(.15 * var(--p)); min-width: calc(10 * var(--p)); }
+.ob-player-edit { display: inline-flex; align-items: center; gap: calc(.5 * var(--p)); margin-left: calc(1 * var(--p)); padding-left: calc(1.6 * var(--p)); border-left: 1px solid rgba(255, 255, 255, .18); font: 600 calc(1.2 * var(--p)) / 1 var(--g-font); color: rgba(255, 255, 255, .85); }
+.ob-player-edit svg { width: calc(1.6 * var(--p)); height: calc(1.6 * var(--p)); }
+.ob-avatar { background: rgba(255, 255, 255, .1); }
+.ob-avatar img, .ob-avatar .avatar-glyph { display: grid; place-items: center; width: 100%; height: 100%; object-fit: cover; font-size: calc(2 * var(--p)); }
+
+/* Button hints: glyph and label on one line. */
+.ob-hints span { line-height: 1; }
+.ob-hints kbd { display: inline-flex; align-items: center; line-height: 1; }
+.ob-hints kbd .g-glyph { vertical-align: middle !important; }
+
+/* The theme's name and line sit under the preview, so they never land on top of the screenshot's own tiles. */
+.ob-preview { display: grid; overflow: visible !important; aspect-ratio: auto !important; max-height: none !important; background: none !important; box-shadow: none !important; }
+.ob-preview img { aspect-ratio: 16 / 9; height: auto !important; border-radius: calc(1.2 * var(--p)); box-shadow: 0 calc(2 * var(--p)) calc(5 * var(--p)) rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .12); max-height: 40vh; width: auto !important; max-width: 100%; justify-self: end; }
+.ob-preview figcaption { position: static !important; padding: calc(1.4 * var(--p)) 0 0 !important; background: none !important; text-align: right !important; justify-items: end; }
+.g-onboard-stage :is(.ob-next, .ob-pack-button):is(.focused, :focus-visible) { box-shadow: var(--g-ring) !important; }
+
+/* Step 2: launchers grouped by what they can add, so it's clear which ones show games you haven't installed. */
+.g-onboard-stage .ob-services.g-onboard-services { display: grid !important; grid-template-columns: none !important; align-content: center; gap: calc(1.6 * var(--p)); max-height: none !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+.ob-group { display: grid; gap: calc(.8 * var(--p)); }
+.ob-group h3 { margin: 0; font: 600 calc(1.05 * var(--p)) / 1.2 var(--g-font); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
+.ob-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(.8 * var(--p)); }
+.ob-grid-small { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ob-services .g-onboard-service { min-height: calc(6.2 * var(--p)) !important; padding: calc(.8 * var(--p)) calc(1.4 * var(--p)) !important; gap: calc(1.2 * var(--p)) !important; }
+.ob-services .g-onboard-service small { font-size: calc(1.1 * var(--p)) !important; line-height: 1.3 !important; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ob-grid-small .g-onboard-service { min-height: calc(4.8 * var(--p)) !important; padding: calc(.6 * var(--p)) calc(1.1 * var(--p)) !important; }
+.ob-grid-small .g-onboard-service small { display: none !important; }
+.ob-grid-small .g-onboard-service strong { font-size: calc(1.25 * var(--p)) !important; }
+.ob-grid-small .g-onboard-service :is(img, .g-onboard-mark) { width: calc(2.4 * var(--p)) !important; height: calc(2.4 * var(--p)) !important; }
+.ob-grid-small .g-onboard-check { width: calc(2 * var(--p)); height: calc(2 * var(--p)); font-size: calc(1.1 * var(--p)); }
+.ob-services .g-onboard-link { flex: none; white-space: nowrap; }
+.g-onboard-stage .g-onboard-service:is(.focused, :focus-visible) { outline: none; box-shadow: var(--g-ring) !important; transform: none !important; }
+/* Preview, caption and pack offer share the height between the header and the row of dashboards. */
+.ob-preview img { max-height: 34vh; }
+.ob-preview figcaption { gap: calc(.2 * var(--p)) !important; padding-top: calc(1 * var(--p)) !important; }
+.ob-preview figcaption strong { font-size: calc(1.9 * var(--p)) !important; }
+.ob-preview figcaption small { max-width: calc(60 * var(--p)); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: calc(1.2 * var(--p)) !important; }
+.ob-stagearea { gap: calc(1.2 * var(--p)) !important; }
+.ob-pack { padding: calc(.9 * var(--p)) calc(1.2 * var(--p)) !important; }
+.ob-pack-copy small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

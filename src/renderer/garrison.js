@@ -11,7 +11,8 @@ const gIconNames = {
   folder: 'folder_open', add: 'add', close: 'dismiss', download: 'arrow_download', info: 'info', keyboard: 'games', shield: 'shield_lock',
   language: 'local_language', volume: 'speaker_2', ease: 'accessibility', color: 'paint_brush', stream: 'video_clip', calculator: 'calculator',
   tv: 'desktop', drive: 'hard_drive', repair: 'wrench', photo: 'image', tag: 'tag', star: 'star', people: 'people_add', fullscreen: 'full_screen_maximize',
-  controller: 'xbox_controller', help: 'question_circle', hide: 'eye_off', show: 'eye', friends: 'people', chat: 'chat', headset: 'headset', pause: 'pause'
+  controller: 'xbox_controller', help: 'question_circle', hide: 'eye_off', show: 'eye', friends: 'people', chat: 'chat', headset: 'headset', pause: 'pause',
+  wifi: 'wifi', battery: 'battery', brightness: 'brightness', mute: 'speaker_mute'
 };
 function gIcon(name, className = '') {
   return `<svg class="g-glyph${className ? ' ' + className : ''}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">${gIconPaths[gIconNames[name]] || gIconPaths.info}</svg>`;
@@ -534,15 +535,15 @@ function gOnboardDots(step) { return `<div class="g-onboard-dots">${[0, 1].map(i
 function gOnboardStatus(source) {
   const busy = gOnboard.busy[source.id];
   if (busy) return busy;
-  if (!source.owned) return 'Installed games are found automatically';
+  if (!source.owned) return 'Found automatically';
   const games = count => `${count} game${count === 1 ? '' : 's'}`;
   if (source.id === 'steam-family' && source.enabled && !source.ready) return 'On · Sign in to Steam to load shared games';
   if (source.id === 'steam-family') return source.enabled && source.ready ? (source.noFamily ? 'This account isn\'t in a Steam Family' : `${games(source.count)} shared with you`) : 'Also include games your Steam Family shares';
   if (source.enabled) return source.count ? `Including ${games(source.count)} you haven't installed` : 'Including games you haven\'t installed';
-  if (source.id === 'steam') return source.ready ? 'Linked · Installed games only' : gOnboard.identity?.name ? `Signed in as ${gOnboard.identity.name} · Installed games only` : 'Installed games only';
-  if (source.id === 'epic' && !source.ready) return 'Installed games only · Uninstalled games need the Legendary helper';
-  if (['ea', 'battlenet'].includes(source.id)) return source.ready ? 'Linked · Installed games only' : 'Installed games only · Sign in to add the rest';
-  return 'Installed games only';
+  if (source.id === 'steam') return gOnboard.identity?.name ? `Off · signed in as ${gOnboard.identity.name}` : 'Off · switch on to sign in';
+  if (source.id === 'epic' && !source.ready) return 'Off · needs the free Legendary helper';
+  if (['ea', 'battlenet'].includes(source.id)) return source.ready ? 'Off · linked' : 'Off · switch on to sign in';
+  return 'Off · switch on to add the rest';
 }
 function gOnboardService(source) {
   const icon = gOnboardIcons[source.id];
@@ -557,7 +558,10 @@ function gOnboardServicesMarkup() {
   if (!gOnboard.sources) return '<p class="g-onboard-loading">Finding launchers on this PC…</p>';
   // Family games sit under Steam: they're only offered once Steam includes games you haven't installed.
   const steamOn = gOnboard.sources.find(item => item.id === 'steam')?.enabled;
-  return gOnboard.sources.filter(item => item.id !== 'steam-family' || steamOn).map(gOnboardService).join('');
+  const shown = gOnboard.sources.filter(item => item.id !== 'steam-family' || steamOn);
+  const full = shown.filter(item => item.owned), installed = shown.filter(item => !item.owned);
+  return (full.length ? `<section class="ob-group"><h3>Can add games you haven't installed</h3><div class="ob-grid">${full.map(gOnboardService).join('')}</div></section>` : '')
+    + (installed.length ? `<section class="ob-group"><h3>Installed games only</h3><div class="ob-grid ob-grid-small">${installed.map(gOnboardService).join('')}</div></section>` : '');
 }
 // The setup screens, laid out like a console's first-run: the step's title and a line on the left, the content on
 // the right, button hints and the step count along the bottom. Screen 1 previews each dashboard full size as you
@@ -578,11 +582,27 @@ function gOnboardPackMarkup(id) {
     ${busy ? '<i class="ob-pack-bar"><b></b></i>' : ''}
   </div>`;
 }
+// The picture you chose wins, then your Steam picture; with neither, a console-style gamerpic that follows the
+// dashboard you're looking at (saved when you finish).
+const gThemeAvatar = { x360: 'cc-360-orb', one: 'cc-one-figure', series: 'cc-one-neon', helix: 'cc-one-neon', aero: 'cc-360-blades', ps3: 'cc-ps3-wave', ps4: 'cc-ps4-particles', ps5: 'cc-ps5-light', wii: 'cc-one-figure', '3ds': 'cc-ps5-light' };
+function gOnboardAvatarId(themeId) {
+  if (selectedAvatarId && !['steam-profile', 'one-orbit'].includes(selectedAvatarId)) return selectedAvatarId;
+  if (gOnboard.identity?.avatar || steamPlayerIdentity?.avatar) return 'steam-profile';
+  return gThemeAvatar[themeId] || 'cc-one-figure';
+}
+function gOnboardAvatarMarkup(themeId) {
+  const id = gOnboardAvatarId(themeId);
+  if (id === 'steam-profile') return `<img src="${escapeHtml(gOnboard.identity?.avatar || steamPlayerIdentity?.avatar || '')}" alt="" />`;
+  if (id === 'custom-uploaded' && customAvatarData) return `<img src="${customAvatarData}" alt="" />`;
+  const preset = avatarPresets.find(item => item.id === id);
+  if (preset?.url) return `<img src="${escapeHtml(preset.url)}" alt="" />`;
+  return preset ? `<span class="avatar-glyph" style="background:linear-gradient(140deg,${preset.colors})">${preset.glyph}</span>` : '';
+}
 function gOnboardPreview(id) {
   const theme = gOnboardTheme(id);
   const stage = onboardingDialog.querySelector('.g-onboard-stage');
   if (!stage || gOnboard.step !== 0) return;
-  stage.querySelector('.ob-preview img')?.setAttribute('src', `assets/theme-previews/${id}.webp`);
+  stage.querySelector('.ob-preview img')?.setAttribute('src', `assets/theme-previews/large/${id}.webp`);
   const back = stage.querySelector('.ob-backdrop');
   if (back && back.dataset.theme !== id) {
     back.dataset.theme = id;
@@ -595,6 +615,9 @@ function gOnboardPreview(id) {
   if (name) name.textContent = theme.name;
   if (era) era.textContent = theme.era;
   if (blurb) blurb.textContent = theme.blurb;
+  const avatarBox = stage.querySelector('.ob-avatar');
+  const avatarId = gOnboardAvatarId(id);
+  if (avatarBox && avatarBox.dataset.avatar !== avatarId) { avatarBox.dataset.avatar = avatarId; avatarBox.innerHTML = gOnboardAvatarMarkup(id); }
   const packSlot = stage.querySelector('.ob-pack-slot');
   if (packSlot) {
     const markup = gOnboardPackMarkup(id);
@@ -606,8 +629,7 @@ function renderOnboarding(focus = true) {
   const step = gOnboard.step;
   const name = gOnboard.identity?.name || state.displayName || 'Player';
   // The picture you chose wins; otherwise the Steam picture.
-  const chosen = selectedAvatarId && selectedAvatarId !== 'steam-profile';
-  const avatar = !chosen && gOnboard.identity?.avatar ? `<img src="${escapeHtml(gOnboard.identity.avatar)}" alt="" />` : document.querySelector('#profile-avatar').innerHTML;
+  const avatar = gOnboardAvatarMarkup(gOnboardThemeId());
   const current = gOnboardThemeId();
   const hints = (next) => `<footer class="ob-foot"><span class="ob-hints"><span><kbd data-g-role="confirm"></kbd>Select</span>${step ? '<span><kbd data-g-role="back"></kbd>Back</span>' : ''}</span>
     <span class="ob-count">${step + 1} of 2</span>${next}</footer>`;
@@ -620,10 +642,10 @@ function renderOnboarding(focus = true) {
         <span class="ob-eyebrow">Set up</span>
         <h1>Choose your dashboard</h1>
         <p>Every game on this PC, from every launcher, in one home. Pick the console you want it to feel like; you can change it any time.</p>
-        <div class="ob-player"><span class="ob-avatar">${avatar}</span><span><small>Playing as</small><strong>${escapeHtml(name)}</strong></span><button class="ob-link focusable" type="button" data-action="g-onboard-rename">Change</button></div>
+        <button class="ob-player focusable" type="button" data-action="g-onboard-rename" aria-label="${escapeHtml(`Playing as ${name}. Change your name or gamerpic`)}"><span class="ob-avatar">${avatar}</span><span class="ob-player-copy"><small>Playing as</small><strong>${escapeHtml(name)}</strong></span><span class="ob-player-edit">${gIcon('edit')}Change</span></button>
       </div>
       <div class="ob-stagearea">
-        <figure class="ob-preview"><img src="assets/theme-previews/${current}.webp" alt="" /><figcaption><strong class="ob-theme-name"></strong><em class="ob-theme-era"></em><small class="ob-theme-blurb"></small></figcaption></figure>
+        <figure class="ob-preview"><img src="assets/theme-previews/large/${current}.webp" alt="" /><figcaption><strong class="ob-theme-name"></strong><em class="ob-theme-era"></em><small class="ob-theme-blurb"></small></figcaption></figure>
         <div class="ob-pack-slot"></div>
       </div>
     </section>
@@ -633,7 +655,7 @@ function renderOnboarding(focus = true) {
       <div class="ob-copy">
         <span class="ob-eyebrow">Set up</span>
         <h1>Bring your games</h1>
-        <p>Installed games from every launcher are added automatically. Switch a launcher on to also include games you own but haven't installed.</p>
+        <p>Installed games from every launcher are added automatically. Some launchers can also show the games you own but haven't installed: switch those on.</p>
         <p class="ob-note">Sign-ins happen on each service's own website. Your passwords are never seen or stored here.</p>
       </div>
       <div class="ob-stagearea"><div class="g-onboard-services ob-services">${gOnboardServicesMarkup()}</div></div>
@@ -769,7 +791,10 @@ const gOnboardActions = {
     try {
       const custom = Boolean(gOnboard.identity?.custom);
       const displayName = (custom ? gOnboard.identity.name : gOnboard.identity?.name) || state.displayName || 'Player';
-      await window.launcher.saveSettings({ onboardingComplete: true, displayName, profileNameMode: custom ? 'custom' : 'steam', avatarId: selectedAvatarId || 'steam-profile', profileAvatarCustomized: Boolean(selectedAvatarId && selectedAvatarId !== 'steam-profile') });
+      const customized = Boolean(selectedAvatarId && !['steam-profile', 'one-orbit'].includes(selectedAvatarId));
+      selectedAvatarId = gOnboardAvatarId(gOnboardThemeId());
+      await window.launcher.saveSettings({ onboardingComplete: true, displayName, profileNameMode: custom ? 'custom' : 'steam', avatarId: selectedAvatarId, profileAvatarCustomized: customized });
+      if (typeof renderAvatarChoices === 'function') renderAvatarChoices();
       state.displayName = displayName;
       onboardingDialog.close();
       refreshPlayerIdentity();

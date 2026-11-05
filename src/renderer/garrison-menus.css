@@ -1,0 +1,129 @@
+/* Menus (account, quick settings, notifications, view, friends, game options): one size scale and one shape for
+   every theme that uses the shared flyouts, with each theme's own surface, accent and focus. Loaded last, so it
+   replaces the sizes earlier sheets layered on (px, --p and --g-vp mixed, which made row text huge next to tiny
+   icons and a small header). Everything is in em of the panel's font size, which follows the window width. */
+html body.garrison[data-g-theme] {
+  --mn-size: clamp(15px, .94vw, 19px);
+  --mn-bg: rgba(36, 38, 41, .94);
+  --mn-border: rgba(255, 255, 255, .1);
+  --mn-line: rgba(255, 255, 255, .08);
+  --mn-tile: rgba(255, 255, 255, .06);
+  --mn-hover: rgba(255, 255, 255, .08);
+  --mn-focus: rgba(255, 255, 255, .14);
+  --mn-ring: 0 0 0 2px #fff;
+  --mn-accent: #107c10;
+  --mn-accent-text: #fff;
+  --mn-sub: rgba(255, 255, 255, .62);
+  --mn-radius: 12px;
+  --mn-item-radius: 8px;
+  --mn-shadow: 0 24px 60px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
+  --mn-sheen: none;
+  --mn-text-shadow: none;
+}
+html body.garrison[data-g-theme="series"] { --mn-bg: rgba(30, 33, 30, .95); --mn-radius: 8px; --mn-item-radius: 5px; }
+html body.garrison[data-g-theme="one"] { --mn-bg: rgba(28, 30, 34, .96); --mn-radius: 4px; --mn-item-radius: 2px; }
+html body.garrison[data-g-theme="x360"] { --mn-bg: linear-gradient(180deg, #3b3d3f, #232526); --mn-accent: #5dc21e; --mn-radius: 0; --mn-item-radius: 0; --mn-ring: 0 0 0 2px #8ee34a; --mn-focus: rgba(93, 194, 30, .28); }
+/* Aero: blue glass with a gloss across the top half, a bright hairline edge and an aqua glow for focus. */
+html body.garrison[data-g-skin="aero"][data-g-theme] {
+  --mn-bg: linear-gradient(180deg, rgba(150, 215, 255, .42), rgba(40, 130, 200, .5) 46%, rgba(10, 70, 130, .72));
+  --mn-border: rgba(255, 255, 255, .6);
+  --mn-line: rgba(255, 255, 255, .22);
+  --mn-tile: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .06) 50%, rgba(0, 40, 90, .16) 50%, rgba(0, 40, 90, .1));
+  --mn-hover: rgba(255, 255, 255, .14);
+  --mn-focus: linear-gradient(180deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .16) 50%, rgba(120, 220, 255, .22) 50%, rgba(120, 220, 255, .32));
+  --mn-ring: 0 0 0 1.5px rgba(255, 255, 255, .95), 0 0 14px 2px rgba(130, 225, 255, .85);
+  --mn-accent: linear-gradient(180deg, #a8ecff, #3cb4f0 48%, #0b7ad0 52%, #1494e6);
+  --mn-accent-text: #fff;
+  --mn-sub: rgba(235, 250, 255, .82);
+  --mn-radius: 14px;
+  --mn-item-radius: 9px;
+  --mn-shadow: 0 24px 60px rgba(0, 40, 90, .45), inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 0 0 1px rgba(255, 255, 255, .12);
+  --mn-sheen: linear-gradient(180deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .06) 60%, transparent);
+  --mn-text-shadow: 0 1px 2px rgba(0, 40, 80, .55);
+}
+
+/* ---------- The panel ---------- */
+html body.garrison[data-g-theme] dialog.g-flyout {
+  font-size: var(--mn-size) !important; padding: .55em !important; color: #fff;
+  border: 1px solid var(--mn-border) !important; border-radius: var(--mn-radius) !important;
+  background: var(--mn-bg) !important; box-shadow: var(--mn-shadow) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.4); backdrop-filter: blur(28px) saturate(1.4);
+  text-shadow: var(--mn-text-shadow); overflow: hidden;
+}
+html body.garrison[data-g-theme] dialog.g-flyout::before { content: ""; position: absolute; inset: 0 0 auto; height: 3.2em; pointer-events: none; background: var(--mn-sheen); border-radius: inherit; }
+html body.garrison[data-g-theme] dialog.g-flyout > * { position: relative; }
+html body.garrison[data-g-theme] dialog.g-flyout header h2 { margin: .35em .55em .6em !important; font: 600 1.1em/1.25 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; letter-spacing: 0; }
+html body.garrison[data-g-theme] dialog.g-flyout h3 { margin: .9em .65em .45em !important; font: 600 .74em/1.2 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; letter-spacing: .08em; text-transform: uppercase; color: var(--mn-sub) !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout { width: 20em !important; }
+html body.garrison[data-g-theme] dialog.g-quick-flyout { width: 23em !important; }
+html body.garrison[data-g-theme] :is(dialog.g-notifications-flyout, dialog.g-view-flyout, dialog.g-friends-flyout) { width: 21em !important; }
+
+/* ---------- Rows ---------- */
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-item {
+  display: flex; align-items: center; gap: .8em !important; min-height: 2.75em !important; padding: 0 .8em !important; margin: 0;
+  border-radius: var(--mn-item-radius) !important; font: 400 1em/1.25 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; color: #fff; background: transparent;
+  transition: background-color .12s ease;
+}
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-item > svg { width: 1.3em !important; height: 1.3em !important; font-size: 1em !important; flex: none; opacity: .92; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-item:hover { background: var(--mn-hover) !important; }
+html body.garrison[data-g-theme] dialog.g-flyout :is(.g-menu-item, .g-notice, .g-quick-step, .g-quick-plan, .g-friend) { --g-ring: var(--mn-ring); }
+html body.garrison[data-g-theme] dialog.g-flyout :is(.g-menu-item, .g-notice, .g-friend):is(.focused, :focus-visible) { outline: none; background: var(--mn-focus) !important; box-shadow: var(--mn-ring) !important; transform: none !important; }
+html body.garrison[data-g-theme] dialog.g-flyout :is(.g-menu-item, .g-notice, .g-friend):is(.focused, :focus-visible)::after { display: none !important; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-group { display: grid; gap: .15em; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-menu-group + .g-menu-group { margin-top: .4em; padding-top: .4em; border-top: 1px solid var(--mn-line); }
+
+/* ---------- Account ---------- */
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-head { gap: .8em !important; padding: .55em .6em .4em !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-avatar { width: 3.1em !important; height: 3.1em !important; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-head strong { font: 600 1.15em/1.2 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-head small { gap: .35em !important; margin-top: .2em !important; font-size: .82em !important; color: var(--mn-sub) !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-head small::after { font-size: 1em !important; color: var(--mn-sub) !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-score-status { margin: 0 .75em .6em !important; font-size: .78em !important; color: var(--mn-sub) !important; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-score-status:empty { display: none; }
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-head + .g-account-score-status + .g-menu-group,
+html body.garrison[data-g-theme] dialog.g-account-flyout .g-account-score-status:empty + .g-menu-group { padding-top: .4em; border-top: 1px solid var(--mn-line); }
+
+/* ---------- Quick settings ---------- */
+html body.garrison[data-g-theme] .g-quick-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .4em; }
+html body.garrison[data-g-theme] .g-quick-tile { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .1em .65em; padding: .7em .8em; border-radius: var(--mn-item-radius); background: var(--mn-tile); box-shadow: inset 0 0 0 1px var(--mn-line); }
+html body.garrison[data-g-theme] .g-quick-tile > svg { grid-row: span 2; width: 1.45em; height: 1.45em; }
+html body.garrison[data-g-theme] .g-quick-tile strong { font: 600 1em/1.2 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif); }
+html body.garrison[data-g-theme] .g-quick-tile small { overflow: hidden; font-size: .84em; line-height: 1.25; color: var(--mn-sub); white-space: nowrap; text-overflow: ellipsis; }
+html body.garrison[data-g-theme] .g-quick-sliders { display: grid; gap: .4em; margin-top: .4em; }
+html body.garrison[data-g-theme] .g-quick-slider { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .7em; padding: .55em .55em .55em .8em; border-radius: var(--mn-item-radius); background: var(--mn-tile); box-shadow: inset 0 0 0 1px var(--mn-line); }
+html body.garrison[data-g-theme] .g-quick-slider > svg { width: 1.3em; height: 1.3em; }
+html body.garrison[data-g-theme] .g-quick-meter { display: grid; gap: .35em; min-width: 0; }
+html body.garrison[data-g-theme] .g-quick-meter > span { display: flex; justify-content: space-between; font-size: .92em; }
+html body.garrison[data-g-theme] .g-quick-meter > span b { font-weight: 600; }
+html body.garrison[data-g-theme] .g-quick-meter > span em { font-style: normal; color: var(--mn-sub); font-variant-numeric: tabular-nums; }
+html body.garrison[data-g-theme] .g-quick-track { position: relative; display: block; height: .3em; overflow: hidden; border-radius: 1em; background: rgba(255, 255, 255, .18); }
+html body.garrison[data-g-theme] .g-quick-track i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--mn-accent); transition: width .15s ease; }
+html body.garrison[data-g-theme] .g-quick-slider.muted .g-quick-track i { background: rgba(255, 255, 255, .35); }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-controls { display: flex !important; gap: .3em !important; }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-step {
+  display: grid; place-items: center; min-width: 2.3em !important; width: 2.3em; height: 2.3em !important; padding: 0 !important; border: 0;
+  border-radius: var(--mn-item-radius) !important; background: rgba(255, 255, 255, .1) !important; color: #fff; font: 500 1.15em/1 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; box-shadow: none;
+}
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-step svg { width: 1.1em; height: 1.1em; }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-step.on { background: var(--mn-accent) !important; color: var(--mn-accent-text); }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-plans { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .25em !important; padding: .25em; border-radius: calc(var(--mn-item-radius) + .25em); background: var(--mn-tile); box-shadow: inset 0 0 0 1px var(--mn-line); }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-plan {
+  min-height: 2.4em; padding: .35em .4em !important; border: 0; border-radius: var(--mn-item-radius) !important; background: transparent !important;
+  color: #fff; font: 500 .9em/1.15 var(--g-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif) !important; text-align: center !important; box-shadow: none;
+}
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-plan.on { background: var(--mn-accent) !important; color: var(--mn-accent-text); font-weight: 600 !important; }
+html body.garrison[data-g-theme] .g-quick-flyout :is(.g-quick-step, .g-quick-plan):hover:not(.on) { background: var(--mn-hover) !important; }
+html body.garrison[data-g-theme] .g-quick-flyout :is(.g-quick-step, .g-quick-plan):is(.focused, :focus-visible) { outline: none; box-shadow: var(--mn-ring) !important; transform: none !important; }
+html body.garrison[data-g-theme] .g-quick-flyout :is(.g-quick-step, .g-quick-plan):is(.focused, :focus-visible)::after { display: none !important; }
+html body.garrison[data-g-theme] .g-quick-flyout .g-quick-note { margin: .6em .7em !important; font-size: .85em !important; color: var(--mn-sub) !important; }
+
+/* ---------- Notifications ---------- */
+html body.garrison[data-g-theme] dialog.g-flyout .g-notice { display: grid; gap: .2em; padding: .65em .8em !important; border-radius: var(--mn-item-radius) !important; font-size: .92em !important; }
+html body.garrison[data-g-theme] dialog.g-flyout .g-notice small { color: var(--mn-sub); font-size: .85em; }
+
+/* Aero: the Customize pill is glass like everything else, not a dark box. */
+html body.garrison[data-g-skin="aero"][data-g-theme] .g-aero-customize {
+  border-color: rgba(255, 255, 255, .6) !important; text-shadow: var(--a-text);
+  background: linear-gradient(180deg, rgba(170, 225, 255, .5), rgba(40, 130, 200, .45) 50%, rgba(10, 80, 150, .6) 50%, rgba(20, 110, 190, .6)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 calc(4 * var(--cpx)) calc(12 * var(--cpx)) rgba(0, 40, 80, .35);
+}
