@@ -39,7 +39,8 @@
     "productName": "OmniDash",
     "asarUnpack": ["src/xbox-mode-bridge/**"],
     "extraResources": [{ "from": ".packaging-staging/native", "to": "native", "filter": ["**/*"] }],
-    "compression": "maximum",
+    "compression": "normal",
+    "electronLanguages": ["en-US"],
     "files": [
       "src/**/*",
       "!src/**/*.cs",
@@ -54,7 +55,8 @@
       "artifactName": "OmniDash-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "OmniDash-Portable-${version}.${ext}"
+      "artifactName": "OmniDash-Portable-${version}.${ext}",
+      "splashImage": "build/portable-splash.bmp"
     },
     "nsis": {
       "oneClick": false,
